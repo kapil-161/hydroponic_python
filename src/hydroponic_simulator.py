@@ -170,6 +170,13 @@ class HydroponicSimulator:
                     self.current_biomass, nutrient_uptake, env_conditions, stage
                 )
                 
+                # Apply water balance constraint - cannot consume more than available
+                max_available_water = max(0, current_tank_volume - 1.0)  # Keep 1L minimum for circulation
+                actual_water_consumed = min(transpiration_l, max_available_water)
+                
+                # Update tank volume with actual consumption
+                new_tank_volume = current_tank_volume - actual_water_consumed
+                
                 # Update concentrations with both uptake and concentration effects
                 new_concentrations = {}
                 for nutrient_id, concentration in current_concentrations.items():
@@ -186,14 +193,7 @@ class HydroponicSimulator:
                         new_conc = concentration  # Prevent division by zero
                     
                     new_concentrations[nutrient_id] = max(0.1, new_conc)
-                
-                # Apply water balance constraint - cannot consume more than available
-                max_available_water = max(0, current_tank_volume - 1.0)  # Keep 1L minimum for circulation
-                actual_water_consumed = min(transpiration_l, max_available_water)
-                
-                # Update tank volume with actual consumption
-                new_tank_volume = current_tank_volume - actual_water_consumed
-                
+
                 # Apply water stress if insufficient water available
                 if actual_water_consumed < transpiration_l:
                     water_stress_factor = actual_water_consumed / (transpiration_l + 1e-6)
