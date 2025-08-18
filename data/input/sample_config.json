@@ -1,0 +1,34 @@
+{
+  "system_config": {
+    "system_id": "HYD1",
+    "crop_id": "LETT",
+    "location_id": "USGA",
+    "tank_volume": 500.0,
+    "flow_rate": 50.0,
+    "system_type": "NFT",
+    "system_area": 10.0,
+    "n_plants": 48,
+    "description": "Nutrient Film Technique - Lettuce production"
+  },
+  "crop_parameters": {
+    "crop_id": "LETT",
+    "crop_name": "Lettuce",
+    "kcb": 0.90,
+    "phi": 0.85,
+    "crop_height": 0.30,
+    "root_zone_depth": 0.15,
+    "laid": 2.0
+  },
+  "simulation_settings": {
+    "simulation_days": 30,
+    "start_date": "2024-04-11",
+    "output_frequency": "daily"
+  },
+  "weather_settings": {
+    "source": "generated",
+    "base_temperature": 22.0,
+    "temperature_variation": 5.0,
+    "base_humidity": 70.0,
+    "base_solar_radiation": 18.0
+  }
+}
