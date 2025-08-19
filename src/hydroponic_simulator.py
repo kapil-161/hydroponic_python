@@ -4,6 +4,7 @@ Integrates all models to simulate hydroponic system behavior over time
 """
 
 import numpy as np
+import pandas as pd
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
@@ -13,6 +14,12 @@ from .models.dynamic_growth import DynamicGrowthModel
 from .models.mechanistic_nutrient_uptake import (
     MechanisticNutrientUptake, PlantBiomass, create_initial_biomass, GrowthStage
 )
+from .models.carbon_allocation import CarbonAllocationModel
+from .models.hydroponic_root_dynamics import HydroponicRootModel
+from .models.photosynthesis_model import PhotosynthesisModel
+from .models.root_zone_temperature import RootZoneTemperatureModel
+from .models.leaf_development import LeafDevelopmentModel
+from .models.environmental_control import EnvironmentalControlSystem, ControlStrategy
 from .data.hydroponic_system import (
     HydroInputData, SimulationResults, DailyResults,
     HydroSystemConfig, CropParameters, WeatherData, DefaultConfigurations
@@ -23,17 +30,51 @@ from .utils.weather_generator import WeatherGenerator
 class HydroponicSimulator:
     """Main simulation engine for hydroponic systems."""
     
-    def __init__(self, use_dynamic_growth: bool = False, use_mechanistic_uptake: bool = False):
+    def __init__(self, use_dynamic_growth: bool = False, use_mechanistic_uptake: bool = False, 
+                 use_rzt_model: bool = False, use_leaf_model: bool = False, 
+                 use_environmental_control: bool = False):
         self.water_model = WaterUptakeModel()
         self.nutrient_model = NutrientConcentrationModel()
         self.growth_model = DynamicGrowthModel() if use_dynamic_growth else None
         self.mechanistic_uptake = MechanisticNutrientUptake() if use_mechanistic_uptake else None
+        self.carbon_allocation_model = CarbonAllocationModel()
+        self.photosynthesis_model = PhotosynthesisModel()
+        self.rzt_model = RootZoneTemperatureModel() if use_rzt_model else None
+        self.leaf_model = LeafDevelopmentModel() if use_leaf_model else None
+        self.environmental_control = EnvironmentalControlSystem() if use_environmental_control else None
         self.use_dynamic_growth = use_dynamic_growth
         self.use_mechanistic_uptake = use_mechanistic_uptake
+        self.use_rzt_model = use_rzt_model
+        self.use_leaf_model = use_leaf_model
+        self.use_environmental_control = use_environmental_control
         self.results: Optional[SimulationResults] = None
         
         # Initialize biomass tracking
         self.current_biomass: Optional[PlantBiomass] = None
+        self.current_ph: float = 6.0
+        self.current_ec: float = 1.8
+        self.current_rzt: float = 22.0  # Default root zone temperature (°C)
+        self.current_co2: float = 400.0  # Default CO2 concentration (μmol/mol)
+        self.current_vpd: float = 0.8  # Default VPD (kPa)
+
+    def _calculate_ec(self, concentrations: Dict[str, float]) -> float:
+        """Calculate EC using the Sonneveld et al. (1990) model."""
+        # Calculate sum of cations in meq/L
+        sum_cations_meql = 0
+        for nutrient_id, conc_mg_l in concentrations.items():
+            params = self.nutrient_model.nutrients.get(nutrient_id)
+            if params and params.charge > 0: # It's a cation
+                # mg/L to mol/L
+                conc_mol_l = (conc_mg_l / 1000.0) / params.molar_mass
+                # mol/L to eq/L
+                conc_eq_l = conc_mol_l * params.charge
+                # eq/L to meq/L
+                conc_meq_l = conc_eq_l * 1000.0
+                sum_cations_meql += conc_meq_l
+        
+        # EC = 0.19 + 0.095 * [C+]
+        ec = 0.19 + 0.095 * sum_cations_meql
+        return ec
         
     def setup_simulation(self, input_data: HydroInputData):
         """Set up the simulation with input data."""
@@ -64,6 +105,8 @@ class HydroponicSimulator:
             nutrient_id: params.initial_conc 
             for nutrient_id, params in input_data.nutrient_params.items()
         }
+        current_ph = self.current_ph
+        current_ec = self.current_ec
         
         # Initialize biomass for mechanistic model
         if self.use_mechanistic_uptake:
@@ -113,6 +156,44 @@ class HydroponicSimulator:
                 phi = input_data.crop_params.phi
                 nutrient_factor = 1.0
             
+            # Update leaf development model if enabled
+            leaf_results = {}
+            if self.use_leaf_model and self.leaf_model:
+                # Calculate stress factors for leaf development
+                water_stress = 1.0  # Will be updated with actual stress calculation
+                nitrogen_stress = 1.0  # Will be based on N concentration
+                temperature_stress = 1.0  # Will be based on temperature conditions
+                
+                # Update N stress based on concentration
+                if 'N-NO3' in current_concentrations:
+                    optimal_n = 200.0  # mg/L optimal N concentration for lettuce
+                    nitrogen_stress = min(1.0, current_concentrations['N-NO3'] / optimal_n)
+                
+                # Update temperature stress  
+                optimal_temp_range = (18, 24)  # Optimal for lettuce
+                if weather.temp_avg < optimal_temp_range[0] or weather.temp_avg > optimal_temp_range[1]:
+                    if weather.temp_avg < optimal_temp_range[0]:
+                        temperature_stress = max(0.2, (weather.temp_avg - 4) / (optimal_temp_range[0] - 4))
+                    else:
+                        temperature_stress = max(0.2, (35 - weather.temp_avg) / (35 - optimal_temp_range[1]))
+                
+                # Update leaf model
+                leaf_results = self.leaf_model.daily_update(
+                    weather.temp_avg, water_stress, nitrogen_stress, temperature_stress
+                )
+                
+                # Override LAI with leaf model result if available
+                if 'leaf_area_index' in leaf_results:
+                    lai = leaf_results['leaf_area_index']
+            
+            # Initialize environmental control effects (will be updated if enabled)
+            env_control_effects = {
+                'vpd_transpiration_factor': 1.0,
+                'vpd_photosynthesis_factor': 1.0,
+                'co2_photosynthesis_factor': 1.0,
+                'combined_photosynthesis_factor': 1.0
+            }
+            
             # Calculate net radiation
             net_radiation = self.water_model.calculate_net_radiation(
                 weather.solar_radiation, weather.temp_max, weather.temp_min,
@@ -140,14 +221,90 @@ class HydroponicSimulator:
                 stage = self._get_growth_stage_enum(growth_params.get('growth_stage', 'slow_growth') 
                                                   if self.use_dynamic_growth else 'rapid_growth')
                 
-                # Environmental conditions for uptake
+                # Calculate RZT effects if enabled
+                rzt_effects = {}
+                if self.use_rzt_model and self.rzt_model:
+                    # Update RZT based on air temperature (simplified control)
+                    optimal_rzt = self.rzt_model.calculate_optimal_rzt(weather.temp_avg)
+                    self.current_rzt = optimal_rzt  # Assume perfect temperature control for now
+                    
+                    # Calculate comprehensive RZT effects
+                    rzt_effects = self.rzt_model.calculate_comprehensive_rzt_effects(
+                        self.current_rzt, weather.temp_avg
+                    )
+                else:
+                    # Default RZT effects (no impact)
+                    rzt_effects = {
+                        'growth_factor': 1.0,
+                        'nutrient_uptake_factor': 1.0,
+                        'water_uptake_factor': 1.0,
+                        'photosynthesis_factor': 1.0,
+                        'root_metabolism_factor': 1.0
+                    }
+                
+                # Calculate environmental control effects if enabled
+                env_control_effects = {}
+                if self.use_environmental_control and self.environmental_control:
+                    # Determine photoperiod (assuming 16h light cycle starting at 6 AM)
+                    hour_of_day = (current_day - 1) * 24 % 24  # Simplified daily cycle
+                    light_on = 6 <= hour_of_day <= 22  # 16-hour photoperiod
+                    
+                    # Current environmental conditions
+                    current_conditions = {
+                        'temperature': weather.temp_avg,
+                        'humidity': weather.rel_humidity,
+                        'co2': self.current_co2,
+                        'light_intensity': 200.0 if light_on else 0.0
+                    }
+                    
+                    light_schedule = {'light_on': light_on}
+                    
+                    # Calculate comprehensive environmental control
+                    env_control_results = self.environmental_control.calculate_comprehensive_control(
+                        current_conditions, light_schedule, ControlStrategy.PID
+                    )
+                    
+                    # Extract environmental factors for plant models
+                    env_control_effects = env_control_results['plant_factors']
+                    
+                    # Update system state based on control actions
+                    self.current_vpd = env_control_results['current_conditions']['vpd_kPa']
+                    if light_on:
+                        # Apply CO2 control during photoperiod
+                        co2_action = env_control_results['control_actions']['co2']
+                        if co2_action['co2_injection_rate'] > 0:
+                            # Increase CO2 based on injection rate
+                            co2_increase = co2_action['co2_injection_rate'] * 0.5  # Simplified response
+                            self.current_co2 = min(1800.0, self.current_co2 + co2_increase)
+                        elif co2_action['ventilation_increase'] > 0:
+                            # Decrease CO2 due to ventilation
+                            co2_decrease = co2_action['ventilation_increase'] * 20.0
+                            self.current_co2 = max(350.0, self.current_co2 - co2_decrease)
+                    else:
+                        # Gradual return to ambient CO2 during dark period
+                        self.current_co2 = max(350.0, self.current_co2 - 10.0)
+                # If not using environmental control, keep default values (already initialized)
+                
+                # Environmental conditions for uptake with RZT and environmental control integration
+                base_growth_factor = growth_params.get('env_factor', 1.0) if self.use_dynamic_growth else 1.0
+                combined_growth_factor = (base_growth_factor * rzt_effects['growth_factor'] * 
+                                        env_control_effects['vpd_photosynthesis_factor'])
+                
                 env_conditions = {
-                    'growth_factor': growth_params.get('env_factor', 1.0) if self.use_dynamic_growth else 1.0,
+                    'growth_factor': combined_growth_factor,
                     'dli_factor': growth_params.get('dli_factor', 1.0) if self.use_dynamic_growth else 1.0,
                     'temp_factor': growth_params.get('temp_factor', 1.0) if self.use_dynamic_growth else 1.0,
                     'temp_avg': weather.temp_avg,
+                    'rzt': self.current_rzt,
+                    'rzt_growth_factor': rzt_effects['growth_factor'],
+                    'rzt_nutrient_factor': rzt_effects['nutrient_uptake_factor'],
+                    'rzt_water_factor': rzt_effects['water_uptake_factor'],
+                    'rzt_metabolism_factor': rzt_effects['root_metabolism_factor'],
+                    'vpd_transpiration_factor': env_control_effects['vpd_transpiration_factor'],
+                    'vpd_photosynthesis_factor': env_control_effects['vpd_photosynthesis_factor'],
+                    'co2_photosynthesis_factor': env_control_effects['co2_photosynthesis_factor'],
                     'dissolved_oxygen': 6.0,  # Default hydroponic DO level
-                    'ph': 6.0,                # Default hydroponic pH
+                    'ph': current_ph,
                     'flow_rate': input_data.system_config.flow_rate / 60.0  # Convert L/h to L/min
                 }
                 
@@ -162,17 +319,53 @@ class HydroponicSimulator:
                             concentration, stage_kinetics, self.current_biomass, 
                             env_conditions['growth_factor'], current_tank_volume
                         )
+                        # Apply RZT nutrient uptake factor
+                        uptake_rate *= rzt_effects['nutrient_uptake_factor']
                         nutrient_uptake[nutrient_id] = uptake_rate
                         uptake_diagnostics[nutrient_id] = diagnostics
                 
-                # Update biomass based on nutrient uptake
-                self.current_biomass = self.mechanistic_uptake.update_biomass(
-                    self.current_biomass, nutrient_uptake, env_conditions, stage
+                # Carbon and Nitrogen Assimilation
+                # Convert solar radiation (MJ/m2/day) to PAR (umol photons/m2/s)
+                # Approx conversion: 1 MJ/m2/day = 2.04 mol photons/m2/day = 2.04 * 1e6 umol / (24*3600) umol/m2/s = 23.6 umol/m2/s
+                par_umol_m2_s = weather.solar_radiation * 23.6
+                
+                # Use current CO2 concentration from environmental control
+                co2_concentration = self.current_co2
+
+                carbon_assimilated = self.photosynthesis_model.calculate_daily_assimilation(
+                    par_umol_m2_s, co2_concentration, weather.temp_avg, lai
                 )
+                # Apply RZT and environmental control photosynthesis factors
+                carbon_assimilated *= rzt_effects['photosynthesis_factor']
+                carbon_assimilated *= env_control_effects['combined_photosynthesis_factor']
+                nitrogen_assimilated = nutrient_uptake.get('N-NO3', 0) / 1000.0 # g
+
+                # Update biomass using the new carbon allocation model
+                self.current_biomass = self.carbon_allocation_model.update_biomass(
+                    self.current_biomass, carbon_assimilated, nitrogen_assimilated
+                )
+                biomass_partition = self.carbon_allocation_model.partition_biomass(self.current_biomass)
+                self.current_biomass.shoot_mass = biomass_partition['shoot_mass']
+                self.current_biomass.root_mass = biomass_partition['root_mass']
+
+                # Update root system dynamics
+                if self.current_biomass.root_system:
+                    root_model = HydroponicRootModel(self.current_biomass.root_system.system_type)
+                    self.current_biomass.root_system = root_model.calculate_daily_root_growth(
+                        self.current_biomass.root_system,
+                        self.current_biomass.get_total_dry_mass(),
+                        stage.value,
+                        env_conditions
+                    )
+
+                # Apply RZT and VPD factors to transpiration
+                environmental_adjusted_transpiration = (transpiration_l * 
+                                                       rzt_effects['water_uptake_factor'] * 
+                                                       env_control_effects['vpd_transpiration_factor'])
                 
                 # Apply water balance constraint - cannot consume more than available
                 max_available_water = max(0, current_tank_volume - 1.0)  # Keep 1L minimum for circulation
-                actual_water_consumed = min(transpiration_l, max_available_water)
+                actual_water_consumed = min(environmental_adjusted_transpiration, max_available_water)
                 
                 # Update tank volume with actual consumption
                 new_tank_volume = current_tank_volume - actual_water_consumed
@@ -194,10 +387,30 @@ class HydroponicSimulator:
                     
                     new_concentrations[nutrient_id] = max(0.1, new_conc)
 
+                # pH modeling
+                total_charge_uptake = 0
+                for nutrient_id, uptake_mg in nutrient_uptake.items():
+                    params = self.nutrient_model.nutrients[nutrient_id]
+                    if params.molar_mass > 0:
+                        uptake_moles = (uptake_mg / 1000.0) / params.molar_mass
+                        total_charge_uptake += uptake_moles * params.charge
+                
+                # Update pH based on charge balance
+                if current_tank_volume > 0:
+                    delta_h_moles = -total_charge_uptake 
+                    delta_h_conc = delta_h_moles / current_tank_volume
+                    
+                    current_h_conc = 10**(-current_ph)
+                    new_h_conc = current_h_conc + delta_h_conc
+
+                    if new_h_conc > 0:
+                        current_ph = -np.log10(new_h_conc)
+                    else:
+                        current_ph = 7.0
+
                 # Apply water stress if insufficient water available
-                if actual_water_consumed < transpiration_l:
+                if actual_water_consumed < environmental_adjusted_transpiration:
                     water_stress_factor = actual_water_consumed / (transpiration_l + 1e-6)
-                    # Reduce nutrient uptake proportionally due to water stress
                     for nutrient_id in nutrient_uptake:
                         nutrient_uptake[nutrient_id] *= water_stress_factor
                     print(f"Day {current_day}: Water stress detected - {water_stress_factor:.2f} stress factor")
@@ -237,6 +450,9 @@ class HydroponicSimulator:
                 water_stress_factor if self.use_mechanistic_uptake else 1.0
             )
             
+            # Calculate EC
+            current_ec = self._calculate_ec(new_concentrations)
+
             # Store daily results with additional growth data
             daily_result = DailyResults(
                 date=weather.date,
@@ -250,7 +466,20 @@ class HydroponicSimulator:
                 temp_avg=weather.temp_avg,
                 solar_radiation=weather.solar_radiation,
                 vpd=vpd,
-                water_use_efficiency=wue
+                water_use_efficiency=wue,
+                ph=current_ph,
+                ec=current_ec,
+                rzt=self.current_rzt,
+                rzt_growth_factor=rzt_effects.get('growth_factor', 1.0) if self.use_mechanistic_uptake else 1.0,
+                rzt_nutrient_factor=rzt_effects.get('nutrient_uptake_factor', 1.0) if self.use_mechanistic_uptake else 1.0,
+                v_stage=leaf_results.get('v_stage', 0.0) if self.use_leaf_model else 0.0,
+                leaf_number=leaf_results.get('leaf_number', 0) if self.use_leaf_model else 0,
+                leaf_area_m2=leaf_results.get('total_leaf_area_m2', 0.0) if self.use_leaf_model else 0.0,
+                average_leaf_area_cm2=leaf_results.get('average_leaf_area', 0.0) * 10000 if self.use_leaf_model else 0.0,
+                co2_concentration=self.current_co2,
+                vpd_actual=self.current_vpd,
+                env_photosynthesis_factor=env_control_effects.get('combined_photosynthesis_factor', 1.0),
+                env_transpiration_factor=env_control_effects.get('vpd_transpiration_factor', 1.0)
             )
             
             # Add dynamic growth data if available
@@ -361,12 +590,56 @@ class HydroponicSimulator:
         return max(0.5, min(6.0, dynamic_wue))  # Reasonable bounds
     
     def save_results_csv(self, filename: str):
-        """Save simulation results to CSV file."""
+        """Save simulation results to CSV file with a second row for units."""
         if self.results is None:
             raise ValueError("No simulation results to save. Run simulation first.")
-            
+
         df = self.results.to_dataframe()
-        df.to_csv(filename, index=False)
+
+        units = {
+            'Date': '(YYYY-MM-DD)',
+            'Day': '(day)',
+            'System_ID': '(id)',
+            'Crop_ID': '(id)',
+            'ETO_Ref_mm': '(mm/day)',
+            'ETC_Prime_mm': '(mm/day)',
+            'Transpiration_mm': '(mm/day)',
+            'Water_Total_L': '(L/day)',
+            'Tank_Volume_L': '(L)',
+            'Temp_C': '(°C)',
+            'Solar_Rad_MJ': '(MJ/m²/day)',
+            'VPD_kPa': '(kPa)',
+            'WUE_kg_m3': '(kg/m³)',
+            'LAI': '(unitless)',
+            'Height_m': '(m)',
+            'Kcb_dynamic': '(unitless)',
+            'Growth_Stage': '(stage)',
+            'Total_Biomass_g': '(g)',
+            'Fresh_Weight_g': '(g)',
+            'pH': '(unitless)',
+            'EC': '(dS/m)',
+            'RZT_C': '(°C)',
+            'RZT_Growth_Factor': '(unitless)',
+            'RZT_Nutrient_Factor': '(unitless)',
+            'V_Stage': '(unitless)',
+            'Leaf_Number': '(count)',
+            'Leaf_Area_m2': '(m²)',
+            'Avg_Leaf_Area_cm2': '(cm²)',
+            'CO2_umol_mol': '(μmol/mol)',
+            'VPD_Actual_kPa': '(kPa)',
+            'Env_Photo_Factor': '(unitless)',
+            'Env_Transp_Factor': '(unitless)'
+        }
+        for col in df.columns:
+            if col.endswith('_mg_L'):
+                units[col] = '(mg/L)'
+
+        with open(filename, 'w', newline='') as f:
+            f.write(','.join(df.columns) + '\n')
+            unit_row = [units.get(col, '') for col in df.columns]
+            f.write(','.join(unit_row) + '\n')
+            df.to_csv(f, header=False, index=False)
+
         print(f"Results saved to {filename}")
     
     def print_summary(self):

@@ -5,7 +5,7 @@ Based on: NiCoLet model principles and hydroponic crop modeling research
 """
 
 import numpy as np
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
 from .hydroponic_root_dynamics import HydroponicRootSystem, HydroponicRootModel
@@ -36,6 +36,8 @@ class PlantBiomass:
     carbon_storage: float     # g C - stored carbohydrates  
     nitrogen_storage: float   # g N - stored nitrogen compounds
     total_fresh_weight: float # g fresh weight - for yield calculations
+    shoot_mass: float = 0.0 # g dry weight
+    root_mass: float = 0.0 # g dry weight
     
     # Hydroponic root system integration
     root_system: Optional[HydroponicRootSystem] = None
@@ -66,110 +68,121 @@ class PlantBiomass:
 class MechanisticNutrientUptake:
     """Mechanistic nutrient uptake model with Monod kinetics."""
     
-    def __init__(self):
+    def __init__(self, config_dict: Optional[Dict[str, Any]] = None):
         # Initialize stage-specific kinetic parameters based on research
-        self.kinetic_params = self._initialize_kinetic_parameters()
+        self.kinetic_params = self._initialize_kinetic_parameters(config_dict)
         
         # Biomass growth parameters (simplified from NiCoLet)
-        self.growth_params = {
-            'carbon_assimilation_rate': 0.12,     # g C/g-biomass/day
-            'nitrogen_assimilation_rate': 0.018,  # g N/g-biomass/day  
-            'structural_growth_efficiency': 0.75, # C to structure conversion
-            'respiration_rate': 0.02,             # Daily maintenance respiration
-            'fresh_to_dry_ratio': 12.0            # Fresh:dry weight ratio for lettuce
-        }
+        if config_dict and 'growth_params' in config_dict:
+            self.growth_params = config_dict['growth_params']
+        else:
+            self.growth_params = {
+                'carbon_assimilation_rate': 0.12,     # g C/g-biomass/day
+                'nitrogen_assimilation_rate': 0.018,  # g N/g-biomass/day  
+                'structural_growth_efficiency': 0.75, # C to structure conversion
+                'respiration_rate': 0.02,             # Daily maintenance respiration
+                'fresh_to_dry_ratio': 12.0            # Fresh:dry weight ratio for lettuce
+            }
         
         # Fault detection thresholds
-        self.fault_thresholds = {
-            'uptake_prediction_error': 0.25,      # 25% error threshold
-            'concentration_depletion_rate': 0.15, # 15% daily depletion limit
-            'biomass_inconsistency': 0.20         # 20% biomass prediction error
-        }
+        if config_dict and 'fault_thresholds' in config_dict:
+            self.fault_thresholds = config_dict['fault_thresholds']
+        else:
+            self.fault_thresholds = {
+                'uptake_prediction_error': 0.25,      # 25% error threshold
+                'concentration_depletion_rate': 0.15, # 15% daily depletion limit
+                'biomass_inconsistency': 0.20         # 20% biomass prediction error
+            }
     
-    def _initialize_kinetic_parameters(self) -> Dict[str, Dict[GrowthStage, NutrientKinetics]]:
+    def _initialize_kinetic_parameters(self, config_dict: Optional[Dict[str, Any]] = None) -> Dict[str, Dict[GrowthStage, NutrientKinetics]]:
         """Initialize Monod kinetics parameters for each nutrient and growth stage."""
+        
+        # Use config if available, otherwise use default values
+        kinetic_config = {}
+        if config_dict and 'kinetic_parameters' in config_dict:
+            kinetic_config = config_dict['kinetic_parameters']
         
         # Based on hydroponic lettuce research and NiCoLet model parameters
         kinetics = {}
         
+        # Helper function to get kinetic parameters from config or defaults
+        def get_kinetic_params(nutrient_id: str, stage_name: str, defaults: dict) -> NutrientKinetics:
+            if nutrient_id in kinetic_config and stage_name in kinetic_config[nutrient_id]:
+                params = kinetic_config[nutrient_id][stage_name]
+                return NutrientKinetics(
+                    nutrient_id=nutrient_id,
+                    vmax=params.get('vmax', defaults['vmax']),
+                    km=params.get('km', defaults['km']),
+                    min_conc=params.get('min_conc', defaults['min_conc']),
+                    max_conc=params.get('max_conc', defaults['max_conc']),
+                    uptake_efficiency=params.get('uptake_efficiency', defaults['uptake_efficiency'])
+                )
+            else:
+                return NutrientKinetics(nutrient_id=nutrient_id, **defaults)
+        
         # Nitrogen (NO3-) - Primary growth driver
         kinetics['N-NO3'] = {
-            GrowthStage.SLOW_GROWTH: NutrientKinetics(
-                nutrient_id='N-NO3', vmax=0.45, km=18.0, 
-                min_conc=5.0, max_conc=250.0, uptake_efficiency=0.7
-            ),
-            GrowthStage.RAPID_GROWTH: NutrientKinetics(
-                nutrient_id='N-NO3', vmax=1.2, km=12.0,
-                min_conc=10.0, max_conc=300.0, uptake_efficiency=0.95
-            ),
-            GrowthStage.STEADY_GROWTH: NutrientKinetics(
-                nutrient_id='N-NO3', vmax=0.6, km=22.0,
-                min_conc=8.0, max_conc=200.0, uptake_efficiency=0.8
-            )
+            GrowthStage.SLOW_GROWTH: get_kinetic_params('N-NO3', 'slow_growth', {
+                'vmax': 0.45, 'km': 18.0, 'min_conc': 5.0, 'max_conc': 250.0, 'uptake_efficiency': 0.7
+            }),
+            GrowthStage.RAPID_GROWTH: get_kinetic_params('N-NO3', 'rapid_growth', {
+                'vmax': 1.2, 'km': 12.0, 'min_conc': 10.0, 'max_conc': 300.0, 'uptake_efficiency': 0.95
+            }),
+            GrowthStage.STEADY_GROWTH: get_kinetic_params('N-NO3', 'steady_growth', {
+                'vmax': 0.6, 'km': 22.0, 'min_conc': 8.0, 'max_conc': 200.0, 'uptake_efficiency': 0.8
+            })
         }
         
         # Phosphorus (PO4-3) - Energy metabolism
         kinetics['P-PO4'] = {
-            GrowthStage.SLOW_GROWTH: NutrientKinetics(
-                nutrient_id='P-PO4', vmax=0.12, km=8.0,
-                min_conc=2.0, max_conc=60.0, uptake_efficiency=0.6
-            ),
-            GrowthStage.RAPID_GROWTH: NutrientKinetics(
-                nutrient_id='P-PO4', vmax=0.28, km=6.0,
-                min_conc=3.0, max_conc=80.0, uptake_efficiency=0.85
-            ),
-            GrowthStage.STEADY_GROWTH: NutrientKinetics(
-                nutrient_id='P-PO4', vmax=0.15, km=10.0,
-                min_conc=2.5, max_conc=50.0, uptake_efficiency=0.7
-            )
+            GrowthStage.SLOW_GROWTH: get_kinetic_params('P-PO4', 'slow_growth', {
+                'vmax': 0.12, 'km': 8.0, 'min_conc': 2.0, 'max_conc': 60.0, 'uptake_efficiency': 0.6
+            }),
+            GrowthStage.RAPID_GROWTH: get_kinetic_params('P-PO4', 'rapid_growth', {
+                'vmax': 0.28, 'km': 6.0, 'min_conc': 3.0, 'max_conc': 80.0, 'uptake_efficiency': 0.85
+            }),
+            GrowthStage.STEADY_GROWTH: get_kinetic_params('P-PO4', 'steady_growth', {
+                'vmax': 0.15, 'km': 10.0, 'min_conc': 2.5, 'max_conc': 50.0, 'uptake_efficiency': 0.7
+            })
         }
         
         # Potassium (K+) - Osmoregulation and quality
         kinetics['K'] = {
-            GrowthStage.SLOW_GROWTH: NutrientKinetics(
-                nutrient_id='K', vmax=0.35, km=25.0,
-                min_conc=10.0, max_conc=350.0, uptake_efficiency=0.8
-            ),
-            GrowthStage.RAPID_GROWTH: NutrientKinetics(
-                nutrient_id='K', vmax=0.75, km=20.0,
-                min_conc=15.0, max_conc=400.0, uptake_efficiency=0.9
-            ),
-            GrowthStage.STEADY_GROWTH: NutrientKinetics(
-                nutrient_id='K', vmax=0.85, km=18.0,  # Higher for quality
-                min_conc=12.0, max_conc=350.0, uptake_efficiency=0.95
-            )
+            GrowthStage.SLOW_GROWTH: get_kinetic_params('K', 'slow_growth', {
+                'vmax': 0.35, 'km': 25.0, 'min_conc': 10.0, 'max_conc': 350.0, 'uptake_efficiency': 0.8
+            }),
+            GrowthStage.RAPID_GROWTH: get_kinetic_params('K', 'rapid_growth', {
+                'vmax': 0.75, 'km': 20.0, 'min_conc': 15.0, 'max_conc': 400.0, 'uptake_efficiency': 0.9
+            }),
+            GrowthStage.STEADY_GROWTH: get_kinetic_params('K', 'steady_growth', {
+                'vmax': 0.85, 'km': 18.0, 'min_conc': 12.0, 'max_conc': 350.0, 'uptake_efficiency': 0.95
+            })
         }
         
         # Calcium (Ca2+) - Cell walls and structure
         kinetics['Ca'] = {
-            GrowthStage.SLOW_GROWTH: NutrientKinetics(
-                nutrient_id='Ca', vmax=0.18, km=15.0,
-                min_conc=5.0, max_conc=180.0, uptake_efficiency=0.65
-            ),
-            GrowthStage.RAPID_GROWTH: NutrientKinetics(
-                nutrient_id='Ca', vmax=0.42, km=12.0,
-                min_conc=8.0, max_conc=200.0, uptake_efficiency=0.8
-            ),
-            GrowthStage.STEADY_GROWTH: NutrientKinetics(
-                nutrient_id='Ca', vmax=0.25, km=18.0,
-                min_conc=6.0, max_conc=160.0, uptake_efficiency=0.7
-            )
+            GrowthStage.SLOW_GROWTH: get_kinetic_params('Ca', 'slow_growth', {
+                'vmax': 0.18, 'km': 15.0, 'min_conc': 5.0, 'max_conc': 180.0, 'uptake_efficiency': 0.65
+            }),
+            GrowthStage.RAPID_GROWTH: get_kinetic_params('Ca', 'rapid_growth', {
+                'vmax': 0.42, 'km': 12.0, 'min_conc': 8.0, 'max_conc': 200.0, 'uptake_efficiency': 0.8
+            }),
+            GrowthStage.STEADY_GROWTH: get_kinetic_params('Ca', 'steady_growth', {
+                'vmax': 0.25, 'km': 18.0, 'min_conc': 6.0, 'max_conc': 160.0, 'uptake_efficiency': 0.7
+            })
         }
         
         # Magnesium (Mg2+) - Chlorophyll and enzyme activation
         kinetics['Mg'] = {
-            GrowthStage.SLOW_GROWTH: NutrientKinetics(
-                nutrient_id='Mg', vmax=0.08, km=8.0,
-                min_conc=2.0, max_conc=55.0, uptake_efficiency=0.7
-            ),
-            GrowthStage.RAPID_GROWTH: NutrientKinetics(
-                nutrient_id='Mg', vmax=0.15, km=6.0,
-                min_conc=3.0, max_conc=70.0, uptake_efficiency=0.85
-            ),
-            GrowthStage.STEADY_GROWTH: NutrientKinetics(
-                nutrient_id='Mg', vmax=0.10, km=10.0,
-                min_conc=2.5, max_conc=50.0, uptake_efficiency=0.75
-            )
+            GrowthStage.SLOW_GROWTH: get_kinetic_params('Mg', 'slow_growth', {
+                'vmax': 0.08, 'km': 8.0, 'min_conc': 2.0, 'max_conc': 55.0, 'uptake_efficiency': 0.7
+            }),
+            GrowthStage.RAPID_GROWTH: get_kinetic_params('Mg', 'rapid_growth', {
+                'vmax': 0.15, 'km': 6.0, 'min_conc': 3.0, 'max_conc': 70.0, 'uptake_efficiency': 0.85
+            }),
+            GrowthStage.STEADY_GROWTH: get_kinetic_params('Mg', 'steady_growth', {
+                'vmax': 0.10, 'km': 10.0, 'min_conc': 2.5, 'max_conc': 50.0, 'uptake_efficiency': 0.75
+            })
         }
         
         return kinetics
@@ -194,20 +207,20 @@ class MechanisticNutrientUptake:
         uptake_capacity = biomass.get_uptake_capacity()
         
         # Root-specific factors
-        root_efficiency = 1.0
+        intrinsic_root_efficiency = 1.0 # Renamed for clarity
         root_surface_factor = 1.0
+        solution_contact_factor = 1.0 # New variable for solution contact
         
         if biomass.root_system:
             # Use actual root system parameters
-            root_efficiency = biomass.root_system.uptake_efficiency
+            intrinsic_root_efficiency = biomass.root_system.uptake_efficiency
             
             # Root surface area factor (more surface = more uptake potential)
             # Normalize against typical mature lettuce root surface (500 cm²)
             root_surface_factor = min(2.0, biomass.root_system.root_surface_area / 500.0)
             
             # Solution contact factor (hydroponic-specific)
-            solution_contact = biomass.root_system.solution_root_fraction
-            root_efficiency *= solution_contact
+            solution_contact_factor = biomass.root_system.solution_root_fraction
         
         # Check if concentration is below minimum threshold
         if concentration < kinetics.min_conc:
@@ -215,19 +228,18 @@ class MechanisticNutrientUptake:
             limitation_factor = "minimum_threshold"
         else:
             # Monod equation with hydroponic root system integration
-            # Uptake = (Vmax * C / (Km + C)) * Root_Surface * Efficiency * Environment * Root_Health
+            # Uptake = (Vmax * C / (Km + C)) * Root_Surface * Efficiency * Environment * Root_Health * Solution_Contact
             saturation_term = concentration / (kinetics.km + concentration)
             uptake_rate = (kinetics.vmax * saturation_term * uptake_capacity * 
                           kinetics.uptake_efficiency * environmental_factor *
-                          root_efficiency * root_surface_factor)
+                          intrinsic_root_efficiency * root_surface_factor *
+                          solution_contact_factor)
             
             # Determine limiting factor
             if concentration < kinetics.km:
                 limitation_factor = "concentration_limited"
             elif uptake_capacity < 1.0:
                 limitation_factor = "root_limited"  # Changed from biomass_limited
-            elif root_efficiency < 0.7:
-                limitation_factor = "root_health_limited"
             elif environmental_factor < 0.8:
                 limitation_factor = "environment_limited"
             else:
@@ -248,7 +260,7 @@ class MechanisticNutrientUptake:
             'saturation_factor': min(1.0, concentration / kinetics.km),
             'root_capacity_factor': uptake_capacity,
             'root_surface_factor': root_surface_factor,
-            'root_efficiency': root_efficiency,
+            'root_efficiency': intrinsic_root_efficiency,
             'solution_contact': biomass.root_system.solution_root_fraction if biomass.root_system else 1.0,
             'kinetic_efficiency': kinetics.uptake_efficiency,
             'environmental_factor': environmental_factor,
@@ -271,96 +283,7 @@ class MechanisticNutrientUptake:
         else:
             return 75.0  # Default score for simplified model
     
-    def update_biomass(self, current_biomass: PlantBiomass, nutrient_uptake: Dict[str, float],
-                      environmental_conditions: Dict, stage: GrowthStage) -> PlantBiomass:
-        """
-        Update plant biomass based on nutrient uptake and environmental conditions.
-        Includes hydroponic root system dynamics.
-        """
-        # Environmental growth factor (temperature, light, etc.)
-        env_growth_factor = environmental_conditions.get('growth_factor', 1.0)
-        
-        # Calculate carbon assimilation (simplified photosynthesis)
-        light_factor = min(1.0, environmental_conditions.get('dli_factor', 1.0))
-        temp_factor = min(1.0, environmental_conditions.get('temp_factor', 1.0))
-        carbon_assimilation = (self.growth_params['carbon_assimilation_rate'] * 
-                             current_biomass.structural_mass * light_factor * temp_factor)
-        
-        # Calculate nitrogen assimilation from uptake
-        n_uptake_g = nutrient_uptake.get('N-NO3', 0) / 1000.0  # Convert mg to g
-        nitrogen_assimilation = min(n_uptake_g, 
-                                  self.growth_params['nitrogen_assimilation_rate'] * 
-                                  current_biomass.structural_mass)
-        
-        # Growth limitation by most limiting factor
-        growth_limitation = min(
-            carbon_assimilation / (self.growth_params['carbon_assimilation_rate'] * current_biomass.structural_mass + 1e-10),
-            nitrogen_assimilation / (self.growth_params['nitrogen_assimilation_rate'] * current_biomass.structural_mass + 1e-10),
-            env_growth_factor
-        )
-        
-        # Update biomass compartments
-        # Respiration losses
-        respiration_loss = current_biomass.structural_mass * self.growth_params['respiration_rate']
-        
-        # Structural growth (limited by both C and N availability)
-        structural_growth = (carbon_assimilation * self.growth_params['structural_growth_efficiency'] * 
-                           growth_limitation - respiration_loss)
-        structural_growth = max(0, structural_growth)  # No negative growth
-        
-        # Storage compartments
-        excess_carbon = carbon_assimilation - structural_growth / self.growth_params['structural_growth_efficiency']
-        excess_nitrogen = nitrogen_assimilation - structural_growth * 0.02  # 2% N in structural mass
-        
-        # Update root system dynamics (hydroponic-specific)
-        updated_root_system = current_biomass.root_system
-        if current_biomass.root_system:
-            # Create root model for the same system type
-            from .hydroponic_root_dynamics import HydroponicRootModel
-            
-            # Determine system type from root system properties
-            if hasattr(current_biomass.root_system, '_system_type'):
-                system_type = current_biomass.root_system._system_type
-            else:
-                # Infer system type from root characteristics
-                if current_biomass.root_system.solution_root_fraction > 0.7:
-                    from .hydroponic_root_dynamics import HydroponicSystemType
-                    system_type = HydroponicSystemType.DWC
-                else:
-                    from .hydroponic_root_dynamics import HydroponicSystemType
-                    system_type = HydroponicSystemType.NFT
-            
-            root_model = HydroponicRootModel(system_type)
-            
-            # Convert stage enum to string for root model
-            stage_string = stage.value if hasattr(stage, 'value') else 'rapid_growth'
-            
-            # Environmental conditions for root growth
-            root_env_conditions = {
-                'temp_avg': environmental_conditions.get('temp_avg', 20.0),
-                'dissolved_oxygen': environmental_conditions.get('dissolved_oxygen', 6.0),
-                'ph': environmental_conditions.get('ph', 6.0),
-                'flow_rate': environmental_conditions.get('flow_rate', 1.0)
-            }
-            
-            # Calculate total biomass for root model
-            total_biomass = current_biomass.get_total_dry_mass()
-            
-            # Update root system
-            updated_root_system = root_model.calculate_daily_root_growth(
-                current_biomass.root_system, total_biomass, stage_string, root_env_conditions
-            )
-        
-        new_biomass = PlantBiomass(
-            structural_mass=current_biomass.structural_mass + structural_growth,
-            carbon_storage=current_biomass.carbon_storage + max(0, excess_carbon * 0.5),
-            nitrogen_storage=current_biomass.nitrogen_storage + max(0, excess_nitrogen * 0.8),
-            total_fresh_weight=(current_biomass.structural_mass + structural_growth) * 
-                             self.growth_params['fresh_to_dry_ratio'],
-            root_system=updated_root_system  # Include updated root system
-        )
-        
-        return new_biomass
+    
     
     def detect_nutrient_faults(self, predicted_concentrations: Dict[str, float],
                              actual_concentrations: Dict[str, float],
@@ -434,6 +357,18 @@ class MechanisticNutrientUptake:
         return demand
 
 
+def create_mechanistic_uptake_model() -> MechanisticNutrientUptake:
+    """Create mechanistic nutrient uptake model with configuration."""
+    try:
+        from ..utils.config_loader import get_config_loader
+        config_loader = get_config_loader()
+        uptake_config = config_loader.get_mechanistic_uptake_config()
+        return MechanisticNutrientUptake(uptake_config)
+    except ImportError:
+        # Fallback to default values if config loader not available
+        return MechanisticNutrientUptake()
+
+
 def create_initial_biomass(n_plants: int, initial_fresh_weight_per_plant: float = 2.0,
                           system_type: str = "NFT") -> PlantBiomass:
     """
@@ -463,7 +398,7 @@ def create_initial_biomass(n_plants: int, initial_fresh_weight_per_plant: float 
     
     system_enum = system_type_map.get(system_type.upper(), HydroponicSystemType.NFT)
     root_model = HydroponicRootModel(system_enum)
-    root_system = root_model.initialize_root_system(n_plants, initial_fresh_weight_per_plant)
+    root_system = root_model.initialize_root_system(n_plants, initial_fresh_weight_per_plant, system_enum)
     
     return PlantBiomass(
         structural_mass=total_dry_weight * 0.7,    # 70% structural (includes roots)

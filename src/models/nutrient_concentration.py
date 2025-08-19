@@ -6,7 +6,7 @@ Based on: [I]t+1 = [I]t + TrV⁻¹([I]R − [I]U) for nutritive ions
 """
 
 import numpy as np
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
 from dataclasses import dataclass
 
 
@@ -23,14 +23,33 @@ class NutrientParams:
     is_nutritive: bool
     min_conc: float  # mg/L
     max_conc: float  # mg/L
+    charge: int = 0
+    molar_mass: float = 0.0
 
 
 class NutrientConcentrationModel:
     """Nutrient Concentration Submodel for hydroponic systems."""
     
-    def __init__(self):
+    def __init__(self, config_dict: Optional[Dict[str, Any]] = None):
         self.nutrients: Dict[str, NutrientParams] = {}
         self.warning_flags: Dict[str, int] = {}
+        
+        # Load EC factors from config or use defaults
+        if config_dict and 'ec_factors' in config_dict:
+            self.ec_factors = config_dict['ec_factors']
+        else:
+            self.ec_factors = {
+                'N-NO3': 0.001, 'P-PO4': 0.0008, 'K': 0.0012,
+                'Ca': 0.0015, 'Mg': 0.0014, 'S-SO4': 0.0010,
+                'Fe': 0.002, 'Mn': 0.002, 'Zn': 0.002, 'Cu': 0.002,
+                'B': 0.0018, 'Mo': 0.002, 'Na': 0.0016, 'Cl': 0.0018
+            }
+        
+        # Load minimum volume fraction
+        if config_dict and 'minimum_volume_fraction' in config_dict:
+            self.minimum_volume_fraction = config_dict['minimum_volume_fraction']
+        else:
+            self.minimum_volume_fraction = 0.1
         
     def add_nutrient(self, params: NutrientParams):
         """Add a nutrient to the model."""
@@ -145,8 +164,8 @@ class NutrientConcentrationModel:
         """
         new_volume = initial_volume - transpiration_rate + recharge_volume
         
-        # Ensure minimum volume (10% of initial volume)
-        return max(new_volume, initial_volume * 0.1)
+        # Ensure minimum volume (configurable fraction of initial volume)
+        return max(new_volume, initial_volume * self.minimum_volume_fraction)
     
     def calculate_electrical_conductivity(self, concentrations: Dict[str, float],
                                         ec_factors: Optional[Dict[str, float]] = None) -> float:
@@ -162,13 +181,8 @@ class NutrientConcentrationModel:
             Total electrical conductivity (dS/m)
         """
         if ec_factors is None:
-            # Default EC factors (approximate values)
-            ec_factors = {
-                'N-NO3': 0.001, 'P-PO4': 0.0008, 'K': 0.0012,
-                'Ca': 0.0015, 'Mg': 0.0014, 'S-SO4': 0.0010,
-                'Fe': 0.002, 'Mn': 0.002, 'Zn': 0.002, 'Cu': 0.002,
-                'B': 0.0018, 'Mo': 0.002, 'Na': 0.0016, 'Cl': 0.0018
-            }
+            # Use instance EC factors (loaded from config or defaults)
+            ec_factors = self.ec_factors
         
         total_ec = 0.0
         for nutrient_id, concentration in concentrations.items():
@@ -217,3 +231,15 @@ class NutrientConcentrationModel:
                 new_concentrations[nutrient_id] = self.nutrients[nutrient_id].initial_conc
                 
         return new_concentrations
+
+
+def create_nutrient_concentration_model() -> NutrientConcentrationModel:
+    """Create nutrient concentration model with configuration."""
+    try:
+        from ..utils.config_loader import get_config_loader
+        config_loader = get_config_loader()
+        concentration_config = config_loader.get_nutrient_concentration_config()
+        return NutrientConcentrationModel(concentration_config)
+    except ImportError:
+        # Fallback to default values if config loader not available
+        return NutrientConcentrationModel()

@@ -1,0 +1,96 @@
+{
+  "timestamp": "2025-08-18T21:41:01.301379",
+  "system_info": {
+    "total_models": 12,
+    "core_hydroponic_models": 5,
+    "cropgro_components": 7,
+    "scenarios_tested": 4
+  },
+  "scenario_analysis": {
+    "baseline": {
+      "simulation_duration": 30,
+      "final_biomass": 15.937333333333331,
+      "final_lai": 2.1806480000085333,
+      "final_height": 15.979999999999997,
+      "final_stage": "V8",
+      "total_gdd": 540.0,
+      "average_photosynthesis": 15.334086746088742,
+      "average_respiration": 0.26678232677966424,
+      "average_n_stress": 0.9722222222222222,
+      "biomass_partitioning": {
+        "leaves_pct": 50.83451853091275,
+        "stems_pct": 19.706349870325433,
+        "roots_pct": 29.459131598761807
+      }
+    },
+    "heat_stress": {
+      "simulation_duration": 30,
+      "final_biomass": 13.126318098750751,
+      "final_lai": 1.6455398331831033,
+      "final_height": 11.269163727526374,
+      "final_stage": "HM",
+      "total_gdd": 1041.7781986531988,
+      "average_photosynthesis": 14.607220295908816,
+      "average_respiration": 0.34016784331773803,
+      "average_n_stress": 0.9722222222222222,
+      "biomass_partitioning": {
+        "leaves_pct": 50.41509021582087,
+        "stems_pct": 19.404207832223218,
+        "roots_pct": 30.180701951955914
+      },
+      "max_temp_stress": 0.9999999999999999,
+      "max_heat_acclimation": 0.349121137199904
+    },
+    "nutrient_deficiency": {
+      "simulation_duration": 30,
+      "final_biomass": 13.543333333333322,
+      "final_lai": 1.7238169508979846,
+      "final_height": 8.0,
+      "final_stage": "SD",
+      "total_gdd": 1603.3781986531983,
+      "average_photosynthesis": 14.429334915789836,
+      "average_respiration": 0.22431000327732198,
+      "average_n_stress": 0.9722222222222222,
+      "biomass_partitioning": {
+        "leaves_pct": 49.999999999999986,
+        "stems_pct": 19.261629337927637,
+        "roots_pct": 30.738370662072377
+      }
+    },
+    "multi_stress": {
+      "simulation_duration": 30,
+      "final_biomass": 12.524119845226053,
+      "final_lai": 1.5501147180764063,
+      "final_height": 8.0,
+      "final_stage": "PM",
+      "total_gdd": 2132.994828581381,
+      "average_photosynthesis": 13.934261076010552,
+      "average_respiration": 0.29309836142351836,
+      "average_n_stress": 0.9722222222222222,
+      "biomass_partitioning": {
+        "leaves_pct": 50.000000000000014,
+        "stems_pct": 19.201540697184257,
+        "roots_pct": 30.79845930281575
+      },
+      "max_temp_stress": 0.9999999999999999,
+      "min_integrated_stress": 0.4924444444444445
+    }
+  },
+  "model_performance": {
+    "biomass_growth_rate_g_per_day": 0.2634666666666666,
+    "lai_development_rate_per_day": 0.03936042814843259,
+    "photosynthesis_efficiency": 10.143456322023251,
+    "nitrogen_use_efficiency": 0.14920515533835146,
+    "light_use_efficiency": 28.517930921212013,
+    "respiratory_quotient": 0.017397992537619644
+  },
+  "stress_analysis": {
+    "heat_stress_biomass_reduction_pct": 17.63792709727211,
+    "temperature_acclimation_capability": 0.349121137199904,
+    "stress_recovery_demonstrated": true
+  },
+  "recommendations": [
+    "Consider optimizing nitrogen supply timing for improved efficiency",
+    "Implement heat stress mitigation strategies in high-temperature conditions"
+  ]
+}

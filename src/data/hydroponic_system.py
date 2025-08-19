@@ -72,6 +72,19 @@ class DailyResults:
     solar_radiation: float  # MJ/m²/day
     vpd: float  # kPa
     water_use_efficiency: float  # kg/m³
+    ph: float = 0.0
+    ec: float = 0.0
+    rzt: float = 0.0  # Root zone temperature (°C)
+    rzt_growth_factor: float = 1.0  # RZT growth effect
+    rzt_nutrient_factor: float = 1.0  # RZT nutrient uptake effect
+    v_stage: float = 0.0  # Vegetative stage (number of leaves)
+    leaf_number: int = 0  # Current number of active leaves
+    leaf_area_m2: float = 0.0  # Total leaf area per plant (m²)
+    average_leaf_area_cm2: float = 0.0  # Average leaf area (cm²)
+    co2_concentration: float = 400.0  # CO2 concentration (μmol/mol)
+    vpd_actual: float = 0.8  # Actual VPD (kPa)
+    env_photosynthesis_factor: float = 1.0  # Environmental photosynthesis enhancement
+    env_transpiration_factor: float = 1.0  # Environmental transpiration factor
 
 
 @dataclass
@@ -103,13 +116,45 @@ class SimulationResults:
                 'Temp_C': result.temp_avg,
                 'Solar_Rad_MJ': result.solar_radiation,
                 'VPD_kPa': result.vpd,
-                'WUE_kg_m3': result.water_use_efficiency
+                'WUE_kg_m3': result.water_use_efficiency,
+                'pH': result.ph,
+                'EC': result.ec,
+                'RZT_C': result.rzt,
+                'RZT_Growth_Factor': result.rzt_growth_factor,
+                'RZT_Nutrient_Factor': result.rzt_nutrient_factor,
+                'V_Stage': result.v_stage,
+                'Leaf_Number': result.leaf_number,
+                'Leaf_Area_m2': result.leaf_area_m2,
+                'Avg_Leaf_Area_cm2': result.average_leaf_area_cm2,
+                'CO2_umol_mol': result.co2_concentration,
+                'VPD_Actual_kPa': result.vpd_actual,
+                'Env_Photo_Factor': result.env_photosynthesis_factor,
+                'Env_Transp_Factor': result.env_transpiration_factor
             }
             
             # Add nutrient concentrations
             for nutrient, conc in result.nutrient_concentrations.items():
                 row[f'{nutrient}_mg_L'] = conc
-                
+
+            # Add dynamic crop variables if they exist
+            if hasattr(result, 'lai'):
+                row['LAI'] = result.lai
+            if hasattr(result, 'height'):
+                row['Height_m'] = result.height
+            if hasattr(result, 'kcb_dynamic'):
+                row['Kcb_dynamic'] = result.kcb_dynamic
+            if hasattr(result, 'growth_stage'):
+                row['Growth_Stage'] = result.growth_stage
+            if hasattr(result, 'total_biomass'):
+                row['Total_Biomass_g'] = result.total_biomass
+            if hasattr(result, 'fresh_weight'):
+                row['Fresh_Weight_g'] = result.fresh_weight
+
+            # Round all float values to 2 decimal places
+            for key, value in row.items():
+                if isinstance(value, float):
+                    row[key] = round(value, 2)
+
             data.append(row)
             
         return pd.DataFrame(data)
@@ -142,7 +187,7 @@ class DefaultConfigurations:
             system_id="HYD1",
             crop_id="LETT",
             location_id="USGA",
-            tank_volume=500.0,
+            tank_volume=1500.0,
             flow_rate=50.0,
             system_type="NFT",
             system_area=10.0,
@@ -169,11 +214,11 @@ class DefaultConfigurations:
         from ..models.nutrient_concentration import NutrientParams
         
         nutrients = [
-            NutrientParams("N-NO3", "Nitrogen-Nitrate", "NO3-", 200.0, 250.0, 180.0, 1.0, True, 150.0, 300.0),
-            NutrientParams("P-PO4", "Phosphorus-Phosphate", "PO4-3", 50.0, 60.0, 45.0, 1.2, True, 30.0, 80.0),
-            NutrientParams("K", "Potassium", "K+", 300.0, 350.0, 280.0, 1.1, True, 250.0, 400.0),
-            NutrientParams("Ca", "Calcium", "Ca+2", 150.0, 180.0, 120.0, 1.5, True, 100.0, 200.0),
-            NutrientParams("Mg", "Magnesium", "Mg+2", 50.0, 60.0, 40.0, 1.3, True, 30.0, 70.0),
+            NutrientParams("N-NO3", "Nitrogen-Nitrate", "NO3-", 200.0, 250.0, 180.0, 1.0, True, 150.0, 300.0, charge=-1, molar_mass=14.01),
+            NutrientParams("P-PO4", "Phosphorus-Phosphate", "PO4-3", 50.0, 60.0, 45.0, 1.2, True, 30.0, 80.0, charge=-1, molar_mass=30.97),
+            NutrientParams("K", "Potassium", "K+", 300.0, 350.0, 280.0, 1.1, True, 250.0, 400.0, charge=1, molar_mass=39.10),
+            NutrientParams("Ca", "Calcium", "Ca+2", 150.0, 180.0, 120.0, 1.5, True, 100.0, 200.0, charge=2, molar_mass=40.08),
+            NutrientParams("Mg", "Magnesium", "Mg+2", 50.0, 60.0, 40.0, 1.3, True, 30.0, 70.0, charge=2, molar_mass=24.31),
         ]
         
         return {nutrient.nutrient_id: nutrient for nutrient in nutrients}

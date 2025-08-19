@@ -1,0 +1,511 @@
+{
+  "_metadata": {
+    "_description": "Hydroponic Lettuce Simulation Configuration",
+    "_version": "1.0.0",
+    "_documentation": "See CONFIG_DOCUMENTATION.md for detailed parameter explanations",
+    "_last_updated": "2024-08-18"
+  },
+
+  "system_config": {
+    "_description": "Physical system setup and infrastructure",
+    "system_id": "HYD1",
+    "crop_id": "LETT",
+    "location_id": "USGA",
+    "tank_volume": 1500.0,
+    "flow_rate": 50.0,
+    "system_type": "NFT",
+    "system_area": 10.0,
+    "n_plants": 48,
+    "description": "Nutrient Film Technique - Lettuce production",
+    "_options": {
+      "system_type": ["NFT", "DWC", "DRIP", "AERO", "WICK", "EBB_FLOW"],
+      "crop_id": ["LETT", "SPIN", "BASIL", "KALE", "CHARD"],
+      "tank_volume_range": "50-10000 L",
+      "flow_rate_range": "5-200 L/min (NFT: 1-4 L/min per channel)",
+      "plant_density": "4-6 plants/m² for lettuce"
+    }
+  },
+
+  "crop_parameters": {
+    "_description": "Plant-specific biological and physical properties",
+    "crop_id": "LETT",
+    "crop_name": "Lettuce",
+    "kcb": 0.90,
+    "phi": 0.85,
+    "crop_height": 0.30,
+    "root_zone_depth": 0.15,
+    "laid": 2.0,
+    "_options": {
+      "kcb_range": "0.7-1.2 (lettuce: 0.8-1.0)",
+      "phi_range": "0.6-0.95 (photosynthetic efficiency)",
+      "crop_height_range": "0.1-2.0 m (lettuce: 0.2-0.4)",
+      "laid_range": "1.0-6.0 (lettuce: 1.5-3.0)"
+    }
+  },
+
+  "simulation_settings": {
+    "_description": "Simulation control and model activation settings",
+    "simulation_days": 30,
+    "start_date": "2024-04-11",
+    "output_frequency": "daily",
+    "use_dynamic_growth": true,
+    "use_mechanistic_uptake": true,
+    "use_rzt_model": true,
+    "use_leaf_model": true,
+    "use_environmental_control": true,
+    "_options": {
+      "simulation_days_range": "1-365 (crop cycle length)",
+      "output_frequency": ["hourly", "daily", "weekly"],
+      "date_format": "YYYY-MM-DD"
+    }
+  },
+
+  "weather_settings": {
+    "_description": "Environmental conditions and weather generation",
+    "source": "generated",
+    "base_temperature": 22.0,
+    "temperature_variation": 5.0,
+    "base_humidity": 70.0,
+    "base_solar_radiation": 18.0,
+    "_options": {
+      "source": ["generated", "file", "api"],
+      "base_temperature_range": "15-30°C (lettuce optimal: 18-24°C)",
+      "temperature_variation_range": "2-15°C (greenhouse: 3-8°C)",
+      "base_humidity_range": "50-90% (optimal: 60-75%)",
+      "solar_radiation_range": "10-50 mol/m²/d (lettuce needs: 12-17)"
+    }
+  },
+
+  "nutrient_parameters": {
+    "_description": "Individual nutrient properties and concentration targets",
+    "N-NO3": {
+      "_description": "Nitrogen-Nitrate - Primary growth driver",
+      "nutrient_id": "N-NO3",
+      "name": "Nitrogen-Nitrate",
+      "formula": "NO3-",
+      "initial_conc": 200.0,
+      "optimal_conc": 250.0,
+      "minimum_conc": 180.0,
+      "uptake_rate": 1.0,
+      "essential": true,
+      "max_conc": 150.0,
+      "toxic_conc": 300.0,
+      "charge": -1,
+      "molar_mass": 14.01,
+      "_range": "180-250 mg/L optimal for lettuce"
+    },
+    "P-PO4": {
+      "_description": "Phosphorus-Phosphate - Energy metabolism and root development",
+      "nutrient_id": "P-PO4",
+      "name": "Phosphorus-Phosphate", 
+      "formula": "PO4-3",
+      "initial_conc": 50.0,
+      "optimal_conc": 60.0,
+      "minimum_conc": 45.0,
+      "uptake_rate": 1.2,
+      "essential": true,
+      "max_conc": 30.0,
+      "toxic_conc": 80.0,
+      "charge": -1,
+      "molar_mass": 30.97,
+      "_range": "30-60 mg/L optimal for lettuce"
+    },
+    "K": {
+      "_description": "Potassium - Osmoregulation and quality enhancement",
+      "nutrient_id": "K",
+      "name": "Potassium",
+      "formula": "K+",
+      "initial_conc": 300.0,
+      "optimal_conc": 350.0,
+      "minimum_conc": 280.0,
+      "uptake_rate": 1.1,
+      "essential": true,
+      "max_conc": 250.0,
+      "toxic_conc": 400.0,
+      "charge": 1,
+      "molar_mass": 39.10,
+      "_range": "250-350 mg/L optimal for lettuce"
+    },
+    "Ca": {
+      "_description": "Calcium - Cell wall structure and disease resistance",
+      "nutrient_id": "Ca",
+      "name": "Calcium",
+      "formula": "Ca+2",
+      "initial_conc": 150.0,
+      "optimal_conc": 180.0,
+      "minimum_conc": 120.0,
+      "uptake_rate": 1.5,
+      "essential": true,
+      "max_conc": 100.0,
+      "toxic_conc": 200.0,
+      "charge": 2,
+      "molar_mass": 40.08,
+      "_range": "120-180 mg/L optimal for lettuce"
+    },
+    "Mg": {
+      "_description": "Magnesium - Chlorophyll center and enzyme activation",
+      "nutrient_id": "Mg",
+      "name": "Magnesium",
+      "formula": "Mg+2",
+      "initial_conc": 50.0,
+      "optimal_conc": 60.0,
+      "minimum_conc": 40.0,
+      "uptake_rate": 1.3,
+      "essential": true,
+      "max_conc": 30.0,
+      "toxic_conc": 70.0,
+      "charge": 2,
+      "molar_mass": 24.31,
+      "_range": "40-60 mg/L optimal for lettuce"
+    }
+  },
+
+  "root_zone_temperature": {
+    "_description": "Root zone temperature model based on 2023-2024 research",
+    "optimal_rzt_offset": 3.0,
+    "min_effective_rzt": 15.0,
+    "max_effective_rzt": 35.0,
+    "linear_growth_slope": 0.08,
+    "rapid_decline_slope": 0.15,
+    "base_growth_factor": 1.0,
+    "_notes": {
+      "optimal_rzt_offset": "°C above air temperature (research: 2-5°C)",
+      "growth_slopes": "Linear increase below optimum, rapid decline above",
+      "temperature_ranges": "15-35°C effective range for root function"
+    }
+  },
+
+  "leaf_development": {
+    "_description": "DSSAT CROPGRO-based leaf development model",
+    "base_phyllochron": 45.0,
+    "min_temp": 4.0,
+    "opt_temp_min": 18.0,
+    "opt_temp_max": 24.0,
+    "max_temp": 35.0,
+    "max_leaf_number": 25.0,
+    "initial_leaf_number": 2.0,
+    "leaf_appearance_rate": 1.0,
+    "max_individual_leaf_area": 0.006,
+    "leaf_area_expansion_rate": 0.12,
+    "specific_leaf_area": 250.0,
+    "water_stress_threshold": 0.5,
+    "nitrogen_stress_threshold": 0.6,
+    "temperature_stress_sensitivity": 0.8,
+    "_notes": {
+      "phyllochron": "Thermal time between leaf appearances (°C-day)",
+      "leaf_area": "0.006 m² = 60 cm² typical lettuce leaf",
+      "expansion_rate": "12% daily growth at optimal conditions",
+      "stress_thresholds": "Below these values = growth reduction"
+    }
+  },
+
+  "environmental_control": {
+    "_description": "VPD optimization, CO2 enrichment, and climate control",
+    "setpoints": {
+      "_description": "Target environmental conditions",
+      "target_vpd": 0.8,
+      "vpd_tolerance": 0.1,
+      "min_humidity": 60.0,
+      "max_humidity": 80.0,
+      "day_temp": 22.0,
+      "night_temp": 18.0,
+      "temp_tolerance": 2.0,
+      "target_co2": 1200.0,
+      "ambient_co2": 400.0,
+      "co2_tolerance": 100.0,
+      "light_hours": 16.0,
+      "light_intensity": 200.0,
+      "_ranges": {
+        "vpd": "0.6-1.2 kPa (lettuce optimal: 0.7-0.9)",
+        "humidity": "50-90% (disease prevention: <80%)",
+        "co2": "800-1500 ppm (photosynthesis enhancement)",
+        "light": "150-400 μmol/m²/s PPFD for lettuce"
+      }
+    },
+    "equipment": {
+      "_description": "Environmental control equipment specifications",
+      "humidifier_capacity": 5.0,
+      "dehumidifier_capacity": 10.0,
+      "humidifier_efficiency": 0.85,
+      "dehumidifier_efficiency": 0.90,
+      "co2_injection_rate": 50.0,
+      "co2_sensor_accuracy": 25.0,
+      "co2_mixing_time": 2.0,
+      "air_exchange_rate": 0.5,
+      "circulation_fan_power": 100.0,
+      "electricity_cost": 0.12,
+      "_units": {
+        "capacity": "L/h water addition/removal",
+        "co2_injection": "μmol/mol/min maximum",
+        "air_exchange": "air changes per hour",
+        "electricity": "$/kWh"
+      }
+    },
+    "pid_parameters": {
+      "_description": "PID controller tuning for different systems",
+      "humidity": {
+        "kp": 2.0,
+        "ki": 0.5,
+        "kd": 0.1,
+        "_note": "Moderate response to avoid oscillation"
+      },
+      "co2": {
+        "kp": 1.5,
+        "ki": 0.3,
+        "kd": 0.05,
+        "_note": "Slower response due to gas mixing time"
+      },
+      "temperature": {
+        "kp": 3.0,
+        "ki": 0.8,
+        "kd": 0.2,
+        "_note": "Faster response, account for thermal mass"
+      }
+    }
+  },
+
+  "photosynthesis_model": {
+    "_description": "Farquhar-type C3 photosynthesis model parameters",
+    "kc": 404.0,
+    "ko": 248.0,
+    "gamma_star": 36.9,
+    "jmax_25": 500.0,
+    "vcmax_25": 250.0,
+    "theta": 0.85,
+    "phi_psii": 0.3,
+    "alpha": 0.2,
+    "rd_25": 0.1,
+    "eaj": 30000.0,
+    "eav": 60000.0,
+    "ear": 46390.0,
+    "r": 8.314,
+    "_units": {
+      "kc_ko": "μmol/mol Michaelis-Menten constants",
+      "jmax_vcmax": "μmol/m²/s maximum rates at 25°C",
+      "activation_energies": "J/mol for temperature response",
+      "quantum_efficiency": "mol CO2/mol photons"
+    },
+    "_adjustment_notes": {
+      "variety_specific": "Adjust jmax_25 and vcmax_25 for different lettuce varieties",
+      "nitrogen_dependent": "Higher vcmax_25 with increased N availability",
+      "light_acclimation": "Modify theta (0.7-0.9) based on growth light levels"
+    }
+  },
+
+  "mechanistic_uptake": {
+    "_description": "Monod kinetics-based nutrient uptake model",
+    "growth_params": {
+      "_description": "Biomass growth and metabolism parameters",
+      "carbon_assimilation_rate": 0.12,
+      "nitrogen_assimilation_rate": 0.018,
+      "structural_growth_efficiency": 0.75,
+      "respiration_rate": 0.02,
+      "fresh_to_dry_ratio": 12.0,
+      "_units": {
+        "assimilation": "g/g-biomass/day",
+        "efficiency": "fraction (0-1)",
+        "ratio": "fresh:dry weight"
+      }
+    },
+    "fault_thresholds": {
+      "_description": "System monitoring and fault detection limits",
+      "uptake_prediction_error": 0.25,
+      "concentration_depletion_rate": 0.15,
+      "biomass_inconsistency": 0.20,
+      "_note": "Fractions above which warnings are triggered"
+    },
+    "kinetic_parameters": {
+      "_description": "Monod kinetics for each nutrient and growth stage",
+      "N-NO3": {
+        "slow_growth": {
+          "_description": "Early growth phase parameters",
+          "vmax": 0.45,
+          "km": 18.0,
+          "min_conc": 5.0,
+          "max_conc": 250.0,
+          "uptake_efficiency": 0.7
+        },
+        "rapid_growth": {
+          "_description": "Exponential growth phase parameters",
+          "vmax": 1.2,
+          "km": 12.0,
+          "min_conc": 10.0,
+          "max_conc": 300.0,
+          "uptake_efficiency": 0.95
+        },
+        "steady_growth": {
+          "_description": "Mature growth phase parameters",
+          "vmax": 0.6,
+          "km": 22.0,
+          "min_conc": 8.0,
+          "max_conc": 200.0,
+          "uptake_efficiency": 0.8
+        }
+      },
+      "P-PO4": {
+        "slow_growth": {
+          "vmax": 0.12,
+          "km": 8.0,
+          "min_conc": 2.0,
+          "max_conc": 60.0,
+          "uptake_efficiency": 0.6
+        },
+        "rapid_growth": {
+          "vmax": 0.28,
+          "km": 6.0,
+          "min_conc": 3.0,
+          "max_conc": 80.0,
+          "uptake_efficiency": 0.85
+        },
+        "steady_growth": {
+          "vmax": 0.15,
+          "km": 10.0,
+          "min_conc": 2.5,
+          "max_conc": 50.0,
+          "uptake_efficiency": 0.7
+        }
+      },
+      "K": {
+        "slow_growth": {
+          "vmax": 0.35,
+          "km": 25.0,
+          "min_conc": 10.0,
+          "max_conc": 350.0,
+          "uptake_efficiency": 0.8
+        },
+        "rapid_growth": {
+          "vmax": 0.75,
+          "km": 20.0,
+          "min_conc": 15.0,
+          "max_conc": 400.0,
+          "uptake_efficiency": 0.9
+        },
+        "steady_growth": {
+          "vmax": 0.85,
+          "km": 18.0,
+          "min_conc": 12.0,
+          "max_conc": 350.0,
+          "uptake_efficiency": 0.95
+        }
+      },
+      "Ca": {
+        "slow_growth": {
+          "vmax": 0.18,
+          "km": 15.0,
+          "min_conc": 5.0,
+          "max_conc": 180.0,
+          "uptake_efficiency": 0.65
+        },
+        "rapid_growth": {
+          "vmax": 0.42,
+          "km": 12.0,
+          "min_conc": 8.0,
+          "max_conc": 200.0,
+          "uptake_efficiency": 0.8
+        },
+        "steady_growth": {
+          "vmax": 0.25,
+          "km": 18.0,
+          "min_conc": 6.0,
+          "max_conc": 160.0,
+          "uptake_efficiency": 0.7
+        }
+      },
+      "Mg": {
+        "slow_growth": {
+          "vmax": 0.08,
+          "km": 8.0,
+          "min_conc": 2.0,
+          "max_conc": 55.0,
+          "uptake_efficiency": 0.7
+        },
+        "rapid_growth": {
+          "vmax": 0.15,
+          "km": 6.0,
+          "min_conc": 3.0,
+          "max_conc": 70.0,
+          "uptake_efficiency": 0.85
+        },
+        "steady_growth": {
+          "vmax": 0.10,
+          "km": 10.0,
+          "min_conc": 2.5,
+          "max_conc": 50.0,
+          "uptake_efficiency": 0.75
+        }
+      },
+      "_parameter_units": {
+        "vmax": "mg/g-biomass/day maximum uptake rate",
+        "km": "mg/L half-saturation concentration",
+        "concentrations": "mg/L solution concentration",
+        "efficiency": "fraction (0-1) stage-specific modifier"
+      }
+    }
+  },
+
+  "nutrient_concentration": {
+    "_description": "Solution chemistry and electrical conductivity factors",
+    "ec_factors": {
+      "_description": "EC contribution per mg/L for each ion",
+      "N-NO3": 0.001,
+      "P-PO4": 0.0008,
+      "K": 0.0012,
+      "Ca": 0.0015,
+      "Mg": 0.0014,
+      "S-SO4": 0.0010,
+      "Fe": 0.002,
+      "Mn": 0.002,
+      "Zn": 0.002,
+      "Cu": 0.002,
+      "B": 0.0018,
+      "Mo": 0.002,
+      "Na": 0.0016,
+      "Cl": 0.0018,
+      "_units": "dS/m per mg/L contribution to total EC"
+    },
+    "minimum_volume_fraction": 0.1,
+    "_notes": {
+      "ec_calculation": "Total EC = Σ(concentration × ec_factor)",
+      "volume_safety": "Minimum tank level = initial_volume × fraction"
+    }
+  },
+
+  "default_values": {
+    "_description": "System initialization and reference values",
+    "initial_ph": 6.0,
+    "initial_ec": 1.8,
+    "initial_rzt": 22.0,
+    "initial_co2": 400.0,
+    "initial_vpd": 0.8,
+    "dissolved_oxygen": 6.0,
+    "minimum_tank_volume": 1.0,
+    "par_conversion_factor": 23.6,
+    "optimal_n_concentration": 200.0,
+    "photoperiod_start_hour": 6,
+    "photoperiod_end_hour": 22,
+    "_ranges": {
+      "ph": "5.5-6.5 optimal for lettuce",
+      "ec": "1.2-2.5 dS/m for lettuce",
+      "dissolved_oxygen": "5-8 mg/L for root health",
+      "photoperiod": "14-16 hours typical for lettuce"
+    }
+  },
+
+  "stress_thresholds": {
+    "_description": "Plant stress detection and response limits",
+    "water_stress_minimum": 0.5,
+    "nitrogen_stress_minimum": 0.6,
+    "temperature_stress": {
+      "lettuce_optimal_min": 18.0,
+      "lettuce_optimal_max": 24.0,
+      "absolute_min": 4.0,
+      "absolute_max": 35.0,
+      "_note": "Below absolute limits = crop failure"
+    },
+    "_stress_effects": {
+      "below_minimum": "Growth reduction and quality loss",
+      "outside_optimal": "Gradual stress accumulation",
+      "beyond_absolute": "Permanent damage or death"
+    }
+  }
+}

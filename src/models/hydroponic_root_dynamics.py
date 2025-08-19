@@ -54,6 +54,7 @@ class HydroponicRootSystem:
     root_growth_rate: float             # g/day - daily root mass increase
     root_senescence_rate: float         # g/day - daily root mass loss
     uptake_efficiency: float            # fraction (0-1) - current uptake efficiency
+    system_type: HydroponicSystemType
 
 
 class HydroponicRootModel:
@@ -74,7 +75,7 @@ class HydroponicRootModel:
             'root_tissue_density': 0.15,   # g/cm³ - root tissue density
             
             # Growth rates by stage
-            'establishment_growth': 0.8,    # g/g/day - rapid early root growth
+            'establishment_growth': 1.5,    # g/g/day - rapid early root growth
             'vegetative_growth': 0.15,      # g/g/day - steady vegetative growth
             'reproductive_growth': 0.05,    # g/g/day - slow reproductive growth
             
@@ -138,12 +139,12 @@ class HydroponicRootModel:
         
         return system_configs.get(self.system_type, system_configs[HydroponicSystemType.NFT])
     
-    def initialize_root_system(self, plant_count: int, seedling_weight: float = 2.0) -> HydroponicRootSystem:
+    def initialize_root_system(self, plant_count: int, seedling_weight: float = 2.0, system_enum: HydroponicSystemType = HydroponicSystemType.NFT) -> HydroponicRootSystem:
         """Initialize root system for transplanted seedlings."""
         
         # Initial root mass (typically 15-20% of total seedling weight)
         initial_root_fraction = 0.18
-        total_initial_root_mass = plant_count * seedling_weight * initial_root_fraction / 1000.0  # Convert mg to g
+        total_initial_root_mass = plant_count * seedling_weight * initial_root_fraction  # seedling_weight is in g
         
         # Calculate initial root parameters
         initial_srl = self.growth_params['initial_srl']
@@ -177,7 +178,8 @@ class HydroponicRootModel:
             # Initial growth rates
             root_growth_rate=0.0,
             root_senescence_rate=0.0,
-            uptake_efficiency=0.7  # Initial efficiency
+            uptake_efficiency=0.7,  # Initial efficiency
+            system_type=system_enum
         )
     
     def calculate_daily_root_growth(self, root_system: HydroponicRootSystem, 
@@ -266,7 +268,8 @@ class HydroponicRootModel:
             # Store growth rates
             root_growth_rate=daily_growth,
             root_senescence_rate=total_senescence,
-            uptake_efficiency=new_uptake_efficiency
+            uptake_efficiency=new_uptake_efficiency,
+            system_type=root_system.system_type
         )
         
         return updated_root_system
