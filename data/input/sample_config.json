@@ -671,6 +671,167 @@
       "memory_effect_strength": 0.3
     }
   },
+  "root_architecture": {
+    "system_type": "NFT",
+    "container_volume": 1500.0,
+    "parameters": {
+      "primary_root_growth_rate": 2.0,
+      "lateral_root_density": 3.5,
+      "branching_angle_mean": 45.0,
+      "branching_angle_std": 15.0,
+      "fine_root_fraction": 0.65,
+      "medium_root_fraction": 0.30,
+      "coarse_root_fraction": 0.05,
+      "fine_diameter_mean": 0.12,
+      "fine_diameter_std": 0.04,
+      "medium_diameter_mean": 0.4,
+      "medium_diameter_std": 0.15,
+      "coarse_diameter_mean": 1.2,
+      "coarse_diameter_std": 0.4,
+      "fine_turnover_rate": 0.02,
+      "medium_turnover_rate": 0.01,
+      "coarse_turnover_rate": 0.005
+    },
+    "system_multipliers": {
+      "NFT": {
+        "root_length_multiplier": 1.0,
+        "surface_area_multiplier": 1.0,
+        "branching_multiplier": 1.0
+      },
+      "DWC": {
+        "root_length_multiplier": 0.8,
+        "surface_area_multiplier": 1.1,
+        "branching_multiplier": 1.2
+      },
+      "AEROPONICS": {
+        "root_length_multiplier": 1.5,
+        "surface_area_multiplier": 2.0,
+        "branching_multiplier": 3.0
+      }
+    },
+    "uptake_parameters": {
+      "base_uptake_rates": {
+        "NO3": 0.25,
+        "NH4": 0.15,
+        "PO4": 0.05,
+        "K": 0.20,
+        "Ca": 0.10,
+        "Mg": 0.08,
+        "SO4": 0.06
+      },
+      "michaelis_constants": {
+        "NO3": 50.0,
+        "NH4": 20.0,
+        "PO4": 5.0,
+        "K": 30.0,
+        "Ca": 40.0,
+        "Mg": 25.0,
+        "SO4": 35.0
+      },
+      "fine_root_effectiveness": 1.0,
+      "medium_root_effectiveness": 0.6,
+      "coarse_root_effectiveness": 0.2,
+      "optimal_temperature": 20.0,
+      "q10_factor": 2.0,
+      "optimal_flow_rate": 1.5,
+      "flow_stress_threshold": 4.0
+    }
+  },
+  "genetic_parameters": {
+    "default_cultivar": "HYDRO_001",
+    "cultivar_database": {
+      "HYDRO_001": {
+        "cultivar_name": "Salanova Green Butter",
+        "lettuce_type": "butterhead", 
+        "breeder": "Rijk Zwaan",
+        "year_released": 2018,
+        "genetic_coefficients": {
+          "EM_FL": 26.0,
+          "FL_SH": 15.0,
+          "FL_SD": 24.0,
+          "SD_PM": 35.0,
+          "LFMAX": 1.35,
+          "SLAVR": 190.0,
+          "SIZLF": 28.0,
+          "EC_TOLERANCE": 1.6,
+          "NITRATE_EFFICIENCY": 0.92,
+          "ROOT_ACTIVITY": 1.15,
+          "PHOTOSYNTHETIC_CAPACITY": 1.08
+        },
+        "trait_values": {
+          "days_to_emergence": 0.95,
+          "days_to_harvest": 0.9,
+          "bolting_tolerance": 0.85,
+          "leaf_size": 0.85,
+          "chlorophyll_content": 0.9,
+          "heat_tolerance": 0.8,
+          "cold_tolerance": 0.8,
+          "salinity_tolerance": 0.85,
+          "nitrate_accumulation": 0.1
+        },
+        "yield_potential": 1.1,
+        "adaptation_score": 0.95,
+        "commercial_rating": 1.0
+      },
+      "BUTT_001": {
+        "cultivar_name": "Buttercrunch",
+        "lettuce_type": "butterhead",
+        "breeder": "Burpee Seeds", 
+        "year_released": 1963,
+        "genetic_coefficients": {
+          "EM_FL": 32.0,
+          "FL_SH": 18.0,
+          "FL_SD": 28.0,
+          "SD_PM": 40.0,
+          "LFMAX": 1.1,
+          "SLAVR": 175.0,
+          "SIZLF": 22.0,
+          "EC_TOLERANCE": 1.2,
+          "NITRATE_EFFICIENCY": 0.82,
+          "ROOT_ACTIVITY": 0.95,
+          "PHOTOSYNTHETIC_CAPACITY": 0.95
+        },
+        "trait_values": {
+          "days_to_emergence": 0.8,
+          "days_to_harvest": 0.7,
+          "bolting_tolerance": 0.6,
+          "leaf_size": 0.8,
+          "chlorophyll_content": 0.7,
+          "heat_tolerance": 0.5,
+          "cold_tolerance": 0.8,
+          "salinity_tolerance": 0.6,
+          "nitrate_accumulation": 0.3
+        },
+        "yield_potential": 0.85,
+        "adaptation_score": 0.9,
+        "commercial_rating": 0.9
+      }
+    },
+    "breeding_parameters": {
+      "heterosis_factor": 1.05,
+      "trait_heritability": {
+        "days_to_emergence": 0.7,
+        "days_to_harvest": 0.8,
+        "bolting_tolerance": 0.6,
+        "heat_tolerance": 0.75,
+        "cold_tolerance": 0.8,
+        "yield_potential": 0.5,
+        "nitrate_accumulation": 0.65
+      },
+      "environmental_sensitivity": {
+        "temperature_stress_impact": 0.6,
+        "light_stress_impact": 0.4,
+        "nutrient_stress_impact": 0.5,
+        "salinity_stress_impact": 0.3
+      }
+    },
+    "g_by_e_parameters": {
+      "temperature_interaction_strength": 0.8,
+      "light_interaction_strength": 0.6,
+      "nutrient_interaction_strength": 0.7,
+      "adaptation_plasticity": 0.3
+    }
+  },
   "default_values": {
     "initial_ph": 6.0,
     "initial_ec": 1.8,

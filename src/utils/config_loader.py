@@ -30,6 +30,8 @@ class SimulationConfig:
     nitrogen_balance: Dict[str, Any]
     nutrient_mobility: Dict[str, Any]
     temperature_stress: Dict[str, Any]
+    root_architecture: Dict[str, Any]
+    genetic_parameters: Dict[str, Any]
     default_values: Dict[str, Any]
     stress_thresholds: Dict[str, Any]
 
@@ -72,6 +74,8 @@ class ConfigLoader:
                 nitrogen_balance=config_data.get('nitrogen_balance', {}),
                 nutrient_mobility=config_data.get('nutrient_mobility', {}),
                 temperature_stress=config_data.get('temperature_stress', {}),
+                root_architecture=config_data.get('root_architecture', {}),
+                genetic_parameters=config_data.get('genetic_parameters', {}),
                 default_values=config_data.get('default_values', {}),
                 stress_thresholds=config_data.get('stress_thresholds', {})
             )
@@ -244,6 +248,31 @@ def get_rzt_parameter(key: str, default: Any = None) -> Any:
 def get_leaf_parameter(key: str, default: Any = None) -> Any:
     """Get a leaf development parameter from configuration."""
     return get_config_loader().get_value('leaf_development', key, default)
+
+
+def get_root_architecture_parameter(key: str, default: Any = None) -> Any:
+    """Get a root architecture parameter from configuration."""
+    return get_config_loader().get_nested_value('root_architecture', 'parameters', key, default)
+
+
+def get_root_uptake_parameter(key: str, default: Any = None) -> Any:
+    """Get a root uptake parameter from configuration."""
+    return get_config_loader().get_nested_value('root_architecture', 'uptake_parameters', key, default)
+
+
+def get_genetic_parameter(key: str, default: Any = None) -> Any:
+    """Get a genetic parameter from configuration."""
+    return get_config_loader().get_value('genetic_parameters', key, default)
+
+
+def get_cultivar_data(cultivar_id: str, default: Any = None) -> Any:
+    """Get cultivar data from configuration."""
+    return get_config_loader().get_nested_value('genetic_parameters', 'cultivar_database', cultivar_id, default)
+
+
+def get_breeding_parameter(key: str, default: Any = None) -> Any:
+    """Get a breeding parameter from configuration."""
+    return get_config_loader().get_nested_value('genetic_parameters', 'breeding_parameters', key, default)
 
 
 def get_environmental_setpoint(key: str, default: Any = None) -> Any:
