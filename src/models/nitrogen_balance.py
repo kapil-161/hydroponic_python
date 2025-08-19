@@ -258,7 +258,7 @@ class NitrogenBalanceResponse:
     organ_states: Dict[str, OrganNitrogenState]
     total_plant_nitrogen: float
     nitrogen_use_efficiency: float
-    nitrogen_stress_factor: float                # 0-1, 1=no stress
+    nitrogen_stress_level: float                 # 0-1, 0=no stress, 1=max stress
     remobilized_nitrogen: float                  # g N remobilized today
     nitrogen_balance: float                      # Net N balance (uptake - growth demand)
 
@@ -597,15 +597,15 @@ class PlantNitrogenBalanceModel:
         else:
             organ_state.nitrogen_status = 'unknown'
     
-    def calculate_nitrogen_stress_factor(self) -> float:
+    def calculate_nitrogen_stress_level(self) -> float:
         """
-        Calculate overall plant nitrogen stress factor.
+        Calculate overall plant nitrogen stress level.
         
         Returns:
-            Nitrogen stress factor (0-1, 1=no stress)
+            Nitrogen stress level (0-1, 0=no stress, 1=max stress)
         """
         if not self.organ_states:
-            return 1.0
+            return 0.0
         
         # Weight stress by organ importance
         organ_weights = {
@@ -625,15 +625,15 @@ class PlantNitrogenBalanceModel:
                 critical_conc = n_concs['critical']
                 optimal_conc = n_concs['optimal']
                 
-                # Calculate stress factor for this organ
+                # Calculate stress level for this organ (0=no stress, 1=max stress)
                 if current_conc >= optimal_conc:
-                    organ_stress = 1.0  # No stress
+                    organ_stress = 0.0  # No stress
                 elif current_conc >= critical_conc:
-                    # Linear decline from optimal to critical
-                    organ_stress = (current_conc - critical_conc) / (optimal_conc - critical_conc)
+                    # Linear increase from optimal to critical
+                    organ_stress = 1.0 - (current_conc - critical_conc) / (optimal_conc - critical_conc)
                 else:
-                    # Severe stress below critical
-                    organ_stress = 0.1
+                    # Maximum stress below critical
+                    organ_stress = 0.9
                 
                 # Apply weighting
                 weight = organ_weights.get(organ_name, 0.1)
@@ -643,9 +643,9 @@ class PlantNitrogenBalanceModel:
         if total_weight > 0:
             overall_stress = weighted_stress / total_weight
         else:
-            overall_stress = 1.0
+            overall_stress = 0.0
         
-        return max(0.1, min(1.0, overall_stress))
+        return max(0.0, min(1.0, overall_stress))
     
     def daily_update(self, root_mass: float,
                     solution_concentrations: Dict[str, float],
@@ -723,7 +723,7 @@ class PlantNitrogenBalanceModel:
                 self.update_organ_nitrogen_status(organ_name)
         
         # Calculate overall nitrogen stress
-        n_stress_factor = self.calculate_nitrogen_stress_factor()
+        n_stress_level = self.calculate_nitrogen_stress_level()
         
         # Calculate nitrogen use efficiency
         total_plant_n = sum(state.total_nitrogen for state in self.organ_states.values())
@@ -748,7 +748,7 @@ class PlantNitrogenBalanceModel:
             'remobilized': remobilized_n,
             'total_plant_n': total_plant_n,
             'nue': nue,
-            'n_stress': n_stress_factor
+            'n_stress': n_stress_level
         }
         self.nitrogen_history.append(daily_record)
         
@@ -758,7 +758,7 @@ class PlantNitrogenBalanceModel:
             organ_states=self.organ_states.copy(),
             total_plant_nitrogen=total_plant_n,
             nitrogen_use_efficiency=nue,
-            nitrogen_stress_factor=n_stress_factor,
+            nitrogen_stress_level=n_stress_level,
             remobilized_nitrogen=remobilized_n,
             nitrogen_balance=n_balance
         )
@@ -779,7 +779,7 @@ class PlantNitrogenBalanceModel:
             'nitrogen_use_efficiency': total_biomass / max(total_plant_n, 0.001),
             'cumulative_uptake': self.total_cumulative_uptake,
             'cumulative_remobilization': self.total_cumulative_remobilization,
-            'nitrogen_stress_factor': self.calculate_nitrogen_stress_factor(),
+            'nitrogen_stress_level': self.calculate_nitrogen_stress_level(),
             'organ_n_concentrations': {
                 name: state.nitrogen_concentration 
                 for name, state in self.organ_states.items()
@@ -892,7 +892,7 @@ def demonstrate_nitrogen_balance_model():
         
         print(f"{day:<4} {response.uptake_response.total_uptake:<7.3f} "
               f"{response.remobilized_nitrogen:<6.3f} {leaf_n_pct:<7.2f} "
-              f"{response.nitrogen_stress_factor:<7.3f} {response.nitrogen_use_efficiency:<6.1f} "
+              f"{response.nitrogen_stress_level:<7.3f} {response.nitrogen_use_efficiency:<6.1f} "
               f"{response.nitrogen_balance:<8.3f}")
     
     # Final summary
@@ -903,7 +903,7 @@ def demonstrate_nitrogen_balance_model():
     print(f"• Nitrogen use efficiency: {summary['nitrogen_use_efficiency']:.1f} g biomass/g N")
     print(f"• Cumulative uptake: {summary['cumulative_uptake']:.2f} g N")
     print(f"• Cumulative remobilization: {summary['cumulative_remobilization']:.3f} g N")
-    print(f"• Nitrogen stress factor: {summary['nitrogen_stress_factor']:.3f}")
+    print(f"• Nitrogen stress level: {summary['nitrogen_stress_level']:.3f}")
     
     print(f"\nOrgan nitrogen concentrations:")
     for organ, conc in summary['organ_n_concentrations'].items():

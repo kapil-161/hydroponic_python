@@ -153,10 +153,10 @@ class CROPGROHydroponicSimulator:
         # Initial biomass based on cultivar characteristics
         cultivar_coeffs = self.cultivar_profile.genetic_coefficients
         
-        # Initialize biomass pools
-        initial_leaf_biomass = 2.5 * cultivar_coeffs.SIZLF / 25.0  # Scale with leaf size
-        initial_stem_biomass = 1.0
-        initial_root_biomass = 2.0 * cultivar_coeffs.ROOT_ACTIVITY
+        # Initialize biomass pools for TRUE SEED SOWING (start from zero)
+        initial_leaf_biomass = 0.0  # No leaves at seed stage
+        initial_stem_biomass = 0.0  # No stem at seed stage  
+        initial_root_biomass = 0.0  # No roots at seed stage
         
         self.biomass_pools = [
             BiomassPool(TissueType.LEAVES, initial_leaf_biomass, 2.0, 4.5, 0.0),
@@ -186,9 +186,9 @@ class CROPGROHydroponicSimulator:
         self.mobility_model.initialize_organ_pools('roots',
             {k: v*0.80 for k, v in initial_nutrients.items()}, initial_root_biomass)
         
-        # Initial canopy parameters
-        self.current_lai = 0.8
-        self.canopy_height = 0.08  # 8 cm initial height
+        # Initial canopy parameters for SEED STAGE
+        self.current_lai = 0.0  # No leaf area at seed stage
+        self.canopy_height = 0.0  # No height at seed stage
         
         # Simulation tracking
         self.simulation_day = 0
@@ -357,6 +357,7 @@ class CROPGROHydroponicSimulator:
         
         # === 2. GENETIC × ENVIRONMENT INTERACTIONS ===
         # Proper temperature stress calculation using cultivar-specific optimal ranges
+        # STRESS CONVENTION: 1.0 = maximum stress, 0.0 = no stress
         optimal_temp_min = 18.0  # Lettuce optimal minimum
         optimal_temp_max = 24.0  # Lettuce optimal maximum
         
@@ -376,7 +377,7 @@ class CROPGROHydroponicSimulator:
         environment_factors = {
             'temperature_stress': temp_stress_value,
             'light_intensity': min(2.0, solar_radiation / 15.0),
-            'nitrogen_status': self.nitrogen_model.calculate_nitrogen_stress_factor(),
+            'nitrogen_status': 1.0 - self.nitrogen_model.calculate_nitrogen_stress_level(),  # Convert to factor
             'salinity_stress': max(0.0, (self._calculate_ec(nutrient_concentrations) - 1.8) / 2.0)
         }
         
@@ -394,7 +395,7 @@ class CROPGROHydroponicSimulator:
             ec=self._calculate_ec(nutrient_concentrations),
             root_zone_temp=actual_temperature  # Simplified - could be different
         )
-        # Convert stress level to stress factor (1.0 = no stress, 0.0 = maximum stress)
+        # Convert stress level to factor format for phenology model compatibility
         temp_stress_factor = 1.0 - environment_factors['temperature_stress']
         
         phenology_response = self.phenology_model.daily_update(
@@ -410,14 +411,15 @@ class CROPGROHydroponicSimulator:
         # === 4. STRESS MODEL UPDATES ===
         temp_stress_response = self.temperature_stress.daily_update(actual_temperature)
         
+        # CONSISTENT CONVENTION: All values as stress levels (0.0 = no stress, 1.0 = maximum stress)
         stress_levels = {
-            'water': water_stress,
-            'temperature': temp_stress_response.process_factors.overall,
-            'nutrient': environment_factors['nitrogen_status'],
-            'light': min(1.0, environment_factors['light_intensity']),
-            'salinity': 1.0 - environment_factors['salinity_stress'],
-            'oxygen': 0.95,  # Good in hydroponics
-            'ph': 0.9
+            'water': water_stress,  # Now returns stress level directly
+            'temperature': 1.0 - temp_stress_response.process_factors.overall,  # Convert factor to stress level
+            'nutrient': 1.0 - environment_factors['nitrogen_status'],  # Convert factor to stress level
+            'light': max(0.0, 1.0 - environment_factors['light_intensity']),  # Convert factor to stress level
+            'salinity': environment_factors['salinity_stress'],  # Already stress level
+            'oxygen': 0.05,  # Low stress in hydroponics
+            'ph': 0.1  # Low stress
         }
         
         integrated_stress_response = self.integrated_stress.daily_update(
@@ -660,7 +662,7 @@ class CROPGROHydroponicSimulator:
             estimated_daily_n_demand = total_new_growth * 0.04 * 1000  # mg/day
             cropgro_result.nitrogen_uptake_mg = max(5.0, estimated_daily_n_demand)  # Minimum 5 mg/day
         cropgro_result.nitrogen_demand_mg = 50.0  # Default value for now
-        cropgro_result.nitrogen_stress_factor = getattr(nitrogen_response, 'nitrogen_stress_factor', 1.0)
+        cropgro_result.nitrogen_stress_factor = 1.0 - getattr(nitrogen_response, 'nitrogen_stress_level', 0.0)  # Convert to factor
         cropgro_result.leaf_nitrogen_conc = 4.5  # Default
         cropgro_result.root_nitrogen_conc = 2.8  # Default
         
@@ -821,10 +823,9 @@ class CROPGROHydroponicSimulator:
             root_zone_temp: Root zone temperature (°C)
             
         Returns:
-            Water stress factor (1.0 = no stress, 0.0 = maximum stress)
+            Water stress level (0.0 = no stress, 1.0 = maximum stress)
         """
-        # Base water stress factor (hydroponics start high but can vary significantly)
-        base_water_factor = 0.92  # Start a bit lower to allow for more variation
+        # Calculate individual stress components
         
         # VPD stress (too high VPD causes significant water stress even in hydroponics)
         optimal_vpd_min, optimal_vpd_max = 0.6, 1.0  # kPa optimal range for lettuce
@@ -866,11 +867,11 @@ class CROPGROHydroponicSimulator:
         else:
             humidity_stress = 0.0
         
-        # Calculate final water stress factor with more dynamic range
+        # Calculate final water stress level (0=no stress, 1=max stress)
         total_stress = vpd_stress + ec_stress + root_temp_stress + temp_demand_stress + humidity_stress
-        water_stress_factor = max(0.4, base_water_factor - total_stress)  # Lower minimum for more variation
+        water_stress_level = min(0.6, total_stress)  # Cap maximum stress at 0.6
         
-        return water_stress_factor
+        return water_stress_level
     
     def _calculate_summary_statistics(self, daily_results: List[DailyResults]) -> Dict[str, Any]:
         """Calculate comprehensive summary statistics"""
@@ -981,7 +982,7 @@ class CROPGROHydroponicSimulator:
         output.append(f"\n🧪 NITROGEN DYNAMICS:")
         output.append(f"  • N Uptake: {getattr(daily_result, 'nitrogen_uptake_mg', 0.0):.2f} mg/day")
         output.append(f"  • N Demand: {getattr(daily_result, 'nitrogen_demand_mg', 0.0):.2f} mg/day")
-        output.append(f"  • N Stress Factor: {getattr(daily_result, 'nitrogen_stress_factor', 1.0):.3f}")
+        output.append(f"  • N Stress Level: {1.0 - getattr(daily_result, 'nitrogen_stress_factor', 1.0):.3f}")
         output.append(f"  • Leaf N Concentration: {getattr(daily_result, 'leaf_nitrogen_conc', 0.0):.3f}%")
         output.append(f"  • Root N Concentration: {getattr(daily_result, 'root_nitrogen_conc', 0.0):.3f}%")
         
