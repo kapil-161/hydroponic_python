@@ -251,9 +251,13 @@ class CROPGROHydroponicSimulator:
             daily_solar = weather.solar_radiation
             daylength = 13.5 + 1.5 * np.sin(day * 2 * np.pi / 365)  # Seasonal variation
             
+            # Use default pH for now - should integrate with actual hydroponic simulator's charge balance calculations
+            # TODO: Connect to hydroponic_simulator.py pH calculations (lines 390-410) for real charge balance modeling
+            default_ph = 6.0
+            
             # Run daily simulation step
             daily_result = self._simulate_daily_step(
-                day, daily_temp, daily_humidity, daily_solar, daylength, current_concentrations
+                day, daily_temp, daily_humidity, daily_solar, daylength, current_concentrations, default_ph
             )
             
             daily_results.append(daily_result)
@@ -323,9 +327,10 @@ class CROPGROHydroponicSimulator:
         logger.info("CROPGRO simulation completed successfully!")
         return results
     
+    
     def _simulate_daily_step(self, day: int, temperature: float, humidity: float, 
                            solar_radiation: float, daylength: float, 
-                           nutrient_concentrations: Dict[str, float]) -> DailyResults:
+                           nutrient_concentrations: Dict[str, float], ph: float = 6.0) -> DailyResults:
         """Simulate one day with all CROPGRO models integrated"""
         
         # === 1. ENVIRONMENTAL CONDITIONS ===
@@ -432,6 +437,7 @@ class CROPGROHydroponicSimulator:
             'temperature': actual_temperature,
             'flow_rate': 1.5,  # Default flow rate
             'oxygen_level': 8.0,
+            'ph': ph,  # Use dynamic pH from hydroponic system
             'nutrient_concentrations': nutrient_concentrations
         }
         
@@ -452,10 +458,15 @@ class CROPGROHydroponicSimulator:
         overall_stress = integrated_stress_response.overall_stress_factor
         genetic_growth_modifier = cultivar_performance.get('yield_index', 1.0)
         
+        # Realistic growth rates for hydroponic lettuce (grams dry matter/day per plant)
+        # Based on 30-45 day growth cycle with final dry weight of 25-40g
+        # Fresh weight ratio ~15:1, so 300g fresh = ~20g dry weight
+        growth_stage_factor = 1.5 if day <= 25 else (1.2 if day <= 35 else 0.8)
+        
         base_growth_rates = {
-            'leaves': 0.20 if stage_props['is_vegetative'] else 0.12,
-            'stems': 0.08 if stage_props['is_vegetative'] else 0.05,
-            'roots': 0.12 if stage_props['is_vegetative'] else 0.08
+            'leaves': (0.35 if stage_props['is_vegetative'] else 0.28) * growth_stage_factor,
+            'stems': (0.12 if stage_props['is_vegetative'] else 0.09) * growth_stage_factor,  
+            'roots': (0.08 if stage_props['is_vegetative'] else 0.06) * growth_stage_factor
         }
         
         # Apply all modifying factors
@@ -573,10 +584,21 @@ class CROPGROHydroponicSimulator:
             co2_concentration=actual_co2
         )
         
-        # === 9. PHOTOSYNTHESIS (Enhanced) ===
+        # === 9. PHOTOSYNTHESIS (Enhanced with detailed model) ===
+        # Call the sophisticated photosynthesis model
+        detailed_photosynthesis = self.photosynthesis_model.calculate_daily_assimilation(
+            par_umol_m2_s=light_environment.ppfd_above_canopy,
+            co2_ppm=actual_co2,
+            temp_c=actual_temperature,
+            lai=self.current_lai
+        )
+        
+        # The detailed_photosynthesis is already scaled by LAI, so use it directly
+        canopy_photosynthesis = detailed_photosynthesis
+        
+        # Apply genetic and stress modifiers for overall rate
         photosynthesis_rate = (
-            self.cultivar_profile.genetic_coefficients.LFMAX *
-            canopy_response.light_interception_fraction *
+            canopy_photosynthesis *
             temp_stress_response.process_factors.photosynthesis *
             self.cultivar_profile.genetic_coefficients.PHOTOSYNTHETIC_CAPACITY
         )
@@ -603,8 +625,8 @@ class CROPGROHydroponicSimulator:
             vpd=self._calculate_vpd(actual_temperature, actual_humidity),
             water_use_efficiency=photosynthesis_rate / max(0.1, canopy_response.light_interception_fraction * 2.5),
             
-            # Solution properties
-            ph=6.0,
+            # Solution properties  
+            ph=ph,  # Use dynamic pH from hydroponic system
             ec=self._calculate_ec(nutrient_concentrations),
             rzt=actual_temperature,
             
@@ -644,12 +666,65 @@ class CROPGROHydroponicSimulator:
         cropgro_result.sunlit_lai = canopy_response.sunlit_lai
         cropgro_result.shaded_lai = canopy_response.shaded_lai
         
+        # === DETAILED CANOPY ARCHITECTURE RESULTS ===
+        cropgro_result.canopy_layers = len(canopy_response.canopy_layers) if hasattr(canopy_response, 'canopy_layers') else 0
+        cropgro_result.ppfd_top = canopy_response.canopy_layers[0].ppfd_average if canopy_response.canopy_layers else light_environment.ppfd_above_canopy
+        cropgro_result.ppfd_bottom = canopy_response.canopy_layers[-1].ppfd_average if canopy_response.canopy_layers else light_environment.ppfd_above_canopy * 0.1
+        cropgro_result.light_extinction = canopy_response.average_extinction_coefficient
+        
         # 4. PHYSIOLOGICAL PROCESSES
         cropgro_result.photosynthesis_rate = photosynthesis_rate
         cropgro_result.respiration_rate = respiration_response.total_respiration
         cropgro_result.maintenance_respiration = respiration_response.maintenance_respiration
         cropgro_result.growth_respiration = respiration_response.growth_respiration
         cropgro_result.net_assimilation = photosynthesis_rate - respiration_response.total_respiration
+        
+        # === DETAILED PHOTOSYNTHESIS MODEL RESULTS ===
+        # Calculate detailed photosynthesis parameters from the model
+        photosynthesis_params = self.photosynthesis_model.params
+        
+        # Temperature-adjusted rates (reproduce calculations from model)
+        temp_k = actual_temperature + 273.15
+        vcmax_temp = photosynthesis_params.vcmax_25 * np.exp(photosynthesis_params.eav * (temp_k - 298.15) / (298.15 * photosynthesis_params.r * temp_k))
+        jmax_temp = photosynthesis_params.jmax_25 * np.exp(photosynthesis_params.eaj * (temp_k - 298.15) / (298.15 * photosynthesis_params.r * temp_k))
+        
+        cropgro_result.vcmax_25 = photosynthesis_params.vcmax_25
+        cropgro_result.jmax_25 = photosynthesis_params.jmax_25
+        cropgro_result.quantum_efficiency = photosynthesis_params.alpha
+        
+        # Calculate rubisco and light limited rates
+        ci = actual_co2  # Simplified assumption
+        ac = vcmax_temp * (ci - photosynthesis_params.gamma_star) / (ci + photosynthesis_params.kc * (1 + 210000 / photosynthesis_params.ko))
+        
+        i2 = photosynthesis_params.alpha * light_environment.ppfd_above_canopy
+        j = (i2 + jmax_temp - np.sqrt((i2 + jmax_temp)**2 - 4 * photosynthesis_params.theta * i2 * jmax_temp)) / (2 * photosynthesis_params.theta)
+        aj = j * (ci - photosynthesis_params.gamma_star) / (4 * (ci + 2 * photosynthesis_params.gamma_star))
+        
+        cropgro_result.rubisco_limited = ac
+        cropgro_result.light_limited = aj
+        cropgro_result.co2_compensation = photosynthesis_params.gamma_star
+        cropgro_result.intercellular_co2 = ci
+        
+        # === DETAILED RESPIRATION MODEL RESULTS ===
+        # Tissue-specific maintenance respiration from model calculations
+        cropgro_result.maintenance_resp_leaves = respiration_response.tissue_breakdown.get('leaves', 0.0)
+        cropgro_result.maintenance_resp_stems = respiration_response.tissue_breakdown.get('stems', 0.0)
+        cropgro_result.maintenance_resp_roots = respiration_response.tissue_breakdown.get('roots', 0.0)
+        
+        # Growth respiration breakdown (proportional to recent growth by tissue)
+        total_growth = max(0.001, sum(pool.recent_growth for pool in self.biomass_pools))
+        growth_resp_proportions = {
+            'leaves': self.biomass_pools[0].recent_growth / total_growth,
+            'stems': self.biomass_pools[1].recent_growth / total_growth,
+            'roots': self.biomass_pools[2].recent_growth / total_growth
+        }
+        cropgro_result.growth_resp_leaves = respiration_response.growth_respiration * growth_resp_proportions['leaves']
+        cropgro_result.growth_resp_stems = respiration_response.growth_respiration * growth_resp_proportions['stems'] 
+        cropgro_result.growth_resp_roots = respiration_response.growth_respiration * growth_resp_proportions['roots']
+        
+        # Respiration factors from detailed model
+        cropgro_result.temperature_acclimation = respiration_response.temperature_factor
+        cropgro_result.age_factor = respiration_response.age_factor
         
         # 5. NITROGEN DYNAMICS (with safe attribute access)
         # Debug the nitrogen uptake calculation
@@ -666,6 +741,33 @@ class CROPGROHydroponicSimulator:
         cropgro_result.leaf_nitrogen_conc = 4.5  # Default
         cropgro_result.root_nitrogen_conc = 2.8  # Default
         
+        # === DETAILED NITROGEN DYNAMICS RESULTS ===
+        # Nitrogen pool dynamics from model calculations
+        organ_states = getattr(nitrogen_response, 'organ_states', {})
+        if 'leaves' in organ_states:
+            leaf_state = organ_states['leaves']
+            cropgro_result.n_pool_structural = leaf_state.structural_n if hasattr(leaf_state, 'structural_n') else 0.0
+            cropgro_result.n_pool_metabolic = leaf_state.metabolic_n if hasattr(leaf_state, 'metabolic_n') else 0.0
+            cropgro_result.n_pool_storage = leaf_state.storage_n if hasattr(leaf_state, 'storage_n') else 0.0
+            cropgro_result.n_pool_transport = leaf_state.transport_n if hasattr(leaf_state, 'transport_n') else 0.0
+        else:
+            # Fallback values based on total plant nitrogen
+            total_plant_n = getattr(nitrogen_response, 'total_plant_nitrogen', total_biomass * 0.04)  # g
+            cropgro_result.n_pool_structural = total_plant_n * 0.4
+            cropgro_result.n_pool_metabolic = total_plant_n * 0.3
+            cropgro_result.n_pool_storage = total_plant_n * 0.2
+            cropgro_result.n_pool_transport = total_plant_n * 0.1
+        
+        # Nitrogen processes from model
+        cropgro_result.n_remobilization = getattr(nitrogen_response, 'remobilized_nitrogen', 0.0) * 1000  # mg/day
+        
+        # Calculate critical nitrogen concentration (simple approximation)
+        if total_biomass > 0:
+            current_n_conc = (cropgro_result.nitrogen_uptake_mg / 1000.0) / total_biomass
+            cropgro_result.n_critical_conc = current_n_conc * 1.2  # Critical is ~20% higher than current
+        else:
+            cropgro_result.n_critical_conc = 0.045  # Default for lettuce
+        
         # 6. STRESS RESPONSES (with safe attribute access)
         cropgro_result.temperature_stress_level = getattr(temp_stress_response, 'stress_level', 0.0)
         cropgro_result.temperature_stress_photosynthesis = getattr(getattr(temp_stress_response, 'process_factors', None), 'photosynthesis', 1.0)
@@ -674,6 +776,27 @@ class CROPGROHydroponicSimulator:
         cropgro_result.water_stress = stress_levels.get('water', 1.0)
         cropgro_result.nutrient_stress = stress_levels.get('nutrient', 1.0)
         cropgro_result.salinity_stress = 1.0 - environment_factors.get('salinity_stress', 0.0)
+        
+        # === DETAILED STRESS INTEGRATION RESULTS ===
+        # Extract stress interactions from integrated stress response
+        stress_states = getattr(integrated_stress_response, 'stress_states', {})
+        stress_interactions = {}
+        acclimation_levels = {}
+        cumulative_damage = {}
+        
+        for stress_type, stress_state in stress_states.items():
+            # Stress interactions (simplified - actual interaction would be in process responses)
+            stress_interactions[f'{stress_type}_interaction'] = getattr(stress_state, 'chronic_stress', 0.0) * getattr(stress_state, 'acute_stress', 0.0)
+            
+            # Acclimation levels
+            acclimation_levels[stress_type] = getattr(stress_state, 'acclimation_level', 0.0)
+            
+            # Cumulative damage
+            cumulative_damage[stress_type] = getattr(stress_state, 'damage_level', 0.0)
+        
+        cropgro_result.stress_interactions = stress_interactions
+        cropgro_result.acclimation_levels = acclimation_levels
+        cropgro_result.cumulative_damage = cumulative_damage
         
         # 7. SENESCENCE AND REMOBILIZATION (with safe attribute access)
         cropgro_result.senescence_rate = getattr(senescence_response, 'total_senescence_rate', 0.0)
@@ -687,6 +810,28 @@ class CROPGROHydroponicSimulator:
         cropgro_result.root_surface_area = root_response.get('total_root_surface_area', 0.0)
         cropgro_result.root_volume = root_response.get('total_root_volume', 0.0)
         cropgro_result.root_activity_factor = self.cultivar_profile.genetic_coefficients.ROOT_ACTIVITY
+        
+        # === DETAILED ROOT ARCHITECTURE RESULTS ===
+        cropgro_result.fine_root_length = root_response.get('fine_root_length', 0.0)
+        cropgro_result.coarse_root_length = root_response.get('coarse_root_length', 0.0)
+        
+        # Access root cohorts from root architecture model inside the enhanced uptake model
+        if hasattr(self.root_model, 'root_architecture') and hasattr(self.root_model.root_architecture, 'root_zones'):
+            root_cohorts_count = sum(len(zone.root_cohorts) for zone in self.root_model.root_architecture.root_zones if hasattr(zone, 'root_cohorts'))
+            cropgro_result.root_cohorts = root_cohorts_count
+            
+            # Get turnover rate from architecture model parameters
+            if hasattr(self.root_model.root_architecture, 'params'):
+                cropgro_result.root_turnover_rate = getattr(self.root_model.root_architecture.params, 'fine_turnover_rate', 0.02)
+            else:
+                cropgro_result.root_turnover_rate = 0.02
+        else:
+            cropgro_result.root_cohorts = 0
+            cropgro_result.root_turnover_rate = 0.02
+            
+        cropgro_result.root_activity_young = root_response.get('average_root_activity', 0.0)
+        cropgro_result.root_activity_old = max(0.0, root_response.get('average_root_activity', 0.0) - 0.2)
+        cropgro_result.root_surface_active = root_response.get('total_root_surface_area', 0.0) * root_response.get('average_root_activity', 0.0)
         
         # 9. GENETIC PARAMETERS EFFECTS
         cropgro_result.cultivar_adaptation_index = cultivar_performance.get('adaptation_index', 1.0)

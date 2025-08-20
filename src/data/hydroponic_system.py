@@ -85,6 +85,148 @@ class DailyResults:
     vpd_actual: float = 0.8  # Actual VPD (kPa)
     env_photosynthesis_factor: float = 1.0  # Environmental photosynthesis enhancement
     env_transpiration_factor: float = 1.0  # Environmental transpiration factor
+    
+    # === DETAILED PHOTOSYNTHESIS MODEL RESULTS ===
+    vcmax_25: float = 0.0  # Maximum carboxylation rate at 25°C (μmol/m²/s)
+    jmax_25: float = 0.0   # Maximum electron transport rate at 25°C (μmol/m²/s)
+    quantum_efficiency: float = 0.0  # Quantum efficiency of photosystem II
+    rubisco_limited: float = 0.0  # Rubisco-limited photosynthesis rate
+    light_limited: float = 0.0    # Light-limited photosynthesis rate
+    co2_compensation: float = 0.0  # CO2 compensation point (μmol/mol)
+    intercellular_co2: float = 0.0  # Intercellular CO2 concentration
+    
+    # === DETAILED RESPIRATION MODEL RESULTS ===
+    maintenance_resp_leaves: float = 0.0  # Leaf maintenance respiration
+    maintenance_resp_stems: float = 0.0   # Stem maintenance respiration  
+    maintenance_resp_roots: float = 0.0   # Root maintenance respiration
+    growth_resp_leaves: float = 0.0       # Leaf growth respiration
+    growth_resp_stems: float = 0.0        # Stem growth respiration
+    growth_resp_roots: float = 0.0        # Root growth respiration
+    temperature_acclimation: float = 1.0   # Temperature acclimation factor
+    age_factor: float = 1.0               # Age effects on respiration
+    
+    # === DETAILED ROOT ARCHITECTURE RESULTS ===
+    fine_root_length: float = 0.0    # Fine root length (cm)
+    coarse_root_length: float = 0.0  # Coarse root length (cm) 
+    root_cohorts: int = 0            # Number of active root cohorts
+    root_activity_young: float = 0.0 # Activity of young roots
+    root_activity_old: float = 0.0   # Activity of old roots
+    root_surface_active: float = 0.0 # Active root surface area
+    root_turnover_rate: float = 0.0  # Daily root turnover rate
+    
+    # === DETAILED CANOPY ARCHITECTURE RESULTS ===
+    sunlit_lai: float = 0.0          # Sunlit leaf area index
+    shaded_lai: float = 0.0          # Shaded leaf area index
+    canopy_layers: int = 0           # Number of canopy layers
+    ppfd_top: float = 0.0           # PPFD at top of canopy
+    ppfd_bottom: float = 0.0        # PPFD at bottom of canopy
+    light_extinction: float = 0.0    # Light extinction coefficient
+    
+    # === DETAILED NITROGEN DYNAMICS RESULTS ===
+    n_pool_structural: float = 0.0   # Structural nitrogen pool (g)
+    n_pool_metabolic: float = 0.0    # Metabolic nitrogen pool (g)
+    n_pool_storage: float = 0.0      # Storage nitrogen pool (g)
+    n_pool_transport: float = 0.0    # Transport nitrogen pool (g)
+    n_remobilization: float = 0.0    # Daily N remobilization (g)
+    n_critical_conc: float = 0.0     # Critical nitrogen concentration
+    
+    # === DETAILED STRESS INTEGRATION RESULTS ===
+    stress_interactions: Dict[str, float] = field(default_factory=dict)  # Stress interaction effects
+    acclimation_levels: Dict[str, float] = field(default_factory=dict)   # Acclimation to each stress
+    cumulative_damage: Dict[str, float] = field(default_factory=dict)    # Cumulative damage by stress type
+    
+    # === ADDITIONAL CROPGRO MODEL RESULTS ===
+    # Genetic parameters
+    cultivar_adaptation_index: float = 1.0
+    cultivar_yield_potential: float = 1.0
+    genetic_photosynthesis_capacity: float = 1.0
+    genetic_ec_tolerance: float = 1.0
+    genetic_nitrate_efficiency: float = 1.0
+    
+    # Phenology
+    accumulated_gdd: float = 0.0
+    development_rate: float = 0.0
+    growth_stage: str = "VE"
+    thermal_time_daily: float = 0.0
+    is_vegetative: bool = True
+    is_reproductive: bool = False
+    
+    # Growth and biomass
+    total_biomass: float = 0.0
+    leaf_biomass: float = 0.0
+    stem_biomass: float = 0.0
+    root_biomass: float = 0.0
+    daily_growth_rate: float = 0.0
+    leaf_growth_rate: float = 0.0
+    stem_growth_rate: float = 0.0
+    root_growth_rate: float = 0.0
+    
+    # Canopy architecture
+    lai: float = 0.0
+    canopy_height_cm: float = 0.0
+    light_interception: float = 0.0
+    total_absorbed_ppfd: float = 0.0
+    canopy_photosynthesis: float = 0.0
+    
+    # Photosynthesis detailed
+    photosynthesis_rate: float = 0.0
+    net_assimilation: float = 0.0
+    
+    # Respiration detailed
+    maintenance_respiration: float = 0.0
+    growth_respiration: float = 0.0
+    respiration_rate: float = 0.0
+    
+    # Root architecture detailed
+    root_surface_area: float = 0.0
+    root_length_density: float = 0.0
+    root_volume: float = 0.0
+    
+    # Nitrogen dynamics detailed
+    nitrogen_uptake_mg: float = 0.0
+    nitrogen_demand_mg: float = 0.0
+    nitrogen_stress_factor: float = 1.0
+    leaf_nitrogen_conc: float = 0.0
+    root_nitrogen_conc: float = 0.0
+    nitrogen_remobilization: float = 0.0
+    phosphorus_remobilization: float = 0.0
+    potassium_remobilization: float = 0.0
+    
+    # Senescence 
+    senescence_rate: float = 0.0
+    leaf_senescence_rate: float = 0.0
+    
+    # Stress factors
+    integrated_stress_factor: float = 1.0
+    temperature_stress_level: float = 0.0
+    temperature_stress_photosynthesis: float = 1.0
+    temperature_stress_growth: float = 1.0
+    water_stress: float = 0.0
+    nutrient_stress: float = 0.0
+    salinity_stress: float = 1.0
+    
+    # Environmental control
+    controlled_temperature: float = 0.0
+    controlled_humidity: float = 0.0
+    controlled_co2: float = 400.0
+    vpd_target: float = 0.8
+    environmental_cost: float = 0.0
+    
+    # Temperature data
+    air_temperature: float = 0.0
+    min_temperature: float = 0.0
+    max_temperature: float = 0.0
+    leaf_temperature: float = 0.0
+    canopy_temperature: float = 0.0
+    cold_stress_factor: float = 0.0
+    heat_stress_factor: float = 0.0
+    temperature_stress_factor: float = 0.0
+    
+    # Water dynamics
+    transpiration_rate: float = 0.0
+    total_water_uptake: float = 0.0
+    solution_ph: float = 6.0
+    solution_ec: float = 1.5
 
 
 @dataclass
