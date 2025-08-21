@@ -520,23 +520,6 @@ class AdvancedSenescenceModel:
         """
         return self.remobilization_pool.copy()
     
-    def withdraw_from_remobilization_pool(self, nutrient: str, amount: float) -> float:
-        """
-        Withdraw nutrients from remobilization pool.
-        
-        Args:
-            nutrient: Nutrient type
-            amount: Amount to withdraw
-            
-        Returns:
-            Actual amount withdrawn
-        """
-        available = self.remobilization_pool.get(nutrient, 0.0)
-        withdrawn = min(amount, available)
-        self.remobilization_pool[nutrient] = available - withdrawn
-        return withdrawn
-
-
 def create_lettuce_senescence_model() -> AdvancedSenescenceModel:
     """Create senescence model with lettuce-specific parameters."""
     try:

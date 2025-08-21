@@ -40,46 +40,82 @@ class ConfigLoader:
     """Loads and manages configuration from JSON files."""
     
     def __init__(self, config_path: Optional[str] = None):
-        if config_path is None:
-            # Default to sample config in data/input directory
-            self.config_path = Path(__file__).parent.parent.parent / "data" / "input" / "sample_config.json"
-        else:
+        # Prefer canonical root config unless an explicit path is provided
+        default_root = Path(__file__).parent.parent.parent / "cropgro_config.json"
+        legacy_sample = Path(__file__).parent.parent.parent / "input" / "sample_configs" / "sample_config.json"
+        if config_path is not None:
             self.config_path = Path(config_path)
+        elif default_root.exists():
+            self.config_path = default_root
+        else:
+            self.config_path = legacy_sample
         
         self.config: Optional[SimulationConfig] = None
         self._load_config()
     
     def _load_config(self):
-        """Load configuration from JSON file."""
+        """Load configuration from JSON file, supporting both legacy and canonical schemas."""
         try:
             with open(self.config_path, 'r') as f:
                 config_data = json.load(f)
-            
-            self.config = SimulationConfig(
-                system_config=config_data.get('system_config', {}),
-                crop_parameters=config_data.get('crop_parameters', {}),
-                simulation_settings=config_data.get('simulation_settings', {}),
-                weather_settings=config_data.get('weather_settings', {}),
-                nutrient_parameters=config_data.get('nutrient_parameters', {}),
-                root_zone_temperature=config_data.get('root_zone_temperature', {}),
-                leaf_development=config_data.get('leaf_development', {}),
-                environmental_control=config_data.get('environmental_control', {}),
-                photosynthesis_model=config_data.get('photosynthesis_model', {}),
-                mechanistic_uptake=config_data.get('mechanistic_uptake', {}),
-                nutrient_concentration=config_data.get('nutrient_concentration', {}),
-                respiration_model=config_data.get('respiration_model', {}),
-                phenology_model=config_data.get('phenology_model', {}),
-                senescence_model=config_data.get('senescence_model', {}),
-                canopy_architecture=config_data.get('canopy_architecture', {}),
-                nitrogen_balance=config_data.get('nitrogen_balance', {}),
-                nutrient_mobility=config_data.get('nutrient_mobility', {}),
-                temperature_stress=config_data.get('temperature_stress', {}),
-                root_architecture=config_data.get('root_architecture', {}),
-                genetic_parameters=config_data.get('genetic_parameters', {}),
-                default_values=config_data.get('default_values', {}),
-                stress_thresholds=config_data.get('stress_thresholds', {})
-            )
-            
+
+            # Detect canonical root schema (e.g., keys like 'photosynthesis', 'phenology', 'genetics')
+            is_canonical = any(k in config_data for k in (
+                'photosynthesis', 'phenology', 'genetics', 'environment', 'system'
+            ))
+
+            if is_canonical:
+                # Map canonical groups into SimulationConfig fields expected by callers
+                self.config = SimulationConfig(
+                    system_config=config_data.get('system', {}),
+                    crop_parameters=config_data.get('physiology', {}),
+                    simulation_settings=config_data.get('simulation', {}),
+                    weather_settings=config_data.get('weather', {}),
+                    nutrient_parameters=config_data.get('nutrients', {}),
+                    root_zone_temperature=config_data.get('roots', {}),
+                    leaf_development=config_data.get('canopy', {}),
+                    environmental_control=config_data.get('environmental_control', {}),
+                    photosynthesis_model=config_data.get('photosynthesis', {}),
+                    mechanistic_uptake=config_data.get('mechanistic_uptake', {}),
+                    nutrient_concentration=config_data.get('nutrient_concentration', {}),
+                    respiration_model=config_data.get('respiration', {}),
+                    phenology_model=config_data.get('phenology', {}),
+                    senescence_model=config_data.get('senescence', {}),
+                    canopy_architecture=config_data.get('canopy', {}),
+                    nitrogen_balance=config_data.get('nitrogen_balance', {}),
+                    nutrient_mobility=config_data.get('nutrient_mobility', {}),
+                    temperature_stress=config_data.get('temperature_stress', {}),
+                    root_architecture=config_data.get('root_architecture', {}),
+                    genetic_parameters=config_data.get('genetics', {}),
+                    default_values=config_data.get('default_values', {}),
+                    stress_thresholds=config_data.get('stress_thresholds', {})
+                )
+            else:
+                # Legacy schema passthrough
+                self.config = SimulationConfig(
+                    system_config=config_data.get('system_config', {}),
+                    crop_parameters=config_data.get('crop_parameters', {}),
+                    simulation_settings=config_data.get('simulation_settings', {}),
+                    weather_settings=config_data.get('weather_settings', {}),
+                    nutrient_parameters=config_data.get('nutrient_parameters', {}),
+                    root_zone_temperature=config_data.get('root_zone_temperature', {}),
+                    leaf_development=config_data.get('leaf_development', {}),
+                    environmental_control=config_data.get('environmental_control', {}),
+                    photosynthesis_model=config_data.get('photosynthesis_model', {}),
+                    mechanistic_uptake=config_data.get('mechanistic_uptake', {}),
+                    nutrient_concentration=config_data.get('nutrient_concentration', {}),
+                    respiration_model=config_data.get('respiration_model', {}),
+                    phenology_model=config_data.get('phenology_model', {}),
+                    senescence_model=config_data.get('senescence_model', {}),
+                    canopy_architecture=config_data.get('canopy_architecture', {}),
+                    nitrogen_balance=config_data.get('nitrogen_balance', {}),
+                    nutrient_mobility=config_data.get('nutrient_mobility', {}),
+                    temperature_stress=config_data.get('temperature_stress', {}),
+                    root_architecture=config_data.get('root_architecture', {}),
+                    genetic_parameters=config_data.get('genetic_parameters', {}),
+                    default_values=config_data.get('default_values', {}),
+                    stress_thresholds=config_data.get('stress_thresholds', {})
+                )
         except FileNotFoundError:
             raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
         except json.JSONDecodeError as e:
@@ -124,6 +160,12 @@ class ConfigLoader:
     def get_stress_thresholds(self) -> Dict[str, Any]:
         """Get stress threshold parameters."""
         return self.config.stress_thresholds if self.config else {}
+
+    # === Canonical group helpers (for models reading consolidated root config) ===
+    def get_genetic_parameters(self) -> Dict[str, Any]:
+        """Get genetics group from canonical config."""
+        # In canonical mapping, genetics lives in SimulationConfig.genetic_parameters
+        return self.config.genetic_parameters if self.config else {}
     
     def get_photosynthesis_parameters(self) -> Dict[str, Any]:
         """Get photosynthesis model parameters."""

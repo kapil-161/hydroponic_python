@@ -33,13 +33,14 @@ from .models.respiration_model import create_lettuce_respiration_model, BiomassP
 from .models.senescence_model import create_lettuce_senescence_model
 from .models.canopy_architecture import create_lettuce_canopy_model, LightEnvironment
 from .models.nitrogen_balance import create_lettuce_nitrogen_balance_model
-from .models.nutrient_mobility import create_lettuce_nutrient_mobility_model
-from .models.integrated_stress import create_lettuce_integrated_stress_model
-from .models.temperature_stress import create_lettuce_temperature_stress_model
-from .models.root_architecture_integration import create_enhanced_root_uptake_model, HydroponicSystemType
+from .models.nutrient_models import create_lettuce_nutrient_mobility_model
+from .models.stress_models import create_lettuce_integrated_stress_model
+from .models.stress_models import create_lettuce_temperature_stress_model
+from .models.root_system_model import create_enhanced_root_uptake_model, HydroponicSystemType
 from .models.environmental_control import EnvironmentalControlSystem
 from .models.photosynthesis_model import PhotosynthesisModel
-from .models.nutrient_concentration import NutrientConcentrationModel
+from .models.nutrient_models import NutrientConcentrationModel
+from .models.leaf_development import LeafDevelopmentModel, LeafParameters
 from .data.hydroponic_system import HydroInputData, SimulationResults, DailyResults
 from .utils.config_loader import get_config_loader, get_genetic_parameter
 from .utils.weather_generator import WeatherGenerator
@@ -95,6 +96,8 @@ class CROPGROHydroponicSimulator:
         # 2. PHENOLOGY AND DEVELOPMENT
         logger.info("Initializing phenology model...")
         self.phenology_model = create_lettuce_phenology_model()
+        # Leaf development model for realistic LAI and leaf metrics
+        self.leaf_model = LeafDevelopmentModel(LeafParameters())
         
         # 3. RESPIRATION MODEL
         logger.info("Initializing respiration model...")
@@ -235,6 +238,13 @@ class CROPGROHydroponicSimulator:
         current_concentrations = {}
         for nutrient_id, params in input_data.nutrient_params.items():
             current_concentrations[nutrient_id] = params.initial_conc
+
+        # Track system state
+        current_tank_volume = input_data.system_config.tank_volume
+        self.plant_count = input_data.system_config.n_plants
+        self.system_area = max(0.1, input_data.system_config.system_area)
+        self.plant_density = max(0.1, self.plant_count / self.system_area)
+        current_ph = 6.0
         
         # Main simulation loop - run until maturity or max days
         day = 1
@@ -251,13 +261,17 @@ class CROPGROHydroponicSimulator:
             daily_solar = weather.solar_radiation
             daylength = 13.5 + 1.5 * np.sin(day * 2 * np.pi / 365)  # Seasonal variation
             
-            # Use default pH for now - should integrate with actual hydroponic simulator's charge balance calculations
-            # TODO: Connect to hydroponic_simulator.py pH calculations (lines 390-410) for real charge balance modeling
-            default_ph = 6.0
-            
             # Run daily simulation step
             daily_result = self._simulate_daily_step(
-                day, daily_temp, daily_humidity, daily_solar, daylength, current_concentrations, default_ph
+                day=day,
+                temperature=daily_temp,
+                humidity=daily_humidity,
+                solar_radiation=daily_solar,
+                daylength=daylength,
+                nutrient_concentrations=current_concentrations,
+                ph=current_ph,
+                previous_tank_volume=current_tank_volume,
+                plant_density=self.plant_density
             )
             
             daily_results.append(daily_result)
@@ -268,16 +282,34 @@ class CROPGROHydroponicSimulator:
                 maturity_reached = True
                 logger.info(f"Maturity reached at day {day}: {current_stage}")
             
-            # Update nutrient concentrations based on uptake
-            for nutrient_id in current_concentrations:
+            # Update nutrient concentrations based on uptake (use current tank volume)
+            plant_count = input_data.system_config.n_plants
+            for nutrient_id in list(current_concentrations.keys()):
                 uptake_key = f"{nutrient_id}_uptake_rate"
-                if hasattr(daily_result, uptake_key):
-                    daily_uptake = getattr(daily_result, uptake_key, 0.0)
-                    # Simple depletion model (would be more sophisticated in reality)
-                    volume_factor = input_data.system_config.tank_volume / 1000.0  # Convert L to m³
-                    concentration_reduction = daily_uptake / volume_factor / 1000.0  # mg/L reduction
-                    current_concentrations[nutrient_id] = max(0.0, 
-                        current_concentrations[nutrient_id] - concentration_reduction)
+                per_plant_uptake = getattr(daily_result, uptake_key, 0.0)
+                # Fallback: estimate nitrate uptake from nitrogen balance if root uptake is zero
+                if nutrient_id == 'N-NO3' and per_plant_uptake == 0.0:
+                    est_n_mg = getattr(daily_result, 'nitrogen_uptake_mg', 0.0)
+                    # Convert mg N to mg NO3 using molecular mass ratio (62/14)
+                    per_plant_uptake = est_n_mg * (62.0 / 14.0)
+
+                if per_plant_uptake > 0.0:
+                    total_uptake_mg = per_plant_uptake * max(1, plant_count)
+                    volume_m3 = max(0.001, daily_result.tank_volume / 1000.0)
+                    concentration_reduction = total_uptake_mg / volume_m3 / 1000.0  # mg/L reduction
+                    current_concentrations[nutrient_id] = max(0.0, current_concentrations[nutrient_id] - concentration_reduction)
+
+            # Update pH with simple drift from nitrate uptake (NO3 uptake tends to raise pH)
+            no3_uptake_total_mg = getattr(daily_result, 'N-NO3_uptake_rate', 0.0) * max(1, plant_count)
+            if no3_uptake_total_mg == 0.0:
+                # Estimate from nitrogen uptake (mg N/day) to mg NO3/day
+                est_n_mg = getattr(daily_result, 'nitrogen_uptake_mg', 0.0) * max(1, plant_count)
+                no3_uptake_total_mg = est_n_mg * (62.0 / 14.0)
+            ph_drift = min(0.05, no3_uptake_total_mg / 10000.0)  # small daily drift scaled by system uptake
+            current_ph = max(5.5, min(6.5, current_ph + ph_drift))
+
+            # Update tank volume
+            current_tank_volume = daily_result.tank_volume
             
             # Log progress
             if day % 10 == 0:
@@ -330,7 +362,9 @@ class CROPGROHydroponicSimulator:
     
     def _simulate_daily_step(self, day: int, temperature: float, humidity: float, 
                            solar_radiation: float, daylength: float, 
-                           nutrient_concentrations: Dict[str, float], ph: float = 6.0) -> DailyResults:
+                           nutrient_concentrations: Dict[str, float], ph: float = 6.0,
+                           previous_tank_volume: float = 0.0,
+                           plant_density: float = 1.0) -> DailyResults:
         """Simulate one day with all CROPGRO models integrated"""
         
         # === 1. ENVIRONMENTAL CONDITIONS ===
@@ -357,7 +391,8 @@ class CROPGROHydroponicSimulator:
         # Use controlled conditions if environmental control is active
         actual_temperature = env_control_response['current_conditions'].get('temperature', temperature)
         actual_humidity = env_control_response['current_conditions'].get('humidity', humidity)  
-        actual_co2 = env_control_response['current_conditions'].get('co2', 400.0)
+        # Dynamic CO2: enrich during photoperiod
+        actual_co2 = self.environmental_control.setpoints.target_co2 if light_schedule['light_on'] else self.environmental_control.setpoints.ambient_co2
         actual_vpd = env_control_response['current_conditions'].get('vpd_kPa', 0.8)
         
         # === 2. GENETIC × ENVIRONMENT INTERACTIONS ===
@@ -449,8 +484,18 @@ class CROPGROHydroponicSimulator:
         }
         
         # Update root architecture
+        # Map solution concentrations to uptake model notation
+        solution_conc_for_uptake = {}
+        if 'N-NO3' in nutrient_concentrations:
+            solution_conc_for_uptake['NO3'] = nutrient_concentrations['N-NO3']
+        if 'P-PO4' in nutrient_concentrations:
+            solution_conc_for_uptake['PO4'] = nutrient_concentrations['P-PO4']
+        for key in ['K', 'Ca', 'Mg']:
+            if key in nutrient_concentrations:
+                solution_conc_for_uptake[key] = nutrient_concentrations[key]
+
         root_response = self.root_model.daily_update(
-            root_env_conditions, root_growth_factors, nutrient_concentrations
+            root_env_conditions, root_growth_factors, solution_conc_for_uptake
         )
         
         # === 6. GROWTH CALCULATIONS ===
@@ -561,13 +606,29 @@ class CROPGROHydroponicSimulator:
             temperature=actual_temperature
         )
         
-        # === 8. CANOPY DEVELOPMENT ===
-        # Update LAI based on growth, senescence, and genetic factors
-        growth_factor = 1.0 + (total_new_growth * 0.15 * genetic_growth_modifier)
-        senescence_factor = 1.0 - (senescence_response.total_senescence_rate * 0.05)
-        
-        self.current_lai *= growth_factor * senescence_factor
-        self.current_lai = max(0.2, min(6.0, self.current_lai))
+        # === 8. CANOPY AND LEAF DEVELOPMENT ===
+        # Compute thermal time for leaf model and update leaf cohorts
+        daily_tt_leaf = self.leaf_model.calculate_thermal_time(actual_temperature)
+        water_status_factor = max(0.0, 1.0 - water_stress)  # convert stress level to factor
+        nitrogen_status_factor = environment_factors['nitrogen_status']
+        temp_status_factor = temp_stress_factor
+        leaf_stress = self.leaf_model.calculate_stress_factors(
+            water_stress=water_status_factor,
+            nitrogen_stress=nitrogen_status_factor,
+            temperature_stress=temp_status_factor
+        )
+        _ = self.leaf_model.update_v_stage(daily_tt_leaf, leaf_stress)
+        leaf_stats = self.leaf_model.update_leaf_areas(daily_tt_leaf, leaf_stress)
+
+        # LAI per ground area = total one-plant leaf area * plants/m2 / ground area per m2 (=1)
+        # Ensure consistency with Leaf_Area_m2; leaf_stats['leaf_area_index'] equals leaf area (m2) per plant by model design
+        # Harmonize leaf area with biomass (SLA-based) to keep ratios realistic
+        sla_cm2_per_g = getattr(self.leaf_model.params, 'specific_leaf_area', 250.0)
+        leaf_biomass_g_current = self.biomass_pools[0].dry_mass
+        biomass_based_area_m2 = (leaf_biomass_g_current * sla_cm2_per_g) / 10000.0
+        model_based_area_m2 = leaf_stats['total_leaf_area_m2']
+        one_plant_leaf_area_m2 = max(model_based_area_m2, biomass_based_area_m2)
+        self.current_lai = min(8.0, max(0.0, one_plant_leaf_area_m2 * plant_density))
         
         # Update canopy height
         if stage_props['is_vegetative']:
@@ -603,7 +664,14 @@ class CROPGROHydroponicSimulator:
             self.cultivar_profile.genetic_coefficients.PHOTOSYNTHETIC_CAPACITY
         )
         
-        # === 10. CREATE DAILY RESULTS ===
+        # === 10. WATER USE AND WUE ===
+        # Calculate water uptake using current canopy and compute tank volume
+        water_uptake_l = self._calculate_water_uptake(canopy_response.light_interception_fraction, actual_temperature, self.current_lai)
+        # Scale per system area (our helper returns L per m2 ground area); system_area is m2
+        system_water_use_l = water_uptake_l * self.system_area
+        tank_volume = max(0.0, previous_tank_volume - system_water_use_l)
+
+        # === 11. CREATE DAILY RESULTS ===
         total_biomass = sum(pool.dry_mass for pool in self.biomass_pools)
         
         # Create comprehensive CROPGRO results with ALL details
@@ -615,15 +683,16 @@ class CROPGROHydroponicSimulator:
             eto_ref=self._calculate_eto_reference(actual_temperature, actual_humidity, solar_radiation),
             etc_prime=self._calculate_etc_prime(canopy_response.light_interception_fraction, actual_temperature),
             transpiration=self._calculate_transpiration(canopy_response.light_interception_fraction, actual_temperature, actual_vpd),
-            water_uptake_total=self._calculate_water_uptake(canopy_response.light_interception_fraction, actual_temperature, self.current_lai),
-            tank_volume=1500.0 - (day * 0.5),  # Gradual volume reduction
+            water_uptake_total=system_water_use_l,
+            tank_volume=tank_volume,
             nutrient_concentrations=nutrient_concentrations.copy(),
             
             # Basic measurements  
             temp_avg=actual_temperature,
             solar_radiation=solar_radiation,
             vpd=self._calculate_vpd(actual_temperature, actual_humidity),
-            water_use_efficiency=photosynthesis_rate / max(0.1, canopy_response.light_interception_fraction * 2.5),
+            # WUE: g biomass per L water -> kg/m3: (g/L) * (1 kg/1000 g) * (1000 L / m3) = kg/m3
+            water_use_efficiency= (total_new_growth / max(1e-6, system_water_use_l)),
             
             # Solution properties  
             ph=ph,  # Use dynamic pH from hydroponic system
@@ -666,6 +735,12 @@ class CROPGROHydroponicSimulator:
         cropgro_result.sunlit_lai = canopy_response.sunlit_lai
         cropgro_result.shaded_lai = canopy_response.shaded_lai
         
+        # Leaf metrics
+        cropgro_result.v_stage = self.leaf_model.current_v_stage
+        cropgro_result.leaf_number = int(leaf_stats['active_leaf_count'])
+        cropgro_result.leaf_area_m2 = one_plant_leaf_area_m2
+        cropgro_result.average_leaf_area_cm2 = (one_plant_leaf_area_m2 / max(1, cropgro_result.leaf_number)) * 1.0e4
+
         # === DETAILED CANOPY ARCHITECTURE RESULTS ===
         cropgro_result.canopy_layers = len(canopy_response.canopy_layers) if hasattr(canopy_response, 'canopy_layers') else 0
         cropgro_result.ppfd_top = canopy_response.canopy_layers[0].ppfd_average if canopy_response.canopy_layers else light_environment.ppfd_above_canopy
@@ -832,6 +907,24 @@ class CROPGROHydroponicSimulator:
         cropgro_result.root_activity_young = root_response.get('average_root_activity', 0.0)
         cropgro_result.root_activity_old = max(0.0, root_response.get('average_root_activity', 0.0) - 0.2)
         cropgro_result.root_surface_active = root_response.get('total_root_surface_area', 0.0) * root_response.get('average_root_activity', 0.0)
+
+        # Record nutrient uptake rates on result to enable concentration dynamics
+        # Prefer root-architecture uptake; if zero/absent, fall back to demand-based estimate from growth
+        estimated_element_uptake = {
+            'N-NO3': cropgro_result.nitrogen_uptake_mg * (62.0 / 14.0),  # mg NO3/day per plant
+            'P-PO4': total_new_growth * 0.008 * 1000.0,  # mg/day per plant
+            'K': total_new_growth * 0.035 * 1000.0,
+            'Ca': total_new_growth * 0.015 * 1000.0,
+            'Mg': total_new_growth * 0.006 * 1000.0,
+        }
+        root_keys_map = {'N-NO3': 'NO3', 'P-PO4': 'PO4', 'K': 'K', 'Ca': 'Ca', 'Mg': 'Mg'}
+        for csv_key, root_key in root_keys_map.items():
+            rr_key = f'{root_key}_uptake_rate'
+            uptake_val = root_response.get(rr_key, 0.0)
+            if uptake_val and uptake_val > 0.0:
+                setattr(cropgro_result, f'{csv_key}_uptake_rate', uptake_val)
+            else:
+                setattr(cropgro_result, f'{csv_key}_uptake_rate', max(0.0, estimated_element_uptake.get(csv_key, 0.0)))
         
         # 9. GENETIC PARAMETERS EFFECTS
         cropgro_result.cultivar_adaptation_index = cultivar_performance.get('adaptation_index', 1.0)
@@ -869,10 +962,23 @@ class CROPGROHydroponicSimulator:
         return cohort_data
     
     def _calculate_ec(self, concentrations: Dict[str, float]) -> float:
-        """Calculate electrical conductivity"""
-        # Simplified EC calculation
-        total_tds = sum(concentrations.values()) * 0.5  # Rough conversion
-        return total_tds / 640.0  # Convert to dS/m
+        """Calculate electrical conductivity (dS/m) from major ions.
+
+        Coefficients chosen so that baseline mix (~200 NO3, 300 K, 150 Ca, 50 Mg, 50 PO4)
+        yields ~1.7–1.9 dS/m and declines proportionally with depletion.
+        """
+        factors = {
+            'N-NO3': 0.0040,
+            'P-PO4': 0.0008,
+            'K': 0.0025,
+            'Ca': 0.0015,
+            'Mg': 0.0012,
+        }
+        ec = 0.0
+        for ion, conc in concentrations.items():
+            coeff = factors.get(ion, 0.0006)
+            ec += coeff * conc
+        return max(0.05, min(5.0, ec))
     
     def _calculate_vpd(self, temp: float, rel_humidity: float) -> float:
         """Calculate vapor pressure deficit"""

@@ -39,45 +39,63 @@ class CanopyArchitectureParameters:
     """Parameters for canopy architecture model."""
     
     # Canopy structure
-    number_of_layers: int = 10               # Number of canopy layers
-    max_lai: float = 6.0                     # Maximum leaf area index
+    number_of_layers: int = 10               # Number of canopy layers (model constant)
+    max_lai: float = None                    # Maximum leaf area index
     
     # Light extinction
-    extinction_coefficient: float = 0.5      # Light extinction coefficient (k)
-    diffuse_extinction_coeff: float = 0.7    # Extinction for diffuse light
-    beam_extinction_coeff: float = 0.4       # Extinction for direct beam light
+    extinction_coefficient: float = None     # Light extinction coefficient (k)
+    diffuse_extinction_coeff: float = 0.7   # Extinction for diffuse light (model constant)
+    beam_extinction_coeff: float = 0.4      # Extinction for direct beam light (model constant)
     
     # Leaf angle distribution
-    leaf_angle_distribution: str = "spherical"  # Type of leaf angle distribution
-    mean_leaf_angle: float = 45.0            # Mean leaf angle (degrees)
-    leaf_angle_variance: float = 20.0        # Variance in leaf angles
+    leaf_angle_distribution: str = "spherical"  # Type of leaf angle distribution (model constant)
+    mean_leaf_angle: float = 45.0            # Mean leaf angle (degrees) (model constant)
+    leaf_angle_variance: float = 20.0        # Variance in leaf angles (model constant)
     
     # Plant geometry
-    row_spacing: float = 0.30                # m between rows
-    plant_spacing: float = 0.25              # m between plants in row
-    plant_height: float = 0.25               # m maximum plant height
-    canopy_width: float = 0.20               # m canopy width
+    row_spacing: float = 0.30                # m between rows (model constant)
+    plant_spacing: float = 0.25              # m between plants in row (model constant)
+    plant_height: float = 0.25               # m maximum plant height (model constant)
+    canopy_width: float = None               # m canopy width
     
     # Leaf properties
-    leaf_reflectance: float = 0.10           # Fraction of light reflected
-    leaf_transmittance: float = 0.05         # Fraction of light transmitted
-    leaf_absorptance: float = 0.85           # Fraction of light absorbed
+    leaf_reflectance: float = 0.10           # Fraction of light reflected (biochemical constant)
+    leaf_transmittance: float = 0.05         # Fraction of light transmitted (biochemical constant)
+    leaf_absorptance: float = 0.85           # Fraction of light absorbed (biochemical constant)
     
     # Shading parameters
-    self_shading_factor: float = 0.8         # Factor for self-shading within plant
-    neighbor_shading_distance: float = 0.5   # m distance for neighbor shading
+    self_shading_factor: float = 0.8         # Factor for self-shading within plant (model constant)
+    neighbor_shading_distance: float = 0.5   # m distance for neighbor shading (model constant)
     
     # Photosynthesis scaling
-    sunlit_fraction_method: str = "campbell"  # Method for calculating sunlit fraction
-    clumping_index: float = 0.9              # Leaf clumping index (0-1)
+    sunlit_fraction_method: str = "campbell"  # Method for calculating sunlit fraction (model constant)
+    clumping_index: float = 0.9              # Leaf clumping index (0-1) (model constant)
+    
+    def __post_init__(self):
+        """Load parameters from JSON config if not provided."""
+        try:
+            from ..utils.config_loader import get_config_loader
+            loader = get_config_loader()
+            cfg = loader.get_canopy_architecture_parameters()
+
+            if self.max_lai is None:
+                self.max_lai = cfg.get('max_lai', 8.0)
+            if self.extinction_coefficient is None:
+                self.extinction_coefficient = cfg.get('extinction_coefficient', 0.69)
+            if self.canopy_width is None:
+                # Stored in meters in the JSON config
+                self.canopy_width = cfg.get('canopy_width', 0.20)
+        except Exception:
+            # Leave values as provided
+            pass
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'CanopyArchitectureParameters':
         """Create CanopyArchitectureParameters from configuration dictionary."""
         return cls(
             number_of_layers=config_dict.get('number_of_layers', 10),
-            max_lai=config_dict.get('max_lai', 6.0),
-            extinction_coefficient=config_dict.get('extinction_coefficient', 0.5),
+            max_lai=config_dict.get('max_lai'),
+            extinction_coefficient=config_dict.get('extinction_coefficient'),
             diffuse_extinction_coeff=config_dict.get('diffuse_extinction_coeff', 0.7),
             beam_extinction_coeff=config_dict.get('beam_extinction_coeff', 0.4),
             leaf_angle_distribution=config_dict.get('leaf_angle_distribution', 'spherical'),
@@ -86,14 +104,14 @@ class CanopyArchitectureParameters:
             row_spacing=config_dict.get('row_spacing', 0.30),
             plant_spacing=config_dict.get('plant_spacing', 0.25),
             plant_height=config_dict.get('plant_height', 0.25),
-            canopy_width=config_dict.get('canopy_width', 0.20),
+            canopy_width=config_dict.get('canopy_width'),
             leaf_reflectance=config_dict.get('leaf_reflectance', 0.10),
             leaf_transmittance=config_dict.get('leaf_transmittance', 0.05),
             leaf_absorptance=config_dict.get('leaf_absorptance', 0.85),
             self_shading_factor=config_dict.get('self_shading_factor', 0.8),
             neighbor_shading_distance=config_dict.get('neighbor_shading_distance', 0.5),
             sunlit_fraction_method=config_dict.get('sunlit_fraction_method', 'campbell'),
-            clumping_index=config_dict.get('clumping_index', 0.9)
+            clumping_index=config_dict.get('clumping_index', 0.9),
         )
 
 
@@ -373,42 +391,6 @@ class CanopyArchitectureModel:
         
         return row_factor
     
-    def calculate_neighbor_shading(self, plant_position: Tuple[float, float],
-                                 neighbor_positions: List[Tuple[float, float]],
-                                 canopy_height: float, solar_zenith_angle: float) -> float:
-        """
-        Calculate shading from neighboring plants.
-        
-        Args:
-            plant_position: (x, y) position of focal plant
-            neighbor_positions: List of (x, y) positions of neighboring plants
-            canopy_height: Height of canopies (m)
-            solar_zenith_angle: Solar zenith angle (degrees)
-            
-        Returns:
-            Shading factor (0-1, 0=fully shaded, 1=no shading)
-        """
-        if solar_zenith_angle >= 90.0:
-            return 0.0  # No direct light
-        
-        # Calculate shadow length
-        shadow_length = canopy_height / math.tan(math.radians(90.0 - solar_zenith_angle))
-        
-        shading_factor = 1.0
-        px, py = plant_position
-        
-        for nx, ny in neighbor_positions:
-            distance = math.sqrt((px - nx)**2 + (py - ny)**2)
-            
-            # Check if this neighbor casts shadow on focal plant
-            if distance <= shadow_length and distance <= self.params.neighbor_shading_distance:
-                # Calculate shading intensity based on distance and canopy size
-                relative_distance = distance / shadow_length
-                neighbor_shading = (1.0 - relative_distance) * 0.3  # Max 30% shading
-                shading_factor *= (1.0 - neighbor_shading)
-        
-        return max(0.1, shading_factor)  # Minimum 10% of original light
-    
     def calculate_temperature_profile(self, air_temperature: float,
                                     total_lai: float) -> None:
         """
@@ -495,46 +477,13 @@ class CanopyArchitectureModel:
             canopy_photosynthesis=canopy_photosynthesis
         )
     
-    def get_layer_properties(self, layer_index: int) -> Dict[str, Any]:
-        """
-        Get properties of specific canopy layer.
-        
-        Args:
-            layer_index: Index of layer (0=top)
-            
-        Returns:
-            Dictionary of layer properties
-        """
-        if 0 <= layer_index < len(self.canopy_layers):
-            layer = self.canopy_layers[layer_index]
-            return {
-                'layer_index': layer.layer_index,
-                'height_range': (layer.height_bottom, layer.height_top),
-                'leaf_area_density': layer.leaf_area_density,
-                'cumulative_lai_above': layer.cumulative_lai_above,
-                'fraction_sunlit': layer.fraction_sunlit,
-                'fraction_shaded': layer.fraction_shaded,
-                'ppfd_sunlit': layer.ppfd_sunlit,
-                'ppfd_shaded': layer.ppfd_shaded,
-                'ppfd_average': layer.ppfd_average,
-                'temperature': layer.temperature,
-                'co2_concentration': layer.co2_concentration
-            }
-        else:
-            return {}
-
-
 def create_lettuce_canopy_model() -> CanopyArchitectureModel:
-    """Create canopy architecture model with lettuce-specific parameters."""
-    try:
-        from ..utils.config_loader import get_config_loader
-        config_loader = get_config_loader()
-        canopy_config = config_loader.get_canopy_architecture_parameters()
-        parameters = CanopyArchitectureParameters.from_config(canopy_config)
-        return CanopyArchitectureModel(parameters)
-    except ImportError:
-        # Fallback to default values if config loader not available
-        return CanopyArchitectureModel()
+    """Create canopy architecture model with lettuce-specific parameters from JSON config."""
+    from ..utils.config_loader import get_config_loader
+    config_loader = get_config_loader()
+    canopy_config = config_loader.get_canopy_architecture_parameters()
+    parameters = CanopyArchitectureParameters.from_config(canopy_config)
+    return CanopyArchitectureModel(parameters)
 
 
 def demonstrate_canopy_architecture_model():

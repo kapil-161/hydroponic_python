@@ -137,8 +137,3 @@ class WeatherGenerator:
         return weather_data
 
 
-def create_example_weather(days: int = 30) -> List[WeatherData]:
-    """Create example weather data for demonstration."""
-    generator = WeatherGenerator()
-    start_date = datetime(2024, 4, 11)  # Match the Fortran example
-    return generator.generate_weather_series(start_date, days)

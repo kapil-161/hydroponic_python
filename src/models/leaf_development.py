@@ -295,120 +295,35 @@ class LeafDevelopmentModel:
             'average_leaf_area': total_area / max(1, active_leaves)
         }
     
-    def daily_update(self, temperature: float, water_stress: float = 1.0,
-                    nitrogen_stress: float = 1.0, temperature_stress: float = 1.0) -> Dict[str, float]:
-        """
-        Complete daily update of leaf development.
-        
-        Args:
-            temperature: Daily average temperature (°C)
-            water_stress: Water stress factor (0-1, 1=no stress)
-            nitrogen_stress: Nitrogen stress factor (0-1, 1=no stress)  
-            temperature_stress: Temperature stress factor (0-1, 1=no stress)
-            
-        Returns:
-            Dictionary with leaf development results
-        """
-        # Calculate thermal time
-        daily_tt = self.calculate_thermal_time(temperature)
-        
-        # Calculate stress factors
-        stress_factors = self.calculate_stress_factors(
-            water_stress, nitrogen_stress, temperature_stress
-        )
-        
-        # Update V-stage (leaf appearance)
-        new_leaf_appeared = self.update_v_stage(daily_tt, stress_factors)
-        
-        # Update leaf areas
-        leaf_metrics = self.update_leaf_areas(daily_tt, stress_factors)
-        
-        # Compile results - count leaves that are emerged and still viable
-        active_leaf_count = len([c for c in self.leaf_cohorts.values() 
-                               if c.stage in [LeafStage.EMERGING, LeafStage.EXPANDING, 
-                                            LeafStage.MATURE, LeafStage.SENESCING] 
-                               and c.current_area > 0.0001])
-        
-        results = {
-            'v_stage': self.current_v_stage,
-            'leaf_number': active_leaf_count,
-            'new_leaf_appeared': new_leaf_appeared,
-            'thermal_time_daily': daily_tt,
-            'cumulative_thermal_time': self.cumulative_thermal_time,
-            **leaf_metrics,
-            **stress_factors
-        }
-        
-        return results
     
-    def get_leaf_cohort_details(self) -> Dict[int, Dict[str, float]]:
-        """Get detailed information about all leaf cohorts."""
-        details = {}
-        for cohort_id, cohort in self.leaf_cohorts.items():
-            details[cohort_id] = {
-                'appearance_day': cohort.appearance_day,
-                'current_area_m2': cohort.current_area,
-                'max_area_m2': cohort.max_potential_area,
-                'stage': cohort.stage.value,
-                'thermal_time_age': cohort.thermal_time_since_appearance,
-                'area_completion_percent': (cohort.current_area / cohort.max_potential_area) * 100
-            }
-        return details
 
-
-def create_lettuce_leaf_model() -> LeafDevelopmentModel:
-    """Create leaf development model with lettuce-specific parameters."""
+def demonstrate_leaf_development_model():
+    """Demonstrate leaf development dynamics over 30 days."""
     try:
         from ..utils.config_loader import get_config_loader
         config_loader = get_config_loader()
-        leaf_config = config_loader.get_leaf_development_parameters()
-        parameters = LeafParameters.from_config(leaf_config)
-        return LeafDevelopmentModel(parameters)
-    except ImportError:
-        # Fallback to default values if config loader not available
-        return LeafDevelopmentModel()
+        ld_config = config_loader.get_leaf_development_parameters()
+        model = LeafDevelopmentModel(LeafParameters.from_config(ld_config))
+    except Exception:
+        model = LeafDevelopmentModel()
 
+    print("=" * 80)
+    print("LEAF DEVELOPMENT MODEL DEMONSTRATION")
+    print("=" * 80)
 
-def demonstrate_leaf_development():
-    """Demonstrate leaf development over a growing season."""
-    model = create_lettuce_leaf_model()
-    
-    print("=" * 80)
-    print("LETTUCE LEAF DEVELOPMENT SIMULATION")  
-    print("=" * 80)
-    
-    # Simulate 45 days of growth
-    temperatures = [20, 22, 24, 23, 25, 27, 26, 24, 22, 20] * 5  # Temperature cycle
-    
-    print(f"{'Day':<4} {'Temp':<5} {'V-Stage':<8} {'Leaves':<7} {'LAI':<6} {'Avg Leaf':<9} {'New?':<5}")
+    print(f"{'Day':<4} {'Temp':<6} {'Leaves':<7} {'LAI':<6} {'Area(m2)':<9}")
     print("-" * 80)
-    
-    for day in range(1, 46):
-        temp = temperatures[day % len(temperatures)]
-        
-        # Simulate some stress conditions  
-        water_stress = 1.0 if day < 30 else 0.8  # Water stress late in season
-        nitrogen_stress = 1.0 if day < 20 else 0.9  # Mild N stress later
-        temp_stress = 1.0 if 18 <= temp <= 26 else 0.8  # Temperature stress
-        
-        results = model.daily_update(temp, water_stress, nitrogen_stress, temp_stress)
-        
-        if day % 3 == 1:  # Print every 3rd day
-            print(f"{day:<4} {temp:<5.1f} {results['v_stage']:<8.1f} "
-                  f"{results['leaf_number']:<7} {results['leaf_area_index']:<6.3f} "
-                  f"{results['average_leaf_area']*10000:<9.1f} {'Yes' if results['new_leaf_appeared'] else 'No':<5}")
-    
-    # Show final cohort details
-    print(f"\nFinal leaf cohort details:")
-    print(f"{'ID':<4} {'Stage':<10} {'Area(cm²)':<10} {'Complete%':<10}")
-    print("-" * 40)
-    
-    details = model.get_leaf_cohort_details()
-    for cohort_id, info in list(details.items())[:10]:  # Show first 10
-        area_cm2 = info['current_area_m2'] * 10000
-        print(f"{cohort_id:<4} {info['stage']:<10} {area_cm2:<10.1f} "
-              f"{info['area_completion_percent']:<10.1f}")
+    for day in range(1, 31):
+        # Mildly varying temp and no stress
+        temp = 22.0 + 2.0 * np.sin(day * np.pi / 15)
+        daily_tt = model.calculate_thermal_time(temp)
+        stress = model.calculate_stress_factors(1.0, 1.0, 1.0)
+        _ = model.update_v_stage(daily_tt, stress)
+        stats = model.update_leaf_areas(daily_tt, stress)
+        if day % 3 == 1:
+            print(f"{day:<4} {temp:<6.1f} {int(model.current_v_stage):<7} {stats['leaf_area_index']:<6.2f} {stats['total_leaf_area_m2']:<9.3f}")
 
 
 if __name__ == "__main__":
-    demonstrate_leaf_development()
+    demonstrate_leaf_development_model()
+

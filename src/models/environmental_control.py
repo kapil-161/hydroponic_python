@@ -558,42 +558,6 @@ class EnvironmentalControlSystem:
         return min(50.0, (max_efficiency / current_efficiency - 1.0) * 100.0)
 
 
-def create_lettuce_environmental_control() -> EnvironmentalControlSystem:
-    """Create environmental control system optimized for lettuce production."""
-    try:
-        from ..utils.config_loader import get_config_loader
-        config_loader = get_config_loader()
-        env_config = config_loader.get_environmental_control_config()
-        
-        setpoints = EnvironmentalSetpoints.from_config(env_config.get('setpoints', {}))
-        equipment = ControlEquipment.from_config(env_config.get('equipment', {}))
-        
-        # Create the system
-        system = EnvironmentalControlSystem(setpoints, equipment)
-        
-        # Load PID parameters from config if available
-        pid_config = env_config.get('pid_parameters', {})
-        if pid_config:
-            system.pid_params.update(pid_config)
-        
-        return system
-        
-    except ImportError:
-        # Fallback to default values if config loader not available
-        lettuce_setpoints = EnvironmentalSetpoints(
-            target_vpd=0.8,
-            vpd_tolerance=0.1,
-            min_humidity=65.0,
-            max_humidity=75.0,
-            day_temp=22.0,
-            night_temp=18.0,
-            target_co2=1200.0,
-            light_hours=16.0,
-            light_intensity=200.0
-        )
-        return EnvironmentalControlSystem(lettuce_setpoints)
-
-
 def demonstrate_environmental_control():
     """Demonstrate environmental control system capabilities."""
     controller = create_lettuce_environmental_control()

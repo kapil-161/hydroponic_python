@@ -196,126 +196,34 @@ class RootZoneTemperatureModel:
         
         return np.clip(factor, 0.3, 1.6)
     
-    def calculate_comprehensive_rzt_effects(self, current_rzt: float, 
-                                          air_temperature: float) -> Dict[str, float]:
-        """
-        Calculate all RZT effects comprehensively.
-        
-        Args:
-            current_rzt: Current root zone temperature (°C)
-            air_temperature: Current air temperature (°C)
-            
-        Returns:
-            Dictionary of all RZT effect factors
-        """
-        return {
-            'growth_factor': self.calculate_rzt_growth_factor(current_rzt, air_temperature),
-            'nutrient_uptake_factor': self.calculate_nutrient_uptake_factor(current_rzt, air_temperature),
-            'water_uptake_factor': self.calculate_water_uptake_factor(current_rzt, air_temperature),
-            'photosynthesis_factor': self.calculate_photosynthesis_factor(current_rzt, air_temperature),
-            'root_metabolism_factor': self.calculate_root_metabolism_factor(current_rzt, air_temperature),
-            'optimal_rzt': self.calculate_optimal_rzt(air_temperature)
-        }
     
-    def simulate_rzt_control(self, target_rzt: float, current_rzt: float, 
-                           heating_capacity: float = 100.0, 
-                           cooling_capacity: float = 50.0) -> Tuple[float, float]:
-        """
-        Simulate RZT control system (heating/cooling).
-        
-        Args:
-            target_rzt: Target root zone temperature (°C)
-            current_rzt: Current root zone temperature (°C)
-            heating_capacity: Maximum heating rate (W or relative units)
-            cooling_capacity: Maximum cooling rate (W or relative units)
-            
-        Returns:
-            Tuple of (new_rzt, energy_used)
-        """
-        temperature_diff = target_rzt - current_rzt
-        
-        if temperature_diff > 0:
-            # Need heating
-            heating_needed = min(abs(temperature_diff), heating_capacity / 10.0)
-            new_rzt = current_rzt + heating_needed
-            energy_used = heating_needed * 10.0
-        elif temperature_diff < 0:
-            # Need cooling
-            cooling_needed = min(abs(temperature_diff), cooling_capacity / 10.0)
-            new_rzt = current_rzt - cooling_needed
-            energy_used = cooling_needed * 8.0  # Cooling typically less efficient
-        else:
-            # No change needed
-            new_rzt = current_rzt
-            energy_used = 0.0
-        
-        return new_rzt, energy_used
-    
-    def get_rzt_recommendations(self, air_temperature_forecast: list) -> Dict[str, float]:
-        """
-        Get RZT control recommendations based on air temperature forecast.
-        
-        Args:
-            air_temperature_forecast: List of forecasted air temperatures (°C)
-            
-        Returns:
-            RZT recommendations dictionary
-        """
-        if not air_temperature_forecast:
-            return {}
-        
-        avg_air_temp = np.mean(air_temperature_forecast)
-        min_air_temp = np.min(air_temperature_forecast)
-        max_air_temp = np.max(air_temperature_forecast)
-        
-        recommendations = {
-            'recommended_rzt': self.calculate_optimal_rzt(avg_air_temp),
-            'min_rzt_needed': self.calculate_optimal_rzt(min_air_temp),
-            'max_rzt_acceptable': self.calculate_optimal_rzt(max_air_temp),
-            'avg_air_temp': avg_air_temp,
-            'heating_priority': max(0, self.calculate_optimal_rzt(min_air_temp) - min_air_temp),
-            'cooling_priority': max(0, max_air_temp - self.calculate_optimal_rzt(max_air_temp))
-        }
-        
-        return recommendations
 
-
-def create_default_rzt_model() -> RootZoneTemperatureModel:
-    """Create RZT model with default parameters for lettuce."""
+def demonstrate_rzt_model():
+    """Demonstrate root zone temperature effects across temperatures."""
     try:
         from ..utils.config_loader import get_config_loader
         config_loader = get_config_loader()
-        rzt_config = config_loader.get_rzt_parameters()
-        parameters = RZTParameters.from_config(rzt_config)
-        return RootZoneTemperatureModel(parameters)
-    except ImportError:
-        # Fallback to default values if config loader not available
-        return RootZoneTemperatureModel()
+        rzt_cfg = config_loader.get_rzt_parameters()
+        model = RootZoneTemperatureModel(RZTParameters.from_config(rzt_cfg))
+    except Exception:
+        model = RootZoneTemperatureModel()
 
+    print("=" * 80)
+    print("ROOT ZONE TEMPERATURE (RZT) MODEL DEMONSTRATION")
+    print("=" * 80)
 
-def demonstrate_rzt_effects():
-    """Demonstrate RZT model effects across temperature range."""
-    model = create_default_rzt_model()
-    
-    air_temps = [20, 25, 30]
-    rzt_range = list(range(15, 36))
-    
-    print("Root Zone Temperature Effects Demonstration")
-    print("=" * 60)
-    
-    for air_temp in air_temps:
-        print(f"\nAir Temperature: {air_temp}°C")
-        print(f"Optimal RZT: {model.calculate_optimal_rzt(air_temp):.1f}°C")
-        print("-" * 40)
-        print("RZT(°C) | Growth | Nutrient | Water | Photo | Metabolism")
-        print("-" * 40)
-        
-        for rzt in rzt_range[::3]:  # Every 3rd value for brevity
-            effects = model.calculate_comprehensive_rzt_effects(rzt, air_temp)
-            print(f"{rzt:6.1f} | {effects['growth_factor']:6.2f} | "
-                  f"{effects['nutrient_uptake_factor']:8.2f} | {effects['water_uptake_factor']:5.2f} | "
-                  f"{effects['photosynthesis_factor']:5.2f} | {effects['root_metabolism_factor']:10.2f}")
+    air_temp = 22.0
+    print(f"{'RZT':<6} {'Growth':<8} {'Nutrient':<9} {'Water':<7} {'Photosyn':<8} {'Metab':<7}")
+    print("-" * 80)
+    for rzt in [14, 16, 18, 20, 22, 24, 28, 32, 36]:
+        g = model.calculate_rzt_growth_factor(rzt, air_temp)
+        n = model.calculate_nutrient_uptake_factor(rzt, air_temp)
+        w = model.calculate_water_uptake_factor(rzt, air_temp)
+        p = model.calculate_photosynthesis_factor(rzt, air_temp)
+        m = model.calculate_root_metabolism_factor(rzt, air_temp)
+        print(f"{rzt:<6.0f} {g:<8.2f} {n:<9.2f} {w:<7.2f} {p:<8.2f} {m:<7.2f}")
 
 
 if __name__ == "__main__":
-    demonstrate_rzt_effects()
+    demonstrate_rzt_model()
+

@@ -353,7 +353,7 @@ class DefaultConfigurations:
     @staticmethod
     def get_default_nutrients():
         """Get default nutrient parameters."""
-        from ..models.nutrient_concentration import NutrientParams
+        from ..models.nutrient_models import NutrientParams
         
         nutrients = [
             NutrientParams("N-NO3", "Nitrogen-Nitrate", "NO3-", 200.0, 250.0, 180.0, 1.0, True, 150.0, 300.0, charge=-1, molar_mass=14.01),

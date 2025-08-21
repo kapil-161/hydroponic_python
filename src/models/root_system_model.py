@@ -1,0 +1,781 @@
+"""
+Unified Root System Model
+
+Combines:
+- Enhanced Root Architecture Model (spatial, cohorts)
+- Hydroponic Root Dynamics utilities
+- Root Architecture Integration (Enhanced nutrient uptake)
+
+This consolidation replaces:
+- src/models/root_architecture.py
+- src/models/hydroponic_root_dynamics.py
+- src/models/root_architecture_integration.py
+"""
+
+from __future__ import annotations
+
+import math
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Dict, List, Tuple, Optional
+
+import numpy as np
+
+
+# =========================
+# Root Architecture (from root_architecture.py)
+# =========================
+
+class RootType(Enum):
+    """Root classification based on diameter and function"""
+    FINE = "fine"           # <0.2mm, high activity
+    MEDIUM = "medium"       # 0.2-1.0mm, moderate activity
+    COARSE = "coarse"       # >1.0mm, transport/structural
+
+
+class HydroponicSystemType(Enum):
+    """Hydroponic system types with different root architectures"""
+    NFT = "nutrient_film_technique"
+    DWC = "deep_water_culture"
+    AEROPONICS = "aeroponics"
+    # Aliases/extended systems to subsume hydroponic_root_dynamics variants
+    AERO = "aeroponics"        # alias of AEROPONICS
+    DRIP = "drip"
+    WICK = "wick_system"
+    EBB_FLOW = "ebb_flow"
+
+
+@dataclass
+class RootCohort:
+    """Represents a cohort of roots of similar age and characteristics"""
+    age_days: float
+    length: float                    # cm
+    diameter: float                  # mm
+    root_type: RootType
+    zone_depth: float               # cm from root collar
+    biomass: float                  # g dry weight
+
+    def __post_init__(self):
+        self.surface_area = self.calculate_surface_area()
+        self.activity_factor = self.calculate_activity_factor()
+        self.specific_length = self.length / max(0.001, self.biomass)  # cm/g
+
+    def calculate_surface_area(self) -> float:
+        """Calculate root surface area (cm²)"""
+        diameter_cm = self.diameter / 10.0  # mm to cm
+        return math.pi * diameter_cm * self.length
+
+    def calculate_activity_factor(self) -> float:
+        """Calculate age-dependent root activity factor (0-1)"""
+        if self.root_type == RootType.FINE:
+            max_age = 45.0  # days (informational)
+            decline_rate = 0.03
+        elif self.root_type == RootType.MEDIUM:
+            max_age = 90.0
+            decline_rate = 0.02
+        else:  # COARSE
+            max_age = 180.0
+            decline_rate = 0.01
+
+        activity = math.exp(-decline_rate * self.age_days)
+        return max(0.05, activity)  # Minimum 5% activity
+
+    def calculate_uptake_capacity(self, base_uptake_rate: float) -> float:
+        """Calculate nutrient uptake capacity (mg/day)"""
+        return self.surface_area * self.activity_factor * base_uptake_rate
+
+
+@dataclass
+class RootZoneLayer:
+    """Represents a spatial layer in the root zone"""
+    depth_range: Tuple[float, float]    # cm from surface
+    volume: float                       # cm³
+    root_cohorts: List[RootCohort] = field(default_factory=list)
+
+    # Environmental conditions
+    temperature: float = 20.0           # °C
+    flow_rate: float = 1.0             # L/min
+    oxygen_level: float = 8.0          # mg/L
+    nutrient_concentrations: Dict[str, float] = field(default_factory=dict)
+
+    def calculate_root_length_density(self) -> float:
+        """Calculate root length density (cm/cm³)"""
+        total_length = sum(cohort.length for cohort in self.root_cohorts)
+        return total_length / max(1.0, self.volume)
+
+    def calculate_root_surface_area_density(self) -> float:
+        """Calculate root surface area density (cm²/cm³)"""
+        total_area = sum(cohort.surface_area for cohort in self.root_cohorts)
+        return total_area / max(1.0, self.volume)
+
+    def calculate_total_uptake_capacity(self, nutrient: str, base_rate: float) -> float:
+        """Calculate total nutrient uptake capacity for this layer"""
+        total_capacity = 0.0
+        for cohort in self.root_cohorts:
+            adjusted_rate = self.adjust_uptake_rate(base_rate)
+            total_capacity += cohort.calculate_uptake_capacity(adjusted_rate)
+        return total_capacity
+
+    def adjust_uptake_rate(self, base_rate: float) -> float:
+        """Adjust uptake rate based on environmental conditions"""
+        # Temperature effect (Q10 = 2.0)
+        temp_factor = 2.0 ** ((self.temperature - 20.0) / 10.0)
+        temp_factor = max(0.1, min(4.0, temp_factor))
+
+        # Flow rate effect (optimal around 1-2 L/min)
+        if self.flow_rate < 0.5:
+            flow_factor = 0.5
+        elif self.flow_rate > 4.0:
+            flow_factor = 0.7
+        else:
+            flow_factor = min(1.0, self.flow_rate / 1.5)
+
+        # Oxygen effect
+        oxygen_factor = min(1.0, self.oxygen_level / 6.0)
+
+        return base_rate * temp_factor * flow_factor * oxygen_factor
+
+
+@dataclass
+class RootArchitectureParameters:
+    """Parameters for root architecture model"""
+    # System-specific parameters
+    system_type: HydroponicSystemType = HydroponicSystemType.NFT
+    container_volume: float = 1000.0    # cm³
+
+    # Root growth parameters
+    primary_root_growth_rate: float = 1.5      # cm/day
+    lateral_root_density: float = 2.0          # roots/cm primary root
+    branching_angle_mean: float = 45.0         # degrees
+    branching_angle_std: float = 15.0          # degrees
+
+    # Root type distributions (fractions)
+    fine_root_fraction: float = 0.6
+    medium_root_fraction: float = 0.3
+    coarse_root_fraction: float = 0.1
+
+    # Diameter distributions (mm)
+    fine_diameter_mean: float = 0.15
+    fine_diameter_std: float = 0.05
+    medium_diameter_mean: float = 0.5
+    medium_diameter_std: float = 0.2
+    coarse_diameter_mean: float = 1.5
+    coarse_diameter_std: float = 0.5
+
+    # Turnover rates (fraction/day)
+    fine_turnover_rate: float = 0.015
+    medium_turnover_rate: float = 0.008
+    coarse_turnover_rate: float = 0.003
+
+    # System-specific adjustments
+    system_multipliers: Dict[HydroponicSystemType, Dict[str, float]] = field(
+        default_factory=lambda: {
+            HydroponicSystemType.NFT: {
+                'root_length_multiplier': 1.0,
+                'surface_area_multiplier': 1.0,
+                'branching_multiplier': 1.0
+            },
+            HydroponicSystemType.DWC: {
+                'root_length_multiplier': 0.8,
+                'surface_area_multiplier': 1.1,
+                'branching_multiplier': 1.2
+            },
+            HydroponicSystemType.AEROPONICS: {
+                'root_length_multiplier': 1.5,
+                'surface_area_multiplier': 2.0,
+                'branching_multiplier': 3.0
+            },
+            # Extended systems use nearest equivalents
+            HydroponicSystemType.DRIP: {
+                'root_length_multiplier': 1.1,
+                'surface_area_multiplier': 1.1,
+                'branching_multiplier': 1.2
+            },
+            HydroponicSystemType.WICK: {
+                'root_length_multiplier': 0.7,
+                'surface_area_multiplier': 0.9,
+                'branching_multiplier': 0.8
+            },
+            HydroponicSystemType.EBB_FLOW: {
+                'root_length_multiplier': 1.0,
+                'surface_area_multiplier': 1.2,
+                'branching_multiplier': 1.3
+            },
+        }
+    )
+
+
+class RootArchitectureModel:
+    """Enhanced root architecture model for hydroponic systems"""
+
+    def __init__(self, parameters: RootArchitectureParameters):
+        self.params = parameters
+        self.root_zones: List[RootZoneLayer] = []
+        self.total_age_days = 0.0
+        self.cumulative_root_growth = 0.0
+        self.initialize_root_zones()
+
+    def initialize_root_zones(self):
+        """Initialize root zone layers based on system type"""
+        if self.params.system_type == HydroponicSystemType.NFT:
+            effective_volume = self.params.container_volume * 0.3
+            self.root_zones = [
+                RootZoneLayer((0, 2), effective_volume * 0.3),
+                RootZoneLayer((2, 5), effective_volume * 0.4),
+                RootZoneLayer((5, 8), effective_volume * 0.3)
+            ]
+        elif self.params.system_type == HydroponicSystemType.DWC:
+            effective_volume = self.params.container_volume * 0.6
+            self.root_zones = [
+                RootZoneLayer((0, 5), effective_volume * 0.2),
+                RootZoneLayer((5, 15), effective_volume * 0.5),
+                RootZoneLayer((15, 25), effective_volume * 0.3)
+            ]
+        else:  # Aeroponics and others
+            effective_volume = self.params.container_volume * 0.4
+            self.root_zones = [
+                RootZoneLayer((0, 3), effective_volume * 0.25),
+                RootZoneLayer((3, 8), effective_volume * 0.35),
+                RootZoneLayer((8, 15), effective_volume * 0.25),
+                RootZoneLayer((15, 20), effective_volume * 0.15)
+            ]
+
+    def daily_update(self, environmental_conditions: Dict[str, float],
+                     growth_factors: Dict[str, float]) -> Dict[str, float]:
+        """Update root architecture for one day"""
+        self.total_age_days += 1.0
+
+        # Update environmental conditions in each zone
+        for zone in self.root_zones:
+            zone.temperature = environmental_conditions.get('temperature', 20.0)
+            zone.flow_rate = environmental_conditions.get('flow_rate', 1.0)
+            zone.oxygen_level = environmental_conditions.get('oxygen_level', 8.0)
+            zone.nutrient_concentrations = environmental_conditions.get('nutrient_concentrations', {})
+
+        self.update_root_aging()
+        new_growth = self.generate_new_roots(growth_factors)
+        self.cumulative_root_growth += new_growth
+
+        return self.calculate_architecture_metrics()
+
+    def update_root_aging(self):
+        """Age roots and remove those that have died"""
+        for zone in self.root_zones:
+            surviving_cohorts = []
+            for cohort in zone.root_cohorts:
+                cohort.age_days += 1.0
+                cohort.activity_factor = cohort.calculate_activity_factor()
+
+                if cohort.root_type == RootType.FINE:
+                    survival_prob = 1.0 - self.params.fine_turnover_rate
+                elif cohort.root_type == RootType.MEDIUM:
+                    survival_prob = 1.0 - self.params.medium_turnover_rate
+                else:
+                    survival_prob = 1.0 - self.params.coarse_turnover_rate
+
+                if np.random.random() < survival_prob:
+                    surviving_cohorts.append(cohort)
+
+            zone.root_cohorts = surviving_cohorts
+
+    def generate_new_roots(self, growth_factors: Dict[str, float]) -> float:
+        """Generate new root cohorts based on growth conditions"""
+        base_growth = self.params.primary_root_growth_rate
+
+        nitrogen_factor = growth_factors.get('nitrogen_stress', 1.0)
+        water_factor = growth_factors.get('water_stress', 1.0)
+        temperature_factor = growth_factors.get('temperature_stress', 1.0)
+
+        effective_growth = base_growth * nitrogen_factor * water_factor * temperature_factor
+
+        multipliers = self.params.system_multipliers.get(self.params.system_type, {})
+        length_mult = multipliers.get('root_length_multiplier', 1.0)
+        branching_mult = multipliers.get('branching_multiplier', 1.0)
+
+        total_new_growth = 0.0
+
+        for i, zone in enumerate(self.root_zones):
+            zone_growth_fraction = 0.4 * math.exp(-0.3 * i)
+            zone_growth = effective_growth * zone_growth_fraction * length_mult
+
+            if zone_growth > 0.01:
+                for root_type in RootType:
+                    if root_type == RootType.FINE:
+                        fraction = self.params.fine_root_fraction
+                        diameter = max(0.05, np.random.normal(
+                            self.params.fine_diameter_mean, self.params.fine_diameter_std))
+                    elif root_type == RootType.MEDIUM:
+                        fraction = self.params.medium_root_fraction
+                        diameter = max(0.15, np.random.normal(
+                            self.params.medium_diameter_mean, self.params.medium_diameter_std))
+                    else:
+                        fraction = self.params.coarse_root_fraction
+                        diameter = max(0.8, np.random.normal(
+                            self.params.coarse_diameter_mean, self.params.coarse_diameter_std))
+
+                    cohort_length = zone_growth * fraction * branching_mult
+                    if cohort_length > 0.1:
+                        diameter_cm = diameter / 10.0
+                        volume = math.pi * (diameter_cm/2)**2 * cohort_length
+                        biomass = volume * 0.3
+
+                        new_cohort = RootCohort(
+                            age_days=0.0,
+                            length=cohort_length,
+                            diameter=diameter,
+                            root_type=root_type,
+                            zone_depth=sum(zone.depth_range) / 2,
+                            biomass=biomass
+                        )
+                        zone.root_cohorts.append(new_cohort)
+                        total_new_growth += cohort_length
+
+        return total_new_growth
+
+    def calculate_architecture_metrics(self) -> Dict[str, float]:
+        total_length = 0.0
+        total_surface_area = 0.0
+        total_biomass = 0.0
+        total_volume = 0.0
+
+        fine_length = 0.0
+        medium_length = 0.0
+        coarse_length = 0.0
+
+        weighted_activity = 0.0
+        total_cohorts = 0
+
+        for zone in self.root_zones:
+            for cohort in zone.root_cohorts:
+                total_length += cohort.length
+                total_surface_area += cohort.surface_area
+                total_biomass += cohort.biomass
+
+                diameter_cm = cohort.diameter / 10.0
+                cohort_volume = math.pi * (diameter_cm/2)**2 * cohort.length
+                total_volume += cohort_volume
+
+                if cohort.root_type == RootType.FINE:
+                    fine_length += cohort.length
+                elif cohort.root_type == RootType.MEDIUM:
+                    medium_length += cohort.length
+                else:
+                    coarse_length += cohort.length
+
+                weighted_activity += cohort.activity_factor
+                total_cohorts += 1
+
+        total_zone_volume = sum(zone.volume for zone in self.root_zones)
+        root_length_density = total_length / max(1.0, total_zone_volume)
+        root_surface_area_density = total_surface_area / max(1.0, total_zone_volume)
+
+        avg_activity = weighted_activity / max(1, total_cohorts)
+        specific_root_length = total_length / max(0.001, total_biomass)
+
+        return {
+            'total_root_length': total_length,
+            'total_root_surface_area': total_surface_area,
+            'total_root_biomass': total_biomass,
+            'total_root_volume': total_volume,
+            'root_length_density': root_length_density,
+            'root_surface_area_density': root_surface_area_density,
+            'specific_root_length': specific_root_length,
+            'average_root_activity': avg_activity,
+            'fine_root_length': fine_length,
+            'medium_root_length': medium_length,
+            'coarse_root_length': coarse_length,
+            'fine_root_fraction': fine_length / max(1.0, total_length),
+            'root_age_days': self.total_age_days,
+            'cumulative_growth': self.cumulative_root_growth
+        }
+
+    def get_root_distribution(self) -> Dict[str, Dict[str, float]]:
+        distribution = {}
+        for i, zone in enumerate(self.root_zones):
+            zone_name = f"zone_{i+1}_depth_{zone.depth_range[0]}-{zone.depth_range[1]}cm"
+            total_length = sum(cohort.length for cohort in zone.root_cohorts)
+            total_area = sum(cohort.surface_area for cohort in zone.root_cohorts)
+            total_biomass = sum(cohort.biomass for cohort in zone.root_cohorts)
+            distribution[zone_name] = {
+                'root_length': total_length,
+                'root_surface_area': total_area,
+                'root_biomass': total_biomass,
+                'root_length_density': zone.calculate_root_length_density(),
+                'root_surface_area_density': zone.calculate_root_surface_area_density(),
+                'num_cohorts': len(zone.root_cohorts)
+            }
+        return distribution
+
+
+def create_lettuce_root_architecture_model(system_type: HydroponicSystemType = HydroponicSystemType.NFT) -> RootArchitectureModel:
+    """Create a root architecture model optimized for lettuce"""
+    params = RootArchitectureParameters(
+        system_type=system_type,
+        container_volume=1500.0,
+        primary_root_growth_rate=2.0,
+        lateral_root_density=3.5,
+        fine_root_fraction=0.65,
+        medium_root_fraction=0.30,
+        coarse_root_fraction=0.05,
+        fine_diameter_mean=0.12,
+        fine_diameter_std=0.04,
+        medium_diameter_mean=0.4,
+        medium_diameter_std=0.15,
+        coarse_diameter_mean=1.2,
+        coarse_diameter_std=0.4,
+        fine_turnover_rate=0.02,
+        medium_turnover_rate=0.01,
+        coarse_turnover_rate=0.005,
+    )
+    return RootArchitectureModel(params)
+
+
+# =========================
+# Hydroponic Root Dynamics (from hydroponic_root_dynamics.py)
+# =========================
+
+@dataclass
+class HydroponicRootZone:
+    """Hydroponic root zone characteristics - replaces soil layers."""
+    zone_type: str           # "solution", "media", "air"
+    volume: float            # L
+    solution_contact: float  # 0-1
+    aeration_level: float    # 0-1
+    flow_rate: float         # L/min
+    nutrient_accessibility: float  # 0-1
+
+
+@dataclass
+class HydroponicRootSystem:
+    """Complete hydroponic root system model."""
+    total_root_mass: float              # g dry weight
+    total_root_length: float            # cm
+    root_surface_area: float            # cm²
+    specific_root_length: float         # cm/g
+    root_diameter: float                # cm
+
+    # Hydroponic-specific parameters
+    solution_root_fraction: float
+    media_root_fraction: float
+    air_root_fraction: float
+
+    # Root zone distribution
+    primary_zone_roots: float           # g
+    secondary_zone_roots: float         # g
+    feeder_root_density: float          # cm/cm³
+
+    # Dynamic properties
+    root_growth_rate: float             # g/day
+    root_senescence_rate: float         # g/day
+    uptake_efficiency: float            # 0-1
+    system_type: HydroponicSystemType
+
+
+class HydroponicRootModel:
+    """Root dynamics model adapted for hydroponic systems."""
+
+    def __init__(self, system_type: HydroponicSystemType):
+        self.system_type = system_type
+        self.system_params = self._initialize_system_parameters()
+        self.growth_params = {
+            'initial_srl': 800.0,
+            'mature_srl': 600.0,
+            'max_root_diameter': 0.05,
+            'min_root_diameter': 0.01,
+            'root_tissue_density': 0.15,
+            'establishment_growth': 1.5,
+            'vegetative_growth': 0.15,
+            'reproductive_growth': 0.05,
+            'natural_senescence': 0.02,
+            'stress_senescence': 0.08,
+            'minimum_root_mass': 0.5,
+        }
+        self.environmental_factors = {
+            'optimal_solution_temp': 18.0,
+            'temp_tolerance': 5.0,
+            'optimal_dissolved_oxygen': 8.0,
+            'min_dissolved_oxygen': 3.0,
+            'optimal_ph': 6.0,
+            'ph_tolerance': 1.0,
+            'flow_rate_factor': 0.1,
+        }
+
+    def _initialize_system_parameters(self) -> Dict:
+        system_configs = {
+            HydroponicSystemType.NFT: {
+                'root_zone_volume_factor': 0.5,
+                'solution_contact_fraction': 0.3,
+                'max_aeration': 0.9,
+                'flow_dependency': 0.8,
+                'media_support': False,
+                'vertical_root_limit': 15.0,
+            },
+            HydroponicSystemType.DWC: {
+                'root_zone_volume_factor': 3.0,
+                'solution_contact_fraction': 0.8,
+                'max_aeration': 0.7,
+                'flow_dependency': 0.2,
+                'media_support': False,
+                'vertical_root_limit': 50.0,
+            },
+            HydroponicSystemType.AEROPONICS: {
+                'root_zone_volume_factor': 2.0,
+                'solution_contact_fraction': 0.2,
+                'max_aeration': 1.0,
+                'flow_dependency': 0.9,
+                'media_support': False,
+                'vertical_root_limit': 40.0,
+            },
+        }
+        return system_configs.get(self.system_type, system_configs[HydroponicSystemType.NFT])
+
+    def calculate_nutrient_uptake_capacity(self, root_system: HydroponicRootSystem,
+                                           solution_volume: float) -> float:
+        effective_surface = (
+            root_system.root_surface_area *
+            root_system.solution_root_fraction *
+            root_system.uptake_efficiency
+        )
+        system_efficiency = self.system_params['solution_contact_fraction']
+        base_uptake_rate = 0.05  # mg/cm²/day
+        total_uptake_capacity = effective_surface * base_uptake_rate * system_efficiency
+        return total_uptake_capacity
+
+    def _calculate_health_score(self, root_system: HydroponicRootSystem) -> float:
+        mass_score = min(100, (root_system.total_root_mass / self.growth_params['minimum_root_mass']) * 20)
+        growth_score = max(0, min(100, root_system.root_growth_rate * 500))
+        efficiency_score = root_system.uptake_efficiency * 100
+        senescence_penalty = min(50, root_system.root_senescence_rate * 1000)
+        health_score = (mass_score + growth_score + efficiency_score) / 3.0 - senescence_penalty
+        return max(0, min(100, health_score))
+
+
+# =========================
+# Root Architecture Integration (from root_architecture_integration.py)
+# =========================
+
+@dataclass
+class RootUptakeParameters:
+    """Parameters for root-architecture-based nutrient uptake"""
+    base_uptake_rates: Dict[str, float]
+    fine_root_effectiveness: float = 1.0
+    medium_root_effectiveness: float = 0.6
+    coarse_root_effectiveness: float = 0.2
+    optimal_temperature: float = 20.0
+    q10_factor: float = 2.0
+    optimal_flow_rate: float = 1.5
+    flow_stress_threshold: float = 4.0
+    michaelis_constants: Dict[str, float] = None
+
+
+class EnhancedRootUptakeModel:
+    """
+    Enhanced nutrient uptake model using detailed root architecture
+    """
+
+    def __init__(self, system_type: HydroponicSystemType = HydroponicSystemType.NFT):
+        self.root_architecture = create_lettuce_root_architecture_model(system_type)
+        self.system_type = system_type
+        self.uptake_params = RootUptakeParameters(
+            base_uptake_rates={
+                'NO3': 0.25,
+                'NH4': 0.15,
+                'PO4': 0.05,
+                'K': 0.20,
+                'Ca': 0.10,
+                'Mg': 0.08,
+                'SO4': 0.06,
+            },
+            michaelis_constants={
+                'NO3': 50.0,
+                'NH4': 20.0,
+                'PO4': 5.0,
+                'K': 30.0,
+                'Ca': 40.0,
+                'Mg': 25.0,
+                'SO4': 35.0,
+            },
+        )
+
+    def daily_update(self,
+                     environmental_conditions: Dict[str, float],
+                     growth_factors: Dict[str, float],
+                     solution_concentrations: Dict[str, float]) -> Dict[str, float]:
+        architecture_metrics = self.root_architecture.daily_update(
+            environmental_conditions, growth_factors
+        )
+        uptake_results = self.calculate_nutrient_uptake(
+            architecture_metrics, environmental_conditions, solution_concentrations
+        )
+        return {
+            **architecture_metrics,
+            **uptake_results,
+            'system_type': self.system_type.value
+        }
+
+    def calculate_nutrient_uptake(self,
+                                  architecture_metrics: Dict[str, float],
+                                  environmental_conditions: Dict[str, float],
+                                  solution_concentrations: Dict[str, float]) -> Dict[str, float]:
+        total_surface_area = architecture_metrics['total_root_surface_area']
+        avg_activity = architecture_metrics['average_root_activity']
+
+        temperature = environmental_conditions.get('temperature', 20.0)
+        flow_rate = environmental_conditions.get('flow_rate', 1.5)
+
+        temp_factor = self.calculate_temperature_factor(temperature)
+        flow_factor = self.calculate_flow_factor(flow_rate)
+
+        uptake_rates: Dict[str, float] = {}
+        for nutrient, concentration in solution_concentrations.items():
+            if nutrient in self.uptake_params.base_uptake_rates:
+                base_rate = self.uptake_params.base_uptake_rates[nutrient]
+                if self.uptake_params.michaelis_constants:
+                    km = self.uptake_params.michaelis_constants.get(nutrient, 50.0)
+                    conc_factor = concentration / (concentration + km)
+                else:
+                    conc_factor = 1.0
+
+                effective_surface_area = self.calculate_effective_surface_area(architecture_metrics)
+                uptake_rate = (
+                    effective_surface_area * base_rate * conc_factor * temp_factor * flow_factor * avg_activity
+                )
+                uptake_rates[f'{nutrient}_uptake_rate'] = uptake_rate
+
+        total_uptake = sum(uptake_rates.values())
+        return {
+            **uptake_rates,
+            'total_nutrient_uptake': total_uptake,
+            'uptake_per_surface_area': total_uptake / max(1.0, total_surface_area),
+            'uptake_temperature_factor': temp_factor,
+            'uptake_flow_factor': flow_factor,
+            'effective_root_surface_area': self.calculate_effective_surface_area(architecture_metrics),
+            'total_uptake_g_per_day': total_uptake / 1000.0,
+            'nitrogen_uptake_g_per_day': uptake_rates.get('NO3_uptake_rate', 0.0) / 1000.0,
+        }
+
+    def calculate_effective_surface_area(self, architecture_metrics: Dict[str, float]) -> float:
+        fine_length = architecture_metrics['fine_root_length']
+        medium_length = architecture_metrics['medium_root_length']
+        coarse_length = architecture_metrics['coarse_root_length']
+
+        fine_area = fine_length * math.pi * 0.015
+        medium_area = medium_length * math.pi * 0.05
+        coarse_area = coarse_length * math.pi * 0.15
+
+        return (
+            fine_area * self.uptake_params.fine_root_effectiveness +
+            medium_area * self.uptake_params.medium_root_effectiveness +
+            coarse_area * self.uptake_params.coarse_root_effectiveness
+        )
+
+    def calculate_temperature_factor(self, temperature: float) -> float:
+        temp_diff = temperature - self.uptake_params.optimal_temperature
+        factor = self.uptake_params.q10_factor ** (temp_diff / 10.0)
+        return max(0.1, min(4.0, factor))
+
+    def calculate_flow_factor(self, flow_rate: float) -> float:
+        optimal_flow = self.uptake_params.optimal_flow_rate
+        if flow_rate < 0.5:
+            return 0.4
+        elif flow_rate > self.uptake_params.flow_stress_threshold:
+            return 0.6
+        else:
+            normalized_flow = flow_rate / optimal_flow
+            return min(1.0, 0.5 + 0.5 * normalized_flow)
+
+    def get_spatial_uptake_distribution(self) -> Dict[str, Dict[str, float]]:
+        root_distribution = self.root_architecture.get_root_distribution()
+        spatial_uptake: Dict[str, Dict[str, float]] = {}
+        for zone_name, zone_data in root_distribution.items():
+            zone_surface_area = zone_data['root_surface_area']
+            zone_uptake: Dict[str, float] = {}
+            for nutrient, base_rate in self.uptake_params.base_uptake_rates.items():
+                zone_uptake[f'{nutrient}_capacity'] = zone_surface_area * base_rate
+            zone_uptake['total_surface_area'] = zone_surface_area
+            zone_uptake['total_capacity'] = sum(
+                v for k, v in zone_uptake.items() if k.endswith('_capacity')
+            )
+            spatial_uptake[zone_name] = zone_uptake
+        return spatial_uptake
+
+    def optimize_environmental_conditions(self,
+                                          target_uptake_rates: Dict[str, float],
+                                          current_concentrations: Dict[str, float]) -> Dict[str, float]:
+        current_metrics = self.root_architecture.calculate_architecture_metrics()
+        best_conditions = {'temperature': 20.0, 'flow_rate': 1.5}
+        best_score = 0.0
+        for temp in [16, 18, 20, 22, 24, 26]:
+            for flow in [0.5, 1.0, 1.5, 2.0, 2.5, 3.0]:
+                temp_factor = self.calculate_temperature_factor(temp)
+                flow_factor = self.calculate_flow_factor(flow)
+                score = 0.0
+                for nutrient, target_rate in target_uptake_rates.items():
+                    if nutrient in self.uptake_params.base_uptake_rates:
+                        base_rate = self.uptake_params.base_uptake_rates[nutrient]
+                        concentration = current_concentrations.get(nutrient, 100.0)
+                        predicted_uptake = (
+                            current_metrics['total_root_surface_area'] *
+                            base_rate * temp_factor * flow_factor *
+                            (concentration / (concentration + 50.0))
+                        )
+                        error = abs(predicted_uptake - target_rate)
+                        score += 1.0 / (1.0 + error / max(1e-6, target_rate))
+                if score > best_score:
+                    best_score = score
+                    best_conditions = {'temperature': temp, 'flow_rate': flow}
+        return {
+            **best_conditions,
+            'optimization_score': best_score,
+            'predicted_improvement': (best_score / max(1, len(target_uptake_rates))) * 100.0,
+        }
+
+
+def create_enhanced_root_uptake_model(system_type: HydroponicSystemType = HydroponicSystemType.NFT) -> EnhancedRootUptakeModel:
+    return EnhancedRootUptakeModel(system_type)
+
+
+# =========================
+# Demonstration
+# =========================
+
+if __name__ == "__main__":
+    print("Unified Root System Model - Demonstration")
+    print("=" * 80)
+
+    # 1) Root Architecture quick run
+    arch = create_lettuce_root_architecture_model(HydroponicSystemType.NFT)
+    metrics = arch.daily_update({'temperature': 20.0, 'flow_rate': 1.5, 'oxygen_level': 8.0},
+                                {'nitrogen_stress': 0.9, 'water_stress': 0.95, 'temperature_stress': 0.9})
+    print(f"Root length: {metrics['total_root_length']:.1f} cm, surface: {metrics['total_root_surface_area']:.0f} cm²")
+
+    # 2) Enhanced uptake quick run
+    model = create_enhanced_root_uptake_model(HydroponicSystemType.NFT)
+    results = model.daily_update(
+        {'temperature': 22.0, 'flow_rate': 1.5, 'oxygen_level': 8.0},
+        {'nitrogen_stress': 0.95, 'water_stress': 0.95, 'temperature_stress': 0.95},
+        {'NO3': 140.0, 'K': 120.0}
+    )
+    print(f"NO3 uptake: {results.get('NO3_uptake_rate', 0.0):.2f} mg/day, total: {results.get('total_nutrient_uptake', 0.0):.2f} mg/day")
+
+    # 3) Hydroponic root dynamics utilities
+    hrm = HydroponicRootModel(HydroponicSystemType.NFT)
+    sample_roots = HydroponicRootSystem(
+        total_root_mass=10.0,
+        total_root_length=6000.0,
+        root_surface_area=2500.0,
+        specific_root_length=600.0,
+        root_diameter=0.02,
+        solution_root_fraction=0.6,
+        media_root_fraction=0.2,
+        air_root_fraction=0.2,
+        primary_zone_roots=6.0,
+        secondary_zone_roots=4.0,
+        feeder_root_density=5.0,
+        root_growth_rate=0.8,
+        root_senescence_rate=0.03,
+        uptake_efficiency=0.85,
+        system_type=HydroponicSystemType.NFT,
+    )
+    capacity = hrm.calculate_nutrient_uptake_capacity(sample_roots, solution_volume=50.0)
+    print(f"Capacity: {capacity:.1f} mg/day, Health: {hrm._calculate_health_score(sample_roots):.1f}")

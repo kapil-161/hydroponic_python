@@ -35,53 +35,76 @@ class RespirationParameters:
     """Parameters for respiration model."""
     
     # Maintenance respiration parameters
-    maintenance_base_rate: float = 0.015    # g C/g biomass/day at 25°C
-    reference_temperature: float = 25.0     # °C reference temperature
-    q10_factor: float = 2.3                 # Temperature response coefficient
+    maintenance_base_rate: float = None     # g C/g biomass/day at 25°C
+    reference_temperature: float = None     # °C reference temperature
+    q10_factor: float = None                # Temperature response coefficient
     
     # Growth respiration parameters
-    growth_efficiency: float = 0.75         # Conversion efficiency (glucose → biomass)
-    biosynthetic_cost: float = 1.44         # g glucose/g biomass
+    growth_efficiency: float = None         # Conversion efficiency (glucose → biomass)
+    biosynthetic_cost: float = 1.44         # g glucose/g biomass (biochemical constant)
     
     # Tissue-specific factors
     tissue_factors: Dict[str, float] = None
     
     # Age effects
-    age_effect_coefficient: float = 0.002   # Daily increase in respiration per day of age
-    max_age_effect: float = 2.0             # Maximum age multiplier
+    age_effect_coefficient: float = None    # Daily increase in respiration per day of age
+    max_age_effect: float = None            # Maximum age multiplier
     
     # Temperature acclimation
-    acclimation_rate: float = 0.1           # Rate of thermal acclimation
-    acclimation_memory: float = 7.0         # Days of temperature memory
+    acclimation_rate: float = None          # Rate of thermal acclimation
+    acclimation_memory: float = 7.0         # Days of temperature memory (model constant)
     
     # Nitrogen effects
-    n_effect_slope: float = 0.5             # Respiration response to leaf N content
-    reference_leaf_n: float = 4.0           # g N/g biomass reference
+    n_effect_slope: float = 0.5             # Respiration response to leaf N content (model constant)
+    reference_leaf_n: float = 4.0           # g N/g biomass reference (model constant)
     
     def __post_init__(self):
-        if self.tissue_factors is None:
-            self.tissue_factors = {
-                TissueType.LEAVES.value: 1.0,      # Reference tissue
-                TissueType.STEMS.value: 0.7,       # Lower metabolic activity
-                TissueType.ROOTS.value: 0.8,       # Moderate activity
-                TissueType.REPRODUCTIVE.value: 1.2  # High activity during development
-            }
+        """Load respiration parameters from JSON config if available."""
+        try:
+            from ..utils.config_loader import get_config_loader
+            loader = get_config_loader()
+            cfg = loader.get_respiration_parameters()
+
+            if self.maintenance_base_rate is None:
+                self.maintenance_base_rate = cfg.get('maintenance_base_rate', 0.015)
+            if self.reference_temperature is None:
+                self.reference_temperature = cfg.get('reference_temperature', 25.0)
+            if self.q10_factor is None:
+                self.q10_factor = cfg.get('q10_factor', 2.3)
+            if self.growth_efficiency is None:
+                self.growth_efficiency = cfg.get('growth_efficiency', 0.75)
+            if self.age_effect_coefficient is None:
+                self.age_effect_coefficient = cfg.get('age_effect_coefficient', 0.002)
+            if self.max_age_effect is None:
+                self.max_age_effect = cfg.get('max_age_effect', 1.5)
+            if self.acclimation_rate is None:
+                self.acclimation_rate = cfg.get('acclimation_rate', 0.1)
+
+            if self.tissue_factors is None:
+                self.tissue_factors = cfg.get('tissue_factors', {
+                    TissueType.LEAVES.value: 1.0,
+                    TissueType.STEMS.value: 0.7,
+                    TissueType.ROOTS.value: 0.8,
+                    TissueType.REPRODUCTIVE.value: 1.2
+                })
+        except Exception:
+            # Leave provided values as-is
+            pass
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'RespirationParameters':
         """Create RespirationParameters from configuration dictionary."""
-        tissue_factors = config_dict.get('tissue_factors', {})
-        
+        tissue_factors = config_dict.get('tissue_factors', None)
         return cls(
-            maintenance_base_rate=config_dict.get('maintenance_base_rate', 0.015),
-            reference_temperature=config_dict.get('reference_temperature', 25.0),
-            q10_factor=config_dict.get('q10_factor', 2.3),
-            growth_efficiency=config_dict.get('growth_efficiency', 0.75),
+            maintenance_base_rate=config_dict.get('maintenance_base_rate'),
+            reference_temperature=config_dict.get('reference_temperature'),
+            q10_factor=config_dict.get('q10_factor'),
+            growth_efficiency=config_dict.get('growth_efficiency'),
             biosynthetic_cost=config_dict.get('biosynthetic_cost', 1.44),
-            tissue_factors=tissue_factors if tissue_factors else None,
-            age_effect_coefficient=config_dict.get('age_effect_coefficient', 0.002),
-            max_age_effect=config_dict.get('max_age_effect', 2.0),
-            acclimation_rate=config_dict.get('acclimation_rate', 0.1),
+            tissue_factors=tissue_factors,
+            age_effect_coefficient=config_dict.get('age_effect_coefficient'),
+            max_age_effect=config_dict.get('max_age_effect'),
+            acclimation_rate=config_dict.get('acclimation_rate'),
             acclimation_memory=config_dict.get('acclimation_memory', 7.0),
             n_effect_slope=config_dict.get('n_effect_slope', 0.5),
             reference_leaf_n=config_dict.get('reference_leaf_n', 4.0)
@@ -368,114 +391,41 @@ class EnhancedRespirationModel:
             age_factor=combined_factors['age_factor'],
             nitrogen_factor=combined_factors['nitrogen_factor']
         )
-    
-    def get_daily_carbon_loss(self, respiration_components: RespirationComponents) -> Dict[str, float]:
-        """
-        Get daily carbon loss breakdown for carbon balance calculations.
-        
-        Args:
-            respiration_components: Calculated respiration components
-            
-        Returns:
-            Dictionary with carbon loss breakdown
-        """
-        return {
-            'maintenance_respiration_g_C': respiration_components.maintenance_respiration,
-            'growth_respiration_g_C': respiration_components.growth_respiration,
-            'total_respiration_g_C': respiration_components.total_respiration,
-            'respiration_coefficient': (respiration_components.total_respiration / 
-                                      max(1.0, respiration_components.maintenance_respiration + 
-                                          respiration_components.growth_respiration))
-        }
-
 
 def create_lettuce_respiration_model() -> EnhancedRespirationModel:
-    """Create respiration model with lettuce-specific parameters."""
-    try:
-        from ..utils.config_loader import get_config_loader
-        config_loader = get_config_loader()
-        respiration_config = config_loader.get_respiration_parameters()
-        parameters = RespirationParameters.from_config(respiration_config)
-        return EnhancedRespirationModel(parameters)
-    except ImportError:
-        # Fallback to default values if config loader not available
-        return EnhancedRespirationModel()
-
-
-def create_example_biomass_pools() -> List[BiomassPool]:
-    """Create example biomass pools for testing."""
-    return [
-        BiomassPool(
-            tissue_type=TissueType.LEAVES,
-            dry_mass=15.0,           # g
-            age_days=20.0,
-            nitrogen_content=4.2,    # g N/g biomass
-            recent_growth=2.0        # g new growth today
-        ),
-        BiomassPool(
-            tissue_type=TissueType.STEMS,
-            dry_mass=5.0,            # g
-            age_days=25.0,
-            nitrogen_content=2.0,
-            recent_growth=0.5
-        ),
-        BiomassPool(
-            tissue_type=TissueType.ROOTS,
-            dry_mass=8.0,            # g
-            age_days=30.0,
-            nitrogen_content=2.5,
-            recent_growth=1.0
-        )
-    ]
+    """Create respiration model with lettuce-specific parameters from JSON config."""
+    from ..utils.config_loader import get_config_loader
+    config_loader = get_config_loader()
+    respiration_config = config_loader.get_respiration_parameters()
+    parameters = RespirationParameters.from_config(respiration_config)
+    return EnhancedRespirationModel(parameters)
 
 
 def demonstrate_respiration_model():
-    """Demonstrate respiration model capabilities."""
-    model = create_lettuce_respiration_model()
-    biomass_pools = create_example_biomass_pools()
-    
+    """Demonstrate respiration model with sample biomass pools."""
+    try:
+        from ..utils.config_loader import get_config_loader
+        config_loader = get_config_loader()
+        r_config = config_loader.get_respiration_parameters()
+        model = EnhancedRespirationModel(RespirationParameters.from_config(r_config))
+    except Exception:
+        model = EnhancedRespirationModel()
+
+    # Define sample biomass pools
+    pools = [
+        BiomassPool(TissueType.LEAVES, dry_mass=50.0, age_days=20, nitrogen_content=4.0, recent_growth=1.5),
+        BiomassPool(TissueType.STEMS, dry_mass=20.0, age_days=30, nitrogen_content=1.5, recent_growth=0.3),
+        BiomassPool(TissueType.ROOTS, dry_mass=15.0, age_days=25, nitrogen_content=1.0, recent_growth=0.4),
+    ]
+
     print("=" * 80)
-    print("ENHANCED RESPIRATION MODEL DEMONSTRATION")
+    print("RESPIRATION MODEL DEMONSTRATION")
     print("=" * 80)
-    
-    # Test different temperatures
-    temperatures = [15.0, 20.0, 25.0, 30.0, 35.0]
-    
-    print(f"{'Temp(°C)':<8} {'Maint(gC/d)':<12} {'Growth(gC/d)':<13} {'Total(gC/d)':<12} {'TempFactor':<11}")
-    print("-" * 80)
-    
-    for temp in temperatures:
-        total_new_growth = sum(pool.recent_growth for pool in biomass_pools)
-        
-        respiration = model.calculate_total_respiration(
-            biomass_pools, temp, total_new_growth
-        )
-        
-        print(f"{temp:<8.1f} {respiration.maintenance_respiration:<12.3f} "
-              f"{respiration.growth_respiration:<13.3f} {respiration.total_respiration:<12.3f} "
-              f"{respiration.temperature_factor:<11.3f}")
-    
-    # Show tissue breakdown
-    print(f"\nTissue Breakdown at 25°C:")
-    respiration_25c = model.calculate_total_respiration(biomass_pools, 25.0, 3.5)
-    
-    for tissue, resp_rate in respiration_25c.tissue_breakdown.items():
-        print(f"  {tissue:<12}: {resp_rate:.3f} g C/day")
-    
-    print(f"\nRespiration factors:")
-    print(f"  Temperature factor: {respiration_25c.temperature_factor:.3f}")
-    print(f"  Age factor: {respiration_25c.age_factor:.3f}")
-    print(f"  Nitrogen factor: {respiration_25c.nitrogen_factor:.3f}")
-    
-    # Test temperature acclimation
-    print(f"\nTemperature Acclimation Test:")
-    print(f"Initial acclimated temp: {model.acclimated_reference_temp:.1f}°C")
-    
-    # Simulate 10 days of warm weather
-    for day in range(10):
-        model.update_temperature_acclimation(30.0)
-    
-    print(f"After 10 days at 30°C: {model.acclimated_reference_temp:.1f}°C")
+
+    for temp in [18.0, 22.0, 26.0]:
+        components = model.calculate_total_respiration(pools, temperature=temp, total_new_growth=sum(p.recent_growth for p in pools))
+        print(f"Temp {temp:.1f}C -> Maintenance: {components.maintenance_respiration:.2f} gC/d, "
+              f"Growth: {components.growth_respiration:.2f} gC/d, Total: {components.total_respiration:.2f} gC/d")
 
 
 if __name__ == "__main__":
