@@ -162,14 +162,17 @@ class ConfigLoader:
         return self.config.stress_thresholds if self.config else {}
 
     # === Canonical group helpers (for models reading consolidated root config) ===
-    def get_genetic_parameters(self) -> Dict[str, Any]:
-        """Get genetics group from canonical config."""
-        # In canonical mapping, genetics lives in SimulationConfig.genetic_parameters
-        return self.config.genetic_parameters if self.config else {}
-    
-    def get_photosynthesis_parameters(self) -> Dict[str, Any]:
-        """Get photosynthesis model parameters."""
-        return self.config.photosynthesis_model if self.config else {}
+    def get_stress_parameters(self) -> Dict[str, Any]:
+        return self.config.get('stress', {})
+
+    def get_system_parameters(self) -> Dict[str, Any]:
+        return self.config.get('system', {})
+
+    def get_genetics_parameters(self) -> Dict[str, Any]:
+        return self.config.get('genetics', {})
+
+    def get_all_parameters(self) -> Dict[str, Any]:
+        return self.config.copy()
     
     def get_mechanistic_uptake_config(self) -> Dict[str, Any]:
         """Get mechanistic uptake configuration."""

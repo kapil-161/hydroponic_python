@@ -292,10 +292,20 @@ class SimulationResults:
             if hasattr(result, 'fresh_weight'):
                 row['Fresh_Weight_g'] = result.fresh_weight
 
-            # Round all float values to 2 decimal places
+            # Round floats with field-specific precision to preserve signal
+            precision_overrides = {
+                'WUE_kg_m3': 3,
+                'Leaf_Area_m2': 3,
+                'LAI': 3,
+                'EC': 2,
+                'pH': 2,
+                'Water_Total_L': 2,
+                'Tank_Volume_L': 2,
+            }
             for key, value in row.items():
                 if isinstance(value, float):
-                    row[key] = round(value, 2)
+                    decimals = precision_overrides.get(key, 2)
+                    row[key] = round(value, decimals)
 
             data.append(row)
             

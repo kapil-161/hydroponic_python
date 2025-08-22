@@ -66,19 +66,30 @@ class RootCohort:
         return math.pi * diameter_cm * self.length
 
     def calculate_activity_factor(self) -> float:
-        """Calculate age-dependent root activity factor (0-1)"""
-        if self.root_type == RootType.FINE:
-            max_age = 45.0  # days (informational)
-            decline_rate = 0.03
-        elif self.root_type == RootType.MEDIUM:
-            max_age = 90.0
-            decline_rate = 0.02
-        else:  # COARSE
-            max_age = 180.0
-            decline_rate = 0.01
+        """Calculate age-dependent root activity factor (0-1).
 
-        activity = math.exp(-decline_rate * self.age_days)
-        return max(0.05, activity)  # Minimum 5% activity
+        Use a half-life based decay with an early-life plateau and
+        a higher minimum activity to avoid unrealistic rapid inactivity.
+        """
+        if self.root_type == RootType.FINE:
+            half_life_days = 45.0
+            min_activity = 0.20
+        elif self.root_type == RootType.MEDIUM:
+            half_life_days = 90.0
+            min_activity = 0.25
+        else:  # COARSE
+            half_life_days = 180.0
+            min_activity = 0.30
+
+        # Early establishment plateau (no decline for first week)
+        if self.age_days <= 7.0:
+            base_activity = 1.0
+        else:
+            # Half-life decay: activity = 0.5 ** (age / half_life)
+            base_activity = 0.5 ** (self.age_days / max(1e-6, half_life_days))
+
+        # Clamp to biologically reasonable minimums
+        return max(min_activity, base_activity)
 
     def calculate_uptake_capacity(self, base_uptake_rate: float) -> float:
         """Calculate nutrient uptake capacity (mg/day)"""
@@ -118,9 +129,9 @@ class RootZoneLayer:
 
     def adjust_uptake_rate(self, base_rate: float) -> float:
         """Adjust uptake rate based on environmental conditions"""
-        # Temperature effect (Q10 = 2.0)
-        temp_factor = 2.0 ** ((self.temperature - 20.0) / 10.0)
-        temp_factor = max(0.1, min(4.0, temp_factor))
+        # Temperature effect (Q10 ≈ 1.6 typical for root uptake)
+        temp_factor = 1.6 ** ((self.temperature - 20.0) / 10.0)
+        temp_factor = max(0.5, min(2.5, temp_factor))
 
         # Flow rate effect (optimal around 1-2 L/min)
         if self.flow_rate < 0.5:

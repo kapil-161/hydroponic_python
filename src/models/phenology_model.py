@@ -77,8 +77,8 @@ class PhenologyParameters:
     critical_photoperiod: float = None     # Hours critical day length
     photoperiod_slope: float = 0.1         # Sensitivity to photoperiod (model constant)
     
-    # Scaling to calibrate daily thermal time (>1 speeds development). Target 40–45 day HM.
-    thermal_time_scale: float = 1.4
+    # Scaling to calibrate daily thermal time (0-1). Lettuce target ~15-18 GDD/day.
+    thermal_time_scale: float = 0.85
     
     # Vernalization (cold requirement)
     vernalization_required: bool = False   # Model constant for lettuce
@@ -126,7 +126,7 @@ class PhenologyParameters:
             if self.thermal_requirements is None:
                 self.thermal_requirements = cfg.get('thermal_requirements', cfg.get('THERMAL_REQUIREMENTS')) or None
             # Optional scaling for thermal time
-            self.thermal_time_scale = cfg.get('thermal_time_scale', cfg.get('THERMAL_TIME_SCALE', 1.4))
+            self.thermal_time_scale = cfg.get('thermal_time_scale', cfg.get('THERMAL_TIME_SCALE', 0.9))
         except Exception:
             # Leave values as provided; model will require explicit configuration
             pass

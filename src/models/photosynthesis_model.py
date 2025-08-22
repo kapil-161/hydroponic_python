@@ -24,6 +24,8 @@ class PhotosynthesisParameters:
     eav: float = None           # Activation energy for Vcmax (J/mol)
     ear: float = None           # Activation energy for Rd (J/mol)
     r: float = 8.314            # Gas constant (J/mol/K) - physical constant
+    o2_mmol_mol: float = 210.0  # Atmospheric O2 concentration in mmol/mol (≈21%)
+    ci_fraction: float = 0.75    # Internal CO2 fraction of ambient (stomatal limitation)
     
     def __post_init__(self):
         """Load parameters from centralized JSON config if not provided."""
@@ -55,10 +57,30 @@ class PhotosynthesisParameters:
                 self.eav = cfg.get('eav', 60000.0)
             if self.ear is None:
                 self.ear = cfg.get('ear', 46390.0)
+            # Optional override for O2 concentration (mmol/mol) with validation
+            self.o2_mmol_mol = self._validate_parameter(
+                cfg.get('o2_mmol_mol', cfg.get('O2_MMOL_MOL', 210.0)),
+                200.0, 220.0, 210.0, 'o2_mmol_mol'
+            )
+            # Internal CO2 fraction (0.65–0.85 typical for C3) with validation
+            self.ci_fraction = self._validate_parameter(
+                cfg.get('ci_fraction', cfg.get('CI_FRACTION', 0.75)),
+                0.65, 0.85, 0.75, 'ci_fraction'
+            )
         except Exception:
             # Config loader not available; leave any explicitly provided values as-is
             # and rely on defaults above where needed.
             pass
+    
+    def _validate_parameter(self, value: float, min_val: float, max_val: float, default: float, param_name: str) -> float:
+        """Validate parameter is within biological bounds."""
+        if value is None:
+            return default
+        if not (min_val <= value <= max_val):
+            import warnings
+            warnings.warn(f"Parameter {param_name}={value} outside valid range [{min_val}, {max_val}]. Using default {default}")
+            return default
+        return value
     
     @classmethod
     def from_dict(cls, config_dict: dict) -> 'PhotosynthesisParameters':
@@ -103,8 +125,8 @@ class PhotosynthesisModel:
 
         Uses photoperiod_hours to integrate over light period rather than 24h.
         """
-        # Convert CO2 ppm to umol/mol
-        ci = co2_ppm * 1.0 # Assuming internal CO2 is similar to ambient for simplicity
+        # Convert CO2 ppm to umol/mol and apply stomatal limitation
+        ci = co2_ppm * self.params.ci_fraction
 
         # Temperature-adjusted rates
         vcmax = self._arrhenius_temp_response(self.params.vcmax_25, self.params.eav, temp_c)
@@ -112,7 +134,9 @@ class PhotosynthesisModel:
         rd = self._arrhenius_temp_response(self.params.rd_25, self.params.ear, temp_c)
 
         # Rubisco-limited rate (Ac)
-        ac = vcmax * (ci - self.params.gamma_star) / (ci + self.params.kc * (1 + 210000 / self.params.ko)) # O2 is 21% or 210000 ppm
+        # O2 concentration: convert mmol/mol to μmol/mol for consistency with ci and kinetic constants
+        o2_umol_mol = self.params.o2_mmol_mol * 1000.0  # 210 mmol/mol → 210,000 μmol/mol
+        ac = vcmax * (ci - self.params.gamma_star) / (ci + self.params.kc * (1 + o2_umol_mol / self.params.ko))
 
         # Light-limited rate (Aj)
         # J = (alpha * PAR * Jmax) / sqrt( (alpha * PAR)^2 + Jmax^2 )
@@ -121,15 +145,15 @@ class PhotosynthesisModel:
         j = (i2 + jmax - np.sqrt((i2 + jmax)**2 - 4 * self.params.theta * i2 * jmax)) / (2 * self.params.theta)
         aj = j * (ci - self.params.gamma_star) / (4 * (ci + 2 * self.params.gamma_star))
 
-        # Net assimilation (A) is the minimum of Ac and Aj, minus respiration
-        a_net_umol_m2_s = min(ac, aj) - rd
-
-        # Convert from umol CO2/m2/s to g C/m2/day
-        # 1 umol CO2 = 12.01 g C / 1,000,000 umol = 1.201e-5 g C
-        # Integrate over photoperiod seconds
+        # Net carbon: integrate gross photosynthesis over photoperiod and subtract 24h dark respiration
+        # Gross day assimilation (umol/m2) during light hours
         photoperiod_seconds = max(0.0, photoperiod_hours) * 3600.0
-        # Assimilation per m2 of leaf area
-        g_c_m2_day = a_net_umol_m2_s * 1.201e-5 * photoperiod_seconds
+        gross_day_umol = max(0.0, min(ac, aj)) * photoperiod_seconds
+        # Dark respiration occurs all 24h
+        daily_resp_umol = max(0.0, rd) * 86400.0
+        net_umol_day = gross_day_umol - daily_resp_umol
+        # Convert from umol CO2 to g C: 1 umol CO2 ≈ 1.201e-5 g C
+        g_c_m2_day = max(0.0, net_umol_day) * 1.201e-5
 
         # Scale by LAI to get assimilation per ground area
         total_g_c_m2_day = g_c_m2_day * lai

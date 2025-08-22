@@ -647,70 +647,62 @@ class PlantNitrogenBalanceModel:
         
         return max(0.0, min(1.0, overall_stress))
     
-    def daily_update(self, root_mass: float,
-                    solution_concentrations: Dict[str, float],
-                    environmental_factors: Dict[str, float],
-                    organ_growth_rates: Dict[str, float],
-                    growth_stage: str,
-                    stress_factors: Dict[str, float],
-                    senescence_rates: Dict[str, float]) -> NitrogenBalanceResponse:
+    def update_nitrogen_pools(self, external_nitrogen_input: float,
+                             organ_growth_rates: Dict[str, float],
+                             environmental_factors: Dict[str, float],
+                             growth_stage: str,
+                             stress_factors: Dict[str, float],
+                             senescence_rates: Dict[str, float]) -> NitrogenBalanceResponse:
         """
-        Daily nitrogen balance update.
-        
-        Args:
-            root_mass: Root dry mass (g)
-            solution_concentrations: N concentrations by form (mg N/L)
-            environmental_factors: Environmental factors affecting processes
-            organ_growth_rates: Growth rates by organ (g dry mass/day)
-            growth_stage: Current growth stage
-            stress_factors: Stress levels by type
-            senescence_rates: Senescence rates by organ
-            
-        Returns:
-            Complete nitrogen balance response
+        Daily nitrogen balance update using externally provided uptake.
+        This method focuses on INTERNAL allocation and remobilization.
         """
-        # Calculate nitrogen uptake
-        uptake_response = self.calculate_nitrogen_uptake(
-            root_mass, solution_concentrations, environmental_factors
+        # Create a dummy uptake response since uptake is now external
+        uptake_response = NitrogenUptakeResponse(
+            total_uptake=external_nitrogen_input,
+            uptake_by_form={'external': external_nitrogen_input},
+            uptake_rate_by_form={},
+            root_activity=0.0,
+            uptake_efficiency=1.0,
+            limiting_factors=[]
         )
-        
+
         # Calculate nitrogen remobilization
         remobilized_n = self.calculate_nitrogen_remobilization(
             stress_factors, senescence_rates
         )
-        
+
         # Total available nitrogen for allocation
-        available_n = uptake_response.total_uptake + remobilized_n
-        
+        available_n = external_nitrogen_input + remobilized_n
+
         # Calculate nitrogen demand
         n_demand = self.calculate_nitrogen_demand(organ_growth_rates, growth_stage)
-        
+
         # Allocate nitrogen to organs
         allocation_response = self.allocate_nitrogen(
             available_n, n_demand, growth_stage
         )
-        
+
         # Update organ nitrogen states
         for organ_name, allocated_n in allocation_response.allocated_by_organ.items():
             if organ_name in self.organ_states:
                 organ_state = self.organ_states[organ_name]
-                
-                # Update dry mass if growing (do this first)
+
+                # Update dry mass if growing
                 if organ_name in organ_growth_rates and organ_growth_rates[organ_name] > 0:
                     organ_state.dry_mass += organ_growth_rates[organ_name]
-                
+
                 # Add allocated nitrogen
                 organ_state.total_nitrogen += allocated_n
                 organ_state.daily_uptake = allocated_n
-                
+
                 # Recalculate concentration
                 if organ_state.dry_mass > 0:
                     organ_state.nitrogen_concentration = organ_state.total_nitrogen / organ_state.dry_mass
-                
+
                 # Update nitrogen pools proportionally
                 if organ_state.total_nitrogen > 0:
-                    # Maintain pool proportions
-                    total_pools = (organ_state.structural_n + organ_state.metabolic_n + 
+                    total_pools = (organ_state.structural_n + organ_state.metabolic_n +
                                  organ_state.storage_n + organ_state.transport_n)
                     if total_pools > 0:
                         scale_factor = organ_state.total_nitrogen / total_pools
@@ -718,40 +710,40 @@ class PlantNitrogenBalanceModel:
                         organ_state.metabolic_n *= scale_factor
                         organ_state.storage_n *= scale_factor
                         organ_state.transport_n *= scale_factor
-                
+
                 # Update nitrogen status
                 self.update_organ_nitrogen_status(organ_name)
-        
+
         # Calculate overall nitrogen stress
         n_stress_level = self.calculate_nitrogen_stress_level()
-        
+
         # Calculate nitrogen use efficiency
         total_plant_n = sum(state.total_nitrogen for state in self.organ_states.values())
         total_biomass = sum(state.dry_mass for state in self.organ_states.values())
-        
+
         if total_plant_n > 0:
             nue = total_biomass / total_plant_n
         else:
             nue = 0.0
-        
+
         # Calculate nitrogen balance
         total_growth_demand = sum(n_demand.values())
         n_balance = available_n - total_growth_demand
-        
+
         # Update cumulative tracking
-        self.total_cumulative_uptake += uptake_response.total_uptake
+        self.total_cumulative_uptake += external_nitrogen_input
         self.total_cumulative_remobilization += remobilized_n
-        
+
         # Store daily history
         daily_record = {
-            'total_uptake': uptake_response.total_uptake,
+            'total_uptake': external_nitrogen_input,
             'remobilized': remobilized_n,
             'total_plant_n': total_plant_n,
             'nue': nue,
             'n_stress': n_stress_level
         }
         self.nitrogen_history.append(daily_record)
-        
+
         return NitrogenBalanceResponse(
             uptake_response=uptake_response,
             allocation_response=allocation_response,

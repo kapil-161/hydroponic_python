@@ -369,10 +369,9 @@ class NutrientMobilityModel:
                 self.cumulative_redistribution[nutrient] = 0.0
 
     def calculate_transport_capacity(self, source_organ: str, sink_organ: str, water_flux: float, assimilate_flux: float, temperature: float) -> Dict[str, float]:
-        temp_factor = self.params.temperature_q10 ** ((temperature - 25.0) / 10.0)
-        temp_factor = max(0.5, min(2.0, temp_factor))
-        xylem_capacity = water_flux * self.params.xylem_transport_capacity * self.params.transpiration_coupling * temp_factor
-        phloem_capacity = assimilate_flux * self.params.phloem_transport_capacity * temp_factor
+        # Capacity is constrained by physical fluxes; temperature affects kinetics, not capacity
+        xylem_capacity = water_flux * self.params.xylem_transport_capacity * self.params.transpiration_coupling
+        phloem_capacity = assimilate_flux * self.params.phloem_transport_capacity
         return {"xylem": xylem_capacity, "phloem": phloem_capacity}
 
     def calculate_sink_demands(self, organ_demands: Dict[str, Dict[str, float]], growth_stage: str) -> Dict[str, Dict[str, float]]:
@@ -427,11 +426,14 @@ class NutrientMobilityModel:
 
     def calculate_transport_fluxes(self, sink_demands: Dict[str, Dict[str, float]], source_supplies: Dict[str, Dict[str, float]], transport_capacities: Dict[str, Dict[str, float]], temperature: float) -> List[NutrientTransportFlux]:
         fluxes: List[NutrientTransportFlux] = []
+        # Apply Q10 temperature response to transport kinetics (rates), not to capacity
+        temp_factor = self.params.temperature_q10 ** ((temperature - 25.0) / 10.0)
+        temp_factor = max(0.5, min(2.0, temp_factor))
         for nutrient in self.params.mobility_classifications:
             mobility_info = self.params.mobility_classifications[nutrient]
             transport_type = mobility_info["transport"]
-            xylem_rate = self.params.xylem_transport_rates.get(nutrient, 0.1)
-            phloem_rate = self.params.phloem_transport_rates.get(nutrient, 0.1)
+            xylem_rate = self.params.xylem_transport_rates.get(nutrient, 0.1) * temp_factor
+            phloem_rate = self.params.phloem_transport_rates.get(nutrient, 0.1) * temp_factor
             total_demand = sum(d.get(nutrient, 0.0) for d in sink_demands.values())
             total_supply = sum(s.get(nutrient, 0.0) for s in source_supplies.values())
             if total_demand > 0 and total_supply > 0:
@@ -519,8 +521,9 @@ class NutrientMobilityModel:
                                 pool.storage_pool += excess * 0.3
                                 pool.buffer_pool += excess * 0.1
                         pool.total_content = pool.metabolic_pool + pool.storage_pool + pool.transport_pool + pool.buffer_pool
+                        # Track signed net redistribution to capture direction and magnitude
                         if nutrient in self.cumulative_redistribution:
-                            self.cumulative_redistribution[nutrient] += abs(net_flux)
+                            self.cumulative_redistribution[nutrient] += net_flux
 
     def calculate_mobility_efficiency(self, nutrient: str) -> float:
         if nutrient not in self.params.mobility_classifications:

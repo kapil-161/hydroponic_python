@@ -587,14 +587,30 @@ class IntegratedStressModel:
             self.cumulative_damage[st] = 0.0
 
     def calculate_acute_stress(self, stress_type: str, current_level: float) -> float:
+        """Calculate acute stress factor from current stress level.
+        
+        Args:
+            stress_type: Type of stress (water, temperature, etc.)
+            current_level: Current stress level (0.0 = no stress, 1.0 = maximum stress)
+            
+        Returns:
+            Acute stress factor (0.0 = no stress, 1.0 = maximum stress)
+        """
         threshold = self.params.stress_onset_thresholds.get(stress_type, 0.8)
+        
+        # If stress level is above threshold, return the stress level directly
         if current_level >= threshold:
-            return 1.0
+            return current_level
+        
+        # For stress levels below threshold, apply non-linear scaling
         if current_level < 0.5:
+            # Quadratic scaling for low stress levels
             stress_factor = (current_level / 0.5) ** 2
         else:
+            # Linear scaling for moderate stress levels
             stress_factor = current_level
-        return max(0.1, stress_factor)
+        
+        return max(0.0, min(1.0, stress_factor))
 
     def calculate_chronic_stress(self, stress_state: StressState) -> float:
         if not stress_state.stress_history:
