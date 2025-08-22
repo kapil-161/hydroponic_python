@@ -187,11 +187,14 @@ class CROPGROHydroponicSimulator:
         
         # 2. PHENOLOGY AND DEVELOPMENT
         logger.info("Initializing phenology model...")
-        # Start from transplant stage (V2 - second true leaf) which matches transplant biomass
-        transplant_stage = LettuceGrowthStage.SECOND_LEAF
+        # Start from transplant stage (V3 - third true leaf) to reflect 2–3 week-old plugs
+        transplant_stage = LettuceGrowthStage.THIRD_LEAF
         self.phenology_model = create_lettuce_phenology_model(transplant_stage)
         # Leaf development model for realistic LAI and leaf metrics
-        self.leaf_model = LeafDevelopmentModel(LeafParameters())
+        self.leaf_model = LeafDevelopmentModel(LeafParameters(
+            initial_leaf_number=4.0,           # Cotyledons + ~4 true leaves at transplant
+            specific_leaf_area=300.0           # cm²/g for young lettuce leaves
+        ))
         
         # 3. RESPIRATION MODEL
         logger.info("Initializing respiration model...")
@@ -299,14 +302,11 @@ class CROPGROHydroponicSimulator:
         # Typical lettuce transplants: 2-3 weeks old, 2-4 true leaves + cotyledons
         # This eliminates the bootstrap paradox by starting with functional photosynthetic area
         
-        # Transplant biomass based on industry standards
-        # Typical transplant: 0.1-0.3g total, with established root system and true leaves
-        transplant_development_factor = cultivar_coeffs.PHOTOSYNTHETIC_CAPACITY
-        
-        # True leaves + cotyledons at transplant stage
-        initial_leaf_biomass = 0.08 * transplant_development_factor  # 2-3 true leaves + cotyledons
-        initial_stem_biomass = 0.03  # Developed stem/hypocotyl
-        initial_root_biomass = 0.04  # Established root system for transplant viability
+        # Transplant biomass based on horticultural reports for lettuce plugs (dry mass ≈0.20–0.35 g)
+        # Use realistic split: ~60% leaves, 14% stem, 26% roots
+        initial_leaf_biomass = 0.18   # g DW
+        initial_stem_biomass = 0.04   # g DW
+        initial_root_biomass = 0.08   # g DW
         
         self.biomass_pools = [
             BiomassPool(TissueType.LEAVES, initial_leaf_biomass, 2.0, 4.5, 0.0),
@@ -337,15 +337,12 @@ class CROPGROHydroponicSimulator:
             {k: v*0.80 for k, v in initial_nutrients.items()}, initial_root_biomass)
         
         # Initial canopy parameters for TRANSPLANT STAGE
-        # Calculate realistic LAI from transplant leaf biomass
-        transplant_sla = 250.0  # cm²/g - SLA for young true leaves (higher than cotyledons)
-        transplant_leaf_area_cm2 = initial_leaf_biomass * transplant_sla
-        transplant_leaf_area_m2 = transplant_leaf_area_cm2 / 10000.0
+        # Compute placeholder LAI here; will be recalculated with actual density in run_simulation
+        transplant_sla = self.leaf_model.params.specific_leaf_area  # cm²/g
+        transplant_leaf_area_m2 = (initial_leaf_biomass * transplant_sla) / 10000.0
         default_system_area = getattr(self, 'system_area', 1.0)  # Default 1 m² if not set yet
-        
-        # Transplant typically has LAI 0.01-0.05 depending on system density
-        self.current_lai = min(0.05, transplant_leaf_area_m2 / max(1e-6, default_system_area))
-        self.canopy_height = 0.02  # 2 cm height typical for transplants
+        self.current_lai = min(0.07, max(0.01, transplant_leaf_area_m2 / max(1e-6, default_system_area)))
+        self.canopy_height = 0.045  # 4.5 cm typical for lettuce plugs
         
         # Simulation tracking
         self.simulation_day = 0
@@ -769,7 +766,8 @@ class CROPGROHydroponicSimulator:
             par_umol_m2_s=env_conditions['light_environment'].ppfd_above_canopy,
             co2_ppm=env_conditions['actual_co2'],
             temp_c=env_conditions['actual_temperature'],
-            lai=self.current_lai
+            lai=self.current_lai,
+            photoperiod_hours=daylength
         )
         
         # Apply genetic and stress modifiers ONLY ONCE
@@ -896,7 +894,8 @@ class CROPGROHydroponicSimulator:
             par_umol_m2_s=env_conditions['light_environment'].ppfd_above_canopy,
             co2_ppm=env_conditions['actual_co2'],
             temp_c=env_conditions['actual_temperature'],
-            lai=self.current_lai
+            lai=self.current_lai,
+            photoperiod_hours=daylength
         )
         
         # Apply stress effects to photosynthesis (use overall stress factor from centralized calculation)

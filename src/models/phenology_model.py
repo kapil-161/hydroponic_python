@@ -199,13 +199,25 @@ class ComprehensivePhenologyModel:
     reproductive maturity with environmental responses.
     """
     
-    def __init__(self, parameters: Optional[PhenologyParameters] = None):
+    def __init__(self, parameters: Optional[PhenologyParameters] = None, 
+                 initial_stage: LettuceGrowthStage = LettuceGrowthStage.GERMINATION):
         self.params = parameters or PhenologyParameters()
+        
+        # Set initial stage based on starting point (seed vs transplant)
+        if initial_stage == LettuceGrowthStage.GERMINATION:
+            # Starting from seed
+            thermal_accumulated = 0.0
+            thermal_required = self.params.thermal_requirements["GE_to_VE"]
+        else:
+            # Starting from transplant (typically V2-V3 stage with some thermal time accumulated)
+            thermal_accumulated = self.params.thermal_requirements["GE_to_VE"] + self.params.thermal_requirements["VE_to_V1"]
+            thermal_required = self.params.thermal_requirements["V1_to_V2"]
+            
         self.developmental_state = DevelopmentalState(
-            current_stage=LettuceGrowthStage.GERMINATION,
-            thermal_time_accumulated=0.0,
-            thermal_time_required=self.params.thermal_requirements["GE_to_VE"],
-            total_thermal_time=0.0,
+            current_stage=initial_stage,
+            thermal_time_accumulated=thermal_accumulated,
+            thermal_time_required=thermal_required,
+            total_thermal_time=thermal_accumulated,
             stage_progress=0.0,
             days_in_stage=0
         )
@@ -580,13 +592,13 @@ class ComprehensivePhenologyModel:
         return properties
 
 
-def create_lettuce_phenology_model() -> ComprehensivePhenologyModel:
+def create_lettuce_phenology_model(initial_stage: LettuceGrowthStage = LettuceGrowthStage.GERMINATION) -> ComprehensivePhenologyModel:
     """Create phenology model with lettuce-specific parameters from JSON config."""
     from ..utils.config_loader import get_config_loader
     loader = get_config_loader()
     cfg = loader.get_phenology_parameters()
     parameters = PhenologyParameters.from_config(cfg)
-    return ComprehensivePhenologyModel(parameters)
+    return ComprehensivePhenologyModel(parameters, initial_stage)
 
 
 def demonstrate_phenology_model():

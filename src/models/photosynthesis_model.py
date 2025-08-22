@@ -145,13 +145,13 @@ class PhotosynthesisModel:
         j = (i2 + jmax - np.sqrt((i2 + jmax)**2 - 4 * self.params.theta * i2 * jmax)) / (2 * self.params.theta)
         aj = j * (ci - self.params.gamma_star) / (4 * (ci + 2 * self.params.gamma_star))
 
-        # Net carbon: integrate gross photosynthesis over photoperiod and subtract 24h dark respiration
-        # Gross day assimilation (umol/m2) during light hours
+        # Net carbon: integrate gross photosynthesis over photoperiod 
+        # NOTE: Dark respiration is handled separately by the respiration model
+        # to avoid double-counting and unit mismatches
         photoperiod_seconds = max(0.0, photoperiod_hours) * 3600.0
         gross_day_umol = max(0.0, min(ac, aj)) * photoperiod_seconds
-        # Dark respiration occurs all 24h
-        daily_resp_umol = max(0.0, rd) * 86400.0
-        net_umol_day = gross_day_umol - daily_resp_umol
+        # Do NOT subtract respiration here - it's handled by the respiration model
+        net_umol_day = gross_day_umol
         # Convert from umol CO2 to g C: 1 umol CO2 ≈ 1.201e-5 g C
         g_c_m2_day = max(0.0, net_umol_day) * 1.201e-5
 
