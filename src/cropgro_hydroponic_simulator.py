@@ -534,10 +534,16 @@ class CROPGROHydroponicSimulator:
         net_carbon = photosynthesis - respiration
         carbon_for_growth = growth * self.params.carbon_to_biomass_ratio
         
-        # Check if carbon balance is reasonable (within 10% tolerance)
-        if abs(net_carbon - carbon_for_growth) > 0.1 * max(abs(net_carbon), abs(carbon_for_growth)):
-            logger.warning(f"Day {day}: Carbon balance violation - Net carbon: {net_carbon:.3f}, "
-                         f"Carbon for growth: {carbon_for_growth:.3f}")
+        # Only warn when there is positive assimilation and/or positive growth
+        # Negative net carbon with zero growth is physiologically plausible (maintenance exceeds assimilation)
+        if not (net_carbon <= 0.0 and growth <= 0.0):
+            # Check if carbon balance is reasonable (within 10% tolerance)
+            denom = max(1e-9, max(abs(net_carbon), abs(carbon_for_growth)))
+            if abs(net_carbon - carbon_for_growth) > 0.1 * denom:
+                logger.warning(
+                    f"Day {day}: Carbon balance violation - Net carbon: {net_carbon:.3f}, "
+                    f"Carbon for growth: {carbon_for_growth:.3f}"
+                )
         
         # Check for negative net carbon with positive growth
         if net_carbon < 0 and growth > 0:
