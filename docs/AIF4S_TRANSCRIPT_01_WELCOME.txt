@@ -1,0 +1,18 @@
+AI Fluency for Students Lesson 1 Video Transcripts
+AI Fluency for students: Introduction / teaser
+Hello and welcome to AI Fluency for Students. 
+In this course we’ll explore a different way of thinking about AI as a student – not quick tips or tricks or prompts, but Fluent AI use. So that your interactions with AI can be effective, efficient, ethical and safe.
+Most guidance about AI focuses on use-cases that grow outdated when new models and products are introduced. But over the past few years we’ve observed one thing that perseveres — AI Fluency.  It goes beyond the models, beyond the tools, beyond the prompts, and asks some really important questions about what it means to use AI in our lives and work. How do we decide what to automate to AI? And what not to? How do we pick the right tools? And assess for accuracy? Do we tell our teachers or employers when we’ve used AI? And if so, how? 
+In this course, we’ll explore all of these questions and more. 
+Well start with an overview of the 4D framework—Delegation, Description, Discernment, and Diligence—four competencies that, when combined, create AI Fluency. These transform AI from a tool that does work for you into a partner that helps you do your work better.
+Then, we’ll explore two practical applications of AI as a student: 
+You’ll learn how to bring AI into your learning in order understand concepts more deeply, as well as 
+how to leverage AI in your career planning and job search — to brainstorm future career paths, develop skills, and land a great role.
+Finally, we’ll talk about what it means to be the human in the loop. AI is becoming part of almost every aspect of our lives—from how we learn and work, to how we communicate and analyze problems. 
+The leaders of tomorrow (that’s you) are those who can work thoughtfully and responsibly with these systems. 
+By the end of this course, you'll have the confidence and skills to work with AI in ways that align with your values, enhance your learning, and prepares you for a future where AI fluency is essential.
+Ready to get started? Let's dive in.
+
+
+
+Copyright 2025 Rick Dakan, Joseph Feller, and Anthropic. Released under the CC BY-NC-SA 4.0 license.

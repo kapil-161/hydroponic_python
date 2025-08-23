@@ -342,8 +342,8 @@ class DefaultConfigurations:
             tank_volume=1500.0,
             flow_rate=50.0,
             system_type="NFT",
-            system_area=10.0,
-            n_plants=48,
+            system_area=1.0,
+            n_plants=20,
             description="Nutrient Film Technique - Lettuce production"
         )
     

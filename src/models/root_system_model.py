@@ -589,16 +589,16 @@ class EnhancedRootUptakeModel:
         self.system_type = system_type
         self.uptake_params = RootUptakeParameters(
             base_uptake_rates={
-                'NO3': 0.25,
-                'NH4': 0.15,
-                'PO4': 0.05,
-                'K': 0.20,
-                'Ca': 0.10,
-                'Mg': 0.08,
-                'SO4': 0.06,
+                'NO3': 6.0,
+                'NH4': 3.6,
+                'PO4': 1.2,
+                'K': 4.8,
+                'Ca': 2.4,
+                'Mg': 1.9,
+                'SO4': 1.4,
             },
             michaelis_constants={
-                'NO3': 50.0,
+                'NO3': 6.0,
                 'NH4': 20.0,
                 'PO4': 5.0,
                 'K': 30.0,
@@ -666,19 +666,26 @@ class EnhancedRootUptakeModel:
         }
 
     def calculate_effective_surface_area(self, architecture_metrics: Dict[str, float]) -> float:
-        fine_length = architecture_metrics['fine_root_length']
-        medium_length = architecture_metrics['medium_root_length']
-        coarse_length = architecture_metrics['coarse_root_length']
+        fine_length = architecture_metrics.get('fine_root_length', 0)
+        medium_length = architecture_metrics.get('medium_root_length', 0)
+        coarse_length = architecture_metrics.get('coarse_root_length', 0)
 
         fine_area = fine_length * math.pi * 0.015
         medium_area = medium_length * math.pi * 0.05
         coarse_area = coarse_length * math.pi * 0.15
 
-        return (
+        effective_area = (
             fine_area * self.uptake_params.fine_root_effectiveness +
             medium_area * self.uptake_params.medium_root_effectiveness +
             coarse_area * self.uptake_params.coarse_root_effectiveness
         )
+        
+        # Fallback: if architecture-based calculation fails, use total surface area as proxy
+        if effective_area < 1e-6:
+            total_surface = architecture_metrics.get('total_root_surface_area', 0)
+            effective_area = total_surface * 0.7  # Assume 70% effectiveness
+            
+        return effective_area
 
     def calculate_temperature_factor(self, temperature: float) -> float:
         temp_diff = temperature - self.uptake_params.optimal_temperature
@@ -765,7 +772,7 @@ if __name__ == "__main__":
     results = model.daily_update(
         {'temperature': 22.0, 'flow_rate': 1.5, 'oxygen_level': 8.0},
         {'nitrogen_stress': 0.95, 'water_stress': 0.95, 'temperature_stress': 0.95},
-        {'NO3': 140.0, 'K': 120.0}
+        {'NO3': 6.0, 'K': 120.0}
     )
     print(f"NO3 uptake: {results.get('NO3_uptake_rate', 0.0):.2f} mg/day, total: {results.get('total_nutrient_uptake', 0.0):.2f} mg/day")
 

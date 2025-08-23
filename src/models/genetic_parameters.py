@@ -299,7 +299,7 @@ class GeneticParameterDatabase:
                 EM_FL=26.0, FL_SH=15.0, FL_SD=24.0, SD_PM=35.0,
                 LFMAX=1.35, SLAVR=190.0, SIZLF=28.0,
                 EC_TOLERANCE=1.6, NITRATE_EFFICIENCY=0.92,
-                ROOT_ACTIVITY=1.15, PHOTOSYNTHETIC_CAPACITY=1.08
+                ROOT_ACTIVITY=25.0, PHOTOSYNTHETIC_CAPACITY=6.0
             ),
             trait_values={
                 GeneticTrait.DAYS_TO_EMERGENCE: 0.95,
