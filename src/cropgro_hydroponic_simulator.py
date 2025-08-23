@@ -38,6 +38,7 @@ from .models.nutrient_models import create_lettuce_nutrient_mobility_model
 from .models.stress_models import create_lettuce_integrated_stress_model
 from .models.stress_models import create_lettuce_temperature_stress_model
 from .models.root_system_model import create_enhanced_root_uptake_model, HydroponicSystemType
+from .models.root_zone_temperature import RootZoneTemperatureModel, RZTParameters
 from .models.environmental_control import EnvironmentalControlSystem
 from .models.photosynthesis_model import PhotosynthesisModel
 from .models.nutrient_models import NutrientConcentrationModel
@@ -229,7 +230,8 @@ class CROPGROHydroponicSimulator:
             'AEROPONICS': HydroponicSystemType.AEROPONICS
         }.get(system_type, HydroponicSystemType.NFT)
         
-        self.root_model = create_enhanced_root_uptake_model(system_type_enum)
+        # Initialize with default tank volume, will be updated in simulate() method
+        self.root_model = create_enhanced_root_uptake_model(system_type_enum, 1500.0)
         
         # 10. ENVIRONMENTAL CONTROL
         logger.info("Initializing environmental control...")
@@ -239,13 +241,17 @@ class CROPGROHydroponicSimulator:
         self.photosynthesis_model = PhotosynthesisModel()
         self.nutrient_concentration_model = NutrientConcentrationModel()
         
+        # 12. ROOT ZONE TEMPERATURE MODEL
+        logger.info("Initializing root zone temperature model...")
+        self.rzt_model = RootZoneTemperatureModel()
+        
         # Initialize state variables
         self._initialize_plant_state()
         
         logger.info("CROPGRO Hydroponic Simulator initialized successfully!")
         logger.info(f"Enabled models: Genetic Parameters, Phenology, Respiration, Senescence, "
                    f"Canopy Architecture, Nitrogen Balance, Nutrient Mobility, Stress Models, "
-                   f"Root Architecture, Environmental Control")
+                   f"Root Architecture, Root Zone Temperature, Environmental Control")
 
     def _load_simulation_parameters(self) -> SimulationParameters:
         """Loads simulation parameters from the configuration file."""
@@ -400,6 +406,15 @@ class CROPGROHydroponicSimulator:
         self.plant_density = max(0.1, self.plant_count / self.system_area)
         current_ph = 6.0
         
+        # Update root model with actual tank volume (important for NFT channel calculations)
+        system_type_enum = {
+            'NFT': HydroponicSystemType.NFT,
+            'DWC': HydroponicSystemType.DWC, 
+            'AEROPONICS': HydroponicSystemType.AEROPONICS
+        }.get(input_data.system_config.system_type, HydroponicSystemType.NFT)
+        
+        self.root_model = create_enhanced_root_uptake_model(system_type_enum, current_tank_volume)
+        
         # Main simulation loop - run until maturity or max days
         day = 1
         maturity_reached = False
@@ -414,6 +429,41 @@ class CROPGROHydroponicSimulator:
             daily_humidity = weather.rel_humidity  
             daily_solar = weather.solar_radiation
             daylength = 13.5 + 1.5 * np.sin(day * 2 * np.pi / 365)  # Seasonal variation
+            
+            # WEEKLY SOLUTION CHANGES (DR. NEMALI METHOD) - AT BEGINNING OF DAY
+            # Complete solution replacement every 7 days to maintain optimal nutrient levels
+            if day % 7 == 1 and day > 1:
+                logger.info(f"Day {day}: Weekly solution change - replacing with fresh nutrient solution")
+                
+                # COMPLETE SOLUTION REPLACEMENT based on PDF methodology
+                # Constant concentrations regardless of tank volume (proper hydroponic practice)
+                
+                # Optimal concentrations for lettuce (constant for all tank sizes)
+                optimal_concentrations = {
+                    'N-NO3': 200,     # Constant 200 ppm nitrate
+                    'P-PO4': 50,      # Constant 50 ppm phosphate
+                    'K': 300,         # Constant 300 ppm potassium  
+                    'Ca': 150,        # Constant 150 ppm calcium
+                    'Mg': 50          # Constant 50 ppm magnesium
+                }
+                
+                # Note: Total nutrient mass varies with tank volume, but concentration stays constant
+                # 500mL tank: 100mg NO3 total (200 ppm × 0.5L)
+                # 1500mL tank: 300mg NO3 total (200 ppm × 1.5L)
+                
+                # Replace with fresh solution at optimal concentrations
+                for nutrient_id, params in input_data.nutrient_params.items():
+                    if nutrient_id in optimal_concentrations:
+                        current_concentrations[nutrient_id] = optimal_concentrations[nutrient_id]
+                        logger.info(f"  {nutrient_id}: reset to {optimal_concentrations[nutrient_id]} ppm")
+                    else:
+                        # For other nutrients, use recharge concentration
+                        target = params.recharge_conc if hasattr(params, 'recharge_conc') else params.initial_conc
+                        current_concentrations[nutrient_id] = target
+                
+                # Reset pH with fresh solution
+                current_ph = 6.0
+                logger.info(f"  pH: reset to {current_ph:.1f}")
             
             # Run daily simulation step
             daily_result = self._simulate_daily_step(
@@ -436,14 +486,8 @@ class CROPGROHydroponicSimulator:
                 maturity_reached = True
                 logger.info(f"Maturity reached at day {day}: {current_stage}")
             
-            # Periodic reservoir management: weekly top-up to target concentrations
-            if day % 7 == 1 and day > 1:
-                for nutrient_id, params in input_data.nutrient_params.items():
-                    target = params.recharge_conc if hasattr(params, 'recharge_conc') else params.initial_conc
-                    # Only top-up if below target using configured fraction
-                    current_concentrations[nutrient_id] = (
-                        current_concentrations[nutrient_id] + self.params.reservoir_topup_fraction * max(0.0, target - current_concentrations[nutrient_id])
-                    )
+            # WEEKLY SOLUTION CHANGES (DR. NEMALI METHOD) - MOVED TO BEGINNING OF DAY
+            # Complete solution replacement every 7 days to maintain optimal nutrient levels
 
             # Cache last env for PM/ETc calculations
             self._last_humidity = daily_humidity
@@ -942,9 +986,14 @@ class CROPGROHydroponicSimulator:
                 'roots': self.params.reproductive_root_allocation
             }
         
-        # Calculate actual growth rates
+        # Calculate RZT growth factor
+        rzt_growth_factor = self.rzt_model.calculate_rzt_growth_factor(
+            stress_factors['solution_temperature'], temperature
+        )
+        
+        # Calculate actual growth rates with RZT effects
         actual_growth_rates = {
-            organ: available_biomass_growth * fraction 
+            organ: available_biomass_growth * fraction * rzt_growth_factor
             for organ, fraction in allocation_fractions.items()
         }
         
@@ -1185,6 +1234,12 @@ class CROPGROHydroponicSimulator:
             ph=ph,  # Use dynamic pH from hydroponic system
             ec=stress_factors['ec_current'],  # Pre-calculated EC
             rzt=stress_factors['solution_temperature'],  # Pre-calculated solution temperature
+            rzt_growth_factor=self.rzt_model.calculate_rzt_growth_factor(
+                stress_factors['solution_temperature'], temperature
+            ),
+            rzt_nutrient_factor=self.rzt_model.calculate_nutrient_uptake_factor(
+                stress_factors['solution_temperature'], temperature
+            ),
             
             # Environmental control
             co2_concentration=env_conditions['actual_co2'],
@@ -1293,8 +1348,10 @@ class CROPGROHydroponicSimulator:
         cropgro_result.nitrogen_uptake_mg = nitrogen_uptake_mg_per_day  # Direct from root model
         
         # Validate that root model is providing realistic uptake
-        if cropgro_result.nitrogen_uptake_mg == 0.0 and total_biomass > 0.1:
-            logger.warning(f"Day {day}: Root model returned zero nitrogen uptake for biomass {total_biomass:.1f}g - check root model parameters")
+        # Only warn if there ARE nutrients available but still zero uptake
+        no3_available = solution_conc_for_uptake.get('NO3', 0.0) > 1.0  # At least 1 mg/L available
+        if cropgro_result.nitrogen_uptake_mg == 0.0 and total_biomass > 0.1 and no3_available:
+            logger.warning(f"Day {day}: Root model returned zero nitrogen uptake for biomass {total_biomass:.1f}g with NO3 {solution_conc_for_uptake.get('NO3', 0.0):.1f} mg/L available - check root model parameters")
             # Only apply minimal value if plant has significant biomass but no uptake
             cropgro_result.nitrogen_uptake_mg = self.params.minimal_nitrogen_uptake
         cropgro_result.nitrogen_demand_mg = 50.0  # Default value for now
@@ -1406,9 +1463,10 @@ class CROPGROHydroponicSimulator:
             # Always use root model value, even if zero
             setattr(cropgro_result, f'{csv_key}_uptake_rate', uptake_val)
             
-            # Log warning if root model returns zero for major nutrients with significant biomass
-            if uptake_val == 0.0 and total_biomass > 0.1 and root_key in ['NO3', 'PO4', 'K']:
-                logger.warning(f"Day {day}: Root model returned zero {root_key} uptake for biomass {total_biomass:.1f}g")
+            # Log warning if root model returns zero for major nutrients with significant biomass AND nutrients are available
+            nutrient_available = solution_conc_for_uptake.get(root_key, 0.0) > 1.0  # At least 1 mg/L available
+            if uptake_val == 0.0 and total_biomass > 0.1 and root_key in ['NO3', 'PO4', 'K'] and nutrient_available:
+                logger.warning(f"Day {day}: Root model returned zero {root_key} uptake for biomass {total_biomass:.1f}g with {solution_conc_for_uptake.get(root_key, 0.0):.1f} mg/L available")
         
         # Ensure N-NO3 uptake matches our authoritative nitrogen uptake (already from root model)
         setattr(cropgro_result, 'N-NO3_uptake_rate', cropgro_result.nitrogen_uptake_mg * (62.0 / 14.0))  # Convert mg N to mg NO3

@@ -143,8 +143,16 @@ class RootZoneLayer:
 
         # Oxygen effect
         oxygen_factor = min(1.0, self.oxygen_level / 6.0)
+        
+        # pH effect - optimal range 5.5-6.5 for nutrient uptake
+        current_ph = getattr(self, 'ph', 6.0)
+        if 5.5 <= current_ph <= 6.5:
+            ph_factor = 1.0
+        else:
+            ph_deviation = min(abs(current_ph - 5.5), abs(current_ph - 6.5))
+            ph_factor = max(0.3, 1.0 - ph_deviation * 0.15)  # Less severe than growth effects
 
-        return base_rate * temp_factor * flow_factor * oxygen_factor
+        return base_rate * temp_factor * flow_factor * oxygen_factor * ph_factor
 
 
 @dataclass
@@ -152,7 +160,14 @@ class RootArchitectureParameters:
     """Parameters for root architecture model"""
     # System-specific parameters
     system_type: HydroponicSystemType = HydroponicSystemType.NFT
-    container_volume: float = 1000.0    # cm³
+    container_volume: float = 1000.0    # cm³ (reservoir tank volume)
+    
+    # NFT-specific channel parameters
+    channel_length: float = 100.0       # cm
+    channel_width: float = 10.0         # cm  
+    channel_depth: float = 5.0          # cm
+    n_channels: int = 4                 # number of parallel channels
+    root_zone_independent: bool = True   # root zone size independent of tank volume
 
     # Root growth parameters
     primary_root_growth_rate: float = 1.5      # cm/day
@@ -229,11 +244,20 @@ class RootArchitectureModel:
     def initialize_root_zones(self):
         """Initialize root zone layers based on system type"""
         if self.params.system_type == HydroponicSystemType.NFT:
-            effective_volume = self.params.container_volume * 0.3
+            # NFT: Root zone determined by channel dimensions, not tank volume
+            channel_volume = (
+                self.params.channel_length * 
+                self.params.channel_width * 
+                self.params.channel_depth * 
+                self.params.n_channels
+            )
+            # Root development space in the channels
+            effective_volume = channel_volume * 0.6  # 60% usable for roots
+            
             self.root_zones = [
-                RootZoneLayer((0, 2), effective_volume * 0.3),
-                RootZoneLayer((2, 5), effective_volume * 0.4),
-                RootZoneLayer((5, 8), effective_volume * 0.3)
+                RootZoneLayer((0, 2), effective_volume * 0.4),   # Upper channel zone
+                RootZoneLayer((2, 4), effective_volume * 0.4),   # Middle channel zone  
+                RootZoneLayer((4, 6), effective_volume * 0.2)    # Lower channel zone
             ]
         elif self.params.system_type == HydroponicSystemType.DWC:
             effective_volume = self.params.container_volume * 0.6
@@ -261,6 +285,7 @@ class RootArchitectureModel:
             zone.temperature = environmental_conditions.get('temperature', 20.0)
             zone.flow_rate = environmental_conditions.get('flow_rate', 1.0)
             zone.oxygen_level = environmental_conditions.get('oxygen_level', 8.0)
+            zone.ph = environmental_conditions.get('ph', 6.0)
             zone.nutrient_concentrations = environmental_conditions.get('nutrient_concentrations', {})
 
         self.update_root_aging()
@@ -418,26 +443,59 @@ class RootArchitectureModel:
         return distribution
 
 
-def create_lettuce_root_architecture_model(system_type: HydroponicSystemType = HydroponicSystemType.NFT) -> RootArchitectureModel:
+def create_lettuce_root_architecture_model(system_type: HydroponicSystemType = HydroponicSystemType.NFT, 
+                                          tank_volume: float = 1500.0) -> RootArchitectureModel:
     """Create a root architecture model optimized for lettuce"""
-    params = RootArchitectureParameters(
-        system_type=system_type,
-        container_volume=1500.0,
-        primary_root_growth_rate=2.0,
-        lateral_root_density=3.5,
-        fine_root_fraction=0.65,
-        medium_root_fraction=0.30,
-        coarse_root_fraction=0.05,
-        fine_diameter_mean=0.12,
-        fine_diameter_std=0.04,
-        medium_diameter_mean=0.4,
-        medium_diameter_std=0.15,
-        coarse_diameter_mean=1.2,
-        coarse_diameter_std=0.4,
-        fine_turnover_rate=0.02,
-        medium_turnover_rate=0.01,
-        coarse_turnover_rate=0.005,
-    )
+    
+    if system_type == HydroponicSystemType.NFT:
+        # NFT: Root zone is independent of tank volume - determined by channel dimensions
+        params = RootArchitectureParameters(
+            system_type=system_type,
+            container_volume=tank_volume,  # Tank volume for nutrient storage only
+            # NFT channel configuration for 20 lettuce plants
+            channel_length=200.0,    # cm (2 meters)
+            channel_width=10.0,      # cm  
+            channel_depth=8.0,       # cm
+            n_channels=4,            # 4 channels, 5 plants each
+            root_zone_independent=True,
+            # Growth parameters
+            primary_root_growth_rate=2.0,
+            lateral_root_density=3.5,
+            fine_root_fraction=0.65,
+            medium_root_fraction=0.30,
+            coarse_root_fraction=0.05,
+            fine_diameter_mean=0.12,
+            fine_diameter_std=0.04,
+            medium_diameter_mean=0.4,
+            medium_diameter_std=0.15,
+            coarse_diameter_mean=1.2,
+            coarse_diameter_std=0.4,
+            fine_turnover_rate=0.02,
+            medium_turnover_rate=0.01,
+            coarse_turnover_rate=0.005,
+        )
+    else:
+        # For other systems, use container volume-dependent approach
+        params = RootArchitectureParameters(
+            system_type=system_type,
+            container_volume=tank_volume,
+            root_zone_independent=False,
+            primary_root_growth_rate=2.0,
+            lateral_root_density=3.5,
+            fine_root_fraction=0.65,
+            medium_root_fraction=0.30,
+            coarse_root_fraction=0.05,
+            fine_diameter_mean=0.12,
+            fine_diameter_std=0.04,
+            medium_diameter_mean=0.4,
+            medium_diameter_std=0.15,
+            coarse_diameter_mean=1.2,
+            coarse_diameter_std=0.4,
+            fine_turnover_rate=0.02,
+            medium_turnover_rate=0.01,
+            coarse_turnover_rate=0.005,
+        )
+    
     return RootArchitectureModel(params)
 
 
@@ -584,9 +642,11 @@ class EnhancedRootUptakeModel:
     Enhanced nutrient uptake model using detailed root architecture
     """
 
-    def __init__(self, system_type: HydroponicSystemType = HydroponicSystemType.NFT):
-        self.root_architecture = create_lettuce_root_architecture_model(system_type)
+    def __init__(self, system_type: HydroponicSystemType = HydroponicSystemType.NFT, 
+                 tank_volume: float = 1500.0):
+        self.root_architecture = create_lettuce_root_architecture_model(system_type, tank_volume)
         self.system_type = system_type
+        self.tank_volume = tank_volume
         self.uptake_params = RootUptakeParameters(
             base_uptake_rates={
                 'NO3': 6.0,
@@ -666,13 +726,22 @@ class EnhancedRootUptakeModel:
         }
 
     def calculate_effective_surface_area(self, architecture_metrics: Dict[str, float]) -> float:
+        # Get the actual surface areas by root type from the root architecture
+        # The root architecture already properly calculates surface area from cohorts
+        
+        # Calculate surface area from root length using average diameters for each type
         fine_length = architecture_metrics.get('fine_root_length', 0)
         medium_length = architecture_metrics.get('medium_root_length', 0)
         coarse_length = architecture_metrics.get('coarse_root_length', 0)
 
-        fine_area = fine_length * math.pi * 0.015
-        medium_area = medium_length * math.pi * 0.05
-        coarse_area = coarse_length * math.pi * 0.15
+        # Use correct diameter conversion: mean diameters from parameters are in mm, convert to cm
+        fine_diameter_cm = self.root_architecture.params.fine_diameter_mean / 10.0  # 0.12mm -> 0.012cm
+        medium_diameter_cm = self.root_architecture.params.medium_diameter_mean / 10.0  # 0.4mm -> 0.04cm
+        coarse_diameter_cm = self.root_architecture.params.coarse_diameter_mean / 10.0  # 1.2mm -> 0.12cm
+
+        fine_area = fine_length * math.pi * fine_diameter_cm
+        medium_area = medium_length * math.pi * medium_diameter_cm
+        coarse_area = coarse_length * math.pi * coarse_diameter_cm
 
         effective_area = (
             fine_area * self.uptake_params.fine_root_effectiveness +
@@ -749,8 +818,9 @@ class EnhancedRootUptakeModel:
         }
 
 
-def create_enhanced_root_uptake_model(system_type: HydroponicSystemType = HydroponicSystemType.NFT) -> EnhancedRootUptakeModel:
-    return EnhancedRootUptakeModel(system_type)
+def create_enhanced_root_uptake_model(system_type: HydroponicSystemType = HydroponicSystemType.NFT,
+                                      tank_volume: float = 1500.0) -> EnhancedRootUptakeModel:
+    return EnhancedRootUptakeModel(system_type, tank_volume)
 
 
 # =========================

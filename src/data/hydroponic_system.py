@@ -339,7 +339,7 @@ class DefaultConfigurations:
             system_id="HYD1",
             crop_id="LETT",
             location_id="USGA",
-            tank_volume=1500.0,
+            tank_volume=500.0,
             flow_rate=50.0,
             system_type="NFT",
             system_area=1.0,
