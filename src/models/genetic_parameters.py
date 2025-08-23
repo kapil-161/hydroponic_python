@@ -86,8 +86,8 @@ class GeneticCoefficients:
     # Hydroponic-specific parameters
     EC_TOLERANCE: float = 1.3    # Maximum EC tolerance (dS/m)
     NITRATE_EFFICIENCY: float = 0.85  # Nitrogen use efficiency factor
-    ROOT_ACTIVITY: float = 1.0   # Root activity coefficient
-    PHOTOSYNTHETIC_CAPACITY: float = 1.0  # Relative photosynthetic capacity
+    ROOT_ACTIVITY: float = 1.5   # Root activity coefficient
+    PHOTOSYNTHETIC_CAPACITY: float = 2.0  # Relative photosynthetic capacity
 
 
 @dataclass
