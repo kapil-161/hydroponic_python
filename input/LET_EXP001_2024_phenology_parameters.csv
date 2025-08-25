@@ -1,0 +1,11 @@
+parameter_name,value,unit,description
+base_temperature,4.0,celsius,Minimum temperature for plant development
+optimal_temperature_min,15.0,celsius,Lower bound of optimal temperature range
+optimal_temperature_max,25.0,celsius,Upper bound of optimal temperature range
+maximum_temperature,35.0,celsius,Maximum temperature for development
+photoperiod_sensitive,false,boolean,Whether plant responds to day length
+critical_photoperiod,12.0,hours,Day length threshold for photoperiod response
+bolting_photoperiod_threshold,14.0,hours,Day length above which bolting may occur
+bolting_temperature_threshold,25.0,celsius,Temperature above which bolting may occur
+cold_requirement_days,0.0,days,Days of cold needed for vernalization
+thermal_time_scale,0.85,fraction,Scaling factor for thermal time calculation

@@ -1,0 +1,10 @@
+parameter_name,value,unit,description
+vpd_stress_high_factor,0.25,fraction,Growth reduction when vapor pressure deficit is too high
+vpd_stress_low_factor,0.15,fraction,Growth reduction when vapor pressure deficit is too low
+ec_stress_high_factor,0.2,fraction,Growth reduction when electrical conductivity is too high
+ec_stress_low_factor,0.1,fraction,Growth reduction when electrical conductivity is too low
+temp_stress_threshold,3.0,celsius,Temperature deviation before stress occurs
+temp_stress_factor,0.05,fraction,Stress multiplier per degree temperature deviation
+heat_stress_threshold,0.03,fraction,Stress per degree above optimal air temperature
+cold_stress_threshold,0.02,fraction,Stress per degree below optimal air temperature
+water_stress_factor,0.004,fraction,Stress per percent below optimal humidity

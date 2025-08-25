@@ -603,13 +603,19 @@ class NutrientMobilityModel:
         }
 
 
-def create_lettuce_nutrient_mobility_model() -> NutrientMobilityModel:
+def create_lettuce_nutrient_mobility_model(config=None) -> NutrientMobilityModel:
     """Create nutrient mobility model with lettuce-specific parameters."""
     try:
-        from ..utils.config_loader import get_config_loader
-        config_loader = get_config_loader()
-        mobility_config = config_loader.get_nutrient_mobility_parameters()
-        parameters = NutrientMobilityParameters.from_config(mobility_config)
+        if config is None:
+            from ..utils.config_loader import get_config_loader
+            config = get_config_loader()
+        
+        # For CSV config, use fallback approach
+        if hasattr(config, 'get_nutrient_mobility_parameters'):
+            mobility_config = config.get_nutrient_mobility_parameters()
+            parameters = NutrientMobilityParameters.from_config(mobility_config)
+        else:
+            parameters = None  # Use defaults
         return NutrientMobilityModel(parameters)
     except Exception:
         return NutrientMobilityModel()

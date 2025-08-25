@@ -16,7 +16,6 @@ from typing import Dict, List, Tuple, Optional, Any
 from enum import Enum
 import numpy as np
 # Import centralized JSON config via config_loader
-from ..utils.config_loader import get_config_loader
 
 
 class LettuceType(Enum):
@@ -127,28 +126,28 @@ class CultivarProfile:
         cold_tolerance = self.trait_values.get(GeneticTrait.COLD_TOLERANCE, 0.5)
         
         if temp_stress > 0:  # Heat stress
-            genetics_cfg = get_config_loader().get_genetics_parameters()
-            weight = genetics_cfg.get('HEAT_STRESS_WEIGHT', 0.3)
-            stress_adjustments += temp_stress * (1.0 - heat_tolerance) * weight
+            heat_stress_weight = 0.3  # Heat stress weight
+            stress_adjustments += temp_stress * (1.0 - heat_tolerance) * heat_stress_weight
         else:  # Cold stress
-            genetics_cfg = get_config_loader().get_genetics_parameters()
-            weight = genetics_cfg.get('COLD_STRESS_WEIGHT', 0.25)
-            stress_adjustments += abs(temp_stress) * (1.0 - cold_tolerance) * weight
+            cold_stress_weight = 0.25  # Cold stress weight
+            stress_adjustments += abs(temp_stress) * (1.0 - cold_tolerance) * cold_stress_weight
         
         # Salinity stress
         salinity_stress = environment_factors.get('salinity_stress', 0.0)
         salinity_tolerance = self.trait_values.get(GeneticTrait.SALINITY_TOLERANCE, 0.5)
-        genetics_cfg = get_config_loader().get_genetics_parameters()
-        stress_adjustments += salinity_stress * (1.0 - salinity_tolerance) * genetics_cfg.get('SALINITY_STRESS_WEIGHT', 0.2)
+        salinity_stress_weight = 0.2  # Salinity stress weight
+        stress_adjustments += salinity_stress * (1.0 - salinity_tolerance) * salinity_stress_weight
         
         # Light stress
         light_stress = environment_factors.get('light_stress', 0.0)
-        stress_adjustments += light_stress * genetics_cfg.get('LIGHT_STRESS_WEIGHT', 0.15)
+        light_stress_weight = 0.15  # Light stress weight
+        stress_adjustments += light_stress * light_stress_weight
         
         # Nutrient stress
         nutrient_stress = environment_factors.get('nutrient_stress', 0.0)
         nitrate_efficiency = self.genetic_coefficients.NITRATE_EFFICIENCY
-        stress_adjustments += nutrient_stress * (1.0 - nitrate_efficiency) * genetics_cfg.get('NUTRIENT_STRESS_WEIGHT', 0.25)
+        nutrient_stress_weight = 0.25  # Nutrient stress weight
+        stress_adjustments += nutrient_stress * (1.0 - nitrate_efficiency) * nutrient_stress_weight
         
         # Calculate final adaptation index
         adaptation_index = base_adaptation - stress_adjustments
@@ -363,11 +362,14 @@ class GeneticParameterDatabase:
         
         for cultivar_id, cultivar in self.cultivars.items():
             adaptation_score = cultivar.calculate_adaptation_index(environment_factors)
-            genetics_cfg = get_config_loader().get_genetics_parameters()
+            # Use default breeding weights
+            adaptation_score_weight = 0.6
+            yield_potential_weight = 0.25
+            commercial_rating_weight = 0.15
             overall_score = (
-                adaptation_score * genetics_cfg.get('ADAPTATION_SCORE_WEIGHT', 0.6)
-                + cultivar.yield_potential * genetics_cfg.get('YIELD_POTENTIAL_BREEDING_WEIGHT', 0.25)
-                + cultivar.commercial_rating * genetics_cfg.get('COMMERCIAL_RATING_WEIGHT', 0.15)
+                adaptation_score * adaptation_score_weight
+                + cultivar.yield_potential * yield_potential_weight
+                + cultivar.commercial_rating * commercial_rating_weight
             )
             cultivar_scores.append((cultivar_id, overall_score))
         
@@ -410,16 +412,16 @@ class GenotypeEnvironmentModel:
         if trait == GeneticTrait.HEAT_TOLERANCE:
             temp_stress = environment_factors.get('temperature_stress', 0.0)
             if temp_stress > 0:  # Heat stress present
-                weight = get_config_loader().get_genetics_parameters().get('TEMPERATURE_STRESS_WEIGHT', 0.5)
-                expression = base_trait_value * (1.0 - temp_stress * weight)
+                temperature_stress_weight = 0.5  # Temperature stress weight
+                expression = base_trait_value * (1.0 - temp_stress * temperature_stress_weight)
             else:
                 expression = base_trait_value
         
         elif trait == GeneticTrait.COLD_TOLERANCE:
             temp_stress = environment_factors.get('temperature_stress', 0.0)
             if temp_stress < 0:  # Cold stress present
-                weight = get_config_loader().get_genetics_parameters().get('TEMPERATURE_STRESS_WEIGHT', 0.5)
-                expression = base_trait_value * (1.0 + temp_stress * weight)  # temp_stress is negative
+                temperature_stress_weight = 0.5  # Temperature stress weight
+                expression = base_trait_value * (1.0 + temp_stress * temperature_stress_weight)  # temp_stress is negative
             else:
                 expression = base_trait_value
                 
@@ -432,19 +434,23 @@ class GenotypeEnvironmentModel:
         elif trait == GeneticTrait.NITRATE_ACCUMULATION:
             nitrogen_excess = environment_factors.get('nitrogen_excess', 0.0)
             # Higher nitrogen leads to more nitrate accumulation
-            expression = base_trait_value + nitrogen_excess * get_config_loader().get_genetics_parameters().get('NITROGEN_EXCESS_WEIGHT', 0.3)
+            nitrogen_excess_weight = 0.3  # Nitrogen excess weight
+            expression = base_trait_value + nitrogen_excess * nitrogen_excess_weight
             
         elif trait == GeneticTrait.ROOT_DEVELOPMENT:
             water_stress = environment_factors.get('water_stress', 0.0)
             nutrient_stress = environment_factors.get('nutrient_stress', 0.0)
             # Root development increases under stress
-            stress_response = max(water_stress, nutrient_stress) * get_config_loader().get_genetics_parameters().get('STRESS_RESPONSE_WEIGHT', 0.2)
+            stress_response_weight = 0.2  # Stress response weight
+            stress_response = max(water_stress, nutrient_stress) * stress_response_weight
             expression = base_trait_value + stress_response
             
         else:
             # Default environmental modulation
             overall_stress = np.mean([abs(v) for v in environment_factors.values() if isinstance(v, (int, float))])
-            expression = base_trait_value * (1.0 - overall_stress * get_config_loader().get_genetics_parameters().get('OVERALL_STRESS_WEIGHT', 0.1))
+            # Use default stress weight instead of loading from config
+            stress_weight = 0.1  # Default stress weight
+            expression = base_trait_value * (1.0 - overall_stress * stress_weight)
         
         return max(0.0, min(1.0, expression))
     

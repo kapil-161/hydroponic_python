@@ -789,15 +789,17 @@ class PlantNitrogenBalanceModel:
         return summary
 
 
-def create_lettuce_nitrogen_balance_model() -> PlantNitrogenBalanceModel:
+def create_lettuce_nitrogen_balance_model(config=None) -> PlantNitrogenBalanceModel:
     """Create nitrogen balance model with lettuce-specific parameters."""
     try:
-        from ..utils.config_loader import get_config_loader
-        config_loader = get_config_loader()
-        nitrogen_config = config_loader.get_nitrogen_balance_parameters()
+        if config is None:
+            from ..utils.config_loader import get_config_loader
+            config = get_config_loader()
+        
+        nitrogen_config = config.get_nitrogen_parameters()
         parameters = NitrogenBalanceParameters.from_config(nitrogen_config)
         return PlantNitrogenBalanceModel(parameters)
-    except ImportError:
+    except (ImportError, AttributeError, FileNotFoundError):
         # Fallback to default values if config loader not available
         return PlantNitrogenBalanceModel()
 

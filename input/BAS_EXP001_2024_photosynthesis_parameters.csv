@@ -1,0 +1,20 @@
+parameter_name,value,unit,description
+light_use_efficiency,2.5,g_per_MJ,How efficiently plants convert light to biomass
+co2_compensation,60.0,ppm,CO2 level where photosynthesis equals respiration
+max_carboxylation,120.0,umol_per_m2_per_s,Maximum rate of CO2 fixation
+light_saturation,800.0,umol_per_m2_per_s,Light level where photosynthesis saturates
+quantum_efficiency,0.05,mol_per_mol,Efficiency of light absorption by chlorophyll
+kc,460.0,umol_per_mol,Michaelis-Menten constant for CO2
+ko,330.0,mmol_per_mol,Michaelis-Menten constant for O2
+gamma_star,42.75,umol_per_mol,CO2 compensation point for lettuce
+jmax_25,110.0,umol_per_m2_per_s,Maximum electron transport rate at 25C
+vcmax_25,60.0,umol_per_m2_per_s,Maximum carboxylation rate at 25C
+theta,0.7,fraction,Curvature factor of light response
+phi_psii,0.3,mol_per_mol,Quantum yield of PSII
+alpha,0.24,mol_per_mol,Quantum efficiency for lettuce
+rd_25,1.5,umol_per_m2_per_s,Dark respiration at 25C
+eaj,37000.0,J_per_mol,Activation energy for Jmax
+eav,65330.0,J_per_mol,Activation energy for Vcmax
+ear,46390.0,J_per_mol,Activation energy for dark respiration
+r,8.314,J_per_mol_per_K,Gas constant
+ci_fraction,0.7,fraction,Ratio of intercellular to atmospheric CO2

@@ -1,0 +1,13 @@
+parameter_name,value,unit,description
+heat_stress_weight,0.3,multiplier,Impact factor for heat stress on genetic traits
+cold_stress_weight,0.25,multiplier,Impact factor for cold stress on genetic traits
+salinity_stress_weight,0.2,multiplier,Impact factor for salinity stress on genetic traits
+light_stress_weight,0.15,multiplier,Impact factor for light stress on genetic traits
+nutrient_stress_weight,0.25,multiplier,Impact factor for nutrient stress on genetic traits
+adaptation_score_weight,0.6,fraction,Weight of adaptation score in breeding selection
+yield_potential_weight,0.25,fraction,Weight of yield potential in breeding selection
+commercial_rating_weight,0.15,fraction,Weight of commercial rating in breeding selection
+temperature_stress_weight,0.5,multiplier,Impact factor for temperature stress on traits
+nitrogen_excess_weight,0.3,multiplier,Impact factor for nitrogen excess on traits
+stress_response_weight,0.2,multiplier,Impact factor for general stress response
+overall_stress_weight,0.1,multiplier,Default overall stress impact weight

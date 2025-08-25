@@ -46,7 +46,8 @@ from .models.nutrient_models import NutrientConcentrationModel
 from .models.leaf_development import LeafDevelopmentModel, LeafParameters
 from .data.hydroponic_system import HydroInputData, SimulationResults, DailyResults
 from .utils.config_loader import get_config_loader, get_genetic_parameter
-from .utils.weather_generator import WeatherGenerator
+from .utils.config_file_loader import ModelConstants
+from .utils.csv_config_adapter import CSVConfigAdapter
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -151,7 +152,9 @@ class CROPGROHydroponicSimulator:
                  cultivar_id: str = 'HYDRO_001',
                  system_type: str = 'NFT',
                  enable_all_models: bool = True,
-                 simulation_params: Optional[SimulationParameters] = None):
+                 simulation_params: Optional[SimulationParameters] = None,
+                 model_constants: Optional[ModelConstants] = None,
+                 config: Optional[CSVConfigAdapter] = None):
         """
         Initialize CROPGRO simulator with all advanced models.
         
@@ -164,8 +167,12 @@ class CROPGROHydroponicSimulator:
         logger.info("Initializing CROPGRO Hydroponic Simulator...")
         
         # Load configuration and simulation parameters
-        self.config = get_config_loader()
-        self.params = simulation_params or self._load_simulation_parameters()
+        if model_constants:
+            self.params = self._convert_constants_to_params(model_constants)
+            self.config = config if config else CSVConfigAdapter()  # Use passed config or default
+        else:
+            self.config = config if config else get_config_loader()
+            self.params = simulation_params or self._load_simulation_parameters()
         
         # Validate simulation parameters
         param_errors = self.params.validate()
@@ -191,7 +198,7 @@ class CROPGROHydroponicSimulator:
         logger.info("Initializing phenology model...")
         # Start from transplant stage (V3 - third true leaf) to reflect 2–3 week-old plugs
         transplant_stage = LettuceGrowthStage.THIRD_LEAF
-        self.phenology_model = create_lettuce_phenology_model(transplant_stage)
+        self.phenology_model = create_lettuce_phenology_model(transplant_stage, config=self.config)
         # Leaf development model for realistic LAI and leaf metrics
         self.leaf_model = LeafDevelopmentModel(LeafParameters(
             initial_leaf_number=4.0,           # Cotyledons + ~4 true leaves at transplant
@@ -200,28 +207,28 @@ class CROPGROHydroponicSimulator:
         
         # 3. RESPIRATION MODEL
         logger.info("Initializing respiration model...")
-        self.respiration_model = create_lettuce_respiration_model()
+        self.respiration_model = create_lettuce_respiration_model(config=self.config)
         
         # 4. SENESCENCE MODEL
         logger.info("Initializing senescence model...")
-        self.senescence_model = create_lettuce_senescence_model()
+        self.senescence_model = create_lettuce_senescence_model(config=self.config)
         
         # 5. CANOPY ARCHITECTURE
         logger.info("Initializing canopy architecture model...")
-        self.canopy_model = create_lettuce_canopy_model()
+        self.canopy_model = create_lettuce_canopy_model(config=self.config)
         
         # 6. NITROGEN BALANCE
         logger.info("Initializing nitrogen balance model...")
-        self.nitrogen_model = create_lettuce_nitrogen_balance_model()
+        self.nitrogen_model = create_lettuce_nitrogen_balance_model(config=self.config)
         
         # 7. NUTRIENT MOBILITY
         logger.info("Initializing nutrient mobility model...")
-        self.mobility_model = create_lettuce_nutrient_mobility_model()
+        self.mobility_model = create_lettuce_nutrient_mobility_model(config=self.config)
         
         # 8. STRESS MODELS
         logger.info("Initializing stress models...")
-        self.integrated_stress = create_lettuce_integrated_stress_model()
-        self.temperature_stress = create_lettuce_temperature_stress_model()
+        self.integrated_stress = create_lettuce_integrated_stress_model(config=self.config)
+        self.temperature_stress = create_lettuce_temperature_stress_model(config=self.config)
         
         # 9. ROOT ARCHITECTURE
         logger.info("Initializing root architecture model...")
@@ -239,7 +246,7 @@ class CROPGROHydroponicSimulator:
         self.environmental_control = EnvironmentalControlSystem()
         
         # 11. BASIC MODELS (Enhanced)
-        self.photosynthesis_model = PhotosynthesisModel()
+        self.photosynthesis_model = PhotosynthesisModel(config=self.config)
         self.nutrient_concentration_model = NutrientConcentrationModel()
         
         # 12. ROOT ZONE TEMPERATURE MODEL
@@ -297,6 +304,31 @@ class CROPGROHydroponicSimulator:
             metabolic_water_per_lai=water_params.get('LAI_WATER_DEMAND_FACTOR'),
             reservoir_topup_fraction=system_params.get('RESERVOIR_TOPUP_FRACTION', 0.3),
             minimal_nitrogen_uptake=nutrient_params.get('NITROGEN_UPTAKE_EFFICIENCY')
+        )
+    
+    def _convert_constants_to_params(self, constants: ModelConstants) -> SimulationParameters:
+        """Convert ModelConstants from CSV to SimulationParameters."""
+        return SimulationParameters(
+            carbon_to_biomass_ratio=constants.carbon_to_biomass_ratio,
+            growth_respiration_fraction=constants.growth_respiration_fraction,
+            vegetative_leaf_allocation=constants.vegetative_leaf_allocation,
+            vegetative_stem_allocation=constants.vegetative_stem_allocation,
+            vegetative_root_allocation=constants.vegetative_root_allocation,
+            reproductive_leaf_allocation=constants.reproductive_leaf_allocation,
+            reproductive_stem_allocation=constants.reproductive_stem_allocation,
+            reproductive_root_allocation=constants.reproductive_root_allocation,
+            optimal_light_intensity=constants.optimal_light_intensity,
+            optimal_ec_range=(constants.optimal_ec_min, constants.optimal_ec_max),
+            optimal_vpd_min=constants.optimal_vpd_min,
+            optimal_vpd_max=constants.optimal_vpd_max,
+            vpd_stress_high_factor=constants.vpd_stress_high_factor,
+            vpd_stress_low_factor=constants.vpd_stress_low_factor,
+            optimal_ec=constants.optimal_ec_min,
+            ec_stress_high_factor=constants.ec_stress_high_factor,
+            ec_stress_low_threshold=constants.ec_stress_low_threshold,
+            ec_stress_low_factor=constants.ec_stress_low_factor,
+            optimal_root_temp=constants.optimal_root_temperature,
+            root_temp_tolerance=constants.root_temp_tolerance
         )
     
     def _initialize_plant_state(self):

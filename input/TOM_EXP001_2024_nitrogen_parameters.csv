@@ -1,0 +1,6 @@
+parameter_name,value,unit,description
+uptake_efficiency,0.8,fraction,Efficiency of nitrogen uptake from solution
+translocation_rate,0.4,fraction,Rate of nitrogen movement between plant parts
+protein_synthesis,0.6,fraction,Portion of nitrogen used for protein synthesis
+chlorophyll_ratio,0.02,fraction,Fraction of leaf nitrogen in chlorophyll
+senescence_rate,0.6,fraction,Nitrogen recovered during leaf senescence

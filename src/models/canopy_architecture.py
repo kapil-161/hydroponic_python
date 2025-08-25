@@ -477,13 +477,19 @@ class CanopyArchitectureModel:
             canopy_photosynthesis=canopy_photosynthesis
         )
     
-def create_lettuce_canopy_model() -> CanopyArchitectureModel:
-    """Create canopy architecture model with lettuce-specific parameters from JSON config."""
-    from ..utils.config_loader import get_config_loader
-    config_loader = get_config_loader()
-    canopy_config = config_loader.get_canopy_architecture_parameters()
-    parameters = CanopyArchitectureParameters.from_config(canopy_config)
-    return CanopyArchitectureModel(parameters)
+def create_lettuce_canopy_model(config=None) -> CanopyArchitectureModel:
+    """Create canopy architecture model with lettuce-specific parameters from config."""
+    if config is None:
+        from ..utils.config_loader import get_config_loader
+        config = get_config_loader()
+    
+    try:
+        canopy_config = config.get_canopy_parameters()
+        parameters = CanopyArchitectureParameters.from_config(canopy_config)
+        return CanopyArchitectureModel(parameters)
+    except (AttributeError, FileNotFoundError):
+        # Fallback to default parameters for CSV config
+        return CanopyArchitectureModel()
 
 
 def demonstrate_canopy_architecture_model():

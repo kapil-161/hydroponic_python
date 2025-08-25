@@ -594,12 +594,16 @@ class ComprehensivePhenologyModel:
         return properties
 
 
-def create_lettuce_phenology_model(initial_stage: LettuceGrowthStage = LettuceGrowthStage.GERMINATION) -> ComprehensivePhenologyModel:
-    """Create phenology model with lettuce-specific parameters from JSON config."""
-    from ..utils.config_loader import get_config_loader
-    loader = get_config_loader()
-    cfg = loader.get_phenology_parameters()
+def create_lettuce_phenology_model(initial_stage: LettuceGrowthStage = LettuceGrowthStage.GERMINATION, config=None) -> ComprehensivePhenologyModel:
+    """Create phenology model with lettuce-specific parameters from config."""
+    if config is None:
+        from ..utils.config_loader import get_config_loader
+        config = get_config_loader()
+    
+    # Load phenology parameters from config (CSV or JSON)
+    cfg = config.get_phenology_parameters()
     parameters = PhenologyParameters.from_config(cfg)
+    
     return ComprehensivePhenologyModel(parameters, initial_stage)
 
 

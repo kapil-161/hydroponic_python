@@ -1,0 +1,16 @@
+parameter_name,value,unit,description
+maintenance_coefficient,0.015,fraction,Base respiration rate for maintaining plant tissues
+temperature_coefficient,0.08,per_celsius,How much respiration increases per degree temperature
+biomass_coefficient,0.02,fraction,Respiration rate proportional to plant biomass
+q10_factor,2.0,ratio,Respiration rate doubles every 10°C temperature increase
+base_temperature,5.0,celsius,Minimum temperature for respiration calculations
+maintenance_base_rate,0.02,g_C_per_g_biomass_per_day,Maintenance respiration rate at reference temperature
+reference_temperature,25.0,celsius,Reference temperature for respiration calculations
+growth_efficiency,0.75,fraction,Conversion efficiency from glucose to biomass
+age_effect_coefficient,0.001,per_day,Daily increase in respiration per day of age
+max_age_effect,2.0,multiplier,Maximum age multiplier for respiration
+tissue_factor_leaves,1.0,multiplier,Respiration factor for leaf tissues
+tissue_factor_stems,0.8,multiplier,Respiration factor for stem tissues
+tissue_factor_roots,1.2,multiplier,Respiration factor for root tissues
+tissue_factor_reproductive,1.5,multiplier,Respiration factor for reproductive tissues
+acclimation_rate,0.05,per_celsius_per_day,Rate of temperature acclimation

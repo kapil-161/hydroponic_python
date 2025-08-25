@@ -1,0 +1,19 @@
+cultivar_id,cultivar_name,parameter,value,description
+HYDRO_001,Salanova Green Butter,EM,0.85,Emergence coefficient
+HYDRO_001,Salanova Green Butter,P1,120.0,Photoperiod sensitivity
+HYDRO_001,Salanova Green Butter,P3,0.52,Phyllochron interval
+HYDRO_001,Salanova Green Butter,P5,850.0,Grain filling duration
+HYDRO_001,Salanova Green Butter,G1,7.5,Scattering factor for leaf number
+HYDRO_001,Salanova Green Butter,G2,0.0025,Scattering factor for leaf size
+HYDRO_001,Salanova Green Butter,G3,1.2,Scattering factor for leaf weight
+HYDRO_001,Salanova Green Butter,PHINT,95.0,Interval between leaf tip appearances
+HYDRO_001,Salanova Green Butter,SLAVR,275.0,Specific leaf area of leaves
+HYDRO_001,Salanova Green Butter,SIZLF,180.0,Maximum leaf size
+HYDRO_001,Salanova Green Butter,XFRT,1.0,Maximum fraction of daily growth partitioned to reproductive growth
+HYDRO_001,Salanova Green Butter,WTLF,0.75,Maximum weight of a leaf
+HYDRO_001,Salanova Green Butter,SFDUR,25.0,Seed filling duration for pod cohort
+HYDRO_001,Salanova Green Butter,SDPDV,1.8,Average seed per pod under standard conditions
+HYDRO_001,Salanova Green Butter,PODUR,10.0,Time required for cultivar to reach final pod load under optimal conditions
+HYDRO_001,Salanova Green Butter,THRSH,78.0,Threshing percentage
+HYDRO_001,Salanova Green Butter,SDPRO,0.42,Fraction protein in seeds
+HYDRO_001,Salanova Green Butter,SDLIP,0.18,Fraction oil in seeds

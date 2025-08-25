@@ -412,11 +412,13 @@ class EnhancedRespirationModel:
             nitrogen_factor=combined_factors['nitrogen_factor']
         )
 
-def create_lettuce_respiration_model() -> EnhancedRespirationModel:
-    """Create respiration model with lettuce-specific parameters from JSON config."""
-    from ..utils.config_loader import get_config_loader
-    config_loader = get_config_loader()
-    respiration_config = config_loader.get_respiration_parameters()
+def create_lettuce_respiration_model(config=None) -> EnhancedRespirationModel:
+    """Create respiration model with lettuce-specific parameters from config."""
+    if config is None:
+        from ..utils.config_loader import get_config_loader
+        config = get_config_loader()
+    
+    respiration_config = config.get_respiration_parameters()
     parameters = RespirationParameters.from_config(respiration_config)
     return EnhancedRespirationModel(parameters)
 

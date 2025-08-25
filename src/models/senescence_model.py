@@ -520,15 +520,17 @@ class AdvancedSenescenceModel:
         """
         return self.remobilization_pool.copy()
     
-def create_lettuce_senescence_model() -> AdvancedSenescenceModel:
+def create_lettuce_senescence_model(config=None) -> AdvancedSenescenceModel:
     """Create senescence model with lettuce-specific parameters."""
     try:
-        from ..utils.config_loader import get_config_loader
-        config_loader = get_config_loader()
-        senescence_config = config_loader.get_senescence_parameters()
+        if config is None:
+            from ..utils.config_loader import get_config_loader
+            config = get_config_loader()
+        
+        senescence_config = config.get_senescence_parameters()
         parameters = SenescenceParameters.from_config(senescence_config)
         return AdvancedSenescenceModel(parameters)
-    except ImportError:
+    except (ImportError, FileNotFoundError):
         # Fallback to default values if config loader not available
         return AdvancedSenescenceModel()
 

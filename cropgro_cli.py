@@ -13,8 +13,10 @@ from typing import Any, Dict
 
 # Import CROPGRO system
 from src.cropgro_hydroponic_simulator import CROPGROHydroponicSimulator
-from src.data.hydroponic_system import DefaultConfigurations, HydroInputData
-from src.utils.weather_generator import WeatherGenerator
+from src.data.hydroponic_system import HydroInputData
+from src.utils.weather_loader import WeatherLoader
+from src.utils.config_file_loader import ConfigFileLoader
+from src.utils.csv_config_adapter import CSVConfigAdapter
 
 
 def to_serializable(value: Any) -> Any:
@@ -41,26 +43,45 @@ def daily_result_to_dict(dr: Any) -> Dict[str, Any]:
     return data
 
 
-def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: bool) -> Any:
+def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: bool, weather_csv: str = None, config_dir: str = ".", experiment_code: str = None) -> Any:
     print("🌱 CROPGRO Hydroponic Simulator - CLI Version")
     print("=" * 50)
 
-    # Use default configurations as a base
-    system_config = DefaultConfigurations.get_nft_lettuce_system()
-    if system_type and system_type.upper() != 'NFT':
-        # Only type affects the engine; keep other fields
-        system_config.system_type = system_type.upper()
+    # Load configurations from files
+    config_loader = ConfigFileLoader(config_dir, experiment_code)
+    
+    try:
+        system_config = config_loader.load_system_settings()
+        crop_params = config_loader.load_crop_parameters()
+        nutrient_params = config_loader.load_nutrient_solution()
+        experiment_settings = config_loader.load_experiment_settings()
+        model_constants = config_loader.load_complete_simulation_parameters()
+        
+        # Override system type if specified in command line
+        if system_type and system_type.upper() != system_config.system_type:
+            system_config.system_type = system_type.upper()
+            
+        print(f"✅ Loaded configuration from: {config_dir}")
+        
+    except FileNotFoundError as e:
+        print(f"❌ Configuration file not found: {e}")
+        print("💡 Please create the required CSV configuration files!")
+        print("   Run with sample files or create your own configuration.")
+        raise e
 
-    crop_params = DefaultConfigurations.get_lettuce_parameters()
-    nutrient_params = DefaultConfigurations.get_default_nutrients()
-
-    # Generate weather data
-    generator = WeatherGenerator()
-    start_date = datetime.now()
-    weather_list = generator.generate_weather_series(
-        start_date=start_date,
-        days=days
-    )
+    # Load weather data from CSV or use fallback
+    if weather_csv:
+        loader = WeatherLoader(csv_path=weather_csv)
+        # Load weather data without date filtering to use available data
+        weather_list = loader.load_weather_data(days=days)
+        print(f"✅ Loaded {len(weather_list)} weather records from CSV")
+    elif experiment_code:
+        loader = WeatherLoader(experiment_code=experiment_code, config_dir=config_dir)
+        weather_list = loader.load_weather_data(days=days)
+        print(f"✅ Loaded {len(weather_list)} weather records for experiment {experiment_code}")
+    else:
+        # Fallback: raise error if no weather CSV provided
+        raise ValueError("Weather CSV file path is required. Use --weather-csv argument or --experiment with matching weather file.")
 
     # Create input data
     input_data = HydroInputData(
@@ -71,10 +92,15 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
         simulation_days=days
     )
 
-    # Create and run simulator
+    # Create CSV config adapter with experiment code
+    csv_config = CSVConfigAdapter(config_dir, experiment_code)
+    
+    # Create and run simulator with loaded configuration
     simulator = CROPGROHydroponicSimulator(
         cultivar_id=cultivar_id,
-        system_type=system_type.upper() if system_type else 'NFT'
+        system_type=system_type.upper() if system_type else 'NFT',
+        model_constants=model_constants,
+        config=csv_config
     )
 
     print(f"Starting simulation until harvest maturity...")
@@ -104,11 +130,14 @@ def main():
     parser.add_argument('--daily-csv', action='store_true', help='Automatically save daily CSV with timestamp in outputs/ directory')
     parser.add_argument('--print-daily', action='store_true', help='Print detailed per-day results to stdout')
     parser.add_argument('--print-summary', action='store_true', help='Print summary stats to stdout')
+    parser.add_argument('--weather-csv', type=str, help='Path to weather data CSV file (optional if --experiment is used)')
+    parser.add_argument('--config-dir', type=str, default='input', help='Directory containing configuration files (default: input)')
+    parser.add_argument('--experiment', type=str, help='Experiment code (e.g., LET_EXP001_2024) for multi-experiment setups')
 
     args = parser.parse_args()
 
     try:
-        results = run_simulation(args.days, args.cultivar, args.system, args.print_daily)
+        results = run_simulation(args.days, args.cultivar, args.system, args.print_daily, args.weather_csv, args.config_dir, args.experiment)
 
         # Output CSV via DataFrame (curated columns)
         if args.output_csv:

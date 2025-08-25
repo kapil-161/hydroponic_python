@@ -323,12 +323,14 @@ class TemperatureStressModel:
         )
 
 
-def create_lettuce_temperature_stress_model(config_path: Optional[str] = None) -> TemperatureStressModel:
+def create_lettuce_temperature_stress_model(config=None) -> TemperatureStressModel:
     try:
-        from ..utils.config_loader import get_config_loader
-
-        config_loader = get_config_loader(config_path)
-        temp_stress_config = config_loader.get_value("temperature_stress", "parameters", {})
+        if config is None:
+            from ..utils.config_loader import get_config_loader
+            config_loader = get_config_loader()
+            temp_stress_config = config_loader.get_value("temperature_stress", "parameters", {})
+        else:
+            temp_stress_config = {}  # Use defaults for CSV config
         params = TemperatureStressParameters.from_config(temp_stress_config)
         return TemperatureStressModel(params)
     except Exception:
@@ -805,11 +807,14 @@ class IntegratedStressModel:
         }
 
 
-def create_lettuce_integrated_stress_model() -> IntegratedStressModel:
+def create_lettuce_integrated_stress_model(config=None) -> IntegratedStressModel:
     try:
-        from ..utils.config_loader import get_config_loader
-        config_loader = get_config_loader()
-        stress_config = config_loader.get_value("integrated_stress", "", {})
+        if config is None:
+            from ..utils.config_loader import get_config_loader
+            config = get_config_loader()
+            stress_config = config.get_value("integrated_stress", "", {})
+        else:
+            stress_config = {}  # Use defaults for CSV config
         parameters = IntegratedStressParameters.from_config(stress_config)
         return IntegratedStressModel(parameters)
     except Exception:

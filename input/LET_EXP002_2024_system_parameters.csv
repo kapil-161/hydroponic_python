@@ -1,0 +1,2 @@
+parameter_name,value,unit,description
+reservoir_topup_fraction,0.3,fraction,Fraction of reservoir volume to refill when needed

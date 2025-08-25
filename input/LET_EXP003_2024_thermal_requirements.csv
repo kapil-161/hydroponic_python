@@ -1,0 +1,17 @@
+stage_transition,thermal_time_gdd,description
+GE_to_VE,80.0,Growing degree days from germination to emergence
+VE_to_V1,45.0,Growing degree days from emergence to first leaf
+V1_to_V2,35.0,Growing degree days from first to second leaf
+V2_to_V3,35.0,Growing degree days from second to third leaf
+V3_to_V4,35.0,Growing degree days from third to fourth leaf
+V4_to_V5,35.0,Growing degree days from fourth to fifth leaf
+V5_to_V6,35.0,Growing degree days from fifth to sixth leaf
+V6_to_V7,35.0,Growing degree days from sixth to seventh leaf
+V7_to_V8,35.0,Growing degree days from seventh to eighth leaf
+V8_to_V9,35.0,Growing degree days from eighth to ninth leaf
+V9_to_V10,35.0,Growing degree days from ninth to tenth leaf
+V10_to_V11+,40.0,Growing degree days from tenth leaf to mature vegetative
+V11+_to_HI,120.0,Growing degree days from mature vegetative to head initiation
+HI_to_HD,180.0,Growing degree days from head initiation to head development
+HD_to_HM,200.0,Growing degree days from head development to harvest maturity
+HM_to_PM,100.0,Growing degree days from harvest to physiological maturity

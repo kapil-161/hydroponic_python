@@ -105,13 +105,19 @@ class PhotosynthesisParameters:
 class PhotosynthesisModel:
     """Simplified Farquhar-type model for daily carbon assimilation."""
 
-    def __init__(self, parameters: Optional[PhotosynthesisParameters] = None):
+    def __init__(self, parameters: Optional[PhotosynthesisParameters] = None, config=None):
         if parameters is None:
-            # Load parameters strictly from JSON config
-            from ..utils.config_loader import get_config_loader
-            loader = get_config_loader()
-            p_cfg = loader.get_photosynthesis_parameters()
-            self.params = PhotosynthesisParameters.from_dict(p_cfg)
+            if config is None:
+                # Load parameters strictly from JSON config
+                from ..utils.config_loader import get_config_loader
+                config = get_config_loader()
+            
+            try:
+                p_cfg = config.get_photosynthesis_parameters()
+                self.params = PhotosynthesisParameters.from_dict(p_cfg)
+            except (AttributeError, FileNotFoundError):
+                # Use default parameters for CSV config
+                self.params = PhotosynthesisParameters()
         else:
             self.params = parameters
 
