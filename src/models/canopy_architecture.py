@@ -79,7 +79,7 @@ class CanopyArchitectureParameters:
             cfg = loader.get_canopy_architecture_parameters()
 
             if self.max_lai is None:
-                self.max_lai = cfg.get('max_lai', 8.0)
+                self.max_lai = cfg.get('max_lai', float('inf'))  # Natural unlimited growth
             if self.extinction_coefficient is None:
                 self.extinction_coefficient = cfg.get('extinction_coefficient', 0.69)
             if self.canopy_width is None:

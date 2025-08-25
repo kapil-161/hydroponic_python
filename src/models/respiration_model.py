@@ -161,11 +161,18 @@ class EnhancedRespirationModel:
         Returns:
             Temperature factor (1.0 at reference temperature)
         """
-        reference_temp = acclimated_temp or self.acclimated_reference_temp
-        temp_diff = temperature - reference_temp
+        from ..utils.temperature_utils import calculate_q10_temperature_factor
         
-        # Q10 temperature response
-        factor = self.params.q10_factor ** (temp_diff / 10.0)
+        reference_temp = acclimated_temp or self.acclimated_reference_temp
+        
+        # Use shared Q10 calculation
+        factor = calculate_q10_temperature_factor(
+            temperature=temperature,
+            reference_temp=reference_temp,
+            q10_factor=self.params.q10_factor,
+            min_factor=0.1,
+            max_factor=4.0
+        )
         
         # Prevent excessive respiration at very high temperatures
         if temperature > 40.0:
@@ -173,7 +180,7 @@ class EnhancedRespirationModel:
             excess_temp = temperature - 40.0
             factor *= np.exp(-0.1 * excess_temp)
         
-        return max(0.1, factor)
+        return factor
     
     def calculate_age_factor(self, age_days: float) -> float:
         """
@@ -185,9 +192,11 @@ class EnhancedRespirationModel:
         Returns:
             Age factor (1.0 for young tissue)
         """
-        # Exponential increase in respiration with age
-        age_effect = 1.0 + (self.params.age_effect_coefficient * age_days)
-        return min(age_effect, self.params.max_age_effect)
+        from ..utils.math_utils import clamp_value
+        
+        # Natural exponential increase in respiration with age - no caps
+        age_effect = 1.0 + (self.params.age_effect_coefficient * max(0.0, age_days))
+        return max(1.0, age_effect)  # Natural aging without artificial limits
     
     def calculate_nitrogen_factor(self, nitrogen_content: float, tissue_type: TissueType) -> float:
         """
@@ -200,13 +209,15 @@ class EnhancedRespirationModel:
         Returns:
             Nitrogen factor (1.0 at reference N content)
         """
+        from ..utils.math_utils import safe_divide
+        
         if tissue_type != TissueType.LEAVES:
             return 1.0  # N effects mainly in leaves
         
-        n_ratio = nitrogen_content / self.params.reference_leaf_n
+        n_ratio = safe_divide(nitrogen_content, self.params.reference_leaf_n, 1.0)
         factor = 1.0 + self.params.n_effect_slope * (n_ratio - 1.0)
         
-        return max(0.5, min(2.0, factor))
+        return max(0.1, factor)  # Natural nitrogen response without caps
     
     def calculate_maintenance_respiration(self, biomass_pool: BiomassPool, 
                                         temperature: float) -> Tuple[float, Dict[str, float]]:
@@ -238,9 +249,17 @@ class EnhancedRespirationModel:
             biomass_pool.tissue_type.value, 1.0
         )
         
-        # Combined maintenance respiration
+        # Real-world maintenance penalties for excessive biomass
+        # Large plants have disproportionately high maintenance costs
+        size_penalty_factor = 1.0
+        if biomass_pool.dry_mass > 50.0:  # Above normal lettuce size
+            excess_mass = biomass_pool.dry_mass - 50.0
+            # Exponential penalty for maintaining excessive biomass
+            size_penalty_factor = 1.0 + 0.02 * excess_mass  # 2% increase per gram above 50g
+        
+        # Combined maintenance respiration with realistic size penalties
         maintenance_respiration = (base_rate * biomass_pool.dry_mass * 
-                                 temp_factor * age_factor * n_factor * tissue_factor)
+                                 temp_factor * age_factor * n_factor * tissue_factor * size_penalty_factor)
         
         factor_breakdown = {
             'temperature_factor': temp_factor,
@@ -325,7 +344,8 @@ class EnhancedRespirationModel:
             self.acclimated_reference_temp += acclimation_change
             
             # Keep within reasonable bounds
-            self.acclimated_reference_temp = np.clip(
+            from ..utils.math_utils import clamp_value
+            self.acclimated_reference_temp = clamp_value(
                 self.acclimated_reference_temp, 15.0, 35.0
             )
     

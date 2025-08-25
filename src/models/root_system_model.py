@@ -289,7 +289,7 @@ class RootArchitectureModel:
             zone.nutrient_concentrations = environmental_conditions.get('nutrient_concentrations', {})
 
         self.update_root_aging()
-        new_growth = self.generate_new_roots(growth_factors)
+        new_growth = self.generate_new_roots(growth_factors, environmental_conditions)
         self.cumulative_root_growth += new_growth
 
         return self.calculate_architecture_metrics()
@@ -314,7 +314,7 @@ class RootArchitectureModel:
 
             zone.root_cohorts = surviving_cohorts
 
-    def generate_new_roots(self, growth_factors: Dict[str, float]) -> float:
+    def generate_new_roots(self, growth_factors: Dict[str, float], environmental_conditions: Dict[str, float]) -> float:
         """Generate new root cohorts based on growth conditions"""
         base_growth = self.params.primary_root_growth_rate
 
@@ -331,7 +331,10 @@ class RootArchitectureModel:
         total_new_growth = 0.0
 
         for i, zone in enumerate(self.root_zones):
-            zone_growth_fraction = 0.4 * math.exp(-0.3 * i)
+            # Root growth driven by auxin gradients and nutrient availability
+            zone_growth_fraction = self._calculate_zone_growth_potential(
+                zone, i, environmental_conditions, growth_factors
+            )
             zone_growth = effective_growth * zone_growth_fraction * length_mult
 
             if zone_growth > 0.01:
@@ -367,6 +370,93 @@ class RootArchitectureModel:
                         total_new_growth += cohort_length
 
         return total_new_growth
+
+    def _calculate_zone_growth_potential(self, zone: 'RootZoneLayer', zone_index: int,
+                                        environmental_conditions: Dict[str, float],
+                                        growth_factors: Dict[str, float]) -> float:
+        """
+        Calculate root growth potential based on biological gradients.
+        
+        Root growth is driven by:
+        1. Auxin transport from shoot (decreases with distance)
+        2. Local nutrient availability (attracts root growth)
+        3. Oxygen availability (essential for respiration)
+        4. Root competition (density-dependent inhibition)
+        """
+        
+        # 1. AUXIN GRADIENT EFFECT
+        # Auxin concentration decreases exponentially from shoot
+        # Hydroponic systems: auxin transport limited by root length, not soil impedance
+        auxin_decay_rate = 0.15  # per zone index (biology-based)
+        auxin_gradient = math.exp(-auxin_decay_rate * zone_index)
+        
+        # 2. NUTRIENT AVAILABILITY EFFECT  
+        # Roots grow toward high nutrient concentrations (chemotropism)
+        nutrient_concentrations = environmental_conditions.get('nutrient_concentrations', {})
+        
+        # Calculate nutrient attractiveness (weighted by plant demand)
+        nutrient_demand_weights = {
+            'N-NO3': 0.4,  # Nitrogen is primary growth driver
+            'P-PO4': 0.25, # Phosphorus for energy metabolism
+            'K': 0.2,      # Potassium for osmotic regulation  
+            'Ca': 0.1,     # Calcium for cell walls
+            'Mg': 0.05     # Magnesium for chlorophyll
+        }
+        
+        nutrient_signal = 0.0
+        for nutrient, weight in nutrient_demand_weights.items():
+            conc = nutrient_concentrations.get(nutrient, 100.0)  # mg/L
+            # Normalized to typical hydroponic concentrations
+            normalized_conc = min(1.0, conc / 200.0)  # 200 mg/L as reference
+            nutrient_signal += weight * normalized_conc
+        
+        # 3. OXYGEN AVAILABILITY EFFECT
+        # Root respiration requires oxygen - critical in hydroponics
+        oxygen_level = environmental_conditions.get('oxygen_level', 8.0)  # mg/L DO
+        optimal_oxygen = 6.0  # mg/L minimum for healthy root growth
+        
+        if oxygen_level >= optimal_oxygen:
+            oxygen_effect = 1.0
+        else:
+            # Linear decline below optimal (root death below 2 mg/L)
+            oxygen_effect = max(0.1, oxygen_level / optimal_oxygen)
+        
+        # 4. ROOT DENSITY COMPETITION
+        # Higher root density in zone reduces further growth (self-inhibition)
+        zone_root_density = zone.calculate_root_length_density()
+        optimal_density = 2.0  # cm/cm³ for efficient nutrient uptake
+        
+        if zone_root_density <= optimal_density:
+            competition_effect = 1.0
+        else:
+            # Density-dependent growth reduction
+            density_stress = (zone_root_density - optimal_density) / optimal_density
+            competition_effect = max(0.2, 1.0 - 0.5 * density_stress)
+        
+        # 5. TEMPERATURE EFFECT ON ROOT ELONGATION
+        temperature = environmental_conditions.get('temperature', 20.0)
+        root_temp_optimum = 18.0  # °C optimal for lettuce roots  
+        root_temp_max = 30.0      # °C maximum before damage
+        
+        if temperature <= root_temp_optimum:
+            temp_effect = max(0.3, temperature / root_temp_optimum)
+        else:
+            # Heat stress reduces root growth
+            heat_stress = (temperature - root_temp_optimum) / (root_temp_max - root_temp_optimum)
+            temp_effect = max(0.1, 1.0 - heat_stress)
+        
+        # COMBINED GROWTH POTENTIAL
+        # Multiplicative combination (all factors must be favorable)
+        zone_growth_potential = (
+            auxin_gradient *        # 0.0-1.0 (decreases with distance)
+            nutrient_signal *       # 0.0-1.0 (higher where nutrients abundant)  
+            oxygen_effect *         # 0.1-1.0 (essential for respiration)
+            competition_effect *    # 0.2-1.0 (density-dependent inhibition)
+            temp_effect            # 0.1-1.0 (temperature optimum)
+        )
+        
+        # Normalize across zones (ensure total growth is conserved)
+        return max(0.05, min(0.8, zone_growth_potential))
 
     def calculate_architecture_metrics(self) -> Dict[str, float]:
         total_length = 0.0
@@ -649,13 +739,13 @@ class EnhancedRootUptakeModel:
         self.tank_volume = tank_volume
         self.uptake_params = RootUptakeParameters(
             base_uptake_rates={
-                'NO3': 6.0,
-                'NH4': 3.6,
-                'PO4': 1.2,
-                'K': 4.8,
-                'Ca': 2.4,
-                'Mg': 1.9,
-                'SO4': 1.4,
+                'NO3': 0.15,    # mg/cm²/day - realistic for hydroponic lettuce
+                'NH4': 0.09,    # mg/cm²/day - reduced from 3.6
+                'PO4': 0.03,    # mg/cm²/day - reduced from 1.2
+                'K': 0.12,      # mg/cm²/day - reduced from 4.8
+                'Ca': 0.06,     # mg/cm²/day - reduced from 2.4
+                'Mg': 0.05,     # mg/cm²/day - reduced from 1.9
+                'SO4': 0.04,    # mg/cm²/day - reduced from 1.4
             },
             michaelis_constants={
                 'NO3': 6.0,
@@ -700,16 +790,33 @@ class EnhancedRootUptakeModel:
         uptake_rates: Dict[str, float] = {}
         for nutrient, concentration in solution_concentrations.items():
             if nutrient in self.uptake_params.base_uptake_rates:
-                base_rate = self.uptake_params.base_uptake_rates[nutrient]
-                if self.uptake_params.michaelis_constants:
-                    km = self.uptake_params.michaelis_constants.get(nutrient, 50.0)
-                    conc_factor = concentration / (concentration + km)
-                else:
-                    conc_factor = 1.0
-
+                
+                # True Michaelis-Menten kinetics: V = Vmax * [S] / (Km + [S])
+                vmax = self.uptake_params.base_uptake_rates[nutrient]  # mg/cm²/day (maximum rate)
+                km = self.uptake_params.michaelis_constants.get(nutrient, 50.0) if self.uptake_params.michaelis_constants else 50.0
+                
+                # Michaelis-Menten equation
+                michaelis_rate = (vmax * concentration) / (km + concentration)
+                
+                # Competitive inhibition between similar nutrients
+                inhibition_factor = self._calculate_nutrient_competition(nutrient, solution_concentrations)
+                
+                # pH effects on nutrient speciation and uptake
+                ph = environmental_conditions.get('ph', 6.0)
+                ph_effect = self._calculate_ph_effect_on_uptake(nutrient, ph)
+                
+                # Temperature effects on carrier protein activity (Q10 = 2.5 for transport)
+                transport_temp_effect = temp_factor ** 1.25  # Enhanced temperature sensitivity for transport
+                
+                # Root age effect (young roots have higher transporter density)
+                root_age_effect = self._calculate_root_age_effect(architecture_metrics)
+                
                 effective_surface_area = self.calculate_effective_surface_area(architecture_metrics)
+                
+                # Final uptake rate with all biological factors
                 uptake_rate = (
-                    effective_surface_area * base_rate * conc_factor * temp_factor * flow_factor * avg_activity
+                    effective_surface_area * michaelis_rate * inhibition_factor * 
+                    ph_effect * transport_temp_effect * flow_factor * avg_activity * root_age_effect
                 )
                 uptake_rates[f'{nutrient}_uptake_rate'] = uptake_rate
 
@@ -785,6 +892,93 @@ class EnhancedRootUptakeModel:
             )
             spatial_uptake[zone_name] = zone_uptake
         return spatial_uptake
+    
+    def _calculate_nutrient_competition(self, target_nutrient: str, 
+                                       concentrations: Dict[str, float]) -> float:
+        """
+        Calculate competitive inhibition between nutrients.
+        Similar nutrients compete for the same transport proteins.
+        """
+        # Define nutrient competition groups
+        competition_groups = {
+            'N-NO3': ['N-NO3', 'Cl'],  # Nitrate competes with chloride
+            'N-NH4': ['N-NH4', 'K'],   # Ammonium competes with potassium  
+            'P-PO4': ['P-PO4'],        # Phosphate has unique transporters
+            'K': ['K', 'N-NH4'],       # Potassium competes with ammonium
+            'Ca': ['Ca', 'Mg'],        # Calcium competes with magnesium
+            'Mg': ['Mg', 'Ca']         # Magnesium competes with calcium
+        }
+        
+        if target_nutrient not in competition_groups:
+            return 1.0  # No competition
+        
+        competitors = competition_groups[target_nutrient]
+        target_conc = concentrations.get(target_nutrient, 0.0)
+        
+        # Calculate competitive inhibition using classical enzyme kinetics
+        total_competitor_conc = 0.0
+        for competitor in competitors:
+            if competitor != target_nutrient and competitor in concentrations:
+                # Ki (inhibition constant) typically similar to Km
+                ki = 50.0  # mg/L
+                competitor_effect = concentrations[competitor] / ki
+                total_competitor_conc += competitor_effect
+        
+        # Competitive inhibition factor: 1 / (1 + [I]/Ki)
+        inhibition_factor = 1.0 / (1.0 + total_competitor_conc)
+        
+        return max(0.1, inhibition_factor)  # Minimum 10% activity
+    
+    def _calculate_ph_effect_on_uptake(self, nutrient: str, ph: float) -> float:
+        """
+        Calculate pH effects on nutrient speciation and transport protein activity.
+        """
+        # Optimal pH ranges for different nutrients
+        ph_optima = {
+            'N-NO3': (5.5, 7.0),   # Nitrate uptake optimal at slightly acidic
+            'N-NH4': (5.0, 6.5),   # Ammonium prefers acidic conditions
+            'P-PO4': (5.5, 6.5),   # Phosphate availability peaks at acidic pH
+            'K': (5.5, 7.5),       # Potassium relatively pH insensitive
+            'Ca': (6.0, 7.5),      # Calcium prefers neutral to slightly basic
+            'Mg': (6.0, 7.5)       # Magnesium similar to calcium
+        }
+        
+        if nutrient not in ph_optima:
+            return 1.0
+        
+        optimal_min, optimal_max = ph_optima[nutrient]
+        
+        if optimal_min <= ph <= optimal_max:
+            return 1.0  # Optimal pH range
+        elif ph < optimal_min:
+            # Too acidic - calculate linear decline
+            stress_range = 2.0  # pH units below optimum before severe stress
+            ph_stress = max(0.0, (optimal_min - ph) / stress_range)
+            return max(0.2, 1.0 - ph_stress)
+        else:  # ph > optimal_max
+            # Too basic - calculate linear decline
+            stress_range = 2.5  # pH units above optimum before severe stress
+            ph_stress = max(0.0, (ph - optimal_max) / stress_range)
+            return max(0.2, 1.0 - ph_stress)
+    
+    def _calculate_root_age_effect(self, architecture_metrics: Dict[str, float]) -> float:
+        """
+        Calculate effect of root age on transporter density.
+        Young roots have higher transporter density than old roots.
+        """
+        # Assume fine roots are younger and more active
+        fine_root_fraction = architecture_metrics.get('fine_root_fraction', 0.7)
+        
+        # Age distribution effect: young roots are 2x more active than old
+        young_root_activity = 2.0
+        old_root_activity = 0.8
+        
+        # Weighted average based on root age distribution
+        weighted_activity = (fine_root_fraction * young_root_activity + 
+                           (1.0 - fine_root_fraction) * old_root_activity)
+        
+        return max(0.1, weighted_activity)  # Natural root activity without caps
+    
 
     def optimize_environmental_conditions(self,
                                           target_uptake_rates: Dict[str, float],

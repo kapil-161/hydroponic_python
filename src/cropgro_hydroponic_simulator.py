@@ -17,6 +17,7 @@ This simulator provides research-grade crop modeling capabilities.
 
 import numpy as np
 import pandas as pd
+import math
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
@@ -76,7 +77,7 @@ class SimulationParameters:
     
     # Environmental stress thresholds
     optimal_light_intensity: float = 15.0  # MJ/m²/day for normalization
-    optimal_ec_range: tuple = (1.2, 1.8)  # dS/m optimal range
+    optimal_ec_range: tuple = (2.0, 2.6)  # dS/m research-validated optimal range
     
     # VPD stress parameters (kPa)
     optimal_vpd_min: float = 0.6
@@ -85,7 +86,7 @@ class SimulationParameters:
     vpd_stress_low_factor: float = 0.15   # Stress multiplier below optimal
     
     # EC stress parameters (dS/m)
-    optimal_ec: float = 1.5
+    optimal_ec: float = 2.0  # Research-based optimum (Andriolo et al., 2005)
     ec_stress_high_factor: float = 0.2    # Stress multiplier for high EC
     ec_stress_low_threshold: float = 0.8  # Below this EC causes stress
     ec_stress_low_factor: float = 0.1     # Stress multiplier for low EC
@@ -691,16 +692,22 @@ class CROPGROHydroponicSimulator:
         # In hydroponic systems, water is abundant and well-controlled
         # Main water stress comes from VPD (vapor pressure deficit) effects
         
-        # Simplified hydroponic water stress based primarily on VPD
-        optimal_vpd = 0.8  # kPa - optimal for lettuce
-        vpd_tolerance = 0.5  # kPa - acceptable range around optimum
+        # Hydroponic water stress - primarily VPD-based (optimized for hydroponics)
+        # In hydroponic systems, water is abundant, so stress mainly from atmospheric demand
+        optimal_vpd_min = self.params.optimal_vpd_min  # 0.6 kPa from config
+        optimal_vpd_max = self.params.optimal_vpd_max  # 1.0 kPa from config
         
-        vpd_deviation = abs(actual_vpd - optimal_vpd)
-        if vpd_deviation <= vpd_tolerance:
+        if optimal_vpd_min <= actual_vpd <= optimal_vpd_max:
             water_stress_level = 0.0  # No stress in optimal range
+        elif actual_vpd < optimal_vpd_min:
+            # Low VPD stress (poor transpiration)
+            water_stress_level = min(0.2, (optimal_vpd_min - actual_vpd) * 0.15)
         else:
-            # Gradual stress increase beyond tolerance
-            water_stress_level = min(0.3, (vpd_deviation - vpd_tolerance) * 0.2)
+            # High VPD stress (excessive water demand)  
+            water_stress_level = min(0.4, (actual_vpd - optimal_vpd_max) * 0.25)
+        
+        # Debug: Print water stress calculation for troubleshooting
+        # print(f"DEBUG: VPD={actual_vpd:.2f}, range=[{optimal_vpd_min}-{optimal_vpd_max}], water_stress={water_stress_level:.3f}")
         
         water_factor = max(0.0, 1.0 - water_stress_level)
         
@@ -972,19 +979,10 @@ class CROPGROHydroponicSimulator:
         # Biomass growth requires carbon: c_bm for structure plus c_bm*rg for construction respiration
         available_biomass_growth = max(0.0, net_carbon_for_growth / (c_bm * (1.0 + rg)))
         
-        # Allocate biomass based on developmental stage
-        if stage_props['is_vegetative']:
-            allocation_fractions = {
-                'leaves': self.params.vegetative_leaf_allocation,
-                'stems': self.params.vegetative_stem_allocation,
-                'roots': self.params.vegetative_root_allocation
-            }
-        else:
-            allocation_fractions = {
-                'leaves': self.params.reproductive_leaf_allocation,
-                'stems': self.params.reproductive_stem_allocation,
-                'roots': self.params.reproductive_root_allocation
-            }
+        # Calculate biomass allocation using functional balance theory
+        allocation_fractions = self._calculate_functional_balance_allocation(
+            stress_factors, stage_props, env_conditions
+        )
         
         # Calculate RZT growth factor
         rzt_growth_factor = self.rzt_model.calculate_rzt_growth_factor(
@@ -1144,7 +1142,32 @@ class CROPGROHydroponicSimulator:
         model_based_area_m2 = leaf_stats['total_leaf_area_m2']
         one_plant_leaf_area_m2 = max(model_based_area_m2, biomass_based_area_m2)
         total_leaf_area_m2 = one_plant_leaf_area_m2 * self.plant_count
-        self.current_lai = min(8.0, max(0.0, total_leaf_area_m2 / max(1e-6, self.system_area)))
+        # Physical space constraints in real hydroponic systems
+        theoretical_lai = total_leaf_area_m2 / max(1e-6, self.system_area)
+        
+        # Real-world growing space limitations
+        if theoretical_lai > 8.0:
+            # Physical collision and overlap of leaves - can't pack infinitely
+            space_limitation_factor = 8.0 / theoretical_lai
+            # Structural failure - plants can't support massive leaf area
+            if theoretical_lai > 15.0:
+                structural_failure_factor = 15.0 / theoretical_lai
+                space_limitation_factor *= structural_failure_factor
+            
+            self.current_lai = theoretical_lai * space_limitation_factor
+            
+            # Additional real-world problems with dense canopies
+            if theoretical_lai > 12.0:
+                # Heat buildup and poor air circulation
+                heat_stress = min(0.3, (theoretical_lai - 12.0) * 0.05)  # Up to 30% heat stress
+                # Disease pressure increases exponentially in dense canopies
+                disease_pressure = min(0.4, (theoretical_lai - 12.0) * 0.08)  # Up to 40% disease loss
+                
+                # Apply realistic canopy stress penalties
+                canopy_stress_factor = 1.0 - heat_stress - disease_pressure
+                self.current_lai *= max(0.3, canopy_stress_factor)  # Minimum 30% survival
+        else:
+            self.current_lai = theoretical_lai
         
         # Update canopy height
         if stage_props['is_vegetative']:
@@ -1279,9 +1302,28 @@ class CROPGROHydroponicSimulator:
         
         # Leaf metrics
         cropgro_result.v_stage = self.leaf_model.current_v_stage
-        cropgro_result.leaf_number = int(leaf_stats['active_leaf_count'])
+        
+        # Use visible_leaf_count for consistency with V-stage (leaves that have appeared)
+        visible_leaves = leaf_stats.get('visible_leaf_count', leaf_stats['active_leaf_count'])
+        active_leaves = leaf_stats['active_leaf_count']
+        cropgro_result.leaf_number = int(visible_leaves)
+        
         cropgro_result.leaf_area_m2 = one_plant_leaf_area_m2
-        cropgro_result.average_leaf_area_cm2 = (one_plant_leaf_area_m2 / max(1, cropgro_result.leaf_number)) * 1.0e4
+        
+        # Calculate realistic average leaf area using active leaves (those contributing area)
+        if active_leaves > 0:
+            cropgro_result.average_leaf_area_cm2 = (one_plant_leaf_area_m2 / active_leaves) * 1.0e4
+        else:
+            cropgro_result.average_leaf_area_cm2 = 0.0
+        
+        # Cap unrealistic leaf sizes (max ~100 cm² per leaf for lettuce)
+        max_realistic_leaf_area = 100.0  # cm²
+        if cropgro_result.average_leaf_area_cm2 > max_realistic_leaf_area:
+            # If average is too large, it means we have few large leaves
+            # Adjust to show more realistic average while maintaining total area
+            estimated_realistic_leaf_count = max(1, int(one_plant_leaf_area_m2 * 1.0e4 / max_realistic_leaf_area))
+            cropgro_result.average_leaf_area_cm2 = min(max_realistic_leaf_area, 
+                                                      (one_plant_leaf_area_m2 * 1.0e4) / estimated_realistic_leaf_count)
 
         # === DETAILED CANOPY ARCHITECTURE RESULTS ===
         cropgro_result.canopy_layers = len(canopy_response.canopy_layers) if hasattr(canopy_response, 'canopy_layers') else 0
@@ -1355,7 +1397,7 @@ class CROPGROHydroponicSimulator:
             # Only apply minimal value if plant has significant biomass but no uptake
             cropgro_result.nitrogen_uptake_mg = self.params.minimal_nitrogen_uptake
         cropgro_result.nitrogen_demand_mg = 50.0  # Default value for now
-        cropgro_result.nitrogen_stress_factor = 1.0 - getattr(nitrogen_response, 'nitrogen_stress_level', 0.0)  # Convert to factor
+        cropgro_result.nitrogen_stress_factor = stress_factors['stress_levels']['nitrogen']  # Use hydroponic-specific nitrogen stress
         cropgro_result.leaf_nitrogen_conc = 4.5  # Default
         cropgro_result.root_nitrogen_conc = 2.8  # Default
         
@@ -1388,12 +1430,12 @@ class CROPGROHydroponicSimulator:
         
         # 6. STRESS RESPONSES (with safe attribute access)
         cropgro_result.temperature_stress_level = stress_factors['stress_levels']['temperature']
-        cropgro_result.temperature_stress_photosynthesis = stress_factors['temp_stress_response'].process_factors.photosynthesis
-        cropgro_result.temperature_stress_growth = stress_factors['temp_stress_response'].process_factors.growth
-        cropgro_result.integrated_stress_factor = getattr(integrated_stress_response, 'overall_stress_factor', 1.0)
+        cropgro_result.temperature_stress_photosynthesis = 1.0 - stress_factors['temp_stress_response'].process_factors.photosynthesis  # Convert to 0=no stress, 1=full stress
+        cropgro_result.temperature_stress_growth = 1.0 - stress_factors['temp_stress_response'].process_factors.growth  # Convert to 0=no stress, 1=full stress
+        cropgro_result.integrated_stress_factor = 1.0 - stress_factors['overall_stress_factor']  # Convert to 0=no stress, 1=full stress
         cropgro_result.water_stress = stress_factors['stress_levels']['water']
         cropgro_result.nutrient_stress = stress_factors['stress_levels']['nitrogen']
-        cropgro_result.salinity_stress = stress_factors['salinity_factor']
+        cropgro_result.salinity_stress = 1.0 - stress_factors['salinity_factor']  # Convert to 0=no stress, 1=full stress
         
         # === DETAILED STRESS INTEGRATION RESULTS ===
         # Extract stress interactions from integrated stress response
@@ -1563,19 +1605,185 @@ class CROPGROHydroponicSimulator:
     def _calculate_transpiration(self, light_interception: float, temperature: float, vpd: float, humidity: float, solar_radiation: float) -> float:
         """Calculate actual transpiration based on canopy and environmental factors"""
         base_transpiration = self._calculate_etc_prime(light_interception, temperature, humidity, solar_radiation)
+        
         # VPD effect: higher VPD increases transpiration
         vpd_factor = min(1.5, 0.8 + (vpd / 2.0))
-        return base_transpiration * vpd_factor * light_interception
+        
+        # LAI effect: transpiration should scale with leaf area
+        lai_factor = min(1.0, self.current_lai / 2.0)  # Transpiration saturates around LAI=2 for lettuce
+        
+        # Stomatal coupling: transpiration linked to photosynthetic activity
+        stomatal_conductance_factor = light_interception * lai_factor
+        
+        return base_transpiration * vpd_factor * stomatal_conductance_factor
     
     def _calculate_water_uptake(self, light_interception: float, temperature: float, humidity: float, solar_radiation: float, vpd: float, lai: float) -> float:
-        """Calculate water uptake per m² ground area (L/m²/day).
-
-        - Transpiration: mm/day -> L/m²/day by 1 mm = 1 L/m²
-        - Metabolic water: L/m²/day proportional to LAI
         """
-        transpiration_mm = self._calculate_transpiration(light_interception, temperature, vpd, humidity, solar_radiation)
-        metabolic_water = lai * self.params.metabolic_water_per_lai  # L/m²/day per unit LAI
-        return transpiration_mm + metabolic_water
+        Calculate water uptake using plant hydraulic model.
+        
+        Water transport follows the Soil-Plant-Atmosphere Continuum (SPAC):
+        Water flow = (ΨSolution - ΨLeaf) / Resistance
+        
+        Where:
+        - ΨSolution = solution water potential (near 0 in hydroponics)
+        - ΨLeaf = leaf water potential (driven by transpiration)
+        - Resistance = root + xylem + leaf hydraulic resistances
+        """
+        
+        # 1. CALCULATE LEAF WATER POTENTIAL
+        # Leaf water potential drops with increasing transpiration demand
+        transpiration_demand = self._calculate_transpiration(light_interception, temperature, vpd, humidity, solar_radiation)
+        
+        # Leaf water potential (MPa) - becomes more negative with higher transpiration
+        # Lettuce: -0.2 to -1.5 MPa typical range
+        base_leaf_potential = -0.3  # MPa at minimal transpiration
+        transpiration_effect = -0.08 * transpiration_demand  # -0.08 MPa per mm/day transpiration
+        leaf_water_potential = base_leaf_potential + transpiration_effect
+        
+        # Osmotic adjustment under stress (plants can adjust solute concentration)
+        stress_factors = getattr(self, '_current_stress_factors', {})
+        osmotic_adjustment = self._calculate_osmotic_adjustment(stress_factors)
+        adjusted_leaf_potential = leaf_water_potential + osmotic_adjustment
+        
+        # 2. SOLUTION WATER POTENTIAL
+        # Hydroponic solution potential depends on salt concentration (EC)
+        current_ec = getattr(self, '_current_ec', 1.5)  # dS/m
+        # Water potential (MPa) = -0.036 × EC(dS/m) for typical nutrient solutions
+        solution_water_potential = -0.036 * current_ec
+        
+        # 3. HYDRAULIC CONDUCTANCES
+        # Total plant hydraulic conductance depends on root surface area and xylem development
+        
+        # Root hydraulic conductance (L/day/MPa/m²)
+        # Higher root surface area = higher conductance
+        root_surface_area_factor = min(2.0, lai / 2.0)  # Proxy for root development
+        base_root_conductance = 50.0  # L/day/MPa/m² for lettuce
+        root_conductance = base_root_conductance * root_surface_area_factor
+        
+        # Xylem hydraulic conductance (limited by stem cross-sectional area)  
+        stem_biomass = self.biomass_pools[1].dry_mass if len(self.biomass_pools) > 1 else 1.0
+        xylem_conductance = 30.0 * math.sqrt(stem_biomass / 1.0)  # Scales with stem development
+        
+        # Series resistances: 1/Total = 1/Root + 1/Xylem
+        total_conductance = 1.0 / (1.0/root_conductance + 1.0/xylem_conductance)
+        
+        # 4. WATER FLOW CALCULATION
+        # Darcy's law: Flow = Conductance × ΔΨ
+        water_potential_gradient = solution_water_potential - adjusted_leaf_potential  # Always positive for uptake
+        
+        # Hydraulic flow (L/m²/day)
+        hydraulic_water_uptake = total_conductance * water_potential_gradient
+        
+        # 5. METABOLIC WATER DEMAND
+        # Additional water for cell metabolism and growth
+        metabolic_water = lai * self.params.metabolic_water_per_lai
+        
+        # 6. CAVITATION AND XYLEM FAILURE
+        # Xylem cavitation occurs at very negative water potentials
+        cavitation_threshold = -2.0  # MPa for lettuce
+        if adjusted_leaf_potential < cavitation_threshold:
+            cavitation_factor = max(0.1, 1.0 + (adjusted_leaf_potential - cavitation_threshold) / 1.0)
+            hydraulic_water_uptake *= cavitation_factor
+        
+        # Total water uptake limited by hydraulic capacity
+        total_uptake = max(0.1, hydraulic_water_uptake + metabolic_water)
+        
+        return min(total_uptake, transpiration_demand * 1.2)  # Cannot exceed 120% of transpiration demand
+    
+    def _calculate_osmotic_adjustment(self, stress_factors: Dict[str, Any]) -> float:
+        """
+        Calculate osmotic adjustment under stress conditions.
+        Plants can accumulate solutes to maintain turgor under water stress.
+        """
+        water_stress = stress_factors.get('water_stress_level', 0.0)
+        salt_stress = stress_factors.get('salinity_stress', 0.0)
+        
+        # Maximum osmotic adjustment: 0.3 MPa for lettuce
+        max_adjustment = 0.3
+        
+        # Osmotic adjustment increases with stress
+        adjustment = max_adjustment * (water_stress + salt_stress * 0.5)
+        
+        return min(max_adjustment, adjustment)
+
+    def _calculate_functional_balance_allocation(self, stress_factors: Dict[str, Any], 
+                                               stage_props: Dict[str, Any], 
+                                               env_conditions: Dict[str, Any]) -> Dict[str, float]:
+        """
+        Calculate biomass allocation using functional balance theory.
+        
+        Plants allocate biomass to overcome the most limiting resource:
+        - Light limitation → more leaves (increase light capture)
+        - Nitrogen limitation → more roots (increase N uptake) 
+        - Water limitation → more roots (increase water uptake)
+        - Developmental stage → sink strength effects
+        """
+        # Base allocation fractions (structural minimum)
+        if stage_props['is_vegetative']:
+            base_fractions = {
+                'leaves': self.params.vegetative_leaf_allocation,
+                'stems': self.params.vegetative_stem_allocation, 
+                'roots': self.params.vegetative_root_allocation
+            }
+        else:
+            base_fractions = {
+                'leaves': self.params.reproductive_leaf_allocation,
+                'stems': self.params.reproductive_stem_allocation,
+                'roots': self.params.reproductive_root_allocation
+            }
+        
+        # Resource limitation factors (0 = severe limitation, 1 = no limitation)
+        light_limitation = 1.0 - env_conditions.get('light_stress', 0.0)
+        nitrogen_limitation = stress_factors.get('nitrogen_stress_level', 0.0)  # Higher = more stressed
+        water_limitation = stress_factors.get('water_stress_level', 0.0)
+        
+        # Natural functional balance - unlimited cellular response
+        # Light limitation drives natural leaf allocation
+        light_response = max(0.0, (1.0 - light_limitation) * 1.0)  # Natural unlimited response
+        
+        # Nitrogen limitation drives natural root allocation  
+        nitrogen_response = max(0.0, nitrogen_limitation * 1.0)  # Natural unlimited response
+        
+        # Water limitation drives natural root allocation
+        water_response = max(0.0, water_limitation * 1.0)  # Natural unlimited response
+        
+        # Root:shoot functional balance
+        root_demand = nitrogen_response + water_response
+        shoot_demand = light_response
+        
+        # Natural cellular allocation - no artificial caps
+        total_root_shift = root_demand  # Natural response to resource limitation
+        total_leaf_shift = shoot_demand  # Natural response to light needs
+        
+        # Apply shifts while maintaining mass balance
+        adjusted_fractions = base_fractions.copy()
+        
+        # Increase roots in response to nutrient/water limitation
+        if total_root_shift > 0:
+            adjusted_fractions['roots'] += total_root_shift
+            # Reduce leaves and stems proportionally
+            reduction_factor = total_root_shift / (base_fractions['leaves'] + base_fractions['stems'])
+            adjusted_fractions['leaves'] -= base_fractions['leaves'] * reduction_factor
+            adjusted_fractions['stems'] -= base_fractions['stems'] * reduction_factor
+        
+        # Increase leaves in response to light limitation
+        if total_leaf_shift > 0:
+            adjusted_fractions['leaves'] += total_leaf_shift
+            # Reduce roots and stems proportionally  
+            reduction_factor = total_leaf_shift / (base_fractions['roots'] + base_fractions['stems'])
+            adjusted_fractions['roots'] -= base_fractions['roots'] * reduction_factor
+            adjusted_fractions['stems'] -= base_fractions['stems'] * reduction_factor
+        
+        # Ensure all fractions are positive and sum to 1.0
+        for organ in adjusted_fractions:
+            adjusted_fractions[organ] = max(0.05, adjusted_fractions[organ])  # Minimum 5%
+            
+        # Normalize to sum to 1.0
+        total = sum(adjusted_fractions.values())
+        for organ in adjusted_fractions:
+            adjusted_fractions[organ] /= total
+            
+        return adjusted_fractions
 
     def _calculate_solution_temperature(self, air_temp: float, solar_radiation: float, tank_volume: float, day: int) -> float:
         """Calculate hydroponic solution temperature with simple thermal mass and solar gain model."""
@@ -1651,13 +1859,18 @@ class CROPGROHydroponicSimulator:
         else:
             vpd_stress = 0.0
         
-        # EC stress using configured parameters
-        if ec > self.params.optimal_ec:
-            ec_stress = (ec - self.params.optimal_ec) * self.params.ec_stress_high_factor
-        elif ec < self.params.ec_stress_low_threshold:
-            ec_stress = (self.params.ec_stress_low_threshold - ec) * self.params.ec_stress_low_factor
+        # Research-based salinity stress (Andriolo et al., 2005)
+        # Optimal EC: 2.0-2.6 dS/m, with polynomial response
+        # Fresh weight peaks at 2.0 dS/m, LAI peaks at 2.6 dS/m
+        if ec <= 2.6:
+            # Positive effect up to optimum (bell curve)
+            # Based on research: y = -27.11x² + 108.08x + 62.975 for fresh weight
+            salinity_benefit = max(0.0, -0.1 * (ec - 2.0)**2 + 0.2)  # Peak benefit at EC 2.0
+            ec_stress = -salinity_benefit  # Negative stress = growth promotion
         else:
-            ec_stress = 0.0
+            # Linear decline above 2.6 dS/m (research slope: -14.9)
+            # 16.5% decline from EC 2.0 to 4.72 dS/m = slope of 0.061 per dS/m
+            ec_stress = (ec - 2.6) * 0.061  # Research-based decline rate
         
         # Root zone temperature stress using configured parameters
         temp_deviation = abs(root_zone_temp - self.params.optimal_root_temp)

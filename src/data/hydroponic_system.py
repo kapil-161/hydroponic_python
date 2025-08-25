@@ -185,7 +185,7 @@ class DailyResults:
     # Nitrogen dynamics detailed
     nitrogen_uptake_mg: float = 0.0
     nitrogen_demand_mg: float = 0.0
-    nitrogen_stress_factor: float = 1.0
+    nitrogen_stress_factor: float = 0.0
     leaf_nitrogen_conc: float = 0.0
     root_nitrogen_conc: float = 0.0
     nitrogen_remobilization: float = 0.0
@@ -196,14 +196,14 @@ class DailyResults:
     senescence_rate: float = 0.0
     leaf_senescence_rate: float = 0.0
     
-    # Stress factors
-    integrated_stress_factor: float = 1.0
+    # Stress factors (0 = no stress, 1 = full stress)
+    integrated_stress_factor: float = 0.0
     temperature_stress_level: float = 0.0
-    temperature_stress_photosynthesis: float = 1.0
-    temperature_stress_growth: float = 1.0
+    temperature_stress_photosynthesis: float = 0.0
+    temperature_stress_growth: float = 0.0
     water_stress: float = 0.0
     nutrient_stress: float = 0.0
-    salinity_stress: float = 1.0
+    salinity_stress: float = 0.0
     
     # Environmental control
     controlled_temperature: float = 0.0
@@ -218,9 +218,9 @@ class DailyResults:
     max_temperature: float = 0.0
     leaf_temperature: float = 0.0
     canopy_temperature: float = 0.0
-    cold_stress_factor: float = 0.0
-    heat_stress_factor: float = 0.0
-    temperature_stress_factor: float = 0.0
+    cold_stress_factor: float = 0.0  # 0 = no cold stress, 1 = severe cold stress
+    heat_stress_factor: float = 0.0  # 0 = no heat stress, 1 = severe heat stress
+    temperature_stress_factor: float = 0.0  # 0 = no temperature stress, 1 = severe temperature stress
     
     # Water dynamics
     transpiration_rate: float = 0.0
@@ -291,6 +291,20 @@ class SimulationResults:
                 row['Total_Biomass_g'] = result.total_biomass
             if hasattr(result, 'fresh_weight'):
                 row['Fresh_Weight_g'] = result.fresh_weight
+            
+            # Add stress factors (0=no stress, 1=full stress)
+            if hasattr(result, 'integrated_stress_factor'):
+                row['Integrated_Stress'] = result.integrated_stress_factor
+            if hasattr(result, 'temperature_stress_level'):
+                row['Temperature_Stress'] = result.temperature_stress_level
+            if hasattr(result, 'water_stress'):
+                row['Water_Stress'] = result.water_stress
+            if hasattr(result, 'nutrient_stress'):
+                row['Nutrient_Stress'] = result.nutrient_stress
+            if hasattr(result, 'nitrogen_stress_factor'):
+                row['Nitrogen_Stress'] = result.nitrogen_stress_factor
+            if hasattr(result, 'salinity_stress'):
+                row['Salinity_Stress'] = result.salinity_stress
 
             # Round floats with field-specific precision to preserve signal
             precision_overrides = {
@@ -343,7 +357,7 @@ class DefaultConfigurations:
             flow_rate=50.0,
             system_type="NFT",
             system_area=1.0,
-            n_plants=20,
+            n_plants=12,  # Realistic butterhead lettuce density: 12 plants/m²
             description="Nutrient Film Technique - Lettuce production"
         )
     

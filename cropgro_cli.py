@@ -101,6 +101,7 @@ def main():
     parser.add_argument('--system', type=str, default='NFT', choices=['NFT', 'DWC', 'AEROPONICS'], help='Hydroponic system type')
     parser.add_argument('--output-csv', type=str, help='Path to write CSV of daily results')
     parser.add_argument('--output-json', type=str, help='Path to write JSON with all daily details')
+    parser.add_argument('--daily-csv', action='store_true', help='Automatically save daily CSV with timestamp in outputs/ directory')
     parser.add_argument('--print-daily', action='store_true', help='Print detailed per-day results to stdout')
     parser.add_argument('--print-summary', action='store_true', help='Print summary stats to stdout')
 
@@ -116,6 +117,17 @@ def main():
             out_path.parent.mkdir(parents=True, exist_ok=True)
             df.to_csv(out_path, index=False)
             print(f"Saved CSV: {out_path}")
+
+        # Auto-generate daily CSV with timestamp
+        if args.daily_csv:
+            df = results.to_dataframe()
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"hydroponic_daily_results_{args.cultivar}_{args.system}_{timestamp}.csv"
+            outputs_dir = Path("outputs")
+            outputs_dir.mkdir(exist_ok=True)
+            out_path = outputs_dir / filename
+            df.to_csv(out_path, index=False)
+            print(f"Saved daily CSV: {out_path}")
 
         # Output full JSON with all attributes per day
         if args.output_json:

@@ -44,7 +44,7 @@ class LeafParameters:
     
     # Individual leaf parameters
     max_individual_leaf_area: float = 0.006  # m² per mature leaf (60 cm²)
-    leaf_area_expansion_rate: float = 0.12   # Fraction of max area per day at optimum
+    leaf_area_expansion_rate: float = 0.15   # Natural cellular expansion rate - no artificial limits
     specific_leaf_area: float = 250.0        # cm²/g dry weight
     
     # Stress response parameters
@@ -232,12 +232,19 @@ class LeafDevelopmentModel:
         
         expansion_factor = stress_factors['combined_expansion_factor']
         total_area = 0.0
-        active_leaves = 0
+        visible_leaves = 0  # Leaves that have appeared (V-stage counting)
+        active_leaves = 0   # Leaves contributing significant area
         senesced_area = 0.0
         
-        for cohort in self.leaf_cohorts.values():
+        cohorts_to_remove = []  # Track completely dead leaves
+        
+        for cohort_id, cohort in self.leaf_cohorts.items():
             # Update thermal time for this cohort
             cohort.thermal_time_since_appearance += daily_thermal_time
+            
+            # Count all leaves that have appeared (for V-stage consistency)
+            if cohort.stage != LeafStage.PRIMORDIAL:
+                visible_leaves += 1
             
             # Calculate area expansion for this cohort
             if cohort.stage == LeafStage.EMERGING:
@@ -246,43 +253,87 @@ class LeafDevelopmentModel:
                     cohort.stage = LeafStage.EXPANDING
             
             elif cohort.stage == LeafStage.EXPANDING:
-                # Calculate daily area increase
-                relative_expansion_rate = self.params.leaf_area_expansion_rate * expansion_factor
+                # Calculate daily area increase based on cell biology
+                base_expansion_rate = self.params.leaf_area_expansion_rate
                 
-                # Slower expansion as leaf approaches max size
-                size_factor = 1.0 - (cohort.current_area / cohort.max_potential_area) ** 2
-                daily_increase = (cohort.max_potential_area * relative_expansion_rate * 
-                                size_factor)
+                # Resource-limited expansion factors
+                temperature_factor = stress_factors.get('temperature_factor', 1.0)
+                nitrogen_factor = stress_factors.get('nitrogen_factor', 1.0)
+                water_factor = stress_factors.get('water_factor', 1.0)
                 
-                cohort.current_area = min(
-                    cohort.max_potential_area,
-                    cohort.current_area + daily_increase
-                )
+                # Cell division requires optimal temperature (Q10 response)
+                cell_division_factor = temperature_factor
                 
-                # Transition to mature when 95% of max area reached
-                if cohort.current_area >= 0.95 * cohort.max_potential_area:
+                # Cell expansion requires water for turgor pressure
+                cell_expansion_factor = water_factor * nitrogen_factor
+                
+                # Natural cellular growth - both division and expansion operate independently
+                cell_division_rate = base_expansion_rate * cell_division_factor
+                cell_expansion_rate = base_expansion_rate * cell_expansion_factor
+                
+                # Pure cellular biology - growth continues as long as resources available
+                relative_expansion_rate = cell_division_rate + cell_expansion_rate
+                
+                # No artificial size limits - cells keep dividing and expanding naturally
+                size_factor = 1.0  # Natural growth continues
+                
+                # Carbon drives continuous growth
+                carbon_limited_rate = relative_expansion_rate
+                
+                daily_increase = (cohort.current_area * carbon_limited_rate * size_factor)
+                
+                # Real-world cell wall mechanical limits
+                # Cell walls have tensile strength limits - can't expand infinitely
+                max_realistic_leaf_area = self.params.max_individual_leaf_area * 3.0  # 3x genetic maximum
+                
+                if cohort.current_area > max_realistic_leaf_area:
+                    # Cell wall stress reduces expansion rate
+                    wall_stress_factor = max_realistic_leaf_area / cohort.current_area
+                    daily_increase *= wall_stress_factor ** 2  # Quadratic penalty
+                
+                # Physical constraint - leaves can't exceed structural limits
+                proposed_area = cohort.current_area + max(0.0, daily_increase)
+                max_physical_area = self.params.max_individual_leaf_area * 4.0  # Absolute physical limit
+                
+                cohort.current_area = min(proposed_area, max_physical_area)
+                
+                # Natural maturation based on thermal age, not artificial size limits
+                if cohort.thermal_time_since_appearance > 300:  # Mature after natural cellular development
                     cohort.stage = LeafStage.MATURE
             
             elif cohort.stage == LeafStage.MATURE:
                 # Check for senescence initiation (old leaves or stress)
-                # Lettuce leaves should last 6-8 weeks (600-800 thermal time units)
-                age_factor = cohort.thermal_time_since_appearance / 600.0  # More realistic lifespan
-                stress_senescence = (1.0 - expansion_factor) * 0.1
+                # Real lettuce leaf lifespan: 4-5 weeks (300-400 thermal time units)
+                age_factor = cohort.thermal_time_since_appearance / 350.0  # Realistic lettuce leaf lifespan
+                stress_senescence = (1.0 - expansion_factor) * 0.15
                 
-                # Only start senescence if leaf is truly old (>600 TT) or under severe stress (>0.08)
-                if age_factor > 1.0 or stress_senescence > 0.08:
+                # Natural senescence starts when leaves age
+                if age_factor > 0.9 or stress_senescence > 0.08:  # Start at 90% of lifespan
                     cohort.stage = LeafStage.SENESCING
-                    cohort.senescence_rate = max(0.01, age_factor * 0.005 + stress_senescence)
+                    # Realistic senescence rate: 2-6% per day (10-25 days to senesce)
+                    cohort.senescence_rate = max(0.02, age_factor * 0.04 + stress_senescence)
             
             elif cohort.stage == LeafStage.SENESCING:
                 # Reduce leaf area due to senescence
                 area_loss = cohort.current_area * cohort.senescence_rate
                 cohort.current_area = max(0.0, cohort.current_area - area_loss)
                 senesced_area += area_loss
+                
+                # Mark completely senesced leaves for removal
+                if cohort.current_area < 0.0001:  # Essentially gone
+                    cohorts_to_remove.append(cohort_id)
+                    continue
             
             total_area += cohort.current_area
-            if cohort.current_area > 0.001:  # Count as active leaf
+            
+            # Count leaves with meaningful area contribution
+            if cohort.current_area > 0.0005:  # 5 cm² minimum for active counting
                 active_leaves += 1
+        
+        # Remove completely dead leaves from the cohort dictionary
+        for cohort_id in cohorts_to_remove:
+            if cohort_id in self.leaf_cohorts:
+                del self.leaf_cohorts[cohort_id]
         
         # Calculate LAI (assuming 1 m² growing area per plant for base calculation)
         lai = total_area  # Will be scaled by plant density in main simulation
@@ -290,7 +341,8 @@ class LeafDevelopmentModel:
         return {
             'total_leaf_area_m2': total_area,
             'leaf_area_index': lai,
-            'active_leaf_count': active_leaves,
+            'visible_leaf_count': visible_leaves,      # For V-stage consistency
+            'active_leaf_count': active_leaves,        # For area calculations
             'senesced_area_daily': senesced_area,
             'average_leaf_area': total_area / max(1, active_leaves)
         }

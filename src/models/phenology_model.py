@@ -266,8 +266,10 @@ class ComprehensivePhenologyModel:
         thermal_time = self.calculate_thermal_time(temperature)
         max_thermal_time = self.params.optimal_temperature_min - self.params.base_temperature
         
+        from ..utils.math_utils import clamp_value, safe_divide
+        
         if max_thermal_time > 0:
-            return min(1.0, thermal_time / max_thermal_time)
+            return clamp_value(safe_divide(thermal_time, max_thermal_time), 0.0, 1.0)
         else:
             return 1.0 if thermal_time > 0 else 0.0
     
