@@ -4,6 +4,10 @@ project(HydroponicCSVEditor VERSION 1.0.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Set Qt6 CMAKE_PREFIX_PATH to include PyQt6 installation
+set(QT6_CMAKE_PREFIX_PATH "/Users/kapilbhattarai/Library/Python/3.9/lib/python/site-packages/PyQt6/Qt6")
+set(CMAKE_PREFIX_PATH ${QT6_CMAKE_PREFIX_PATH} ${CMAKE_PREFIX_PATH})
+
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Charts)
 
 qt6_standard_project_setup()

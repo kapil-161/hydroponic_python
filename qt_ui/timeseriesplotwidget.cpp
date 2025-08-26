@@ -68,7 +68,10 @@ void TimeSeriesPlotWidget::setupUI()
     m_chartView = new QChartView;
     m_chartView->setRenderHint(QPainter::Antialiasing);
     m_chartView->setMinimumSize(600, 400);
+    m_chartView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     contentLayout->addWidget(m_chartView, 1);
+    
+    qDebug() << "TimeSeriesPlotWidget: Chart view created with size:" << m_chartView->size();
     
     m_mainLayout->addLayout(contentLayout, 1);
     
@@ -142,6 +145,9 @@ void TimeSeriesPlotWidget::createChart()
     m_chart->addAxis(m_axisY, Qt::AlignLeft);
     
     m_chartView->setChart(m_chart);
+    
+    qDebug() << "TimeSeriesPlotWidget: Chart created and set to chart view";
+    qDebug() << "TimeSeriesPlotWidget: Chart view has chart:" << (m_chartView->chart() != nullptr);
 }
 
 void TimeSeriesPlotWidget::setupChartAppearance()
@@ -211,7 +217,9 @@ void TimeSeriesPlotWidget::loadDataFromModel(CSVTableModel *model)
         }
     }
     
+    qDebug() << "TimeSeriesPlotWidget: About to call onParameterSelectionChanged()";
     onParameterSelectionChanged();
+    qDebug() << "TimeSeriesPlotWidget: loadDataFromModel completed";
 }
 
 void TimeSeriesPlotWidget::clearPlot()
@@ -265,6 +273,9 @@ void TimeSeriesPlotWidget::updateChart()
         return;
     }
     
+    qDebug() << "TimeSeriesPlotWidget: Model has" << m_dataModel->rowCount() << "rows and" << m_dataModel->columnCount() << "columns";
+    qDebug() << "TimeSeriesPlotWidget: Model headers:" << m_dataModel->getHeaders();
+    
     clearPlot();
     
     // Find day column
@@ -294,13 +305,19 @@ void TimeSeriesPlotWidget::updateChart()
         QAbstractSeries *series = nullptr;
         if (m_chartType == LineChart) {
             series = new QLineSeries;
+            qDebug() << "TimeSeriesPlotWidget: Created QLineSeries for" << paramName;
         } else if (m_chartType == SplineChart) {
             series = new QSplineSeries;
+            qDebug() << "TimeSeriesPlotWidget: Created QSplineSeries for" << paramName;
         } else if (m_chartType == ScatterChart) {
             series = new QScatterSeries;
+            qDebug() << "TimeSeriesPlotWidget: Created QScatterSeries for" << paramName;
         }
         
-        if (!series) continue;
+        if (!series) {
+            qDebug() << "TimeSeriesPlotWidget: Failed to create series for" << paramName;
+            continue;
+        }
         
         series->setName(formatParameterName(paramName));
         // Set color using pen
@@ -333,9 +350,18 @@ void TimeSeriesPlotWidget::updateChart()
                     static_cast<QScatterSeries*>(series)->append(day, value);
                 }
                 pointCount++;
+            } else {
+                qDebug() << "TimeSeriesPlotWidget: Invalid data at row" << row << "for" << paramName 
+                         << "day:" << dayStr << "value:" << valueStr;
             }
         }
         qDebug() << "TimeSeriesPlotWidget: Added" << pointCount << "data points for parameter:" << paramName;
+        
+        if (pointCount == 0) {
+            qDebug() << "TimeSeriesPlotWidget: No valid data points for" << paramName << "- skipping series";
+            delete series;
+            continue;
+        }
         
         qDebug() << "TimeSeriesPlotWidget: Adding series to chart for parameter:" << paramName;
         m_chart->addSeries(series);
@@ -345,6 +371,8 @@ void TimeSeriesPlotWidget::updateChart()
         m_series[paramName] = static_cast<QLineSeries*>(series);
         qDebug() << "TimeSeriesPlotWidget: Series added successfully";
     }
+    
+    qDebug() << "TimeSeriesPlotWidget: Total series added:" << m_series.size();
     
     // Auto-scale axes
     if (m_autoScale && !m_selectedParameters.isEmpty()) {
@@ -379,8 +407,15 @@ void TimeSeriesPlotWidget::updateChart()
             
             m_axisX->setRange(minX - xPadding, maxX + xPadding);
             m_axisY->setRange(minY - yPadding, maxY + yPadding);
+            
+            qDebug() << "TimeSeriesPlotWidget: Set axis ranges - X:" << minX - xPadding << "to" << maxX + xPadding 
+                     << "Y:" << minY - yPadding << "to" << maxY + yPadding;
+        } else {
+            qDebug() << "TimeSeriesPlotWidget: Invalid data ranges for auto-scaling";
         }
     }
+    
+    qDebug() << "TimeSeriesPlotWidget: Chart update completed";
 }
 
 void TimeSeriesPlotWidget::addSeriesToChart(const QString &parameterName, const QColor &color)
