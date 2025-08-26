@@ -335,8 +335,20 @@ void MainWindow::createTreatmentCategory(const QString &categoryName, const QStr
     // Add checkboxes for each option
     for (const QString &option : options) {
         QCheckBox *optionCheck = new QCheckBox(option);
-        QString cleanCategory = categoryName.split(" ").first();
-        cleanCategory.remove(QRegularExpression("[^A-Za-z]"));
+        // Extract category name more reliably
+        QString cleanCategory;
+        if (categoryName.contains("Varieties")) cleanCategory = "Varieties";
+        else if (categoryName.contains("Temperature")) cleanCategory = "Temperature";
+        else if (categoryName.contains("Nitrogen")) cleanCategory = "Nitrogen";
+        else if (categoryName.contains("pH")) cleanCategory = "pH";
+        else if (categoryName.contains("Light")) cleanCategory = "Light";
+        else if (categoryName.contains("CO2")) cleanCategory = "CO2";
+        else if (categoryName.contains("EC")) cleanCategory = "EC";
+        else {
+            // Fallback: try to extract from category name
+            cleanCategory = categoryName.split(" ").first();
+            cleanCategory.remove(QRegularExpression("[^A-Za-z]"));
+        }
         optionCheck->setObjectName(QString("%1_%2").arg(cleanCategory, option));
         
         // Set default selections
@@ -560,6 +572,7 @@ void MainWindow::generateBatchFile()
     
     // Get selected treatment combinations
     QStringList combinations = generateTreatmentCombinations();
+    qDebug() << "MainWindow: Generated combinations:" << combinations;
     if (combinations.isEmpty()) {
         QMessageBox::warning(this, "Generate Batch", "No treatment combinations selected.");
         return;
@@ -1068,11 +1081,13 @@ QMap<QString, QStringList> MainWindow::getSelectedTreatments() const
     
     // Find all checkboxes in the treatment layout
     QList<QCheckBox*> checkboxes = m_treatmentSelectionGroup->findChildren<QCheckBox*>();
+    qDebug() << "MainWindow: Found" << checkboxes.size() << "checkboxes in treatment layout";
     
     for (QCheckBox *checkbox : checkboxes) {
         if (checkbox->isChecked()) {
             QString objectName = checkbox->objectName();
             QStringList parts = objectName.split("_");
+            qDebug() << "MainWindow: Checked checkbox - objectName:" << objectName << "parts:" << parts;
             if (parts.size() >= 2) {
                 QString category = parts[0];
                 QString value = parts.mid(1).join("_");
@@ -1088,11 +1103,13 @@ QMap<QString, QStringList> MainWindow::getSelectedTreatments() const
                 else if (category == "EC") fullCategory = "EC";
                 else fullCategory = category;
                 
+                qDebug() << "MainWindow: Adding treatment - category:" << fullCategory << "value:" << value;
                 treatments[fullCategory].append(value);
             }
         }
     }
     
+    qDebug() << "MainWindow: Final treatments map:" << treatments;
     return treatments;
 }
 
