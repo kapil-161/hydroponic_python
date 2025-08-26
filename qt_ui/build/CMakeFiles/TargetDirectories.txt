@@ -1,0 +1,5 @@
+/Users/kapilbhattarai/hydroponic_python/qt_ui/build/CMakeFiles/HydroponicCSVEditor.dir
+/Users/kapilbhattarai/hydroponic_python/qt_ui/build/CMakeFiles/edit_cache.dir
+/Users/kapilbhattarai/hydroponic_python/qt_ui/build/CMakeFiles/rebuild_cache.dir
+/Users/kapilbhattarai/hydroponic_python/qt_ui/build/CMakeFiles/HydroponicCSVEditor_autogen_timestamp_deps.dir
+/Users/kapilbhattarai/hydroponic_python/qt_ui/build/CMakeFiles/HydroponicCSVEditor_autogen.dir
