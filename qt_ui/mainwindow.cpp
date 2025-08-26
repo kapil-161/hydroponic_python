@@ -549,7 +549,7 @@ void MainWindow::runSimulation()
     
     QStringList arguments;
     arguments << "cropgro_cli.py";
-    arguments << "--experiment" << fullExperimentName;
+    arguments << "--cultivar" << fullExperimentName;
     arguments << "--days" << QString::number(m_durationSpinBox->value());
     arguments << "--output-csv" << outputFileName;  // Generate experiment-specific daily CSV
     
@@ -561,7 +561,7 @@ void MainWindow::runSimulation()
     m_statusLabel->setText("Running simulation...");
     m_runSimulationButton->setEnabled(false);
     
-    m_simulationProcess->setWorkingDirectory(QDir::currentPath() + "/../..");
+    m_simulationProcess->setWorkingDirectory(QDir::currentPath() + "/..");
     m_simulationProcess->start("python3", arguments);
     
     if (!m_simulationProcess->waitForStarted()) {
