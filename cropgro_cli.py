@@ -41,7 +41,7 @@ def daily_result_to_dict(dr: Any) -> Dict[str, Any]:
     return data
 
 
-def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: bool, treatment_id: str = None) -> Any:
+def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: bool, treatment_id: str = None, input_dir: str = 'input') -> Any:
     print("🌱 CROPGRO Hydroponic Simulator - CLI Version")
     print("=" * 50)
 
@@ -108,11 +108,12 @@ def main():
     
     # Treatment identifier for batch processing
     parser.add_argument('--treatment-id', type=str, help='Treatment identifier (e.g., T01, T02)')
+    parser.add_argument('--input-dir', type=str, default='input', help='Input directory containing CSV configuration files')
 
     args = parser.parse_args()
 
     try:
-        results = run_simulation(args.days, args.cultivar, args.system, args.print_daily, args.treatment_id)
+        results = run_simulation(args.days, args.cultivar, args.system, args.print_daily, args.treatment_id, args.input_dir)
 
         # Output CSV via DataFrame (curated columns)
         if args.output_csv:
