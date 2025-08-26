@@ -81,7 +81,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
     print(f"Cultivar: {simulator.cultivar_profile.cultivar_name}")
     print(f"System: {system_config.system_type}")
 
-    treatment_id = treatment_params.get('treatment_id') if treatment_params else None
+    # treatment_id parameter is passed directly to the function
     results = simulator.run_simulation(input_data, max_days=days, target_maturity='harvest', treatment_id=treatment_id)
 
     if print_daily:

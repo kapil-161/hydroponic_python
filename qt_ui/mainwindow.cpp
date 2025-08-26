@@ -613,13 +613,10 @@ void MainWindow::generateBatchFile()
         QString treatmentId = QString("T%1").arg(i + 1, 2, 10, QChar('0'));
         QString tempOutputFile = QString("temp_treatments/treatment_%1.csv").arg(treatmentId);
         
-        // Parse the combination string to extract treatment parameters
-        QStringList treatmentParams = parseTreatmentCombination(combo);
-        QString cliParams = treatmentParams.join(" ");
-        
+        // Simple approach: run same simulation with different treatment IDs
         batchContent += QString(
             "echo [%1/%2] Running Treatment %8: %3\n"
-            "python cropgro_cli.py --cultivar %4_%5 --days %6 --treatment-id %8 %9 --output-csv %7\n"
+            "python cropgro_cli.py --cultivar %4_%5 --days %6 --treatment-id %8 --output-csv %7\n"
             "if %ERRORLEVEL% NEQ 0 (\n"
             "    echo Treatment %8 failed!\n"
             "    pause\n"
@@ -627,7 +624,7 @@ void MainWindow::generateBatchFile()
             ")\n"
             "echo Treatment %8 completed successfully!\n"
             "echo.\n\n"
-        ).arg(QString::number(i + 1), QString::number(combinations.size()), combo, cropType, experimentName, QString::number(duration), tempOutputFile, treatmentId, cliParams);
+        ).arg(QString::number(i + 1), QString::number(combinations.size()), combo, cropType, experimentName, QString::number(duration), tempOutputFile, treatmentId);
     }
     
     // Combine all treatment files into single CSV with Treatment_ID column
@@ -670,13 +667,10 @@ void MainWindow::generateBatchFile()
         QString treatmentId = QString("T%1").arg(i + 1, 2, 10, QChar('0'));
         QString tempOutputFile = QString("temp_treatments/treatment_%1.csv").arg(treatmentId);
         
-        // Parse the combination string to extract treatment parameters
-        QStringList treatmentParams = parseTreatmentCombination(combo);
-        QString cliParams = treatmentParams.join(" ");
-        
+        // Simple approach: run same simulation with different treatment IDs
         batchContent += QString(
             "echo \"[%1/%2] Running Treatment %8: %3\"\n"
-            "python3 cropgro_cli.py --cultivar %4_%5 --days %6 --treatment-id %8 %9 --output-csv %7\n"
+            "python3 cropgro_cli.py --cultivar %4_%5 --days %6 --treatment-id %8 --output-csv %7\n"
             "if [ $? -ne 0 ]; then\n"
             "    echo \"Treatment %8 failed!\"\n"
             "    read -p \"Press Enter to continue...\"\n"
@@ -684,7 +678,7 @@ void MainWindow::generateBatchFile()
             "fi\n"
             "echo \"Treatment %8 completed successfully!\"\n"
             "echo\n\n"
-        ).arg(QString::number(i + 1), QString::number(combinations.size()), combo, cropType, experimentName, QString::number(duration), tempOutputFile, treatmentId, cliParams);
+        ).arg(QString::number(i + 1), QString::number(combinations.size()), combo, cropType, experimentName, QString::number(duration), tempOutputFile, treatmentId);
     }
     
     // Combine all treatment files into single CSV with Treatment_ID column
