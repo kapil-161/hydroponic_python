@@ -188,7 +188,7 @@ void TimeSeriesPlotWidget::loadDataFromModel(CSVTableModel *model)
     // Get available parameters (skip Day, Date columns)
     QStringList headers = model->getHeaders();
     qDebug() << "TimeSeriesPlotWidget: Headers from model:" << headers;
-    QStringList excludeColumns = {"Date", "Day", "System_ID", "Crop_ID"};
+    QStringList excludeColumns = {"Date", "Day", "System_ID", "Crop_ID", "Treatment_ID"};
     
     for (const QString &header : headers) {
         if (!excludeColumns.contains(header, Qt::CaseInsensitive)) {
@@ -215,8 +215,8 @@ void TimeSeriesPlotWidget::loadDataFromModel(CSVTableModel *model)
     
     m_parametersLayout->addStretch();
     
-    // Auto-select some interesting parameters (using exact column names from CSV)
-    QStringList autoSelect = {"Total_Biomass_g", "LAI", "pH", "Temp_C", "VPD_kPa"};
+    // Auto-select only biomass by default for cleaner treatment comparison
+    QStringList autoSelect = {"Total_Biomass_g"};
     qDebug() << "TimeSeriesPlotWidget: Auto-selecting parameters:" << autoSelect;
     for (const QString &param : autoSelect) {
         if (m_parameterCheckboxes.contains(param)) {
@@ -300,17 +300,39 @@ void TimeSeriesPlotWidget::updateChart()
     
     clearPlot();
     
-    // Find day column
+    // Find day column and treatment column
     int dayColumn = m_dataModel->findColumnByName("Day");
+    int treatmentColumn = m_dataModel->findColumnByName("Treatment_ID");
+    
     qDebug() << "TimeSeriesPlotWidget: Day column index:" << dayColumn;
+    qDebug() << "TimeSeriesPlotWidget: Treatment column index:" << treatmentColumn;
+    
     if (dayColumn == -1) {
         qDebug() << "TimeSeriesPlotWidget: Day column not found!";
         return;
     }
     
-    // Add series for each selected parameter
-    for (int i = 0; i < m_selectedParameters.size(); ++i) {
-        const QString &paramName = m_selectedParameters.at(i);
+    // Get unique treatments if treatment column exists
+    QStringList treatments;
+    if (treatmentColumn != -1) {
+        QSet<QString> treatmentSet;
+        for (int row = 0; row < m_dataModel->rowCount(); ++row) {
+            QString treatment = m_dataModel->getCellData(row, treatmentColumn);
+            if (!treatment.isEmpty()) {
+                treatmentSet.insert(treatment);
+            }
+        }
+        treatments = treatmentSet.values();
+        std::sort(treatments.begin(), treatments.end());
+        qDebug() << "TimeSeriesPlotWidget: Found treatments:" << treatments;
+    } else {
+        treatments << ""; // Single treatment (no grouping)
+        qDebug() << "TimeSeriesPlotWidget: No treatment column found, using single series";
+    }
+    
+    // Add series for each selected parameter and treatment combination
+    int seriesIndex = 0;
+    for (const QString &paramName : m_selectedParameters) {
         qDebug() << "TimeSeriesPlotWidget: Processing parameter:" << paramName;
         int paramColumn = m_dataModel->findColumnByName(paramName);
         qDebug() << "TimeSeriesPlotWidget: Parameter column index:" << paramColumn;
@@ -320,93 +342,101 @@ void TimeSeriesPlotWidget::updateChart()
             continue;
         }
         
-        QColor color = getColorForParameter(i);
-        addSeriesToChart(paramName, color);
-        
-        // Populate data
-        QAbstractSeries *series = nullptr;
-        if (m_chartType == LineChart) {
-            series = new QLineSeries;
-            qDebug() << "TimeSeriesPlotWidget: Created QLineSeries for" << paramName;
-        } else if (m_chartType == SplineChart) {
-            series = new QSplineSeries;
-            qDebug() << "TimeSeriesPlotWidget: Created QSplineSeries for" << paramName;
-        } else if (m_chartType == ScatterChart) {
-            series = new QScatterSeries;
-            qDebug() << "TimeSeriesPlotWidget: Created QScatterSeries for" << paramName;
-        }
-        
-        if (!series) {
-            qDebug() << "TimeSeriesPlotWidget: Failed to create series for" << paramName;
-            continue;
-        }
-        
-        series->setName(formatParameterName(paramName));
-        // Set color using pen
-        QPen pen(color);
-        pen.setWidth(2);
-        if (m_chartType == LineChart) {
-            static_cast<QLineSeries*>(series)->setPen(pen);
-        } else if (m_chartType == SplineChart) {
-            static_cast<QSplineSeries*>(series)->setPen(pen);
-        } else if (m_chartType == ScatterChart) {
-            static_cast<QScatterSeries*>(series)->setBrush(QBrush(color));
-        }
-        
-        // Add data points
-        int pointCount = 0;
-        for (int row = 0; row < m_dataModel->rowCount(); ++row) {
-            QString dayStr = m_dataModel->getCellData(row, dayColumn);
-            QString valueStr = m_dataModel->getCellData(row, paramColumn);
+        // Create series for each treatment
+        for (const QString &treatment : treatments) {
+            QColor color = getColorForParameter(seriesIndex++);
             
-            bool dayOk, valueOk;
-            qreal day = dayStr.toDouble(&dayOk);
-            qreal value = valueStr.toDouble(&valueOk);
+            // Create series
+            QAbstractSeries *series = nullptr;
+            if (m_chartType == LineChart) {
+                series = new QLineSeries;
+            } else if (m_chartType == SplineChart) {
+                series = new QSplineSeries;
+            } else if (m_chartType == ScatterChart) {
+                series = new QScatterSeries;
+            }
             
-            if (dayOk && valueOk) {
-                if (m_chartType == LineChart) {
-                    static_cast<QLineSeries*>(series)->append(day, value);
-                } else if (m_chartType == SplineChart) {
-                    static_cast<QSplineSeries*>(series)->append(day, value);
-                } else if (m_chartType == ScatterChart) {
-                    static_cast<QScatterSeries*>(series)->append(day, value);
+            if (!series) {
+                continue;
+            }
+            
+            // Set series name with treatment info
+            QString seriesName = formatParameterName(paramName);
+            if (!treatment.isEmpty()) {
+                seriesName += QString(" (%1)").arg(treatment);
+            }
+            series->setName(seriesName);
+            
+            // Set color and style
+            QPen pen(color);
+            pen.setWidth(2);
+            if (m_chartType == LineChart) {
+                static_cast<QLineSeries*>(series)->setPen(pen);
+            } else if (m_chartType == SplineChart) {
+                static_cast<QSplineSeries*>(series)->setPen(pen);
+            } else if (m_chartType == ScatterChart) {
+                static_cast<QScatterSeries*>(series)->setBrush(QBrush(color));
+            }
+            
+            // Add data points for this treatment
+            int pointCount = 0;
+            for (int row = 0; row < m_dataModel->rowCount(); ++row) {
+                // Filter by treatment if treatment column exists
+                if (treatmentColumn != -1) {
+                    QString rowTreatment = m_dataModel->getCellData(row, treatmentColumn);
+                    if (rowTreatment != treatment) {
+                        continue; // Skip rows that don't match this treatment
+                    }
                 }
-                pointCount++;
+                
+                QString dayStr = m_dataModel->getCellData(row, dayColumn);
+                QString valueStr = m_dataModel->getCellData(row, paramColumn);
+                
+                bool dayOk, valueOk;
+                qreal day = dayStr.toDouble(&dayOk);
+                qreal value = valueStr.toDouble(&valueOk);
+                
+                if (dayOk && valueOk) {
+                    if (m_chartType == LineChart) {
+                        static_cast<QLineSeries*>(series)->append(day, value);
+                    } else if (m_chartType == SplineChart) {
+                        static_cast<QSplineSeries*>(series)->append(day, value);
+                    } else if (m_chartType == ScatterChart) {
+                        static_cast<QScatterSeries*>(series)->append(day, value);
+                    }
+                    pointCount++;
+                }
+            }
+            
+            qDebug() << "TimeSeriesPlotWidget: Added" << pointCount << "data points for" << paramName << "treatment" << treatment;
+            
+            if (pointCount == 0) {
+                delete series;
+                continue;
+            }
+            
+            // Add series to chart
+            m_chart->addSeries(series);
+            
+            // Ensure axes are properly attached
+            if (!m_chart->axes(Qt::Horizontal).contains(m_axisX)) {
+                m_chart->addAxis(m_axisX, Qt::AlignBottom);
+            }
+            if (!m_chart->axes(Qt::Vertical).contains(m_axisY)) {
+                m_chart->addAxis(m_axisY, Qt::AlignLeft);
+            }
+            
+            series->attachAxis(m_axisX);
+            series->attachAxis(m_axisY);
+            
+            // Store series reference
+            QString seriesKey = treatment.isEmpty() ? paramName : QString("%1_%2").arg(paramName, treatment);
+            if (m_chartType == LineChart) {
+                m_series[seriesKey] = static_cast<QLineSeries*>(series);
             } else {
-                qDebug() << "TimeSeriesPlotWidget: Invalid data at row" << row << "for" << paramName 
-                         << "day:" << dayStr << "value:" << valueStr;
+                m_series[seriesKey] = nullptr;
             }
         }
-        qDebug() << "TimeSeriesPlotWidget: Added" << pointCount << "data points for parameter:" << paramName;
-        
-        if (pointCount == 0) {
-            qDebug() << "TimeSeriesPlotWidget: No valid data points for" << paramName << "- skipping series";
-            delete series;
-            continue;
-        }
-        
-        qDebug() << "TimeSeriesPlotWidget: Adding series to chart for parameter:" << paramName;
-        m_chart->addSeries(series);
-        
-        // Ensure axes are properly attached
-        if (!m_chart->axes(Qt::Horizontal).contains(m_axisX)) {
-            m_chart->addAxis(m_axisX, Qt::AlignBottom);
-        }
-        if (!m_chart->axes(Qt::Vertical).contains(m_axisY)) {
-            m_chart->addAxis(m_axisY, Qt::AlignLeft);
-        }
-        
-        series->attachAxis(m_axisX);
-        series->attachAxis(m_axisY);
-        
-        // Store series reference (don't cast scatter/spline to line series as they're different types)
-        // Just store the base QLineSeries pointer for line series, nullptr for others
-        if (m_chartType == LineChart) {
-            m_series[paramName] = static_cast<QLineSeries*>(series);
-        } else {
-            m_series[paramName] = nullptr;  // Don't store for non-line series to avoid casting issues
-        }
-        qDebug() << "TimeSeriesPlotWidget: Series added successfully";
     }
     
     qDebug() << "TimeSeriesPlotWidget: Total series added:" << m_series.size();

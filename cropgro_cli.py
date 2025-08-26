@@ -41,7 +41,7 @@ def daily_result_to_dict(dr: Any) -> Dict[str, Any]:
     return data
 
 
-def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: bool) -> Any:
+def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: bool, treatment_id: str = None) -> Any:
     print("🌱 CROPGRO Hydroponic Simulator - CLI Version")
     print("=" * 50)
 
@@ -81,7 +81,8 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
     print(f"Cultivar: {simulator.cultivar_profile.cultivar_name}")
     print(f"System: {system_config.system_type}")
 
-    results = simulator.run_simulation(input_data, max_days=days, target_maturity='harvest')
+    treatment_id = treatment_params.get('treatment_id') if treatment_params else None
+    results = simulator.run_simulation(input_data, max_days=days, target_maturity='harvest', treatment_id=treatment_id)
 
     if print_daily:
         for dr in results.daily_results:
@@ -104,11 +105,14 @@ def main():
     parser.add_argument('--daily-csv', action='store_true', help='Automatically save daily CSV with timestamp in outputs/ directory')
     parser.add_argument('--print-daily', action='store_true', help='Print detailed per-day results to stdout')
     parser.add_argument('--print-summary', action='store_true', help='Print summary stats to stdout')
+    
+    # Treatment identifier for batch processing
+    parser.add_argument('--treatment-id', type=str, help='Treatment identifier (e.g., T01, T02)')
 
     args = parser.parse_args()
 
     try:
-        results = run_simulation(args.days, args.cultivar, args.system, args.print_daily)
+        results = run_simulation(args.days, args.cultivar, args.system, args.print_daily, args.treatment_id)
 
         # Output CSV via DataFrame (curated columns)
         if args.output_csv:

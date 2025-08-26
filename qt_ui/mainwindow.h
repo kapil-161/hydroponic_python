@@ -46,8 +46,14 @@ private slots:
     void findDuplicates();
     void generateBatchFile();
     void runSimulation();
+    void runMultiVarietySimulation();
     void onFileSelected(const QModelIndex &index);
     void onSimulationFinished(int exitCode, QProcess::ExitStatus exitStatus);
+    QStringList getSelectedVarieties() const;
+    QMap<QString, QStringList> getSelectedTreatments() const;
+    QStringList generateTreatmentCombinations() const;
+    QStringList parseTreatmentCombination(const QString &combo) const;
+    void updateTreatmentPreview();
     void updateExperimentSettings();
 
 private:
@@ -60,6 +66,7 @@ private:
     void createBatchGenerator();
     void createResultsViewer();
     void createPlotViewer();
+    void createTreatmentCategory(const QString &categoryName, const QStringList &options, const QStringList &defaults);
     void connectSignals();
     void updateWindowTitle();
     void showDuplicates(const QStringList &duplicates);
@@ -67,9 +74,11 @@ private:
     void setCurrentFile(const QString &fileName);
     void loadCSVFile(const QString &fileName);
     void loadResultsFile(const QString &fileName);
+    void loadMultipleTreatmentResults();
     void findLatestResults();
     void exportResults();
     void refreshResults();
+    QStringList findTreatmentResultFiles() const;
     
     // UI Components
     QWidget *m_centralWidget;
@@ -95,6 +104,9 @@ private:
     QWidget *m_batchGeneratorGroup;
     QLineEdit *m_experimentNameEdit;
     QComboBox *m_cropTypeCombo;
+    QWidget *m_treatmentSelectionGroup;
+    QVBoxLayout *m_treatmentLayout;
+    QScrollArea *m_treatmentScrollArea;
     QSpinBox *m_durationSpinBox;
     QTextEdit *m_batchPreview;
     QPushButton *m_generateBatchButton;

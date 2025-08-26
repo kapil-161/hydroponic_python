@@ -240,6 +240,7 @@ class SimulationResults:
     total_days: int
     daily_results: List[DailyResults]
     summary_stats: Dict = field(default_factory=dict)
+    treatment_id: str = None  # Added for batch experiment tracking
     
     def to_dataframe(self) -> pd.DataFrame:
         """Convert results to pandas DataFrame for analysis."""
@@ -248,6 +249,7 @@ class SimulationResults:
             row = {
                 'Date': result.date.strftime('%Y-%m-%d'),
                 'Day': result.day,
+                'Treatment_ID': self.treatment_id if self.treatment_id else 'DEFAULT',
                 'System_ID': self.system_id,
                 'Crop_ID': self.crop_id,
                 'ETO_Ref_mm': result.eto_ref,

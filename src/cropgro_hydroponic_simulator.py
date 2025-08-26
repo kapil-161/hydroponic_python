@@ -363,7 +363,8 @@ class CROPGROHydroponicSimulator:
     
     def run_simulation(self, input_data: HydroInputData, 
                       max_days: int = 365,
-                      target_maturity: str = "harvest") -> SimulationResults:
+                      target_maturity: str = "harvest",
+                      treatment_id: str = None) -> SimulationResults:
         """
         Run complete CROPGRO hydroponic simulation until physiological maturity.
         
@@ -551,7 +552,8 @@ class CROPGROHydroponicSimulator:
             end_date=datetime.now() + timedelta(days=len(daily_results)),
             total_days=len(daily_results),
             daily_results=daily_results,
-            summary_stats=summary_stats
+            summary_stats=summary_stats,
+            treatment_id=treatment_id
         )
         
         # Add metadata as custom attributes

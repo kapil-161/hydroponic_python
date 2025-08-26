@@ -8031,6 +8031,7 @@ CMakeFiles/HydroponicCSVEditor.dir/mainwindow.cpp.o: /Users/kapilbhattarai/hydro
   /opt/homebrew/lib/QtCore.framework/Headers/QMap \
   /opt/homebrew/lib/QtCore.framework/Headers/QModelIndex \
   /opt/homebrew/lib/QtCore.framework/Headers/QProcess \
+  /opt/homebrew/lib/QtCore.framework/Headers/QRegularExpression \
   /opt/homebrew/lib/QtCore.framework/Headers/QStandardPaths \
   /opt/homebrew/lib/QtCore.framework/Headers/QStringList \
   /opt/homebrew/lib/QtCore.framework/Headers/QVariant \
@@ -8039,6 +8040,7 @@ CMakeFiles/HydroponicCSVEditor.dir/mainwindow.cpp.o: /Users/kapilbhattarai/hydro
   /opt/homebrew/lib/QtCore.framework/Headers/qdir.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qmap.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qprocess.h \
+  /opt/homebrew/lib/QtCore.framework/Headers/qregularexpression.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qstandardpaths.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qstringlist.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qvariant.h \
@@ -8065,6 +8067,7 @@ CMakeFiles/HydroponicCSVEditor.dir/mainwindow.cpp.o: /Users/kapilbhattarai/hydro
   /opt/homebrew/lib/QtWidgets.framework/Headers/QMessageBox \
   /opt/homebrew/lib/QtWidgets.framework/Headers/QProgressBar \
   /opt/homebrew/lib/QtWidgets.framework/Headers/QPushButton \
+  /opt/homebrew/lib/QtWidgets.framework/Headers/QScrollArea \
   /opt/homebrew/lib/QtWidgets.framework/Headers/QSpinBox \
   /opt/homebrew/lib/QtWidgets.framework/Headers/QSplitter \
   /opt/homebrew/lib/QtWidgets.framework/Headers/QStatusBar \
@@ -14519,6 +14522,8 @@ HydroponicCSVEditor_autogen/mocs_compilation.cpp:
 /opt/homebrew/lib/cmake/Qt6Core/Qt6QDarwinMicrophonePermissionPluginTargets.cmake:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX15.5.sdk/usr/include/c++/v1/__algorithm/adjacent_find.h:
+
+/opt/homebrew/lib/QtWidgets.framework/Headers/QScrollArea:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX15.5.sdk/usr/include/sys/_types/_fsblkcnt_t.h:
 

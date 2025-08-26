@@ -2,6 +2,11 @@
 #include <QApplication>
 #include <QDir>
 #include <QStandardPaths>
+#include <QRegularExpression>
+#include <QScrollArea>
+#include <QGroupBox>
+#include <functional>
+#include <algorithm>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -41,6 +46,9 @@ MainWindow::MainWindow(QWidget *parent)
     setupToolBar();
     setupStatusBar();
     connectSignals();
+    
+    // Initialize treatment preview
+    updateTreatmentPreview();
     
     m_statusLabel->setText("Ready");
 }
@@ -169,6 +177,42 @@ void MainWindow::createBatchGenerator()
     m_cropTypeCombo->setToolTip("Select crop type for simulation");
     formLayout->addRow("Crop Type:", m_cropTypeCombo);
     
+    // Treatment selection group for factorial experiments
+    m_treatmentSelectionGroup = new QWidget;
+    QVBoxLayout *treatmentMainLayout = new QVBoxLayout(m_treatmentSelectionGroup);
+    
+    QLabel *treatmentLabel = new QLabel("🧪 Experimental Treatments:");
+    treatmentLabel->setStyleSheet("font-weight: bold; color: #2E8B57;");
+    treatmentMainLayout->addWidget(treatmentLabel);
+    
+    // Create scrollable area for treatments
+    m_treatmentScrollArea = new QScrollArea;
+    m_treatmentScrollArea->setMaximumHeight(200);
+    m_treatmentScrollArea->setWidgetResizable(true);
+    m_treatmentScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    
+    QWidget *treatmentWidget = new QWidget;
+    m_treatmentLayout = new QVBoxLayout(treatmentWidget);
+    
+    // Create treatment categories
+    createTreatmentCategory("🌱 Varieties", {"EXP001_2024", "EXP002_2024", "EXP003_2024"}, {"EXP001_2024"});
+    createTreatmentCategory("🌡️ Temperature (°C)", {"20", "23", "26", "29"}, {"23"});
+    createTreatmentCategory("💧 Nitrogen (mg/L)", {"150", "200", "250", "300"}, {"200"});
+    createTreatmentCategory("🔬 pH Levels", {"5.5", "6.0", "6.5", "7.0"}, {"6.0"});
+    createTreatmentCategory("💡 Light Hours", {"12", "14", "16", "18"}, {"16"});
+    createTreatmentCategory("💨 CO2 (ppm)", {"400", "800", "1200", "1600"}, {"1200"});
+    createTreatmentCategory("🧪 EC (dS/m)", {"1.2", "1.5", "1.8", "2.1"}, {"1.5"});
+    
+    m_treatmentScrollArea->setWidget(treatmentWidget);
+    treatmentMainLayout->addWidget(m_treatmentScrollArea);
+    
+    // Add treatment combination info
+    QLabel *infoLabel = new QLabel("💡 Select treatments to create factorial combinations");
+    infoLabel->setStyleSheet("color: #666; font-size: 11px; font-style: italic;");
+    treatmentMainLayout->addWidget(infoLabel);
+    
+    formLayout->addRow("Treatments:", m_treatmentSelectionGroup);
+    
     m_durationSpinBox = new QSpinBox;
     m_durationSpinBox->setRange(1, 365);
     m_durationSpinBox->setValue(90);
@@ -178,8 +222,21 @@ void MainWindow::createBatchGenerator()
     
     settingsGroup->setLayout(formLayout);
     
+    // Treatment combinations preview
+    QGroupBox *combinationsGroup = new QGroupBox("📋 Treatment Combinations");
+    QTextEdit *combinationsPreview = new QTextEdit;
+    combinationsPreview->setMaximumHeight(100);
+    combinationsPreview->setReadOnly(true);
+    combinationsPreview->setObjectName("combinationsPreview");
+    combinationsPreview->setStyleSheet("font-family: monospace; background-color: #f0f8ff; border: 1px solid #4169E1;");
+    combinationsPreview->setPlainText("Select treatments to see combinations...");
+    
+    QVBoxLayout *combinationsLayout = new QVBoxLayout;
+    combinationsLayout->addWidget(combinationsPreview);
+    combinationsGroup->setLayout(combinationsLayout);
+    
     // Batch preview section
-    QGroupBox *previewGroup = new QGroupBox("Batch File Preview");
+    QGroupBox *previewGroup = new QGroupBox("📄 Batch File Preview");
     m_batchPreview = new QTextEdit;
     m_batchPreview->setMaximumHeight(120);
     m_batchPreview->setReadOnly(true);
@@ -205,6 +262,7 @@ void MainWindow::createBatchGenerator()
     batchLayout->setContentsMargins(10, 10, 10, 10);
     batchLayout->setSpacing(15);
     batchLayout->addWidget(settingsGroup);
+    batchLayout->addWidget(combinationsGroup);
     batchLayout->addWidget(previewGroup);
     batchLayout->addLayout(batchButtonLayout);
     batchLayout->addStretch(); // Push everything to top
@@ -230,9 +288,14 @@ void MainWindow::createResultsViewer()
     m_exportResultsButton = new QPushButton("💾 Export to CSV");
     m_exportResultsButton->setEnabled(false);
     
+    QPushButton *loadMultipleButton = new QPushButton("📊 Load All Treatments");
+    loadMultipleButton->setToolTip("Load and compare all treatment results");
+    connect(loadMultipleButton, &QPushButton::clicked, this, &MainWindow::loadMultipleTreatmentResults);
+    
     QHBoxLayout *resultsButtonLayout = new QHBoxLayout;
     resultsButtonLayout->addWidget(m_refreshResultsButton);
     resultsButtonLayout->addWidget(m_exportResultsButton);
+    resultsButtonLayout->addWidget(loadMultipleButton);
     resultsButtonLayout->addStretch();
     
     // Main layout with better spacing
@@ -257,6 +320,42 @@ void MainWindow::createPlotViewer()
     plotLayout->setContentsMargins(5, 5, 5, 5);
     plotLayout->addWidget(m_plotWidget);
     m_plotViewerGroup->setLayout(plotLayout);
+}
+
+void MainWindow::createTreatmentCategory(const QString &categoryName, const QStringList &options, const QStringList &defaults)
+{
+    // Create group box for this treatment category
+    QGroupBox *categoryGroup = new QGroupBox(categoryName);
+    categoryGroup->setStyleSheet("QGroupBox { font-weight: bold; margin-top: 10px; }");
+    
+    // Create horizontal layout for checkboxes
+    QHBoxLayout *categoryLayout = new QHBoxLayout(categoryGroup);
+    categoryLayout->setSpacing(10);
+    
+    // Add checkboxes for each option
+    for (const QString &option : options) {
+        QCheckBox *optionCheck = new QCheckBox(option);
+        QString cleanCategory = categoryName.split(" ").first();
+        cleanCategory.remove(QRegularExpression("[^A-Za-z]"));
+        optionCheck->setObjectName(QString("%1_%2").arg(cleanCategory, option));
+        
+        // Set default selections
+        if (defaults.contains(option)) {
+            optionCheck->setChecked(true);
+        }
+        
+        // Add tooltip with treatment information
+        QString tooltip = QString("Include %1 = %2 in experimental design").arg(categoryName, option);
+        optionCheck->setToolTip(tooltip);
+        
+        // Connect to update preview when changed
+        connect(optionCheck, &QCheckBox::toggled, this, &MainWindow::updateTreatmentPreview);
+        
+        categoryLayout->addWidget(optionCheck);
+    }
+    
+    categoryLayout->addStretch();
+    m_treatmentLayout->addWidget(categoryGroup);
 }
 
 void MainWindow::setupMenuBar()
@@ -459,6 +558,13 @@ void MainWindow::generateBatchFile()
         return;
     }
     
+    // Get selected treatment combinations
+    QStringList combinations = generateTreatmentCombinations();
+    if (combinations.isEmpty()) {
+        QMessageBox::warning(this, "Generate Batch", "No treatment combinations selected.");
+        return;
+    }
+    
     // Clean up old batch files before creating new ones
     QDir currentDir(QDir::currentPath());
     QStringList batchFilters;
@@ -484,42 +590,74 @@ void MainWindow::generateBatchFile()
         m_statusLabel->setText(QString("Cleaned up %1 old batch file(s)").arg(deletedCount));
     }
     
-    // Generate batch file content
+    // Generate batch file content for multiple treatment combinations
     QString batchContent;
 #ifdef Q_OS_WIN
-    batchContent = QString(
-        "@echo off\n"
-        "echo Running Hydroponic Simulation...\n"
-        "echo Experiment: %1\n"
-        "echo Crop Type: %2\n"
-        "echo Duration: %3 days\n"
-        "echo.\n"
-        "cd /d \"%~dp0\"\n"
-        "python cropgro_cli.py --experiment %2_%1 --days %3 --output-csv outputs/%2_%1_results.csv\n"
-        "if %ERRORLEVEL% EQU 0 (\n"
-        "    echo Simulation completed successfully!\n"
-        ") else (\n"
-        "    echo Simulation failed with error code %ERRORLEVEL%\n"
-        ")\n"
-        "pause\n"
-    ).arg(experimentName, cropType, QString::number(duration));
+    batchContent = "@echo off\n"
+                  "echo Running Multi-Treatment Hydroponic Experiment...\n"
+                  "echo Base Experiment: " + experimentName + "\n"
+                  "echo Crop Type: " + cropType + "\n"
+                  "echo Duration: " + QString::number(duration) + " days\n"
+                  "echo Total Treatments: " + QString::number(combinations.size()) + "\n"
+                  "echo.\n"
+                  "cd /d \"%~dp0\"\n\n";
+    
+    for (int i = 0; i < combinations.size(); ++i) {
+        QString combo = combinations[i];
+        QString treatmentId = QString("T%1").arg(i + 1, 2, 10, QChar('0'));
+        QString outputFile = QString("outputs/%1_%2_%3_results.csv").arg(cropType, experimentName, treatmentId);
+        
+        // Parse the combination string to extract treatment parameters
+        QStringList treatmentParams = parseTreatmentCombination(combo);
+        QString cliParams = treatmentParams.join(" ");
+        
+        batchContent += QString(
+            "echo [%1/%2] Running Treatment %8: %3\n"
+            "python cropgro_cli.py --cultivar %4_%5 --days %6 --treatment-id %8 %9 --output-csv %7\n"
+            "if %ERRORLEVEL% NEQ 0 (\n"
+            "    echo Treatment %8 failed!\n"
+            "    pause\n"
+            "    exit /b 1\n"
+            ")\n"
+            "echo Treatment %8 completed successfully!\n"
+            "echo.\n\n"
+        ).arg(QString::number(i + 1), QString::number(combinations.size()), combo, cropType, experimentName, QString::number(duration), outputFile, treatmentId, cliParams);
+    }
+    
+    batchContent += "echo All treatments completed successfully!\npause\n";
 #else
-    batchContent = QString(
-        "#!/bin/bash\n"
-        "echo \"Running Hydroponic Simulation...\"\n"
-        "echo \"Experiment: %1\"\n"
-        "echo \"Crop Type: %2\"\n"
-        "echo \"Duration: %3 days\"\n"
-        "echo\n"
-        "cd \"$(dirname \"$0\")\"\n"
-        "python3 cropgro_cli.py --experiment %2_%1 --days %3 --output-csv outputs/%2_%1_results.csv\n"
-        "if [ $? -eq 0 ]; then\n"
-        "    echo \"Simulation completed successfully!\"\n"
-        "else\n"
-        "    echo \"Simulation failed with error code $?\"\n"
-        "fi\n"
-        "read -p \"Press Enter to continue...\"\n"
-    ).arg(experimentName, cropType, QString::number(duration));
+    batchContent = "#!/bin/bash\n"
+                  "echo \"Running Multi-Treatment Hydroponic Experiment...\"\n"
+                  "echo \"Base Experiment: " + experimentName + "\"\n"
+                  "echo \"Crop Type: " + cropType + "\"\n"
+                  "echo \"Duration: " + QString::number(duration) + " days\"\n"
+                  "echo \"Total Treatments: " + QString::number(combinations.size()) + "\"\n"
+                  "echo\n"
+                  "cd \"$(dirname \"$0\")\"\n\n";
+    
+    for (int i = 0; i < combinations.size(); ++i) {
+        QString combo = combinations[i];
+        QString treatmentId = QString("T%1").arg(i + 1, 2, 10, QChar('0'));
+        QString outputFile = QString("outputs/%1_%2_%3_results.csv").arg(cropType, experimentName, treatmentId);
+        
+        // Parse the combination string to extract treatment parameters
+        QStringList treatmentParams = parseTreatmentCombination(combo);
+        QString cliParams = treatmentParams.join(" ");
+        
+        batchContent += QString(
+            "echo \"[%1/%2] Running Treatment %8: %3\"\n"
+            "python3 cropgro_cli.py --cultivar %4_%5 --days %6 --treatment-id %8 %9 --output-csv %7\n"
+            "if [ $? -ne 0 ]; then\n"
+            "    echo \"Treatment %8 failed!\"\n"
+            "    read -p \"Press Enter to continue...\"\n"
+            "    exit 1\n"
+            "fi\n"
+            "echo \"Treatment %8 completed successfully!\"\n"
+            "echo\n\n"
+        ).arg(QString::number(i + 1), QString::number(combinations.size()), combo, cropType, experimentName, QString::number(duration), outputFile, treatmentId, cliParams);
+    }
+    
+    batchContent += "echo \"All treatments completed successfully!\"\nread -p \"Press Enter to continue...\"\n";
 #endif
     
     m_batchPreview->setPlainText(batchContent);
@@ -820,4 +958,239 @@ void MainWindow::exportResults()
 void MainWindow::refreshResults()
 {
     findLatestResults();
+}
+
+QMap<QString, QStringList> MainWindow::getSelectedTreatments() const
+{
+    QMap<QString, QStringList> treatments;
+    
+    // Find all checkboxes in the treatment layout
+    QList<QCheckBox*> checkboxes = m_treatmentSelectionGroup->findChildren<QCheckBox*>();
+    
+    for (QCheckBox *checkbox : checkboxes) {
+        if (checkbox->isChecked()) {
+            QString objectName = checkbox->objectName();
+            QStringList parts = objectName.split("_");
+            if (parts.size() >= 2) {
+                QString category = parts[0];
+                QString value = parts.mid(1).join("_");
+                treatments[category].append(value);
+            }
+        }
+    }
+    
+    return treatments;
+}
+
+QStringList MainWindow::generateTreatmentCombinations() const
+{
+    QMap<QString, QStringList> treatments = getSelectedTreatments();
+    QStringList combinations;
+    
+    if (treatments.isEmpty()) {
+        return combinations;
+    }
+    
+    // Generate all possible combinations (factorial design)
+    QStringList categories = treatments.keys();
+    QList<QStringList> allValues;
+    
+    for (const QString &category : categories) {
+        allValues.append(treatments[category]);
+    }
+    
+    // Recursive combination generation
+    std::function<void(int, QStringList)> generateCombos = [&](int categoryIndex, QStringList currentCombo) {
+        if (categoryIndex >= categories.size()) {
+            QString comboStr;
+            for (int i = 0; i < categories.size(); ++i) {
+                if (!comboStr.isEmpty()) comboStr += "_";
+                comboStr += QString("%1:%2").arg(categories[i], currentCombo[i]);
+            }
+            combinations.append(comboStr);
+            return;
+        }
+        
+        for (const QString &value : allValues[categoryIndex]) {
+            QStringList newCombo = currentCombo;
+            newCombo.append(value);
+            generateCombos(categoryIndex + 1, newCombo);
+        }
+    };
+    
+    generateCombos(0, QStringList());
+    return combinations;
+}
+
+QStringList MainWindow::parseTreatmentCombination(const QString &combo) const
+{
+    QStringList cliParams;
+    
+    // Parse the combination string like "Varieties:EXP001_2024_Temperature:23_Nitrogen:200_pH:6.0_Light:16_CO2:1200_EC:1.5"
+    QStringList parts = combo.split("_");
+    
+    for (const QString &part : parts) {
+        if (part.contains(":")) {
+            QStringList keyValue = part.split(":");
+            if (keyValue.size() == 2) {
+                QString category = keyValue[0].toLower();
+                QString value = keyValue[1];
+                
+                // Map treatment categories to CLI parameters
+                if (category == "temperature") {
+                    cliParams << QString("--temperature %1").arg(value);
+                } else if (category == "nitrogen") {
+                    cliParams << QString("--nitrogen %1").arg(value);
+                } else if (category == "ph") {
+                    cliParams << QString("--ph %1").arg(value);
+                } else if (category == "light") {
+                    cliParams << QString("--light-hours %1").arg(value);
+                } else if (category == "co2") {
+                    cliParams << QString("--co2 %1").arg(value);
+                } else if (category == "ec") {
+                    cliParams << QString("--ec %1").arg(value);
+                }
+                // Skip varieties as they're handled differently
+            }
+        }
+    }
+    
+    return cliParams;
+}
+
+void MainWindow::updateTreatmentPreview()
+{
+    QStringList combinations = generateTreatmentCombinations();
+    QTextEdit *preview = m_batchGeneratorGroup->findChild<QTextEdit*>("combinationsPreview");
+    
+    if (preview) {
+        if (combinations.isEmpty()) {
+            preview->setPlainText("No treatments selected. Choose treatment levels to see combinations.");
+        } else {
+            QString previewText = QString("🧪 %1 Treatment Combinations:\n\n").arg(combinations.size());
+            for (int i = 0; i < std::min(static_cast<int>(combinations.size()), 10); ++i) {
+                previewText += QString("%1. %2\n").arg(i + 1).arg(combinations[i].replace("_", " | "));
+            }
+            if (combinations.size() > 10) {
+                previewText += QString("... and %1 more combinations").arg(combinations.size() - 10);
+            }
+            preview->setPlainText(previewText);
+        }
+    }
+}
+
+QStringList MainWindow::getSelectedVarieties() const
+{
+    QStringList varieties;
+    QMap<QString, QStringList> treatments = getSelectedTreatments();
+    if (treatments.contains("Varieties")) {
+        varieties = treatments["Varieties"];
+    }
+    return varieties;
+}
+
+void MainWindow::runMultiVarietySimulation()
+{
+    // Future implementation for running multiple treatment combinations
+    QStringList combinations = generateTreatmentCombinations();
+    
+    if (combinations.isEmpty()) {
+        QMessageBox::warning(this, "Multi-Treatment Simulation", 
+                           "No treatment combinations selected. Please select treatments first.");
+        return;
+    }
+    
+    // For now, show info about what would be run
+    QString message = QString("Would run %1 treatment combinations:\n\n").arg(combinations.size());
+    for (int i = 0; i < std::min(5, static_cast<int>(combinations.size())); ++i) {
+        message += QString("• %1\n").arg(combinations[i].replace("_", " | "));
+    }
+    if (combinations.size() > 5) {
+        message += QString("... and %1 more\n").arg(combinations.size() - 5);
+    }
+    message += "\nThis feature will be fully implemented to run all combinations automatically.";
+    
+    QMessageBox::information(this, "Multi-Treatment Simulation", message);
+}
+
+QStringList MainWindow::findTreatmentResultFiles() const
+{
+    QStringList resultFiles;
+    QString experimentName = m_experimentNameEdit->text();
+    QString cropTypeText = m_cropTypeCombo->currentText();
+    QString cropType = cropTypeText.split(" ").first();
+    
+    // Look for treatment result files in outputs directory
+    QDir outputsDir(QDir::currentPath() + "/../outputs");
+    if (outputsDir.exists()) {
+        QStringList filters;
+        filters << QString("%1_%2_T*_results.csv").arg(cropType, experimentName);
+        
+        QFileInfoList files = outputsDir.entryInfoList(filters, QDir::Files, QDir::Time);
+        for (const QFileInfo &fileInfo : files) {
+            resultFiles.append(fileInfo.absoluteFilePath());
+        }
+    }
+    
+    return resultFiles;
+}
+
+void MainWindow::loadMultipleTreatmentResults()
+{
+    QStringList treatmentFiles = findTreatmentResultFiles();
+    
+    if (treatmentFiles.isEmpty()) {
+        QMessageBox::information(this, "Load Multiple Treatments", 
+                               "No treatment result files found. Run multi-treatment experiments first.");
+        return;
+    }
+    
+    // Create a combined CSV with treatment identifiers
+    QString combinedData;
+    bool isFirstFile = true;
+    QString headers;
+    
+    for (const QString &filePath : treatmentFiles) {
+        QFileInfo fileInfo(filePath);
+        QString treatmentId = fileInfo.baseName().split("_").last().remove("results");
+        
+        QFile file(filePath);
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream in(&file);
+            QString content = in.readAll();
+            QStringList lines = content.split('\n', Qt::SkipEmptyParts);
+            
+            if (isFirstFile) {
+                // Add Treatment_ID column to headers
+                headers = lines[0] + ",Treatment_ID\n";
+                combinedData += headers;
+                isFirstFile = false;
+            }
+            
+            // Add data rows with treatment ID
+            for (int i = 1; i < lines.size(); ++i) {
+                if (!lines[i].trimmed().isEmpty()) {
+                    combinedData += lines[i] + "," + treatmentId + "\n";
+                }
+            }
+        }
+    }
+    
+    // Save combined file temporarily and load it
+    QString tempFile = QDir::tempPath() + "/combined_treatments.csv";
+    QFile outFile(tempFile);
+    if (outFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream out(&outFile);
+        out << combinedData;
+        outFile.close();
+        
+        // Load the combined file
+        loadResultsFile(tempFile);
+        
+        m_resultsInfoLabel->setText(QString("Combined %1 treatment results loaded").arg(treatmentFiles.size()));
+        m_resultsInfoLabel->setStyleSheet("color: blue; font-weight: bold;");
+        
+        // Switch to plot tab to show comparison
+        m_tabWidget->setCurrentIndex(3);
+    }
 }
