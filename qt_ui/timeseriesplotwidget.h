@@ -53,6 +53,7 @@ private:
     void addSeriesToChart(const QString &parameterName, const QColor &color);
     QColor getColorForParameter(int index);
     QString formatParameterName(const QString &parameterName);
+    void updateYAxisTitle();
     
     // UI Components
     QVBoxLayout *m_mainLayout;

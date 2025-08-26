@@ -144,6 +144,7 @@ void TimeSeriesPlotWidget::createChart()
     
     m_axisY = new QValueAxis;
     m_axisY->setTitleText("Value");
+    m_axisY->setMin(0); // Always start Y-axis from 0
     
     m_chart->addAxis(m_axisX, Qt::AlignBottom);
     m_chart->addAxis(m_axisY, Qt::AlignLeft);
@@ -198,8 +199,13 @@ void TimeSeriesPlotWidget::loadDataFromModel(CSVTableModel *model)
     
     // Create checkboxes for parameters
     for (const QString &param : m_availableParameters) {
-        QCheckBox *checkbox = new QCheckBox(formatParameterName(param));
+        QString displayName = formatParameterName(param);
+        QCheckBox *checkbox = new QCheckBox(displayName);
         checkbox->setObjectName(param);
+        
+        // Add tooltip showing the original parameter name and formatted name
+        QString tooltip = QString("Original: %1\nDisplay: %2").arg(param, displayName);
+        checkbox->setToolTip(tooltip);
         
         connect(checkbox, &QCheckBox::toggled, this, &TimeSeriesPlotWidget::onParameterSelectionChanged);
         
@@ -405,6 +411,9 @@ void TimeSeriesPlotWidget::updateChart()
     
     qDebug() << "TimeSeriesPlotWidget: Total series added:" << m_series.size();
     
+    // Update Y-axis title with units based on selected parameters
+    updateYAxisTitle();
+    
     // Auto-scale axes
     if (m_autoScale && !m_selectedParameters.isEmpty()) {
         // Find data ranges
@@ -434,13 +443,23 @@ void TimeSeriesPlotWidget::updateChart()
         
         if (minX <= maxX && minY <= maxY) {
             qreal xPadding = (maxX - minX) * 0.05;
-            qreal yPadding = (maxY - minY) * 0.1;
+            qreal yPadding = maxY * 0.1; // Use percentage of max value for better scaling
+            
+            // Always start Y-axis from 0 for better visual context
+            qreal yMin = 0.0;
+            qreal yMax = maxY + yPadding;
+            
+            // Handle special case where all values are negative
+            if (maxY < 0) {
+                yMin = minY - yPadding;
+                yMax = 0.0;
+            }
             
             m_axisX->setRange(minX - xPadding, maxX + xPadding);
-            m_axisY->setRange(minY - yPadding, maxY + yPadding);
+            m_axisY->setRange(yMin, yMax);
             
             qDebug() << "TimeSeriesPlotWidget: Set axis ranges - X:" << minX - xPadding << "to" << maxX + xPadding 
-                     << "Y:" << minY - yPadding << "to" << maxY + yPadding;
+                     << "Y:" << yMin << "to" << yMax << "(forced Y-min to 0)";
         } else {
             qDebug() << "TimeSeriesPlotWidget: Invalid data ranges for auto-scaling";
         }
@@ -490,14 +509,122 @@ QString TimeSeriesPlotWidget::formatParameterName(const QString &parameterName)
     QString formatted = parameterName;
     formatted.replace('_', ' ');
     
-    // Handle common abbreviations
-    formatted.replace("Temp C", "Temperature (°C)");
+    // Add units and format parameter names with proper scientific notation
+    QMap<QString, QString> parameterUnits = {
+        // Environmental parameters
+        {"ETO Ref mm", "Reference ET (mm/day)"},
+        {"ETC Prime mm", "Crop ET (mm/day)"},
+        {"Transpiration mm", "Transpiration (mm/day)"},
+        {"Temp C", "Temperature (°C)"},
+        {"Solar Rad MJ", "Solar Radiation (MJ/m²/day)"},
+        {"VPD kPa", "Vapor Pressure Deficit (kPa)"},
+        {"VPD Actual kPa", "Actual VPD (kPa)"},
+        {"CO2 umol mol", "CO₂ Concentration (μmol/mol)"},
+        {"RZT C", "Root Zone Temperature (°C)"},
+        
+        // Water and solution parameters
+        {"Water Total L", "Total Water (L)"},
+        {"Tank Volume L", "Tank Volume (L)"},
+        {"WUE kg m3", "Water Use Efficiency (kg/m³)"},
+        {"pH", "pH"},
+        {"EC", "Electrical Conductivity (dS/m)"},
+        
+        // Nutrient parameters
+        {"N-NO3 mg L", "Nitrate-N (mg/L)"},
+        {"P-PO4 mg L", "Phosphate-P (mg/L)"},
+        {"K mg L", "Potassium (mg/L)"},
+        {"Ca mg L", "Calcium (mg/L)"},
+        {"Mg mg L", "Magnesium (mg/L)"},
+        
+        // Plant growth parameters
+        {"Total Biomass g", "Total Biomass (g)"},
+        {"LAI", "Leaf Area Index"},
+        {"Leaf Number", "Leaf Number"},
+        {"Leaf Area m2", "Leaf Area (m²)"},
+        {"Avg Leaf Area cm2", "Average Leaf Area (cm²)"},
+        {"V Stage", "Vegetative Stage"},
+        {"Growth Stage", "Growth Stage"},
+        
+        // Stress and factor parameters
+        {"RZT Growth Factor", "RZT Growth Factor"},
+        {"RZT Nutrient Factor", "RZT Nutrient Factor"},
+        {"Env Photo Factor", "Environmental Photo Factor"},
+        {"Env Transp Factor", "Environmental Transp Factor"},
+        {"Integrated Stress", "Integrated Stress Factor"},
+        {"Temperature Stress", "Temperature Stress Factor"},
+        {"Water Stress", "Water Stress Factor"},
+        {"Nutrient Stress", "Nutrient Stress Factor"},
+        {"Nitrogen Stress", "Nitrogen Stress Factor"},
+        {"Salinity Stress", "Salinity Stress Factor"}
+    };
+    
+    // Check if we have a specific unit mapping
+    if (parameterUnits.contains(formatted)) {
+        return parameterUnits[formatted];
+    }
+    
+    // Handle common abbreviations for unmapped parameters
     formatted.replace("LAI", "Leaf Area Index");
     formatted.replace("VPD", "Vapor Pressure Deficit");
     formatted.replace("RZT", "Root Zone Temperature");
     formatted.replace("WUE", "Water Use Efficiency");
     
     return formatted;
+}
+
+void TimeSeriesPlotWidget::updateYAxisTitle()
+{
+    if (m_selectedParameters.isEmpty()) {
+        m_axisY->setTitleText("Value");
+        return;
+    }
+    
+    // Extract units from selected parameters
+    QStringList units;
+    QMap<QString, QString> unitMap = {
+        {"Total_Biomass_g", "g"},
+        {"LAI", ""},
+        {"Temp_C", "°C"},
+        {"pH", ""},
+        {"VPD_kPa", "kPa"},
+        {"VPD_Actual_kPa", "kPa"},
+        {"Water_Total_L", "L"},
+        {"Tank_Volume_L", "L"},
+        {"WUE_kg_m3", "kg/m³"},
+        {"EC", "dS/m"},
+        {"ETO_Ref_mm", "mm/day"},
+        {"ETC_Prime_mm", "mm/day"},
+        {"Transpiration_mm", "mm/day"},
+        {"Solar_Rad_MJ", "MJ/m²/day"},
+        {"RZT_C", "°C"},
+        {"N-NO3_mg_L", "mg/L"},
+        {"P-PO4_mg_L", "mg/L"},
+        {"K_mg_L", "mg/L"},
+        {"Ca_mg_L", "mg/L"},
+        {"Mg_mg_L", "mg/L"},
+        {"Leaf_Area_m2", "m²"},
+        {"Avg_Leaf_Area_cm2", "cm²"},
+        {"CO2_umol_mol", "μmol/mol"}
+    };
+    
+    for (const QString &param : m_selectedParameters) {
+        QString unit = unitMap.value(param, "");
+        if (!unit.isEmpty() && !units.contains(unit)) {
+            units.append(unit);
+        }
+    }
+    
+    QString yAxisTitle;
+    if (units.isEmpty()) {
+        yAxisTitle = "Value";
+    } else if (units.size() == 1) {
+        yAxisTitle = QString("Value (%1)").arg(units.first());
+    } else {
+        yAxisTitle = QString("Value (%1)").arg(units.join(", "));
+    }
+    
+    m_axisY->setTitleText(yAxisTitle);
+    qDebug() << "TimeSeriesPlotWidget: Updated Y-axis title to:" << yAxisTitle;
 }
 
 void TimeSeriesPlotWidget::exportChart()
@@ -539,6 +666,7 @@ void TimeSeriesPlotWidget::resetChart()
         
         m_axisY = new QValueAxis;
         m_axisY->setTitleText("Value");
+        m_axisY->setMin(0); // Always start Y-axis from 0
         
         m_chart->addAxis(m_axisX, Qt::AlignBottom);
         m_chart->addAxis(m_axisY, Qt::AlignLeft);

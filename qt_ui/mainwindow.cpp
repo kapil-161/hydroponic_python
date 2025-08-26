@@ -459,6 +459,31 @@ void MainWindow::generateBatchFile()
         return;
     }
     
+    // Clean up old batch files before creating new ones
+    QDir currentDir(QDir::currentPath());
+    QStringList batchFilters;
+#ifdef Q_OS_WIN
+    batchFilters << "run_simulation_*.bat";
+#else
+    batchFilters << "run_simulation_*.sh";
+#endif
+    
+    QFileInfoList oldBatchFiles = currentDir.entryInfoList(batchFilters, QDir::Files);
+    int deletedCount = 0;
+    for (const QFileInfo &fileInfo : oldBatchFiles) {
+        if (QFile::remove(fileInfo.absoluteFilePath())) {
+            deletedCount++;
+            qDebug() << "MainWindow: Deleted old batch file:" << fileInfo.fileName();
+        } else {
+            qDebug() << "MainWindow: Failed to delete old batch file:" << fileInfo.fileName();
+        }
+    }
+    
+    if (deletedCount > 0) {
+        qDebug() << "MainWindow: Cleaned up" << deletedCount << "old batch files";
+        m_statusLabel->setText(QString("Cleaned up %1 old batch file(s)").arg(deletedCount));
+    }
+    
     // Generate batch file content
     QString batchContent;
 #ifdef Q_OS_WIN
