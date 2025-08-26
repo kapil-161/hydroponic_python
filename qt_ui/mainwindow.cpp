@@ -1076,7 +1076,19 @@ QMap<QString, QStringList> MainWindow::getSelectedTreatments() const
             if (parts.size() >= 2) {
                 QString category = parts[0];
                 QString value = parts.mid(1).join("_");
-                treatments[category].append(value);
+                
+                // Map the cleaned category names back to full category names
+                QString fullCategory;
+                if (category == "Varieties") fullCategory = "Varieties";
+                else if (category == "Temperature") fullCategory = "Temperature";
+                else if (category == "Nitrogen") fullCategory = "Nitrogen";
+                else if (category == "pH") fullCategory = "pH";
+                else if (category == "Light") fullCategory = "Light";
+                else if (category == "CO2") fullCategory = "CO2";
+                else if (category == "EC") fullCategory = "EC";
+                else fullCategory = category;
+                
+                treatments[fullCategory].append(value);
             }
         }
     }
