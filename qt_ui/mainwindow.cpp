@@ -700,7 +700,7 @@ void MainWindow::findLatestResults()
     QString fullExperimentName = QString("%1_%2").arg(cropType, experimentName);
     
     // Look for experiment-specific results in outputs directory first
-    QDir outputsDir(QDir::currentPath() + "/../../outputs");
+    QDir outputsDir(QDir::currentPath() + "/../outputs");
     if (outputsDir.exists()) {
         // Try exact experiment match first
         QString experimentResultsPath = outputsDir.filePath(QString("%1_results.csv").arg(fullExperimentName));
@@ -724,14 +724,14 @@ void MainWindow::findLatestResults()
     }
     
     // Try experiment-specific files in main directory as fallback
-    QString experimentResultsPath = QDir::currentPath() + "/../../" + fullExperimentName + "_results.csv";
+    QString experimentResultsPath = QDir::currentPath() + "/../" + fullExperimentName + "_results.csv";
     if (QFile::exists(experimentResultsPath)) {
         loadResultsFile(experimentResultsPath);
         return;
     }
     
     // Try generic simulation_results.csv as final fallback
-    QString genericResultsPath = QDir::currentPath() + "/../../simulation_results.csv";
+    QString genericResultsPath = QDir::currentPath() + "/../simulation_results.csv";
     if (QFile::exists(genericResultsPath)) {
         loadResultsFile(genericResultsPath);
         return;
