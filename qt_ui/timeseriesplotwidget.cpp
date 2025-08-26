@@ -51,9 +51,13 @@ void TimeSeriesPlotWidget::setupUI()
     
     topControlsLayout->addStretch();
     
-    // Export button
+    // Export button and debug button
     m_exportButton = new QPushButton("📊 Export Chart");
     topControlsLayout->addWidget(m_exportButton);
+    
+    QPushButton *debugButton = new QPushButton("🐛 Debug");
+    topControlsLayout->addWidget(debugButton);
+    connect(debugButton, &QPushButton::clicked, this, &TimeSeriesPlotWidget::debugChartState);
     
     m_mainLayout->addLayout(topControlsLayout);
     
@@ -205,8 +209,8 @@ void TimeSeriesPlotWidget::loadDataFromModel(CSVTableModel *model)
     
     m_parametersLayout->addStretch();
     
-    // Auto-select some interesting parameters
-    QStringList autoSelect = {"Total_Biomass_g", "LAI", "Growth_Stage", "pH", "Temp_C"};
+    // Auto-select some interesting parameters (using exact column names from CSV)
+    QStringList autoSelect = {"Total_Biomass_g", "LAI", "pH", "Temp_C", "VPD_kPa"};
     qDebug() << "TimeSeriesPlotWidget: Auto-selecting parameters:" << autoSelect;
     for (const QString &param : autoSelect) {
         if (m_parameterCheckboxes.contains(param)) {
@@ -219,14 +223,26 @@ void TimeSeriesPlotWidget::loadDataFromModel(CSVTableModel *model)
     
     qDebug() << "TimeSeriesPlotWidget: About to call onParameterSelectionChanged()";
     onParameterSelectionChanged();
+    
+    // Debug chart state after loading data
+    debugChartState();
+    
     qDebug() << "TimeSeriesPlotWidget: loadDataFromModel completed";
 }
 
 void TimeSeriesPlotWidget::clearPlot()
 {
-    m_chart->removeAllSeries();
+    // Clear all series from chart
+    QList<QAbstractSeries*> allSeries = m_chart->series();
+    for (QAbstractSeries* series : allSeries) {
+        m_chart->removeSeries(series);
+        delete series;  // Clean up memory
+    }
+    
     m_series.clear();
-    m_selectedParameters.clear();
+    // Note: Don't clear m_selectedParameters here as user selections should persist
+    
+    qDebug() << "TimeSeriesPlotWidget: Plot cleared, removed" << allSeries.size() << "series";
 }
 
 void TimeSeriesPlotWidget::onParameterSelectionChanged()
@@ -365,10 +381,25 @@ void TimeSeriesPlotWidget::updateChart()
         
         qDebug() << "TimeSeriesPlotWidget: Adding series to chart for parameter:" << paramName;
         m_chart->addSeries(series);
+        
+        // Ensure axes are properly attached
+        if (!m_chart->axes(Qt::Horizontal).contains(m_axisX)) {
+            m_chart->addAxis(m_axisX, Qt::AlignBottom);
+        }
+        if (!m_chart->axes(Qt::Vertical).contains(m_axisY)) {
+            m_chart->addAxis(m_axisY, Qt::AlignLeft);
+        }
+        
         series->attachAxis(m_axisX);
         series->attachAxis(m_axisY);
         
-        m_series[paramName] = static_cast<QLineSeries*>(series);
+        // Store series reference (don't cast scatter/spline to line series as they're different types)
+        // Just store the base QLineSeries pointer for line series, nullptr for others
+        if (m_chartType == LineChart) {
+            m_series[paramName] = static_cast<QLineSeries*>(series);
+        } else {
+            m_series[paramName] = nullptr;  // Don't store for non-line series to avoid casting issues
+        }
         qDebug() << "TimeSeriesPlotWidget: Series added successfully";
     }
     
@@ -415,14 +446,25 @@ void TimeSeriesPlotWidget::updateChart()
         }
     }
     
-    qDebug() << "TimeSeriesPlotWidget: Chart update completed";
+    // Force chart refresh and ensure it's visible
+    m_chartView->update();
+    m_chartView->repaint();
+    m_chartView->show();
+    
+    // Ensure the chart view has proper size
+    if (m_chartView->size().width() < 100 || m_chartView->size().height() < 100) {
+        m_chartView->resize(600, 400);
+        qDebug() << "TimeSeriesPlotWidget: Resized chart view to:" << m_chartView->size();
+    }
+    
+    qDebug() << "TimeSeriesPlotWidget: Chart update completed - forcing refresh";
 }
 
 void TimeSeriesPlotWidget::addSeriesToChart(const QString &parameterName, const QColor &color)
 {
     Q_UNUSED(parameterName)
     Q_UNUSED(color)
-    // Implementation handled in updateChart
+    // Implementation handled in updateChart - this method kept for interface compatibility
 }
 
 QColor TimeSeriesPlotWidget::getColorForParameter(int index)
@@ -477,3 +519,52 @@ void TimeSeriesPlotWidget::exportChart()
         }
     }
 }
+
+void TimeSeriesPlotWidget::resetChart()
+{
+    if (m_chart) {
+        clearPlot();
+        
+        // Remove and recreate axes
+        m_chart->removeAxis(m_axisX);
+        m_chart->removeAxis(m_axisY);
+        
+        delete m_axisX;
+        delete m_axisY;
+        
+        // Recreate axes
+        m_axisX = new QValueAxis;
+        m_axisX->setTitleText("Day");
+        m_axisX->setLabelFormat("%d");
+        
+        m_axisY = new QValueAxis;
+        m_axisY->setTitleText("Value");
+        
+        m_chart->addAxis(m_axisX, Qt::AlignBottom);
+        m_chart->addAxis(m_axisY, Qt::AlignLeft);
+        
+        setupChartAppearance();
+        
+        qDebug() << "TimeSeriesPlotWidget: Chart reset completed";
+    }
+}
+
+void TimeSeriesPlotWidget::debugChartState()
+{
+    qDebug() << "=== Chart Debug Info ===";
+    qDebug() << "Chart widget visible:" << isVisible();
+    qDebug() << "Chart widget size:" << size();
+    qDebug() << "Chart view size:" << m_chartView->size();
+    qDebug() << "Chart has series:" << (m_chart ? m_chart->series().count() : 0);
+    qDebug() << "Chart has horizontal axes:" << (m_chart ? m_chart->axes(Qt::Horizontal).count() : 0);
+    qDebug() << "Chart has vertical axes:" << (m_chart ? m_chart->axes(Qt::Vertical).count() : 0);
+    qDebug() << "Data model valid:" << (m_dataModel != nullptr);
+    if (m_dataModel) {
+        qDebug() << "Data model rows:" << m_dataModel->rowCount();
+        qDebug() << "Data model cols:" << m_dataModel->columnCount();
+    }
+    qDebug() << "Selected parameters:" << m_selectedParameters;
+    qDebug() << "Available parameters:" << m_availableParameters;
+    qDebug() << "========================";
+}
+

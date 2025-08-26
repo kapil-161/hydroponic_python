@@ -34,6 +34,8 @@ public:
 
     void loadDataFromModel(CSVTableModel *model);
     void clearPlot();
+    void resetChart();
+    void debugChartState();
 
 private slots:
     void onParameterSelectionChanged();

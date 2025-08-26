@@ -547,21 +547,37 @@ void MainWindow::runSimulation()
     QString outputFileName = QString("outputs/%1_results.csv").arg(fullExperimentName);
     QString dailyOutputFileName = QString("outputs/%1_daily_results.csv").arg(fullExperimentName);
     
+    // Set working directory to the hydroponic_python root
+    QString workingDir = QDir::currentPath();
+    // If we're in qt_ui/build, go up two levels to reach hydroponic_python
+    if (workingDir.endsWith("/qt_ui/build")) {
+        workingDir = QDir::currentPath() + "/../..";
+    } else if (workingDir.endsWith("/qt_ui")) {
+        workingDir = QDir::currentPath() + "/..";
+    } else {
+        workingDir = QDir::currentPath() + "/..";
+    }
+    
     QStringList arguments;
     arguments << "cropgro_cli.py";
     arguments << "--cultivar" << fullExperimentName;
     arguments << "--days" << QString::number(m_durationSpinBox->value());
     arguments << "--output-csv" << outputFileName;  // Generate experiment-specific daily CSV
     
+    qDebug() << "MainWindow: Executing simulation command:";
+    qDebug() << "MainWindow: Working directory:" << workingDir;
+    qDebug() << "MainWindow: Command: python3" << arguments.join(" ");
+    
     // Store expected output filenames for results loading
-    m_resultsFile = QDir::currentPath() + "/" + outputFileName;
+    m_resultsFile = workingDir + "/" + outputFileName;
     
     m_progressBar->setVisible(true);
     m_progressBar->setRange(0, 0); // Indeterminate progress
     m_statusLabel->setText("Running simulation...");
     m_runSimulationButton->setEnabled(false);
     
-    m_simulationProcess->setWorkingDirectory(QDir::currentPath() + "/..");
+    qDebug() << "MainWindow: Setting working directory to:" << workingDir;
+    m_simulationProcess->setWorkingDirectory(workingDir);
     m_simulationProcess->start("python3", arguments);
     
     if (!m_simulationProcess->waitForStarted()) {
@@ -597,9 +613,19 @@ void MainWindow::onSimulationFinished(int exitCode, QProcess::ExitStatus exitSta
         findLatestResults();
         m_tabWidget->setCurrentIndex(3); // Switch to Time Series Plot tab
     } else {
+        QString errorOutput = "";
+        if (m_simulationProcess) {
+            errorOutput = m_simulationProcess->readAllStandardError();
+            qDebug() << "MainWindow: Simulation stderr:" << errorOutput;
+            qDebug() << "MainWindow: Simulation stdout:" << m_simulationProcess->readAllStandardOutput();
+        }
+        
         m_statusLabel->setText("Simulation failed!");
-        QMessageBox::warning(this, "Simulation", 
-            QString("Simulation failed with exit code %1").arg(exitCode));
+        QString errorMessage = QString("Simulation failed with exit code %1").arg(exitCode);
+        if (!errorOutput.isEmpty()) {
+            errorMessage += QString("\n\nError details:\n%1").arg(errorOutput);
+        }
+        QMessageBox::warning(this, "Simulation", errorMessage);
     }
     
     if (m_simulationProcess) {
