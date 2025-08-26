@@ -592,6 +592,8 @@ void MainWindow::generateBatchFile()
     
     // Generate batch file content for multiple treatment combinations
     QString batchContent;
+    QString singleOutputFile = QString("outputs/%1_%2_combined_results.csv").arg(cropType, experimentName);
+    
 #ifdef Q_OS_WIN
     batchContent = "@echo off\n"
                   "echo Running Multi-Treatment Hydroponic Experiment...\n"
@@ -599,13 +601,17 @@ void MainWindow::generateBatchFile()
                   "echo Crop Type: " + cropType + "\n"
                   "echo Duration: " + QString::number(duration) + " days\n"
                   "echo Total Treatments: " + QString::number(combinations.size()) + "\n"
+                  "echo Output File: " + singleOutputFile + "\n"
                   "echo.\n"
                   "cd /d \"%~dp0\"\n\n";
+    
+    // Create temporary directory for individual treatment files
+    batchContent += "if not exist temp_treatments mkdir temp_treatments\n\n";
     
     for (int i = 0; i < combinations.size(); ++i) {
         QString combo = combinations[i];
         QString treatmentId = QString("T%1").arg(i + 1, 2, 10, QChar('0'));
-        QString outputFile = QString("outputs/%1_%2_%3_results.csv").arg(cropType, experimentName, treatmentId);
+        QString tempOutputFile = QString("temp_treatments/treatment_%1.csv").arg(treatmentId);
         
         // Parse the combination string to extract treatment parameters
         QStringList treatmentParams = parseTreatmentCombination(combo);
@@ -621,10 +627,30 @@ void MainWindow::generateBatchFile()
             ")\n"
             "echo Treatment %8 completed successfully!\n"
             "echo.\n\n"
-        ).arg(QString::number(i + 1), QString::number(combinations.size()), combo, cropType, experimentName, QString::number(duration), outputFile, treatmentId, cliParams);
+        ).arg(QString::number(i + 1), QString::number(combinations.size()), combo, cropType, experimentName, QString::number(duration), tempOutputFile, treatmentId, cliParams);
     }
     
-    batchContent += "echo All treatments completed successfully!\npause\n";
+    // Combine all treatment files into single CSV with Treatment_ID column
+    batchContent += "echo Combining all treatments into single CSV file...\n";
+    batchContent += "echo Date,Day,System_ID,Crop_ID,Treatment_ID";
+    
+    // Add headers from first treatment file (excluding Date, Day, System_ID, Crop_ID which are already added)
+    batchContent += ",ETO_Ref_mm,ETC_Prime_mm,Transpiration_mm,Water_Total_L,Tank_Volume_L,Temp_C,Solar_Rad_MJ,VPD_kPa,WUE_kg_m3,pH,EC,RZT_C,RZT_Growth_Factor,RZT_Nutrient_Factor,V_Stage,Leaf_Number,Leaf_Area_m2,Avg_Leaf_Area_cm2,CO2_umol_mol,VPD_Actual_kPa,Env_Photo_Factor,Env_Transp_Factor,N-NO3_mg_L,P-PO4_mg_L,K_mg_L,Ca_mg_L,Mg_mg_L,LAI,Growth_Stage,Total_Biomass_g,Integrated_Stress,Temperature_Stress,Water_Stress,Nutrient_Stress,Nitrogen_Stress,Salinity_Stress > " + singleOutputFile + "\n";
+    
+    // Combine all treatment files
+    batchContent += "for %%f in (temp_treatments\\treatment_*.csv) do (\n";
+    batchContent += "    for /f \"skip=1 tokens=1-4,* delims=,\" %%a in (%%f) do (\n";
+    batchContent += "        echo %%a,%%b,%%c,%%d," + QString("%1_%2").arg(cropType, experimentName) + "_%%~nf,%%e >> " + singleOutputFile + "\n";
+    batchContent += "    )\n";
+    batchContent += ")\n\n";
+    
+    // Clean up temporary files
+    batchContent += "echo Cleaning up temporary files...\n";
+    batchContent += "rmdir /s /q temp_treatments\n\n";
+    
+    batchContent += "echo All treatments completed and combined successfully!\n";
+    batchContent += "echo Combined results saved to: " + singleOutputFile + "\n";
+    batchContent += "pause\n";
 #else
     batchContent = "#!/bin/bash\n"
                   "echo \"Running Multi-Treatment Hydroponic Experiment...\"\n"
@@ -632,13 +658,17 @@ void MainWindow::generateBatchFile()
                   "echo \"Crop Type: " + cropType + "\"\n"
                   "echo \"Duration: " + QString::number(duration) + " days\"\n"
                   "echo \"Total Treatments: " + QString::number(combinations.size()) + "\"\n"
+                  "echo \"Output File: " + singleOutputFile + "\"\n"
                   "echo\n"
                   "cd \"$(dirname \"$0\")\"\n\n";
+    
+    // Create temporary directory for individual treatment files
+    batchContent += "mkdir -p temp_treatments\n\n";
     
     for (int i = 0; i < combinations.size(); ++i) {
         QString combo = combinations[i];
         QString treatmentId = QString("T%1").arg(i + 1, 2, 10, QChar('0'));
-        QString outputFile = QString("outputs/%1_%2_%3_results.csv").arg(cropType, experimentName, treatmentId);
+        QString tempOutputFile = QString("temp_treatments/treatment_%1.csv").arg(treatmentId);
         
         // Parse the combination string to extract treatment parameters
         QStringList treatmentParams = parseTreatmentCombination(combo);
@@ -654,10 +684,28 @@ void MainWindow::generateBatchFile()
             "fi\n"
             "echo \"Treatment %8 completed successfully!\"\n"
             "echo\n\n"
-        ).arg(QString::number(i + 1), QString::number(combinations.size()), combo, cropType, experimentName, QString::number(duration), outputFile, treatmentId, cliParams);
+        ).arg(QString::number(i + 1), QString::number(combinations.size()), combo, cropType, experimentName, QString::number(duration), tempOutputFile, treatmentId, cliParams);
     }
     
-    batchContent += "echo \"All treatments completed successfully!\"\nread -p \"Press Enter to continue...\"\n";
+    // Combine all treatment files into single CSV with Treatment_ID column
+    batchContent += "echo \"Combining all treatments into single CSV file...\"\n";
+    batchContent += "echo \"Date,Day,System_ID,Crop_ID,Treatment_ID,ETO_Ref_mm,ETC_Prime_mm,Transpiration_mm,Water_Total_L,Tank_Volume_L,Temp_C,Solar_Rad_MJ,VPD_kPa,WUE_kg_m3,pH,EC,RZT_C,RZT_Growth_Factor,RZT_Nutrient_Factor,V_Stage,Leaf_Number,Leaf_Area_m2,Avg_Leaf_Area_cm2,CO2_umol_mol,VPD_Actual_kPa,Env_Photo_Factor,Env_Transp_Factor,N-NO3_mg_L,P-PO4_mg_L,K_mg_L,Ca_mg_L,Mg_mg_L,LAI,Growth_Stage,Total_Biomass_g,Integrated_Stress,Temperature_Stress,Water_Stress,Nutrient_Stress,Nitrogen_Stress,Salinity_Stress\" > " + singleOutputFile + "\n";
+    
+    // Combine all treatment files
+    batchContent += "for file in temp_treatments/treatment_*.csv; do\n";
+    batchContent += "    treatment_id=$(basename \"$file\" .csv | sed 's/treatment_//')\n";
+    batchContent += "    tail -n +2 \"$file\" | while IFS=, read -r date day system_id crop_id rest; do\n";
+    batchContent += "        echo \"$date,$day,$system_id,$crop_id," + QString("%1_%2").arg(cropType, experimentName) + "_${treatment_id},$rest\" >> " + singleOutputFile + "\n";
+    batchContent += "    done\n";
+    batchContent += "done\n\n";
+    
+    // Clean up temporary files
+    batchContent += "echo \"Cleaning up temporary files...\"\n";
+    batchContent += "rm -rf temp_treatments\n\n";
+    
+    batchContent += "echo \"All treatments completed and combined successfully!\"\n";
+    batchContent += "echo \"Combined results saved to: " + singleOutputFile + "\"\n";
+    batchContent += "read -p \"Press Enter to continue...\"\n";
 #endif
     
     m_batchPreview->setPlainText(batchContent);
@@ -891,7 +939,14 @@ void MainWindow::findLatestResults()
     // Look for experiment-specific results in outputs directory first
     QDir outputsDir(QDir::currentPath() + "/../outputs");
     if (outputsDir.exists()) {
-        // Try exact experiment match first
+        // Try combined results file first (for multi-treatment experiments)
+        QString combinedResultsPath = outputsDir.filePath(QString("%1_combined_results.csv").arg(fullExperimentName));
+        if (QFile::exists(combinedResultsPath)) {
+            loadResultsFile(combinedResultsPath);
+            return;
+        }
+        
+        // Try exact experiment match (single treatment)
         QString experimentResultsPath = outputsDir.filePath(QString("%1_results.csv").arg(fullExperimentName));
         if (QFile::exists(experimentResultsPath)) {
             loadResultsFile(experimentResultsPath);
@@ -900,6 +955,7 @@ void MainWindow::findLatestResults()
         
         // Look for any files matching the experiment name pattern
         QStringList filters;
+        filters << QString("%1_combined_results.csv").arg(fullExperimentName);
         filters << QString("%1_results*.csv").arg(fullExperimentName);
         filters << QString("%1_daily_results*.csv").arg(fullExperimentName);
         filters << "*.csv";  // Fallback to any CSV
@@ -1120,9 +1176,16 @@ QStringList MainWindow::findTreatmentResultFiles() const
     QString cropTypeText = m_cropTypeCombo->currentText();
     QString cropType = cropTypeText.split(" ").first();
     
-    // Look for treatment result files in outputs directory
+    // Look for combined results file first (new format)
     QDir outputsDir(QDir::currentPath() + "/../outputs");
     if (outputsDir.exists()) {
+        QString combinedFile = outputsDir.filePath(QString("%1_%2_combined_results.csv").arg(cropType, experimentName));
+        if (QFile::exists(combinedFile)) {
+            resultFiles.append(combinedFile);
+            return resultFiles;
+        }
+        
+        // Fallback to individual treatment files (old format)
         QStringList filters;
         filters << QString("%1_%2_T*_results.csv").arg(cropType, experimentName);
         
@@ -1145,7 +1208,17 @@ void MainWindow::loadMultipleTreatmentResults()
         return;
     }
     
-    // Create a combined CSV with treatment identifiers
+    // Check if we have a combined file (new format)
+    if (treatmentFiles.size() == 1 && treatmentFiles[0].contains("combined_results")) {
+        // Load the combined file directly
+        loadResultsFile(treatmentFiles[0]);
+        m_resultsInfoLabel->setText("Combined treatment results loaded (new format)");
+        m_resultsInfoLabel->setStyleSheet("color: green; font-weight: bold;");
+        m_tabWidget->setCurrentIndex(3);
+        return;
+    }
+    
+    // Handle old format (multiple individual files)
     QString combinedData;
     bool isFirstFile = true;
     QString headers;
@@ -1187,7 +1260,7 @@ void MainWindow::loadMultipleTreatmentResults()
         // Load the combined file
         loadResultsFile(tempFile);
         
-        m_resultsInfoLabel->setText(QString("Combined %1 treatment results loaded").arg(treatmentFiles.size()));
+        m_resultsInfoLabel->setText(QString("Combined %1 treatment results loaded (legacy format)").arg(treatmentFiles.size()));
         m_resultsInfoLabel->setStyleSheet("color: blue; font-weight: bold;");
         
         // Switch to plot tab to show comparison
