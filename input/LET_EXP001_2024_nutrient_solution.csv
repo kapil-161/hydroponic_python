@@ -1,0 +1,6 @@
+nutrient_name,symbol,initial_ppm,optimal_ppm,minimum_ppm,max_ppm,description
+Nitrogen-Nitrate,N-NO3,200,250,150,300,Primary nutrient for leaf growth and green color
+Phosphorus-Phosphate,P-PO4,50,60,30,80,Essential for root development and energy transfer
+Potassium,K,300,350,250,400,Important for disease resistance and overall plant health
+Calcium,Ca,150,180,100,200,Needed for cell wall strength and preventing tip burn
+Magnesium,Mg,50,60,30,70,Central component of chlorophyll for photosynthesis

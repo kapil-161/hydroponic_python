@@ -1,0 +1,12 @@
+setting_name,value,unit,description
+system_type,NFT,,Type of hydroponic system (NFT/DWC/AEROPONICS)
+tank_volume,500,liters,Total volume of nutrient solution tank
+flow_rate,50,liters_per_hour,Rate of solution circulation through system
+system_area,1.0,square_meters,Growing area of the hydroponic system
+number_of_plants,12,plants,Number of plants in the system
+initial_ph,6.0,,Starting pH level of nutrient solution (5.5-6.5 optimal)
+initial_ec,1.5,dS/m,Starting electrical conductivity (1.2-2.0 optimal)
+solution_change_days,7,days,How often to completely change nutrient solution
+target_temperature,22,celsius,Optimal air temperature for plant growth
+target_humidity,65,percent,Optimal relative humidity level
+co2_concentration,400,ppm,CO2 concentration in growing environment

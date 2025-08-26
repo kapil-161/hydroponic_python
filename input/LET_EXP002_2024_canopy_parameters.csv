@@ -1,0 +1,10 @@
+parameter_name,value,unit,description
+light_extinction,0.65,coefficient,How much light is absorbed per leaf layer
+leaf_angle,45.0,degrees,Average angle of leaves from horizontal
+specific_leaf_area,275.0,cm2_per_g,Leaf area per unit leaf weight
+leaf_thickness,0.3,mm,Average thickness of leaves
+maximum_lai,8.0,m2_per_m2,Maximum leaf area index plants can achieve
+canopy_width,0.3,meters,Width of plant canopy
+canopy_height,0.25,meters,Height of plant canopy
+leaf_area_ratio,0.8,fraction,Ratio of productive leaf area to total leaf area
+light_interception_efficiency,0.95,fraction,Efficiency of light interception by leaves

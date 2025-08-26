@@ -1,0 +1,6 @@
+parameter_name,value,unit,description
+senescence_rate,0.02,per_day,Daily rate of leaf aging and death
+nitrogen_recovery,0.6,fraction,Nitrogen recovered from senescing leaves
+age_factor,0.8,fraction,Effect of leaf age on senescence rate
+stress_acceleration,1.5,multiplier,How much stress speeds up senescence
+minimum_leaf_life,14.0,days,Minimum lifespan of leaves before senescence

@@ -1,0 +1,2 @@
+parameter_name,value,unit,description
+lai_water_demand_factor,0.2,L_per_m2_per_day,Water consumption per unit leaf area index

@@ -1,0 +1,21 @@
+constant_name,value,unit,description
+carbon_to_biomass_ratio,0.45,fraction,Fraction of carbon in dry plant biomass
+growth_respiration_fraction,0.25,fraction,Energy lost during growth processes
+vegetative_leaf_allocation,0.60,fraction,Portion of growth going to leaves in vegetative stage
+vegetative_stem_allocation,0.20,fraction,Portion of growth going to stems in vegetative stage
+vegetative_root_allocation,0.20,fraction,Portion of growth going to roots in vegetative stage
+reproductive_leaf_allocation,0.40,fraction,Portion of growth going to leaves in reproductive stage
+reproductive_stem_allocation,0.35,fraction,Portion of growth going to stems in reproductive stage
+reproductive_root_allocation,0.25,fraction,Portion of growth going to roots in reproductive stage
+optimal_light_intensity,15.0,MJ_per_m2_per_day,Ideal daily light for maximum photosynthesis
+optimal_ec_min,2.0,dS_per_m,Lower bound of optimal electrical conductivity
+optimal_ec_max,2.6,dS_per_m,Upper bound of optimal electrical conductivity
+optimal_vpd_min,0.6,kPa,Lower bound of optimal vapor pressure deficit
+optimal_vpd_max,1.0,kPa,Upper bound of optimal vapor pressure deficit
+optimal_root_temperature,20.0,celsius,Ideal root zone temperature for nutrient uptake
+root_temp_tolerance,3.0,celsius,Temperature deviation before stress occurs
+vpd_stress_high_factor,0.25,fraction,Growth reduction when VPD is too high
+vpd_stress_low_factor,0.15,fraction,Growth reduction when VPD is too low
+ec_stress_high_factor,0.2,fraction,Growth reduction when EC is too high
+ec_stress_low_threshold,0.8,dS_per_m,EC level below which stress occurs
+ec_stress_low_factor,0.1,fraction,Growth reduction when EC is too low

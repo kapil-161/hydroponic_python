@@ -1,0 +1,8 @@
+setting_name,value,unit,description
+experiment_name,Lettuce_Growth_Trial_001,,Name to identify this experiment
+location,Greenhouse_A,,Location where experiment is conducted
+simulation_days,120,days,Maximum number of days to run simulation
+target_maturity,harvest,,When to stop simulation (harvest/flowering/mature)
+daily_monitoring,true,,Whether to record detailed daily measurements
+save_results,true,,Whether to automatically save results to files
+result_format,csv,,Format for saving results (csv/json/both)
