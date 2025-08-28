@@ -17,3 +17,12 @@ HYDRO_001,Salanova Green Butter,PODUR,10.0,Time required for cultivar to reach f
 HYDRO_001,Salanova Green Butter,THRSH,78.0,Threshing percentage
 HYDRO_001,Salanova Green Butter,SDPRO,0.42,Fraction protein in seeds
 HYDRO_001,Salanova Green Butter,SDLIP,0.18,Fraction oil in seeds
+HYDRO_001,Salanova Green Butter,EM_FL,30.0,Days from emergence to first flower
+HYDRO_001,Salanova Green Butter,FL_SH,15.0,Days from first flower to first seed
+HYDRO_001,Salanova Green Butter,FL_SD,25.0,Days from first flower to first pod
+HYDRO_001,Salanova Green Butter,SD_PM,35.0,Days from first seed to physiological maturity
+HYDRO_001,Salanova Green Butter,FL_LF,10.0,Days from first flower to end of leaf expansion
+HYDRO_001,Salanova Green Butter,LFMAX,1.2,Maximum leaf photosynthesis rate
+HYDRO_001,Salanova Green Butter,EC_TOLERANCE,1.3,Maximum EC tolerance
+HYDRO_001,Salanova Green Butter,ROOT_ACTIVITY,1.5,Root activity coefficient
+HYDRO_001,Salanova Green Butter,PHOTOSYNTHETIC_CAPACITY,2.0,Relative photosynthetic capacity

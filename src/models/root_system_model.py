@@ -57,7 +57,7 @@ class RootCohort:
 
     def __post_init__(self):
         self.surface_area = self.calculate_surface_area()
-        self.activity_factor = self.calculate_activity_factor()
+        self.activity_factor = self.calculate_activity_factor()  # Default values, will be updated
         self.specific_length = self.length / max(0.001, self.biomass)  # cm/g
 
     def calculate_surface_area(self) -> float:
@@ -65,20 +65,22 @@ class RootCohort:
         diameter_cm = self.diameter / 10.0  # mm to cm
         return math.pi * diameter_cm * self.length
 
-    def calculate_activity_factor(self) -> float:
+    def calculate_activity_factor(self, fine_half_life: float = 45.0, 
+                                 medium_half_life: float = 90.0,
+                                 coarse_half_life: float = 180.0) -> float:
         """Calculate age-dependent root activity factor (0-1).
 
         Use a half-life based decay with an early-life plateau and
         a higher minimum activity to avoid unrealistic rapid inactivity.
         """
         if self.root_type == RootType.FINE:
-            half_life_days = 45.0
+            half_life_days = fine_half_life
             min_activity = 0.20
         elif self.root_type == RootType.MEDIUM:
-            half_life_days = 90.0
+            half_life_days = medium_half_life
             min_activity = 0.25
         else:  # COARSE
-            half_life_days = 180.0
+            half_life_days = coarse_half_life
             min_activity = 0.30
 
         # Early establishment plateau (no decline for first week)
@@ -158,12 +160,12 @@ class RootZoneLayer:
 @dataclass
 class RootArchitectureParameters:
     """Parameters for root architecture model"""
+    # Required parameters (no defaults)
+    container_volume: float    # cm³ (reservoir tank volume)
+    channel_length: float       # cm
+    
     # System-specific parameters
     system_type: HydroponicSystemType = HydroponicSystemType.NFT
-    container_volume: float = 1000.0    # cm³ (reservoir tank volume)
-    
-    # NFT-specific channel parameters
-    channel_length: float = 100.0       # cm
     channel_width: float = 10.0         # cm  
     channel_depth: float = 5.0          # cm
     n_channels: int = 4                 # number of parallel channels
@@ -229,6 +231,22 @@ class RootArchitectureParameters:
             },
         }
     )
+    
+    # Root half-life parameters for activity calculation
+    fine_root_half_life_days: float = 45.0
+    medium_root_half_life_days: float = 90.0
+    coarse_root_half_life_days: float = 180.0
+    
+    @classmethod
+    def from_config(cls, config_dict: dict) -> 'RootArchitectureParameters':
+        """Create RootArchitectureParameters from configuration dictionary."""
+        return cls(
+            container_volume=config_dict['container_volume'],
+            channel_length=config_dict['channel_length'],
+            fine_root_half_life_days=config_dict.get('fine_root_half_life_days', 45.0),
+            medium_root_half_life_days=config_dict.get('medium_root_half_life_days', 90.0),
+            coarse_root_half_life_days=config_dict.get('coarse_root_half_life_days', 180.0)
+        )
 
 
 class RootArchitectureModel:
@@ -300,7 +318,11 @@ class RootArchitectureModel:
             surviving_cohorts = []
             for cohort in zone.root_cohorts:
                 cohort.age_days += 1.0
-                cohort.activity_factor = cohort.calculate_activity_factor()
+                cohort.activity_factor = cohort.calculate_activity_factor(
+                    self.params.fine_root_half_life_days,
+                    self.params.medium_root_half_life_days,
+                    self.params.coarse_root_half_life_days
+                )
 
                 if cohort.root_type == RootType.FINE:
                     survival_prob = 1.0 - self.params.fine_turnover_rate
@@ -543,7 +565,7 @@ def create_lettuce_root_architecture_model(system_type: HydroponicSystemType = H
             system_type=system_type,
             container_volume=tank_volume,  # Tank volume for nutrient storage only
             # NFT channel configuration for 20 lettuce plants
-            channel_length=200.0,    # cm (2 meters)
+            channel_length=200.0,    # cm (2 meters) - TODO: Load from config
             channel_width=10.0,      # cm  
             channel_depth=8.0,       # cm
             n_channels=4,            # 4 channels, 5 plants each

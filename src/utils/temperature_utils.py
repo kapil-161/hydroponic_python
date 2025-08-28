@@ -2,10 +2,11 @@
 Temperature Utility Functions
 
 Centralized temperature calculations to eliminate duplication across models.
-Provides standardized Q10, thermal time, and temperature factor calculations.
+Provides standardized Q10, thermal time, VPD, pH, and temperature factor calculations.
 """
 
 import math
+import numpy as np
 from typing import Optional
 
 
@@ -58,7 +59,7 @@ def calculate_thermal_time(temperature: float,
     
     if temperature < optimal_temp_min:
         # Linear increase from base to optimal
-        return (temperature - base_temp) * (optimal_temp_min - base_temp) / (optimal_temp_min - base_temp)
+        return (temperature - base_temp)
     
     else:  # temperature > optimal_temp_max
         # Linear decrease from optimal to max
@@ -140,9 +141,66 @@ def interpolate_linear(value: float,
     return out_min + ratio * (out_max - out_min)
 
 
-# Common temperature constants (can be overridden by config)
+def calculate_vpd(temperature: float, relative_humidity: float) -> float:
+    """
+    Calculate vapor pressure deficit using Magnus equation.
+    
+    Args:
+        temperature: Air temperature (°C)
+        relative_humidity: Relative humidity (%)
+        
+    Returns:
+        VPD in kPa
+    """
+    # Saturation vapor pressure using Magnus formula (kPa)
+    es = 0.6108 * np.exp(17.27 * temperature / (temperature + 237.3))
+    
+    # Actual vapor pressure (kPa)
+    ea = es * (relative_humidity / 100.0)
+    
+    # VPD is the difference (ensure non-negative)
+    return max(0.0, es - ea)
+
+
+def calculate_ph_effect(ph: float,
+                       optimal_ph_min: float = 5.5,
+                       optimal_ph_max: float = 6.5,
+                       stress_ph_min: float = 4.0,
+                       stress_ph_max: float = 8.0) -> float:
+    """
+    Calculate pH effect on plant processes (0 = severe stress, 1 = optimal).
+    
+    Args:
+        ph: Current pH value
+        optimal_ph_min: Lower bound of optimal pH range
+        optimal_ph_max: Upper bound of optimal pH range
+        stress_ph_min: pH where stress becomes severe (acidic)
+        stress_ph_max: pH where stress becomes severe (alkaline)
+        
+    Returns:
+        pH factor (1.0 = no stress, 0.0 = severe stress)
+    """
+    if optimal_ph_min <= ph <= optimal_ph_max:
+        return 1.0
+    
+    if ph < optimal_ph_min:
+        # Acidic stress
+        if ph <= stress_ph_min:
+            return 0.0
+        return (ph - stress_ph_min) / (optimal_ph_min - stress_ph_min)
+    
+    else:  # ph > optimal_ph_max
+        # Alkaline stress
+        if ph >= stress_ph_max:
+            return 0.0
+        return (stress_ph_max - ph) / (stress_ph_max - optimal_ph_max)
+
+
+# Common constants (can be overridden by config)
 DEFAULT_Q10_FACTOR = 2.0
 DEFAULT_BASE_TEMPERATURE = 4.0
 DEFAULT_OPTIMAL_TEMP_MIN = 18.0
 DEFAULT_OPTIMAL_TEMP_MAX = 24.0
 DEFAULT_MAX_TEMPERATURE = 35.0
+DEFAULT_OPTIMAL_PH_MIN = 5.5
+DEFAULT_OPTIMAL_PH_MAX = 6.5

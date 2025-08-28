@@ -35,79 +35,67 @@ class RespirationParameters:
     """Parameters for respiration model."""
     
     # Maintenance respiration parameters
-    maintenance_base_rate: float = None     # g C/g biomass/day at 25°C
-    reference_temperature: float = None     # °C reference temperature
-    q10_factor: float = None                # Temperature response coefficient
+    maintenance_base_rate: float     # g C/g biomass/day at 25°C
+    reference_temperature: float     # °C reference temperature
+    q10_factor: float                # Temperature response coefficient
     
     # Growth respiration parameters
-    growth_efficiency: float = None         # Conversion efficiency (glucose → biomass)
-    biosynthetic_cost: float = 1.44         # g glucose/g biomass (biochemical constant)
+    growth_efficiency: float         # Conversion efficiency (glucose → biomass)
+    biosynthetic_cost: float         # g glucose/g biomass
     
     # Tissue-specific factors
-    tissue_factors: Dict[str, float] = None
+    tissue_factors: Dict[str, float]
     
     # Age effects
-    age_effect_coefficient: float = None    # Daily increase in respiration per day of age
-    max_age_effect: float = None            # Maximum age multiplier
+    age_effect_coefficient: float    # Daily increase in respiration per day of age
+    max_age_effect: float            # Maximum age multiplier
     
     # Temperature acclimation
-    acclimation_rate: float = None          # Rate of thermal acclimation
-    acclimation_memory: float = 7.0         # Days of temperature memory (model constant)
+    acclimation_rate: float          # Rate of thermal acclimation
+    acclimation_memory: float        # Days of temperature memory
     
     # Nitrogen effects
-    n_effect_slope: float = 0.5             # Respiration response to leaf N content (model constant)
-    reference_leaf_n: float = 4.0           # g N/g biomass reference (model constant)
-    
-    def __post_init__(self):
-        """Load respiration parameters from JSON config if available."""
-        try:
-            from ..utils.config_loader import get_config_loader
-            loader = get_config_loader()
-            cfg = loader.get_respiration_parameters()
-
-            if self.maintenance_base_rate is None:
-                self.maintenance_base_rate = cfg.get('maintenance_base_rate', 0.015)
-            if self.reference_temperature is None:
-                self.reference_temperature = cfg.get('reference_temperature', 25.0)
-            if self.q10_factor is None:
-                self.q10_factor = cfg.get('q10_factor', 2.3)
-            if self.growth_efficiency is None:
-                self.growth_efficiency = cfg.get('growth_efficiency', 0.75)
-            if self.age_effect_coefficient is None:
-                self.age_effect_coefficient = cfg.get('age_effect_coefficient', 0.002)
-            if self.max_age_effect is None:
-                self.max_age_effect = cfg.get('max_age_effect', 1.5)
-            if self.acclimation_rate is None:
-                self.acclimation_rate = cfg.get('acclimation_rate', 0.1)
-
-            if self.tissue_factors is None:
-                self.tissue_factors = cfg.get('tissue_factors', {
-                    TissueType.LEAVES.value: 1.0,
-                    TissueType.STEMS.value: 0.7,
-                    TissueType.ROOTS.value: 0.8,
-                    TissueType.REPRODUCTIVE.value: 1.2
-                })
-        except Exception:
-            # Leave provided values as-is
-            pass
+    n_effect_slope: float            # Respiration response to leaf N content
+    reference_leaf_n: float          # g N/g biomass reference
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'RespirationParameters':
-        """Create RespirationParameters from configuration dictionary."""
-        tissue_factors = config_dict.get('tissue_factors', None)
+        """Create RespirationParameters from configuration dictionary with clear error reporting."""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        def _get_required_param(param_dict: dict, param_name: str, param_source: str) -> any:
+            """Get a required parameter with clear error message if missing."""
+            if param_name not in param_dict:
+                available_params = list(param_dict.keys()) if param_dict else 'None'
+                error_msg = f"❌ Missing required parameter '{param_name}' in {param_source}. Available parameters: {available_params}"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+            return param_dict[param_name]
+        
+        # Handle tissue factors with defaults for missing values
+        tissue_factors = config_dict.get('tissue_factors', {})
+        if not tissue_factors:
+            tissue_factors = {
+                TissueType.LEAVES.value: 1.0,
+                TissueType.STEMS.value: 0.7,
+                TissueType.ROOTS.value: 0.8,
+                TissueType.REPRODUCTIVE.value: 1.2
+            }
+        
         return cls(
-            maintenance_base_rate=config_dict.get('maintenance_base_rate'),
-            reference_temperature=config_dict.get('reference_temperature'),
-            q10_factor=config_dict.get('q10_factor'),
-            growth_efficiency=config_dict.get('growth_efficiency'),
-            biosynthetic_cost=config_dict.get('biosynthetic_cost', 1.44),
+            maintenance_base_rate=_get_required_param(config_dict, 'maintenance_base_rate', 'respiration_parameters.csv'),
+            reference_temperature=_get_required_param(config_dict, 'reference_temperature', 'respiration_parameters.csv'),
+            q10_factor=_get_required_param(config_dict, 'q10_factor', 'respiration_parameters.csv'),
+            growth_efficiency=_get_required_param(config_dict, 'growth_efficiency', 'respiration_parameters.csv'),
+            biosynthetic_cost=_get_required_param(config_dict, 'biosynthetic_cost', 'respiration_parameters.csv'),
             tissue_factors=tissue_factors,
-            age_effect_coefficient=config_dict.get('age_effect_coefficient'),
-            max_age_effect=config_dict.get('max_age_effect'),
-            acclimation_rate=config_dict.get('acclimation_rate'),
-            acclimation_memory=config_dict.get('acclimation_memory', 7.0),
-            n_effect_slope=config_dict.get('n_effect_slope', 0.5),
-            reference_leaf_n=config_dict.get('reference_leaf_n', 4.0)
+            age_effect_coefficient=_get_required_param(config_dict, 'age_effect_coefficient', 'respiration_parameters.csv'),
+            max_age_effect=_get_required_param(config_dict, 'max_age_effect', 'respiration_parameters.csv'),
+            acclimation_rate=_get_required_param(config_dict, 'acclimation_rate', 'respiration_parameters.csv'),
+            acclimation_memory=_get_required_param(config_dict, 'acclimation_memory', 'respiration_parameters.csv'),
+            n_effect_slope=_get_required_param(config_dict, 'n_effect_slope', 'respiration_parameters.csv'),
+            reference_leaf_n=_get_required_param(config_dict, 'reference_leaf_n', 'respiration_parameters.csv')
         )
 
 
@@ -413,7 +401,7 @@ class EnhancedRespirationModel:
         )
 
 def create_lettuce_respiration_model() -> EnhancedRespirationModel:
-    """Create respiration model with lettuce-specific parameters from JSON config."""
+    """Create respiration model with lettuce-specific parameters from CSV config."""
     from ..utils.config_loader import get_config_loader
     config_loader = get_config_loader()
     respiration_config = config_loader.get_respiration_parameters()
@@ -428,8 +416,10 @@ def demonstrate_respiration_model():
         config_loader = get_config_loader()
         r_config = config_loader.get_respiration_parameters()
         model = EnhancedRespirationModel(RespirationParameters.from_config(r_config))
-    except Exception:
-        model = EnhancedRespirationModel()
+    except Exception as e:
+        print(f"⚠️ Could not load respiration parameters from CSV: {e}")
+        print("Please ensure respiration_parameters.csv exists with all required parameters")
+        return
 
     # Define sample biomass pools
     pools = [

@@ -48,9 +48,9 @@ class NitrogenBalanceParameters:
     uptake_kinetics: Dict[str, Dict[str, float]] = None
     
     # Nitrogen assimilation
-    nitrate_reduction_rate: float = 0.8      # Maximum NO3 reduction rate (g N/g root/day)
-    ammonium_assimilation_rate: float = 1.2  # Maximum NH4 assimilation rate
-    amino_acid_uptake_rate: float = 0.3      # Direct amino acid uptake rate
+    nitrate_reduction_rate: float = None
+    ammonium_assimilation_rate: float = None
+    amino_acid_uptake_rate: float = None
     
     # Nitrogen allocation coefficients
     allocation_coefficients: Dict[str, Dict[str, float]] = None
@@ -63,8 +63,8 @@ class NitrogenBalanceParameters:
     remobilization_efficiency: Dict[str, float] = None
     
     # Nitrogen use efficiency
-    photosynthetic_n_use_efficiency: float = 36.0  # μmol CO2/μmol N/s
-    growth_n_use_efficiency: float = 25.0          # g biomass/g N
+    photosynthetic_n_use_efficiency: float = None
+    growth_n_use_efficiency: float = 25.0
     
     # Stress thresholds
     n_stress_threshold: float = 0.7          # N stress threshold
@@ -184,14 +184,14 @@ class NitrogenBalanceParameters:
         
         return cls(
             uptake_kinetics=uptake_kinetics if uptake_kinetics else None,
-            nitrate_reduction_rate=config_dict.get('nitrate_reduction_rate', 0.8),
-            ammonium_assimilation_rate=config_dict.get('ammonium_assimilation_rate', 1.2),
-            amino_acid_uptake_rate=config_dict.get('amino_acid_uptake_rate', 0.3),
+            nitrate_reduction_rate=config_dict['nitrate_reduction_rate'],
+            ammonium_assimilation_rate=config_dict['ammonium_assimilation_rate'],
+            amino_acid_uptake_rate=config_dict['amino_acid_uptake_rate'],
             allocation_coefficients=allocation_coeffs if allocation_coeffs else None,
             critical_n_concentrations=critical_n_concs if critical_n_concs else None,
             remobilization_rates=remob_rates if remob_rates else None,
             remobilization_efficiency=remob_efficiency if remob_efficiency else None,
-            photosynthetic_n_use_efficiency=config_dict.get('photosynthetic_n_use_efficiency', 36.0),
+            photosynthetic_n_use_efficiency=config_dict['photosynthetic_n_use_efficiency'],
             growth_n_use_efficiency=config_dict.get('growth_n_use_efficiency', 25.0),
             n_stress_threshold=config_dict.get('n_stress_threshold', 0.7),
             luxury_uptake_threshold=config_dict.get('luxury_uptake_threshold', 1.3),
@@ -253,14 +253,14 @@ class NitrogenAllocationResponse:
 @dataclass
 class NitrogenBalanceResponse:
     """Daily nitrogen balance calculation results."""
-    uptake_response: NitrogenUptakeResponse
-    allocation_response: NitrogenAllocationResponse
-    organ_states: Dict[str, OrganNitrogenState]
-    total_plant_nitrogen: float
-    nitrogen_use_efficiency: float
-    nitrogen_stress_level: float                 # 0-1, 0=no stress, 1=max stress
-    remobilized_nitrogen: float                  # g N remobilized today
-    nitrogen_balance: float                      # Net N balance (uptake - growth demand)
+    uptake_response: NitrogenUptakeResponse = None
+    allocation_response: NitrogenAllocationResponse = None
+    organ_states: Dict[str, OrganNitrogenState] = None
+    total_plant_nitrogen: float = None
+    nitrogen_use_efficiency: float = None
+    nitrogen_stress_level: float = None          # 0-1, 0=no stress, 1=max stress
+    remobilized_nitrogen: float = None           # g N remobilized today
+    nitrogen_balance: float = None               # Net N balance (uptake - growth demand)
 
 
 class PlantNitrogenBalanceModel:

@@ -1,5 +1,6 @@
 parameter_name,value,unit,description
 uptake_efficiency,0.8,fraction,Efficiency of nitrogen uptake from solution
+nitrogen_uptake_efficiency,0.8,fraction,Minimal nitrogen uptake efficiency for calculations
 translocation_rate,0.4,fraction,Rate of nitrogen movement between plant parts
 protein_synthesis,0.6,fraction,Portion of nitrogen used for protein synthesis
 chlorophyll_ratio,0.02,fraction,Fraction of leaf nitrogen in chlorophyll

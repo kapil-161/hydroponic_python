@@ -14,3 +14,7 @@ tissue_factor_stems,0.8,multiplier,Respiration factor for stem tissues
 tissue_factor_roots,1.2,multiplier,Respiration factor for root tissues
 tissue_factor_reproductive,1.5,multiplier,Respiration factor for reproductive tissues
 acclimation_rate,0.05,per_celsius_per_day,Rate of temperature acclimation
+biosynthetic_cost,1.44,g_glucose_per_g_biomass,Biochemical cost of biosynthesis
+acclimation_memory,7.0,days,Days of temperature memory for acclimation
+n_effect_slope,0.5,per_g_N_per_g_biomass,Respiration response to leaf nitrogen content
+reference_leaf_n,4.0,g_N_per_g_biomass,Reference leaf nitrogen content

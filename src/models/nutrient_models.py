@@ -100,6 +100,10 @@ class TransportMechanism(Enum):
 class NutrientMobilityParameters:
     """Parameters for nutrient mobility model."""
 
+    xylem_transport_capacity: float = None
+    phloem_transport_capacity: float = None
+    temperature_q10: float = None
+    transpiration_coupling: float = None
     mobility_classifications: Dict[str, Dict[str, Any]] = None
     xylem_transport_rates: Dict[str, float] = None
     phloem_transport_rates: Dict[str, float] = None
@@ -108,10 +112,6 @@ class NutrientMobilityParameters:
     redistribution_thresholds: Dict[str, float] = None
     stress_redistribution_rates: Dict[str, float] = None
     sink_strength_coefficients: Dict[str, Dict[str, float]] = None
-    xylem_transport_capacity: float = 0.1
-    phloem_transport_capacity: float = 0.05
-    temperature_q10: float = 2.0
-    transpiration_coupling: float = 0.8
 
     def __post_init__(self):
         if self.mobility_classifications is None:
@@ -286,10 +286,10 @@ class NutrientMobilityParameters:
             redistribution_thresholds=redist_thresh or None,
             stress_redistribution_rates=stress_redist or None,
             sink_strength_coefficients=sink_coeffs or None,
-            xylem_transport_capacity=config_dict.get("xylem_transport_capacity", 0.1),
-            phloem_transport_capacity=config_dict.get("phloem_transport_capacity", 0.05),
-            temperature_q10=config_dict.get("temperature_q10", 2.0),
-            transpiration_coupling=config_dict.get("transpiration_coupling", 0.8),
+            xylem_transport_capacity=config_dict["xylem_transport_capacity"],
+            phloem_transport_capacity=config_dict["phloem_transport_capacity"],
+            temperature_q10=config_dict["temperature_q10"],
+            transpiration_coupling=config_dict["transpiration_coupling"],
         )
 
 

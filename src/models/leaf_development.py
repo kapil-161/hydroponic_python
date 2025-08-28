@@ -31,21 +31,21 @@ class LeafParameters:
     """Parameters for leaf development model."""
     
     # Phyllochron and thermal time parameters
-    base_phyllochron: float = 45.0      # Base phyllochron (°C-day) for lettuce
-    min_temp: float = 4.0               # Base temperature for development (°C)
-    opt_temp_min: float = 18.0          # Lower optimum temperature (°C)  
-    opt_temp_max: float = 24.0          # Upper optimum temperature (°C)
-    max_temp: float = 35.0              # Maximum temperature for development (°C)
+    base_phyllochron: float      # Base phyllochron (°C-day) for lettuce
+    min_temp: float               # Base temperature for development (°C)
+    opt_temp_min: float          # Lower optimum temperature (°C)  
+    opt_temp_max: float          # Upper optimum temperature (°C)
+    max_temp: float              # Maximum temperature for development (°C)
     
     # Leaf appearance and expansion
-    max_leaf_number: float = 25.0       # Maximum leaves for lettuce
-    initial_leaf_number: float = 2.0    # Cotyledons + first true leaves
-    leaf_appearance_rate: float = 1.0   # Leaves per phyllochron unit
+    max_leaf_number: float       # Maximum leaves for lettuce
+    initial_leaf_number: float    # Cotyledons + first true leaves
+    leaf_appearance_rate: float   # Leaves per phyllochron unit
+    specific_leaf_area: float        # cm²/g dry weight
     
     # Individual leaf parameters
     max_individual_leaf_area: float = 0.006  # m² per mature leaf (60 cm²)
     leaf_area_expansion_rate: float = 0.15   # Natural cellular expansion rate - no artificial limits
-    specific_leaf_area: float = 250.0        # cm²/g dry weight
     
     # Stress response parameters
     water_stress_threshold: float = 0.5      # Below this, leaf development slows
@@ -56,17 +56,17 @@ class LeafParameters:
     def from_config(cls, config_dict: dict) -> 'LeafParameters':
         """Create LeafParameters from configuration dictionary."""
         return cls(
-            base_phyllochron=config_dict.get('base_phyllochron', 45.0),
-            min_temp=config_dict.get('min_temp', 4.0),
-            opt_temp_min=config_dict.get('opt_temp_min', 18.0),
-            opt_temp_max=config_dict.get('opt_temp_max', 24.0),
-            max_temp=config_dict.get('max_temp', 35.0),
-            max_leaf_number=config_dict.get('max_leaf_number', 25.0),
-            initial_leaf_number=config_dict.get('initial_leaf_number', 2.0),
-            leaf_appearance_rate=config_dict.get('leaf_appearance_rate', 1.0),
+            base_phyllochron=config_dict['base_phyllochron'],
+            min_temp=config_dict['min_temp'],
+            opt_temp_min=config_dict['opt_temp_min'],
+            opt_temp_max=config_dict['opt_temp_max'],
+            max_temp=config_dict['max_temp'],
+            max_leaf_number=config_dict['max_leaf_number'],
+            initial_leaf_number=config_dict['initial_leaf_number'],
+            leaf_appearance_rate=config_dict['leaf_appearance_rate'],
             max_individual_leaf_area=config_dict.get('max_individual_leaf_area', 0.006),
             leaf_area_expansion_rate=config_dict.get('leaf_area_expansion_rate', 0.12),
-            specific_leaf_area=config_dict.get('specific_leaf_area', 250.0),
+            specific_leaf_area=config_dict['specific_leaf_area'],
             water_stress_threshold=config_dict.get('water_stress_threshold', 0.5),
             nitrogen_stress_threshold=config_dict.get('nitrogen_stress_threshold', 0.6),
             temperature_stress_sensitivity=config_dict.get('temperature_stress_sensitivity', 0.8)

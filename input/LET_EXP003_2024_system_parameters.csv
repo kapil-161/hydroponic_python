@@ -1,2 +1,11 @@
 parameter_name,value,unit,description
 reservoir_topup_fraction,0.3,fraction,Fraction of reservoir volume to refill when needed
+default_ph,6.0,pH,Default pH value when not specified
+solution_change_frequency,7,days,How often to completely change nutrient solution
+oxygen_factor,0.95,fraction,Oxygen availability factor in hydroponic systems
+base_daylength,13.5,hours,Base photoperiod for seasonal calculation
+seasonal_variation,1.5,hours,Amplitude of seasonal daylength variation
+simulation_days,30,days,Default number of simulation days
+default_co2_concentration,400.0,ppm,Default atmospheric CO2 concentration
+default_solution_ph,6.0,pH,Default nutrient solution pH
+default_solution_ec,1.5,dS_per_m,Default nutrient solution electrical conductivity

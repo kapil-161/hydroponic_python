@@ -59,7 +59,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
         params_loaded = []
         
         # 1. Load environmental control parameters comprehensively
-        env_control_file = f'{input_dir}/LET_EXP001_2024_environmental_control_parameters.csv'
+        env_control_file = f'{input_dir}/{cultivar_id}_environmental_control_parameters.csv'
         if Path(env_control_file).exists():
             try:
                 df = pd.read_csv(env_control_file)
@@ -87,7 +87,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
         # 2. Try to load EC from environment parameters (min_ec, max_ec)
         # Using min_ec as the baseline EC value
         try:
-            df = pd.read_csv(f'{input_dir}/LET_EXP001_2024_environment_parameters.csv')
+            df = pd.read_csv(f'{input_dir}/{cultivar_id}_environment_parameters.csv')
             for _, row in df.iterrows():
                 if row['parameter_name'] == 'min_ec':
                     system_config.solution_ec = float(row['value'])
@@ -97,7 +97,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
             print(f"⚠️  Could not load EC: {e}")
         
         # 3. Try to load pH from system settings
-        system_file = f'{input_dir}/LET_EXP001_2024_system_settings.csv'
+        system_file = f'{input_dir}/{cultivar_id}_system_settings.csv'
         if Path(system_file).exists():
             try:
                 df = pd.read_csv(system_file)
@@ -110,7 +110,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load pH: {e}")
         
         # 4. Load all environment parameters comprehensively
-        env_file = f'{input_dir}/LET_EXP001_2024_environment_parameters.csv'
+        env_file = f'{input_dir}/{cultivar_id}_environment_parameters.csv'
         if Path(env_file).exists():
             try:
                 df = pd.read_csv(env_file)
@@ -140,7 +140,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load environment: {e}")
         
         # 5. Load canopy parameters
-        canopy_file = f'{input_dir}/LET_EXP001_2024_canopy_parameters.csv'
+        canopy_file = f'{input_dir}/{cultivar_id}_canopy_parameters.csv'
         if Path(canopy_file).exists():
             try:
                 df = pd.read_csv(canopy_file)
@@ -148,9 +148,21 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 canopy_params = {}
                 for _, row in df.iterrows():
                     param_name = row['parameter_name']
-                    param_value = float(row['value'])
-                    canopy_params[param_name] = param_value
-                    params_loaded.append(f"{param_name}={param_value}")
+                    param_value = row['value']
+                    # Convert to appropriate type
+                    try:
+                        if param_value != param_value:  # Check for NaN
+                            continue
+                        # Convert certain parameters to integers
+                        if param_name in ['number_of_layers']:
+                            canopy_params[param_name] = int(float(param_value))
+                            params_loaded.append(f"{param_name}={int(float(param_value))}")
+                        else:
+                            canopy_params[param_name] = float(param_value)
+                            params_loaded.append(f"{param_name}={float(param_value)}")
+                    except (ValueError, TypeError):
+                        canopy_params[param_name] = str(param_value)
+                        params_loaded.append(f"{param_name}={param_value}")
                 
                 # Add canopy parameters to system_config
                 system_config.canopy_parameters = canopy_params
@@ -159,7 +171,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load canopy parameters: {e}")
 
         # 6. Load crop parameters
-        crop_file = f'{input_dir}/LET_EXP001_2024_crop_parameters.csv'
+        crop_file = f'{input_dir}/{cultivar_id}_crop_parameters.csv'
         if Path(crop_file).exists():
             try:
                 df = pd.read_csv(crop_file)
@@ -186,7 +198,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load crop parameters: {e}")
 
         # 7. Load genetic parameters
-        genetic_file = f'{input_dir}/LET_EXP001_2024_genetic_parameters.csv'
+        genetic_file = f'{input_dir}/{cultivar_id}_genetic_parameters.csv'
         if Path(genetic_file).exists():
             try:
                 df = pd.read_csv(genetic_file)
@@ -214,7 +226,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load genetic parameters: {e}")
 
         # 8. Load photosynthesis parameters
-        photosynthesis_file = f'{input_dir}/LET_EXP001_2024_photosynthesis_parameters.csv'
+        photosynthesis_file = f'{input_dir}/{cultivar_id}_photosynthesis_parameters.csv'
         if Path(photosynthesis_file).exists():
             try:
                 df = pd.read_csv(photosynthesis_file)
@@ -241,7 +253,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load photosynthesis parameters: {e}")
 
         # 9. Load nitrogen parameters
-        nitrogen_file = f'{input_dir}/LET_EXP001_2024_nitrogen_parameters.csv'
+        nitrogen_file = f'{input_dir}/{cultivar_id}_nitrogen_parameters.csv'
         if Path(nitrogen_file).exists():
             try:
                 df = pd.read_csv(nitrogen_file)
@@ -268,7 +280,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load nitrogen parameters: {e}")
 
         # 10. Load stress parameters
-        stress_file = f'{input_dir}/LET_EXP001_2024_stress_parameters.csv'
+        stress_file = f'{input_dir}/{cultivar_id}_stress_parameters.csv'
         if Path(stress_file).exists():
             try:
                 df = pd.read_csv(stress_file)
@@ -295,7 +307,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load stress parameters: {e}")
 
         # 11. Load respiration parameters
-        respiration_file = f'{input_dir}/LET_EXP001_2024_respiration_parameters.csv'
+        respiration_file = f'{input_dir}/{cultivar_id}_respiration_parameters.csv'
         if Path(respiration_file).exists():
             try:
                 df = pd.read_csv(respiration_file)
@@ -322,7 +334,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load respiration parameters: {e}")
 
         # 12. Load phenology parameters
-        phenology_file = f'{input_dir}/LET_EXP001_2024_phenology_parameters.csv'
+        phenology_file = f'{input_dir}/{cultivar_id}_phenology_parameters.csv'
         if Path(phenology_file).exists():
             try:
                 df = pd.read_csv(phenology_file)
@@ -351,7 +363,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load phenology parameters: {e}")
 
         # 13. Load senescence parameters
-        senescence_file = f'{input_dir}/LET_EXP001_2024_senescence_parameters.csv'
+        senescence_file = f'{input_dir}/{cultivar_id}_senescence_parameters.csv'
         if Path(senescence_file).exists():
             try:
                 df = pd.read_csv(senescence_file)
@@ -378,7 +390,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load senescence parameters: {e}")
 
         # 14. Load root zone parameters
-        root_zone_file = f'{input_dir}/LET_EXP001_2024_root_zone_parameters.csv'
+        root_zone_file = f'{input_dir}/{cultivar_id}_root_zone_parameters.csv'
         if Path(root_zone_file).exists():
             try:
                 df = pd.read_csv(root_zone_file)
@@ -405,7 +417,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load root zone parameters: {e}")
 
         # 15. Load system parameters
-        system_params_file = f'{input_dir}/LET_EXP001_2024_system_parameters.csv'
+        system_params_file = f'{input_dir}/{cultivar_id}_system_parameters.csv'
         if Path(system_params_file).exists():
             try:
                 df = pd.read_csv(system_params_file)
@@ -432,7 +444,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load system parameters: {e}")
 
         # 16. Load water parameters
-        water_params_file = f'{input_dir}/LET_EXP001_2024_water_parameters.csv'
+        water_params_file = f'{input_dir}/{cultivar_id}_water_parameters.csv'
         if Path(water_params_file).exists():
             try:
                 df = pd.read_csv(water_params_file)
@@ -461,7 +473,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load water parameters: {e}")
 
         # 17. Load thermal requirements
-        thermal_params_file = f'{input_dir}/LET_EXP001_2024_thermal_requirements.csv'
+        thermal_params_file = f'{input_dir}/{cultivar_id}_thermal_requirements.csv'
         if Path(thermal_params_file).exists():
             try:
                 df = pd.read_csv(thermal_params_file)
@@ -490,7 +502,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load thermal requirements: {e}")
 
         # 18. Load model constants
-        model_constants_file = f'{input_dir}/LET_EXP001_2024_model_constants.csv'
+        model_constants_file = f'{input_dir}/{cultivar_id}_model_constants.csv'
         if Path(model_constants_file).exists():
             try:
                 df = pd.read_csv(model_constants_file)
@@ -519,7 +531,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load model constants: {e}")
 
         # 19. Load nutrient solution parameters
-        nutrient_solution_file = f'{input_dir}/LET_EXP001_2024_nutrient_solution.csv'
+        nutrient_solution_file = f'{input_dir}/{cultivar_id}_nutrient_solution.csv'
         if Path(nutrient_solution_file).exists():
             try:
                 df = pd.read_csv(nutrient_solution_file)
@@ -548,7 +560,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load nutrient solution: {e}")
 
         # 20. Load genetic stress weights
-        genetic_stress_file = f'{input_dir}/LET_EXP001_2024_genetic_stress_weights.csv'
+        genetic_stress_file = f'{input_dir}/{cultivar_id}_genetic_stress_weights.csv'
         if Path(genetic_stress_file).exists():
             try:
                 df = pd.read_csv(genetic_stress_file)
@@ -577,7 +589,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load genetic stress weights: {e}")
 
         # 21. Load system settings
-        system_settings_file = f'{input_dir}/LET_EXP001_2024_system_settings.csv'
+        system_settings_file = f'{input_dir}/{cultivar_id}_system_settings.csv'
         if Path(system_settings_file).exists():
             try:
                 df = pd.read_csv(system_settings_file)
@@ -608,7 +620,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"⚠️  Could not load system settings: {e}")
 
         # 22. Load experiment settings
-        experiment_settings_file = f'{input_dir}/LET_EXP001_2024_experiment_settings.csv'
+        experiment_settings_file = f'{input_dir}/{cultivar_id}_experiment_settings.csv'
         if Path(experiment_settings_file).exists():
             try:
                 df = pd.read_csv(experiment_settings_file)
@@ -642,6 +654,32 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"✓ Experiment settings loaded: {len(experiment_settings)} parameters")
             except Exception as e:
                 print(f"⚠️  Could not load experiment settings: {e}")
+
+        # 23. Load leaf development parameters
+        leaf_development_file = f'{input_dir}/{cultivar_id}_leaf_development_parameters.csv'
+        if Path(leaf_development_file).exists():
+            try:
+                df = pd.read_csv(leaf_development_file)
+                # Store all leaf development parameters dynamically
+                leaf_development_params = {}
+                for _, row in df.iterrows():
+                    param_name = row['parameter_name']
+                    param_value = row['value']
+                    # Convert to appropriate type
+                    try:
+                        if param_value != param_value:  # Check for NaN
+                            continue
+                        leaf_development_params[param_name] = float(param_value)
+                        params_loaded.append(f"{param_name}={float(param_value)}")
+                    except (ValueError, TypeError):
+                        leaf_development_params[param_name] = str(param_value)
+                        params_loaded.append(f"{param_name}={param_value}")
+                
+                # Add leaf development parameters to system_config
+                system_config.leaf_development_parameters = leaf_development_params
+                print(f"✓ Leaf development parameters loaded: {len(leaf_development_params)} parameters")
+            except Exception as e:
+                print(f"⚠️  Could not load leaf development parameters: {e}")
 
         if params_loaded:
             print(f"📊 Successfully loaded {len(params_loaded)} parameters from CSV files")
@@ -700,7 +738,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 print(f"✓ Updated {config_attr} = {system_settings[csv_param]} from CSV")
 
     # 23. Load weather data
-    weather_data_file = f'{input_dir}/LET_EXP001_2024_weather.csv'
+    weather_data_file = f'{input_dir}/{cultivar_id}_weather.csv'
     weather_list = []
     if Path(weather_data_file).exists():
         try:

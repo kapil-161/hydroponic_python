@@ -22,23 +22,41 @@ from dataclasses import dataclass
 @dataclass
 class RZTParameters:
     """Parameters for root zone temperature model."""
-    optimal_rzt_offset: float = 3.0  # °C above air temperature
-    min_effective_rzt: float = 15.0  # °C
-    max_effective_rzt: float = 35.0  # °C
-    linear_growth_slope: float = 0.08  # Growth factor per °C below optimum
-    rapid_decline_slope: float = 0.15  # Decline factor per °C above optimum
-    base_growth_factor: float = 1.0  # Baseline at optimal temperature
+    optimal_rzt_offset: float  # °C above air temperature
+    min_effective_rzt: float  # °C
+    max_effective_rzt: float  # °C
+    linear_growth_slope: float  # Growth factor per °C below optimum
+    rapid_decline_slope: float  # Decline factor per °C above optimum
+    base_growth_factor: float  # Baseline at optimal temperature
+    
+    # Sensitivity parameters for different processes
+    nutrient_uptake_sensitivity_low: float  # per °C below optimum
+    nutrient_uptake_sensitivity_high: float  # per °C above optimum
+    water_uptake_sensitivity_low: float  # per °C below optimum
+    water_uptake_sensitivity_high: float  # per °C above optimum
+    photosynthesis_sensitivity_low: float  # per °C below optimum
+    photosynthesis_sensitivity_high: float  # per °C above optimum
+    root_metabolism_sensitivity_low: float  # per °C below optimum
+    root_metabolism_sensitivity_high: float  # per °C above optimum
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'RZTParameters':
         """Create RZTParameters from configuration dictionary."""
         return cls(
-            optimal_rzt_offset=config_dict.get('optimal_rzt_offset', 3.0),
-            min_effective_rzt=config_dict.get('min_effective_rzt', 15.0),
-            max_effective_rzt=config_dict.get('max_effective_rzt', 35.0),
-            linear_growth_slope=config_dict.get('linear_growth_slope', 0.08),
-            rapid_decline_slope=config_dict.get('rapid_decline_slope', 0.15),
-            base_growth_factor=config_dict.get('base_growth_factor', 1.0)
+            optimal_rzt_offset=config_dict['optimal_rzt_offset'],
+            min_effective_rzt=config_dict['min_effective_rzt'],
+            max_effective_rzt=config_dict['max_effective_rzt'],
+            linear_growth_slope=config_dict['linear_growth_slope'],
+            rapid_decline_slope=config_dict['rapid_decline_slope'],
+            base_growth_factor=config_dict['base_growth_factor'],
+            nutrient_uptake_sensitivity_low=config_dict['nutrient_uptake_sensitivity_low'],
+            nutrient_uptake_sensitivity_high=config_dict['nutrient_uptake_sensitivity_high'],
+            water_uptake_sensitivity_low=config_dict['water_uptake_sensitivity_low'],
+            water_uptake_sensitivity_high=config_dict['water_uptake_sensitivity_high'],
+            photosynthesis_sensitivity_low=config_dict['photosynthesis_sensitivity_low'],
+            photosynthesis_sensitivity_high=config_dict['photosynthesis_sensitivity_high'],
+            root_metabolism_sensitivity_low=config_dict['root_metabolism_sensitivity_low'],
+            root_metabolism_sensitivity_high=config_dict['root_metabolism_sensitivity_high']
         )
 
 
@@ -118,10 +136,10 @@ class RootZoneTemperatureModel:
         # Uptake efficiency follows similar pattern but with different sensitivity
         if current_rzt <= optimal_rzt:
             temperature_diff = optimal_rzt - current_rzt
-            factor = 1.0 + (temperature_diff * 0.06)  # Slightly less sensitive
+            factor = 1.0 + (temperature_diff * self.params.nutrient_uptake_sensitivity_low)
         else:
             temperature_excess = current_rzt - optimal_rzt
-            factor = 1.0 - (temperature_excess * 0.12)  # More sensitive to excess
+            factor = 1.0 - (temperature_excess * self.params.nutrient_uptake_sensitivity_high)
         
         return np.clip(factor, 0.3, 1.4)
     
@@ -141,10 +159,10 @@ class RootZoneTemperatureModel:
         # Water uptake is less sensitive to temperature than growth
         if current_rzt <= optimal_rzt:
             temperature_diff = optimal_rzt - current_rzt
-            factor = 1.0 + (temperature_diff * 0.04)
+            factor = 1.0 + (temperature_diff * self.params.water_uptake_sensitivity_low)
         else:
             temperature_excess = current_rzt - optimal_rzt
-            factor = 1.0 - (temperature_excess * 0.08)
+            factor = 1.0 - (temperature_excess * self.params.water_uptake_sensitivity_high)
         
         return np.clip(factor, 0.4, 1.3)
     
@@ -164,10 +182,10 @@ class RootZoneTemperatureModel:
         # Photosynthesis has moderate sensitivity to RZT
         if current_rzt <= optimal_rzt:
             temperature_diff = optimal_rzt - current_rzt
-            factor = 1.0 + (temperature_diff * 0.03)
+            factor = 1.0 + (temperature_diff * self.params.photosynthesis_sensitivity_low)
         else:
             temperature_excess = current_rzt - optimal_rzt
-            factor = 1.0 - (temperature_excess * 0.05)
+            factor = 1.0 - (temperature_excess * self.params.photosynthesis_sensitivity_high)
         
         return np.clip(factor, 0.5, 1.2)
     
@@ -189,10 +207,10 @@ class RootZoneTemperatureModel:
         # Root metabolism is highly sensitive to temperature
         if current_rzt <= optimal_rzt:
             temperature_diff = optimal_rzt - current_rzt
-            factor = 1.0 + (temperature_diff * 0.1)
+            factor = 1.0 + (temperature_diff * self.params.root_metabolism_sensitivity_low)
         else:
             temperature_excess = current_rzt - optimal_rzt
-            factor = 1.0 - (temperature_excess * 0.18)
+            factor = 1.0 - (temperature_excess * self.params.root_metabolism_sensitivity_high)
         
         return np.clip(factor, 0.3, 1.6)
     

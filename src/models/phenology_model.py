@@ -22,6 +22,7 @@ from typing import Dict, Tuple, Optional, Any, List
 from dataclasses import dataclass
 from enum import Enum
 import math
+from ..utils.temperature_utils import calculate_thermal_time, calculate_temperature_stress_factor
 
 
 class LettuceGrowthStage(Enum):
@@ -75,6 +76,24 @@ class PhenologyParameters:
     # Photoperiod sensitivity
     photoperiod_sensitive: bool = None
     critical_photoperiod: float = None     # Hours critical day length
+    
+    # Stage-specific properties
+    bolting_photoperiod_threshold: float = None  # Hours that trigger bolting
+    bolting_temperature_threshold: float = None  # °C that accelerates bolting
+    head_formation_node_requirement: int = None  # Minimum nodes for head formation
+    
+    # Additional bolting risk parameters
+    environmental_buffer_days: int = None
+    bolting_photoperiod_divisor: float = None
+    bolting_photoperiod_risk_max: float = None
+    bolting_temperature_divisor: float = None
+    bolting_temperature_risk_max: float = None
+    environmental_history_days: int = None
+    bolting_sustained_stress_risk: float = None
+    bolting_maturity_risk_factor: float = None
+    bolting_maturity_risk_max: float = None
+    bolting_risk_threshold: float = None
+    
     photoperiod_slope: float = 0.1         # Sensitivity to photoperiod (model constant)
     
     # Scaling to calibrate daily thermal time (0-1). Lettuce target ~15-18 GDD/day.
@@ -89,11 +108,6 @@ class PhenologyParameters:
     stress_acceleration_factor: float = 1.5 # How much stress speeds development (model constant)
     drought_threshold: float = 0.5         # Water stress threshold (model constant)
     heat_threshold: float = 30.0          # °C heat stress threshold (model constant)
-    
-    # Stage-specific properties
-    bolting_photoperiod_threshold: float = None  # Hours that trigger bolting
-    bolting_temperature_threshold: float = None  # °C that accelerates bolting
-    head_formation_node_requirement: int = None  # Minimum nodes for head formation
     
     def __post_init__(self):
         """Load phenology parameters from JSON config if available."""
@@ -135,31 +149,32 @@ class PhenologyParameters:
     def from_config(cls, config_dict: dict) -> 'PhenologyParameters':
         """Create PhenologyParameters from configuration dictionary."""
         # Accept both lower/upper-case keys
-        def gv(*keys, default=None):
+        def gv(*keys):
+            """Get value by trying multiple key names. Raises KeyError if not found."""
             for k in keys:
                 if k in config_dict:
                     return config_dict[k]
-            return default
-        thermal_req = gv('thermal_requirements', 'THERMAL_REQUIREMENTS', default={})
+            raise KeyError(f"Required parameter not found in CSV: {keys}")
+        thermal_req = gv('thermal_requirements', 'THERMAL_REQUIREMENTS')
         
         return cls(
-            base_temperature=gv('base_temperature', 'BASE_TEMPERATURE', default=4.0),
-            optimal_temperature_min=gv('optimal_temperature_min', 'OPTIMAL_TEMPERATURE_MIN', default=18.0),
-            optimal_temperature_max=gv('optimal_temperature_max', 'OPTIMAL_TEMPERATURE_MAX', default=24.0),
-            maximum_temperature=gv('maximum_temperature', 'MAXIMUM_TEMPERATURE', default=35.0),
-            thermal_requirements=thermal_req if thermal_req else None,
-            photoperiod_sensitive=gv('photoperiod_sensitive', 'PHOTOPERIOD_SENSITIVE', default=True),
-            critical_photoperiod=gv('critical_photoperiod', 'CRITICAL_PHOTOPERIOD', default=12.0),
-            photoperiod_slope=gv('photoperiod_slope', 'PHOTOPERIOD_SLOPE', default=0.1),
-            vernalization_required=config_dict.get('vernalization_required', False),
-            vernalization_temperature=config_dict.get('vernalization_temperature', 5.0),
-            vernalization_days=config_dict.get('vernalization_days', 0.0),
-            stress_acceleration_factor=config_dict.get('stress_acceleration_factor', 1.5),
-            drought_threshold=config_dict.get('drought_threshold', 0.5),
-            heat_threshold=config_dict.get('heat_threshold', 30.0),
-            bolting_photoperiod_threshold=gv('bolting_photoperiod_threshold', 'BOLTING_PHOTOPERIOD_THRESHOLD', default=14.0),
-            bolting_temperature_threshold=gv('bolting_temperature_threshold', 'BOLTING_TEMPERATURE_THRESHOLD', default=25.0),
-            head_formation_node_requirement=gv('head_formation_node_requirement', 'HEAD_FORMATION_NODE_REQUIREMENT', default=8)
+            base_temperature=gv('base_temperature', 'BASE_TEMPERATURE'),
+            optimal_temperature_min=gv('optimal_temperature_min', 'OPTIMAL_TEMPERATURE_MIN'),
+            optimal_temperature_max=gv('optimal_temperature_max', 'OPTIMAL_TEMPERATURE_MAX'),
+            maximum_temperature=gv('maximum_temperature', 'MAXIMUM_TEMPERATURE'),
+            thermal_requirements=thermal_req,
+            photoperiod_sensitive=gv('photoperiod_sensitive', 'PHOTOPERIOD_SENSITIVE'),
+            critical_photoperiod=gv('critical_photoperiod', 'CRITICAL_PHOTOPERIOD'),
+            photoperiod_slope=gv('photoperiod_slope', 'PHOTOPERIOD_SLOPE'),
+            vernalization_required=config_dict['vernalization_required'],
+            vernalization_temperature=config_dict['vernalization_temperature'],
+            vernalization_days=config_dict['vernalization_days'],
+            stress_acceleration_factor=config_dict['stress_acceleration_factor'],
+            drought_threshold=config_dict['drought_threshold'],
+            heat_threshold=config_dict['heat_threshold'],
+            bolting_photoperiod_threshold=gv('bolting_photoperiod_threshold', 'BOLTING_PHOTOPERIOD_THRESHOLD'),
+            bolting_temperature_threshold=gv('bolting_temperature_threshold', 'BOLTING_TEMPERATURE_THRESHOLD'),
+            head_formation_node_requirement=gv('head_formation_node_requirement', 'HEAD_FORMATION_NODE_REQUIREMENT')
         )
 
 
@@ -346,37 +361,46 @@ class ComprehensivePhenologyModel:
         self.temperature_history.append(temperature)
         self.photoperiod_history.append(daylength)
         
-        # Keep only recent history (14 days)
-        if len(self.temperature_history) > 14:
-            self.temperature_history = self.temperature_history[-14:]
-            self.photoperiod_history = self.photoperiod_history[-14:]
+        # Keep only recent history (from CSV parameter)
+        buffer_days = self.params.environmental_buffer_days
+        if len(self.temperature_history) > buffer_days:
+            self.temperature_history = self.temperature_history[-buffer_days:]
+            self.photoperiod_history = self.photoperiod_history[-buffer_days:]
         
         # Bolting risk factors
         risk = 0.0
         
         # Long photoperiod risk
         if daylength > self.params.bolting_photoperiod_threshold:
-            photoperiod_risk = (daylength - self.params.bolting_photoperiod_threshold) / 4.0
-            risk += min(0.4, photoperiod_risk)
+            divisor = self.params.bolting_photoperiod_divisor
+            max_risk = self.params.bolting_photoperiod_risk_max
+            photoperiod_risk = (daylength - self.params.bolting_photoperiod_threshold) / divisor
+            risk += min(max_risk, photoperiod_risk)
         
         # High temperature risk
         if temperature > self.params.bolting_temperature_threshold:
-            temp_risk = (temperature - self.params.bolting_temperature_threshold) / 10.0
-            risk += min(0.4, temp_risk)
+            divisor = self.params.bolting_temperature_divisor
+            max_risk = self.params.bolting_temperature_risk_max
+            temp_risk = (temperature - self.params.bolting_temperature_threshold) / divisor
+            risk += min(max_risk, temp_risk)
         
         # Cumulative stress risk (sustained conditions)
-        if len(self.temperature_history) >= 7:
-            avg_temp = np.mean(self.temperature_history[-7:])
-            avg_photoperiod = np.mean(self.photoperiod_history[-7:])
+        history_days = self.params.environmental_history_days
+        if len(self.temperature_history) >= history_days:
+            avg_temp = np.mean(self.temperature_history[-history_days:])
+            avg_photoperiod = np.mean(self.photoperiod_history[-history_days:])
             
             if (avg_temp > self.params.bolting_temperature_threshold and 
                 avg_photoperiod > self.params.bolting_photoperiod_threshold):
-                risk += 0.3
+                sustained_risk = self.params.bolting_sustained_stress_risk
+                risk += sustained_risk
         
         # Plant maturity effect (older plants more likely to bolt)
         if self.developmental_state.node_number > 10:
-            maturity_risk = (self.developmental_state.node_number - 10) * 0.05
-            risk += min(0.2, maturity_risk)
+            risk_factor = self.params.bolting_maturity_risk_factor
+            max_risk = self.params.bolting_maturity_risk_max
+            maturity_risk = (self.developmental_state.node_number - 10) * risk_factor
+            risk += min(max_risk, maturity_risk)
         
         return min(1.0, risk)
     
@@ -449,11 +473,11 @@ class ComprehensivePhenologyModel:
         if transition_key in self.params.thermal_requirements:
             return self.params.thermal_requirements[transition_key]
         
-        # Default requirements based on stage type
+        # Default requirements from CSV thermal_requirements
         defaults = {
-            "vegetative": 45.0,
-            "head_formation": 100.0,
-            "reproductive": 80.0
+            "vegetative": self.params.thermal_requirements["vegetative_default"],
+            "head_formation": self.params.thermal_requirements["head_formation_default"],
+            "reproductive": self.params.thermal_requirements["reproductive_default"]
         }
         
         if next_stage.value.startswith('V') or next_stage == LettuceGrowthStage.EMERGENCE:
@@ -488,8 +512,9 @@ class ComprehensivePhenologyModel:
         # Calculate bolting risk
         bolting_risk = self.calculate_bolting_risk(temperature, daylength)
         
-        # Check if bolting is triggered
-        if bolting_risk > 0.7 and not self.developmental_state.is_bolting:
+        # Check if bolting is triggered - use CSV parameter
+        bolting_threshold = self.params.bolting_risk_threshold
+        if bolting_risk > bolting_threshold and not self.developmental_state.is_bolting:
             self.developmental_state.is_bolting = True
         
         # Combined development rate

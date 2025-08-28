@@ -1,0 +1,10 @@
+parameter_name,value,unit,description
+base_phyllochron,45.0,celsius_day,Base phyllochron for lettuce leaf development
+min_temp,4.0,celsius,Base temperature for development
+opt_temp_min,18.0,celsius,Lower optimum temperature
+opt_temp_max,24.0,celsius,Upper optimum temperature
+max_temp,35.0,celsius,Maximum temperature for development
+max_leaf_number,25.0,count,Maximum number of leaves for lettuce
+initial_leaf_number,2.0,count,Cotyledons plus first true leaves
+leaf_appearance_rate,1.0,leaves_per_phyllochron,Rate of leaf appearance
+specific_leaf_area,250.0,cm2_per_g,Leaf area per unit dry weight

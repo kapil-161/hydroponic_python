@@ -1,8 +1,14 @@
 parameter_name,value,unit,description
+optimal_ec_min,0.8,dS_per_m,Minimum optimal electrical conductivity for growth
+optimal_ec_max,2.4,dS_per_m,Maximum optimal electrical conductivity for growth
+optimal_vpd_min,0.4,kPa,Minimum optimal vapor pressure deficit
+optimal_vpd_max,1.2,kPa,Maximum optimal vapor pressure deficit
+optimal_ec,1.6,dS_per_m,Optimal electrical conductivity target
 vpd_stress_high_factor,0.25,fraction,Growth reduction when vapor pressure deficit is too high
 vpd_stress_low_factor,0.15,fraction,Growth reduction when vapor pressure deficit is too low
 ec_stress_high_factor,0.2,fraction,Growth reduction when electrical conductivity is too high
 ec_stress_low_factor,0.1,fraction,Growth reduction when electrical conductivity is too low
+ec_stress_low_threshold,0.5,dS_per_m,EC threshold below which stress occurs
 temp_stress_threshold,3.0,celsius,Temperature deviation before stress occurs
 temp_stress_factor,0.05,fraction,Stress multiplier per degree temperature deviation
 heat_stress_threshold,0.03,fraction,Stress per degree above optimal air temperature

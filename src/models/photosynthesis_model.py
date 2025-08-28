@@ -11,21 +11,24 @@ from dataclasses import dataclass
 @dataclass
 class PhotosynthesisParameters:
     """Parameters for photosynthesis model."""
+    # Required parameters (no defaults)
+    phi_psii: float       # Quantum yield of PSII (mol e-/mol photons)
+    r: float            # Gas constant (J/mol/K)
+    ci_fraction: float    # Internal CO2 fraction of ambient (stomatal limitation)
+    
+    # Optional parameters (loaded from config if None)
     kc: float = None            # Michaelis-Menten constant for CO2 (umol/mol)
     ko: float = None            # Michaelis-Menten constant for O2 (umol/mol)
     gamma_star: float = None    # CO2 compensation point for lettuce (umol/mol)
     jmax_25: float = None       # Realistic Jmax for lettuce at 25C (umol/m2/s) 
     vcmax_25: float = None      # Realistic Vcmax for lettuce at 25C (umol/m2/s)
     theta: float = None         # Curvature factor of light response
-    phi_psii: float = 0.3       # Quantum yield of PSII (mol e-/mol photons) - biochemical constant
     alpha: float = None         # Realistic quantum efficiency for lettuce (mol CO2/mol photons)
     rd_25: float = None         # Realistic dark respiration for lettuce at 25C (umol CO2/m2/s)
     eaj: float = None           # Activation energy for Jmax (J/mol)
     eav: float = None           # Activation energy for Vcmax (J/mol)
     ear: float = None           # Activation energy for Rd (J/mol)
-    r: float = 8.314            # Gas constant (J/mol/K) - physical constant
-    o2_mmol_mol: float = 210.0  # Atmospheric O2 concentration in mmol/mol (≈21%)
-    ci_fraction: float = 0.75    # Internal CO2 fraction of ambient (stomatal limitation)
+    o2_mmol_mol: float = 210.0  # Atmospheric O2 concentration (physical constant)
     
     def __post_init__(self):
         """Load parameters from centralized JSON config if not provided."""
@@ -34,29 +37,35 @@ class PhotosynthesisParameters:
             loader = get_config_loader()
             cfg = loader.get_photosynthesis_parameters()
 
-            # Only fill missing fields from config
+            # Load all parameters from config - strict access
             if self.kc is None:
-                self.kc = cfg.get('kc', 404.0)
+                self.kc = cfg['kc']
             if self.ko is None:
-                self.ko = cfg.get('ko', 248.0)
+                self.ko = cfg['ko']
             if self.gamma_star is None:
-                self.gamma_star = cfg.get('gamma_star', 42.75)
+                self.gamma_star = cfg['gamma_star']
             if self.jmax_25 is None:
-                self.jmax_25 = cfg.get('jmax_25', 150.0)
+                self.jmax_25 = cfg['jmax_25']
             if self.vcmax_25 is None:
-                self.vcmax_25 = cfg.get('vcmax_25', 80.0)
+                self.vcmax_25 = cfg['vcmax_25']
             if self.theta is None:
-                self.theta = cfg.get('theta', 0.90)
+                self.theta = cfg['theta']
             if self.alpha is None:
-                self.alpha = cfg.get('alpha', 0.08)
+                self.alpha = cfg['alpha']
             if self.rd_25 is None:
-                self.rd_25 = cfg.get('rd_25', 1.2)
+                self.rd_25 = cfg['rd_25']
             if self.eaj is None:
-                self.eaj = cfg.get('eaj', 30000.0)
+                self.eaj = cfg['eaj']
             if self.eav is None:
-                self.eav = cfg.get('eav', 60000.0)
+                self.eav = cfg['eav']
             if self.ear is None:
-                self.ear = cfg.get('ear', 46390.0)
+                self.ear = cfg['ear']
+            if self.phi_psii is None:
+                self.phi_psii = cfg['phi_psii']
+            if self.r is None:
+                self.r = cfg['r']
+            if self.ci_fraction is None:
+                self.ci_fraction = cfg['ci_fraction']
             # Optional override for O2 concentration (mmol/mol) with validation
             self.o2_mmol_mol = self._validate_parameter(
                 cfg.get('o2_mmol_mol', cfg.get('O2_MMOL_MOL', 210.0)),

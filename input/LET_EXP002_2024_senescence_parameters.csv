@@ -4,3 +4,8 @@ nitrogen_recovery,0.6,fraction,Nitrogen recovered from senescing leaves
 age_factor,0.8,fraction,Effect of leaf age on senescence rate
 stress_acceleration,1.5,multiplier,How much stress speeds up senescence
 minimum_leaf_life,14.0,days,Minimum lifespan of leaves before senescence
+natural_lifespan_gdd,700.0,gdd,Growing degree days for natural leaf lifespan
+age_senescence_rate,0.005,per_day,Daily senescence rate when leaves are old
+water_stress_threshold,0.4,fraction,Water stress level that triggers senescence
+nitrogen_stress_threshold,0.5,fraction,Nitrogen stress level that triggers senescence
+recovery_rate,0.002,per_day,Daily recovery rate under good conditions

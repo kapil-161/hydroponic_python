@@ -23,6 +23,9 @@ from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import logging
 
+# Import utilities
+from .utils.temperature_utils import calculate_vpd, calculate_ph_effect, calculate_q10_temperature_factor, calculate_thermal_time
+
 # Import all CROPGRO models
 from .models.genetic_parameters import (
     create_lettuce_genetic_system, 
@@ -45,7 +48,7 @@ from .models.photosynthesis_model import PhotosynthesisModel
 from .models.nutrient_models import NutrientConcentrationModel
 from .models.leaf_development import LeafDevelopmentModel, LeafParameters
 from .data.hydroponic_system import HydroInputData, SimulationResults, DailyResults
-from .utils.config_loader import get_config_loader, get_genetic_parameter
+# No longer importing config loader - using CSV data only
 from .utils.weather_generator import WeatherGenerator
 
 # Set up logging
@@ -63,57 +66,57 @@ class SimulationParameters:
     """
     
     # Carbon and biomass parameters - loaded dynamically from CSV
-    carbon_to_biomass_ratio: float = None  # Will be loaded from model_constants CSV
-    growth_respiration_fraction: float = None  # Will be loaded from model_constants CSV
+    carbon_to_biomass_ratio: float        # Will be loaded from model_constants CSV
+    growth_respiration_fraction: float    # Will be loaded from model_constants CSV
     
     # Biomass allocation fractions by growth stage - loaded from CSV
-    vegetative_leaf_allocation: float = None
-    vegetative_stem_allocation: float = None  
-    vegetative_root_allocation: float = None
+    vegetative_leaf_allocation: float
+    vegetative_stem_allocation: float
+    vegetative_root_allocation: float
     
-    reproductive_leaf_allocation: float = None
-    reproductive_stem_allocation: float = None
-    reproductive_root_allocation: float = None
+    reproductive_leaf_allocation: float
+    reproductive_stem_allocation: float
+    reproductive_root_allocation: float
     
     # Environmental stress thresholds - loaded from CSV
-    optimal_light_intensity: float = None  # Will be loaded from environment_parameters CSV
-    optimal_ec_range: tuple = None  # Will be loaded from stress_parameters CSV
+    optimal_light_intensity: float        # Will be loaded from environment_parameters CSV
+    optimal_ec_range: tuple               # Will be loaded from stress_parameters CSV
     
     # VPD stress parameters - loaded from CSV
-    optimal_vpd_min: float = None
-    optimal_vpd_max: float = None
-    vpd_stress_high_factor: float = None  # Will be loaded from stress_parameters CSV
-    vpd_stress_low_factor: float = None   # Will be loaded from stress_parameters CSV
+    optimal_vpd_min: float
+    optimal_vpd_max: float
+    vpd_stress_high_factor: float         # Will be loaded from stress_parameters CSV
+    vpd_stress_low_factor: float          # Will be loaded from stress_parameters CSV
     
     # EC stress parameters - loaded from CSV
-    optimal_ec: float = None  # Will be loaded from stress_parameters CSV
-    ec_stress_high_factor: float = None    # Will be loaded from stress_parameters CSV
-    ec_stress_low_threshold: float = None  # Will be loaded from stress_parameters CSV
-    ec_stress_low_factor: float = None     # Will be loaded from stress_parameters CSV
+    optimal_ec: float                     # Will be loaded from stress_parameters CSV
+    ec_stress_high_factor: float          # Will be loaded from stress_parameters CSV
+    ec_stress_low_threshold: float        # Will be loaded from stress_parameters CSV
+    ec_stress_low_factor: float           # Will be loaded from stress_parameters CSV
     
     # Temperature stress parameters - loaded from CSV
-    optimal_root_temp: float = None
-    root_temp_tolerance: float = None      # Will be loaded from thermal_requirements CSV
-    root_temp_stress_factor: float = None # Will be loaded from stress_parameters CSV
+    optimal_root_temp: float
+    root_temp_tolerance: float            # Will be loaded from thermal_requirements CSV
+    root_temp_stress_factor: float        # Will be loaded from stress_parameters CSV
     
-    optimal_air_temp_max: float = None    # Will be loaded from thermal_requirements CSV
-    optimal_air_temp_min: float = None    # Will be loaded from thermal_requirements CSV
-    air_temp_stress_high_factor: float = None  # Will be loaded from stress_parameters CSV
-    air_temp_stress_low_factor: float = None   # Will be loaded from stress_parameters CSV
+    optimal_air_temp_max: float           # Will be loaded from thermal_requirements CSV
+    optimal_air_temp_min: float           # Will be loaded from thermal_requirements CSV
+    air_temp_stress_high_factor: float    # Will be loaded from stress_parameters CSV
+    air_temp_stress_low_factor: float     # Will be loaded from stress_parameters CSV
     
     # Humidity stress parameters - loaded from CSV
-    optimal_humidity_min: float = None
-    humidity_stress_factor: float = None  # Will be loaded from stress_parameters CSV
+    optimal_humidity_min: float
+    humidity_stress_factor: float          # Will be loaded from stress_parameters CSV
     
     # Water calculations - loaded from CSV
-    specific_leaf_area_default: float = None  # Will be loaded from canopy_parameters CSV
-    metabolic_water_per_lai: float = 0.2       # L/m²/day per LAI unit
+    specific_leaf_area_default: float     # Will be loaded from canopy_parameters CSV
+    metabolic_water_per_lai: float        # L/m²/day per LAI unit
     
     # Nutrient reservoir management
-    reservoir_topup_fraction: float = 0.3      # Fraction of deficit to restore weekly
+    reservoir_topup_fraction: float       # Fraction of deficit to restore weekly
     
     # Minimal biological values (to prevent division by zero)
-    minimal_nitrogen_uptake: float = 0.1  # mg/day minimum for calculations
+    minimal_nitrogen_uptake: float        # mg/day minimum for calculations
     
     def validate(self) -> List[str]:
         """Validate parameter consistency"""
@@ -164,40 +167,11 @@ class CROPGROHydroponicSimulator:
         
         logger.info("Initializing CROPGRO Hydroponic Simulator...")
         
-        # Load configuration and simulation parameters
-        self.config = get_config_loader()
-        self.system_config = system_config  # Store system configuration for parameter access
+        # Store system configuration for parameter access (all parameters now come from CSV)
+        self.system_config = system_config
         
-        # Integrate dynamic genetic stress weights from system_config CSV
-        genetic_stress_weights = getattr(self.system_config, 'genetic_stress_weights', {})
-        if genetic_stress_weights:
-            # Update the config.genetics with CSV stress weights using uppercase keys
-            if not hasattr(self.config, 'config') or not self.config.config:
-                # Create empty config if it doesn't exist
-                from dataclasses import dataclass
-                @dataclass
-                class EmptyConfig:
-                    genetics: dict
-                self.config.config = EmptyConfig(genetics={})
-            elif not hasattr(self.config.config, 'genetics'):
-                self.config.config.genetics = {}
-            
-            # Map CSV parameter names to config parameter names (uppercase)
-            stress_weight_mapping = {
-                'temperature_stress_weight': 'TEMPERATURE_STRESS_WEIGHT',
-                'stress_response_weight': 'STRESS_RESPONSE_WEIGHT',
-                'nitrogen_excess_weight': 'NITROGEN_EXCESS_WEIGHT',
-                'overall_stress_weight': 'OVERALL_STRESS_WEIGHT',
-                'heat_stress_weight': 'HEAT_STRESS_WEIGHT',
-                'cold_stress_weight': 'COLD_STRESS_WEIGHT',
-                'salinity_stress_weight': 'SALINITY_STRESS_WEIGHT',
-                'light_stress_weight': 'LIGHT_STRESS_WEIGHT',
-                'nutrient_stress_weight': 'NUTRIENT_STRESS_WEIGHT'
-            }
-            
-            for csv_param, config_param in stress_weight_mapping.items():
-                if csv_param in genetic_stress_weights:
-                    self.config.config.genetics[config_param] = genetic_stress_weights[csv_param]
+        # Store genetic stress weights from CSV (no longer using JSON config)
+        self.genetic_stress_weights = getattr(self.system_config, 'genetic_stress_weights', {})
         
         self.params = simulation_params or self._load_simulation_parameters()
         
@@ -228,53 +202,79 @@ class CROPGROHydroponicSimulator:
         
         # 2. PHENOLOGY AND DEVELOPMENT
         logger.info("Initializing phenology model...")
-        # Load phenology parameters dynamically from CSV
-        phenology_params = getattr(self.system_config, 'phenology_parameters', {})
+        # Load phenology parameters dynamically from CSV files
+        from .models.phenology_model import ComprehensivePhenologyModel, PhenologyParameters
         
         # Start from transplant stage (V3 - third true leaf) to reflect 2–3 week-old plugs
         transplant_stage = LettuceGrowthStage.THIRD_LEAF
         
-        if phenology_params:
-            from .models.phenology_model import ComprehensivePhenologyModel, PhenologyParameters
-            # Create dynamic phenology parameters
-            pheno_params = PhenologyParameters()
+        # Load phenology parameters from CSV files only
+        csv_phenology_params = getattr(self.system_config, 'phenology_parameters', {})
+        csv_thermal_requirements = getattr(self.system_config, 'thermal_requirements', {})
+        
+        if csv_phenology_params or csv_thermal_requirements:
+            # Create configuration dictionary for PhenologyParameters.from_config()
+            config_dict = {}
             
-            # Map CSV parameters to model parameters
-            param_mapping = {
-                'base_temperature': 'base_temperature',
-                'optimal_temperature_min': 'optimal_temperature_min',
-                'optimal_temperature_max': 'optimal_temperature_max', 
-                'maximum_temperature': 'maximum_temperature',
-                'photoperiod_sensitive': 'photoperiod_sensitive',
-                'critical_photoperiod': 'critical_photoperiod',
-                'bolting_photoperiod_threshold': 'bolting_photoperiod_threshold',
-                'bolting_temperature_threshold': 'bolting_temperature_threshold',
-                'cold_requirement_days': 'cold_requirement_days',
-                'thermal_time_scale': 'thermal_time_scale'
-            }
+            # Add phenology parameters from CSV
+            if csv_phenology_params:
+                config_dict.update(csv_phenology_params)
             
-            # Update parameters with CSV values
-            for csv_param, model_param in param_mapping.items():
-                if csv_param in phenology_params:
-                    setattr(pheno_params, model_param, phenology_params[csv_param])
+            # Add thermal requirements from CSV
+            if csv_thermal_requirements:
+                config_dict['thermal_requirements'] = csv_thermal_requirements
             
-            # Integrate dynamic thermal requirements from system_config CSV
-            thermal_requirements = getattr(self.system_config, 'thermal_requirements', {})
-            if thermal_requirements:
-                # Update pheno_params with CSV thermal requirements
-                pheno_params.thermal_requirements = thermal_requirements
-            
+            # Use from_config method to create parameters with CSV data
+            pheno_params = PhenologyParameters.from_config(config_dict)
             self.phenology_model = ComprehensivePhenologyModel(pheno_params, transplant_stage)
+            phenology_count = len(csv_phenology_params) if csv_phenology_params else 0
+            thermal_count = len(csv_thermal_requirements) if csv_thermal_requirements else 0
+            total_params = phenology_count + thermal_count
+            logger.info(f"Loaded {total_params} phenology parameters from CSV files ({phenology_count} phenology + {thermal_count} thermal)")
         else:
+            # Fallback to hardcoded parameters (should not happen with proper CSV setup)
+            logger.warning("No phenology parameters found in CSV files, using defaults")
             self.phenology_model = create_lettuce_phenology_model(transplant_stage)
         # Leaf development model for realistic LAI and leaf metrics - use dynamic CSV parameters
-        canopy_params = getattr(system_config, 'canopy_parameters', {})
-        specific_leaf_area = canopy_params.get('specific_leaf_area', 300.0)  # Use CSV value or fallback
+        logger.info("Initializing leaf development model...")
         
-        self.leaf_model = LeafDevelopmentModel(LeafParameters(
-            initial_leaf_number=4.0,           # Cotyledons + ~4 true leaves at transplant
-            specific_leaf_area=specific_leaf_area  # Dynamic value from CSV
-        ))
+        # Load leaf development parameters from CSV
+        leaf_dev_params = getattr(self.system_config, 'leaf_development_parameters', {})
+        
+        if leaf_dev_params:
+            # Check for required parameters and show clear error messages
+            required_params = [
+                'base_phyllochron', 'min_temp', 'opt_temp_min', 'opt_temp_max', 
+                'max_temp', 'max_leaf_number', 'leaf_appearance_rate', 
+                'initial_leaf_number', 'specific_leaf_area'
+            ]
+            
+            missing_params = []
+            for param in required_params:
+                if param not in leaf_dev_params:
+                    missing_params.append(param)
+            
+            if missing_params:
+                error_msg = f"❌ Missing leaf development parameters in CSV: {missing_params}"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+            
+            self.leaf_model = LeafDevelopmentModel(LeafParameters(
+                base_phyllochron=leaf_dev_params['base_phyllochron'],
+                min_temp=leaf_dev_params['min_temp'],
+                opt_temp_min=leaf_dev_params['opt_temp_min'],
+                opt_temp_max=leaf_dev_params['opt_temp_max'],
+                max_temp=leaf_dev_params['max_temp'],
+                max_leaf_number=leaf_dev_params['max_leaf_number'],
+                leaf_appearance_rate=leaf_dev_params['leaf_appearance_rate'],
+                initial_leaf_number=leaf_dev_params['initial_leaf_number'],
+                specific_leaf_area=leaf_dev_params['specific_leaf_area']
+            ))
+            logger.info(f"✓ Loaded leaf development model with {len(leaf_dev_params)} CSV parameters")
+        else:
+            error_msg = f"❌ Leaf development parameters CSV file not found: {self.system_config.cultivar_id}_leaf_development_parameters.csv"
+            logger.error(error_msg)
+            raise FileNotFoundError(error_msg)
         
         # 3. RESPIRATION MODEL
         logger.info("Initializing respiration model...")
@@ -283,8 +283,8 @@ class CROPGROHydroponicSimulator:
         
         if respiration_params:
             from .models.respiration_model import EnhancedRespirationModel, RespirationParameters
-            # Create dynamic respiration parameters
-            resp_params = RespirationParameters()
+            # Create respiration parameters from CSV config
+            resp_params = RespirationParameters.from_config(respiration_params)
             
             # Map CSV parameters to model parameters
             param_mapping = {
@@ -503,23 +503,33 @@ class CROPGROHydroponicSimulator:
                    f"Canopy Architecture, Nitrogen Balance, Nutrient Mobility, Stress Models, "
                    f"Root Architecture, Root Zone Temperature, Environmental Control")
 
+    def _get_required_param(self, param_dict: dict, param_name: str, param_source: str) -> any:
+        """Get a required parameter with clear error message if missing."""
+        if param_name not in param_dict:
+            available_params = list(param_dict.keys()) if param_dict else 'None'
+            error_msg = f"❌ Missing required parameter '{param_name}' in {param_source}. Available parameters: {available_params}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        return param_dict[param_name]
+    
     def _load_simulation_parameters(self) -> SimulationParameters:
-        """Loads simulation parameters from the configuration file."""
-        stress_params = self.config.get_stress_parameters()
-        growth_params = self.config.get_growth_parameters()
-        env_params = self.config.get_environment_parameters()
-        phys_params = self.config.get_physiology_parameters()
-        canopy_params = self.config.get_canopy_parameters()
-        water_params = self.config.get_water_parameters()
-        nutrient_params = self.config.get_nutrient_parameters()
-        system_params = self.config.get_system_parameters()
+        """Loads simulation parameters from CSV files."""
+        # Get parameters from CSV data (loaded by CLI)
+        stress_params = getattr(self.system_config, 'stress_parameters', {})
+        growth_params = getattr(self.system_config, 'model_constants', {})  # Growth params are in model_constants
+        env_params = getattr(self.system_config, 'environment_parameters', {})
+        phys_params = getattr(self.system_config, 'model_constants', {})  # Physiology params are in model_constants
+        canopy_params = getattr(self.system_config, 'canopy_parameters', {})
+        # Get parameters from CSV data with proper handling
+        water_params = dict(getattr(self.system_config, 'water_parameters', {}))  # Create a copy
+        nutrient_params = getattr(self.system_config, 'nitrogen_parameters', {})
+        system_params = getattr(self.system_config, 'system_parameters', {})
 
-        # Integrate dynamic water parameters from system_config CSV
-        dynamic_water_params = getattr(self.system_config, 'water_parameters', {})
-        if dynamic_water_params:
-            # Update water_params with CSV values
-            for param_name, param_value in dynamic_water_params.items():
-                # Convert CSV parameter names to internal parameter names
+        # Convert CSV parameter names to internal parameter names for water_params
+        if water_params:
+            # Use a copy of items to avoid dictionary modification during iteration
+            water_params_copy = dict(water_params)
+            for param_name, param_value in water_params_copy.items():
                 if param_name == 'lai_water_demand_factor':
                     water_params['LAI_WATER_DEMAND_FACTOR'] = param_value
 
@@ -529,71 +539,101 @@ class CROPGROHydroponicSimulator:
         environment_parameters = getattr(self.system_config, 'environment_parameters', {})
         thermal_requirements = getattr(self.system_config, 'thermal_requirements', {})
         canopy_parameters = getattr(self.system_config, 'canopy_parameters', {})
+        csv_system_parameters = getattr(self.system_config, 'system_parameters', {})
 
-        return SimulationParameters(
-            carbon_to_biomass_ratio=model_constants.get('carbon_to_biomass_ratio', phys_params.get('CARBON_TO_GLUCOSE_RATIO')),
-            growth_respiration_fraction=model_constants.get('growth_respiration_fraction', phys_params.get('GROWTH_RESPIRATION_RATE')),
-            vegetative_leaf_allocation=model_constants.get('vegetative_leaf_allocation', growth_params.get('LEAF_GROWTH_RATIO')),
-            vegetative_stem_allocation=model_constants.get('vegetative_stem_allocation', growth_params.get('STEM_GROWTH_RATIO')),
-            vegetative_root_allocation=model_constants.get('vegetative_root_allocation', growth_params.get('ROOT_GROWTH_RATIO')),
-            reproductive_leaf_allocation=model_constants.get('reproductive_leaf_allocation', growth_params.get('LEAF_GROWTH_RATIO')),
-            reproductive_stem_allocation=model_constants.get('reproductive_stem_allocation', growth_params.get('STEM_GROWTH_RATIO')),
-            reproductive_root_allocation=model_constants.get('reproductive_root_allocation', growth_params.get('ROOT_GROWTH_RATIO')),
-            optimal_light_intensity=environment_parameters.get('optimal_light_intensity', env_params.get('OPTIMAL_LIGHT_INTENSITY', 15.0)),
-            optimal_ec_range=(stress_parameters.get('optimal_ec_min', env_params.get('MIN_EC')), stress_parameters.get('optimal_ec_max', env_params.get('MAX_EC'))),
-            optimal_vpd_min=stress_parameters.get('optimal_vpd_min', env_params.get('OPTIMAL_VPD_MIN')),
-            optimal_vpd_max=stress_parameters.get('optimal_vpd_max', env_params.get('OPTIMAL_VPD_MAX')),
-            vpd_stress_high_factor=stress_parameters.get('vpd_stress_high_factor', stress_params.get('VPD_STRESS_FACTOR_HIGH')),
-            vpd_stress_low_factor=stress_parameters.get('vpd_stress_low_factor', stress_params.get('VPD_STRESS_FACTOR_LOW')),
-            optimal_ec=stress_parameters.get('optimal_ec', env_params.get('OPTIMAL_EC')),
-            ec_stress_high_factor=stress_parameters.get('ec_stress_high_factor', stress_params.get('EC_STRESS_FACTOR_HIGH')),
-            ec_stress_low_threshold=stress_parameters.get('ec_stress_low_threshold', env_params.get('MIN_EC')),
-            ec_stress_low_factor=stress_parameters.get('ec_stress_low_factor', stress_params.get('EC_STRESS_FACTOR_LOW')),
-            optimal_root_temp=environment_parameters.get('optimal_temperature', env_params.get('OPTIMAL_TEMPERATURE')),
-            root_temp_tolerance=stress_parameters.get('temp_stress_threshold', stress_params.get('TEMP_STRESS_THRESHOLD', 3.0)),
-            root_temp_stress_factor=stress_parameters.get('temp_stress_factor', stress_params.get('TEMP_STRESS_FACTOR')),
-            optimal_air_temp_max=environment_parameters.get('optimal_temperature_max', env_params.get('OPTIMAL_TEMPERATURE_MAX')),
-            optimal_air_temp_min=environment_parameters.get('optimal_temperature_min', env_params.get('OPTIMAL_TEMPERATURE_MIN')),
-            air_temp_stress_high_factor=stress_parameters.get('heat_stress_threshold', stress_params.get('HEAT_STRESS_THRESHOLD')),
-            air_temp_stress_low_factor=stress_parameters.get('cold_stress_threshold', stress_params.get('COLD_STRESS_THRESHOLD')),
-            optimal_humidity_min=environment_parameters.get('min_humidity', env_params.get('MIN_HUMIDITY')),
-            humidity_stress_factor=stress_parameters.get('water_stress_factor', stress_params.get('WATER_STRESS_FACTOR')),
-            specific_leaf_area_default=canopy_parameters.get('specific_leaf_area', canopy_params.get('SLA_YOUNG')),
-            metabolic_water_per_lai=water_params.get('LAI_WATER_DEMAND_FACTOR'),
-            reservoir_topup_fraction=system_params.get('RESERVOIR_TOPUP_FRACTION', 0.3),
-            minimal_nitrogen_uptake=nutrient_params.get('NITROGEN_UPTAKE_EFFICIENCY')
-        )
+        try:
+            return SimulationParameters(
+                carbon_to_biomass_ratio=self._get_required_param(model_constants, 'carbon_to_biomass_ratio', 'model_constants CSV'),
+                growth_respiration_fraction=self._get_required_param(model_constants, 'growth_respiration_fraction', 'model_constants CSV'),
+                vegetative_leaf_allocation=self._get_required_param(model_constants, 'vegetative_leaf_allocation', 'model_constants CSV'),
+                vegetative_stem_allocation=self._get_required_param(model_constants, 'vegetative_stem_allocation', 'model_constants CSV'),
+                vegetative_root_allocation=self._get_required_param(model_constants, 'vegetative_root_allocation', 'model_constants CSV'),
+                reproductive_leaf_allocation=self._get_required_param(model_constants, 'reproductive_leaf_allocation', 'model_constants CSV'),
+                reproductive_stem_allocation=self._get_required_param(model_constants, 'reproductive_stem_allocation', 'model_constants CSV'),
+                reproductive_root_allocation=self._get_required_param(model_constants, 'reproductive_root_allocation', 'model_constants CSV'),
+                optimal_light_intensity=self._get_required_param(environment_parameters, 'optimal_light_intensity', 'environment_parameters CSV'),
+                optimal_ec_range=(
+                    self._get_required_param(stress_parameters, 'optimal_ec_min', 'stress_parameters CSV'),
+                    self._get_required_param(stress_parameters, 'optimal_ec_max', 'stress_parameters CSV')
+                ),
+                optimal_vpd_min=self._get_required_param(stress_parameters, 'optimal_vpd_min', 'stress_parameters CSV'),
+                optimal_vpd_max=self._get_required_param(stress_parameters, 'optimal_vpd_max', 'stress_parameters CSV'),
+                vpd_stress_high_factor=self._get_required_param(stress_parameters, 'vpd_stress_high_factor', 'stress_parameters CSV'),
+                vpd_stress_low_factor=self._get_required_param(stress_parameters, 'vpd_stress_low_factor', 'stress_parameters CSV'),
+                optimal_ec=self._get_required_param(stress_parameters, 'optimal_ec', 'stress_parameters CSV'),
+                ec_stress_high_factor=self._get_required_param(stress_parameters, 'ec_stress_high_factor', 'stress_parameters CSV'),
+                ec_stress_low_threshold=self._get_required_param(stress_parameters, 'ec_stress_low_threshold', 'stress_parameters CSV'),
+                ec_stress_low_factor=self._get_required_param(stress_parameters, 'ec_stress_low_factor', 'stress_parameters CSV'),
+                optimal_root_temp=self._get_required_param(environment_parameters, 'optimal_temperature', 'environment_parameters CSV'),
+                root_temp_tolerance=self._get_required_param(stress_parameters, 'temp_stress_threshold', 'stress_parameters CSV'),
+                root_temp_stress_factor=self._get_required_param(stress_parameters, 'temp_stress_factor', 'stress_parameters CSV'),
+                optimal_air_temp_max=self._get_required_param(environment_parameters, 'optimal_temperature_max', 'environment_parameters CSV'),
+                optimal_air_temp_min=self._get_required_param(environment_parameters, 'optimal_temperature_min', 'environment_parameters CSV'),
+                air_temp_stress_high_factor=self._get_required_param(stress_parameters, 'heat_stress_threshold', 'stress_parameters CSV'),
+                air_temp_stress_low_factor=self._get_required_param(stress_parameters, 'cold_stress_threshold', 'stress_parameters CSV'),
+                optimal_humidity_min=self._get_required_param(environment_parameters, 'min_humidity', 'environment_parameters CSV'),
+                humidity_stress_factor=self._get_required_param(stress_parameters, 'water_stress_factor', 'stress_parameters CSV'),
+                specific_leaf_area_default=self._get_required_param(canopy_parameters, 'specific_leaf_area', 'canopy_parameters CSV'),
+                metabolic_water_per_lai=self._get_required_param(water_params, 'lai_water_demand_factor', 'water_parameters CSV'),
+                reservoir_topup_fraction=self._get_required_param(csv_system_parameters, 'reservoir_topup_fraction', 'system_parameters CSV'),
+                minimal_nitrogen_uptake=self._get_required_param(nutrient_params, 'nitrogen_uptake_efficiency', 'nitrogen_parameters CSV')
+            )
+        except ValueError as e:
+            logger.error(f"Failed to load simulation parameters: {e}")
+            raise
     
     def _create_canopy_model_with_csv_params(self, canopy_params: dict):
-        """Create canopy architecture model with CSV parameters integration."""
+        """Create canopy architecture model with CSV parameters only."""
         from .models.canopy_architecture import CanopyArchitectureModel, CanopyArchitectureParameters
-        from .utils.config_loader import get_config_loader
         
-        # Load base config
-        config_loader = get_config_loader()
-        canopy_config = config_loader.get_canopy_architecture_parameters()
+        # Use CSV parameters directly (no JSON fallback needed)
+        canopy_config = {}
         
         # Override with CSV parameters
         if canopy_params:
             # Map CSV parameter names to canopy config names
             csv_to_config_mapping = {
+                'number_of_layers': 'number_of_layers',
                 'light_extinction': 'extinction_coefficient',
+                'extinction_coefficient': 'extinction_coefficient',
+                'diffuse_extinction_coeff': 'diffuse_extinction_coeff',
+                'beam_extinction_coeff': 'beam_extinction_coeff',
+                'row_spacing': 'row_spacing',
+                'mean_leaf_angle': 'mean_leaf_angle',
                 'leaf_angle': 'mean_leaf_angle',
-                'leaf_thickness': 'leaf_thickness',  # Custom parameter
+                'leaf_thickness': 'leaf_thickness',
                 'canopy_width': 'canopy_width',
-                'leaf_area_ratio': 'leaf_area_ratio',  # Custom parameter
-                'light_interception_efficiency': 'light_interception_efficiency',  # Custom parameter
+                'plant_height': 'plant_height',
+                'canopy_height': 'plant_height',
+                'leaf_area_ratio': 'leaf_area_ratio',
+                'light_interception_efficiency': 'light_interception_efficiency',
                 'specific_leaf_area': 'specific_leaf_area',
                 'maximum_lai': 'max_lai',
-                'canopy_height': 'plant_height'
+                'max_lai': 'max_lai',
+                'leaf_angle_distribution': 'leaf_angle_distribution',
+                'leaf_angle_variance': 'leaf_angle_variance',
+                'plant_spacing': 'plant_spacing',
+                'leaf_reflectance': 'leaf_reflectance',
+                'leaf_transmittance': 'leaf_transmittance',
+                'leaf_absorptance': 'leaf_absorptance',
+                'self_shading_factor': 'self_shading_factor',
+                'neighbor_shading_distance': 'neighbor_shading_distance',
+                'sunlit_fraction_method': 'sunlit_fraction_method',
+                'clumping_index': 'clumping_index'
             }
             
             for csv_param, config_param in csv_to_config_mapping.items():
                 if csv_param in canopy_params:
                     canopy_config[config_param] = canopy_params[csv_param]
                     
-        parameters = CanopyArchitectureParameters.from_config(canopy_config)
-        return CanopyArchitectureModel(parameters)
+        try:
+            parameters = CanopyArchitectureParameters.from_config(canopy_config)
+            return CanopyArchitectureModel(parameters)
+        except KeyError as e:
+            missing_param = str(e).strip("'\"")
+            error_msg = f"❌ Missing canopy parameter in CSV: {missing_param}. Available CSV parameters: {list(canopy_params.keys()) if canopy_params else 'None'}"
+            logger.error(error_msg)
+            raise ValueError(error_msg) from e
 
     def _initialize_plant_state(self):
         """Initialize plant physiological state based on cultivar"""
@@ -648,7 +688,7 @@ class CROPGROHydroponicSimulator:
         self.current_lai = min(0.07, max(0.01, transplant_leaf_area_m2 / max(1e-6, default_system_area)))
         # Use dynamic canopy height from CSV
         canopy_params = getattr(self.system_config, 'canopy_parameters', {})
-        self.canopy_height = canopy_params.get('canopy_height', 0.045)  # Use CSV value or fallback
+        self.canopy_height = canopy_params['canopy_height']  # Must come from CSV
         
         # Simulation tracking
         self.simulation_day = 0
@@ -705,10 +745,11 @@ class CROPGROHydroponicSimulator:
         self.system_area = max(0.1, input_data.system_config.system_area)
         # Use dynamic plant density from crop parameters CSV
         crop_params = getattr(input_data.system_config, 'crop_parameters', {})
-        density_multiplier = crop_params.get('plant_density', 1.0)  # Use CSV value or fallback
+        density_multiplier = crop_params['plant_density']  # Must come from CSV
         base_density = max(0.1, self.plant_count / self.system_area)
         self.plant_density = base_density * density_multiplier
-        current_ph = 6.0
+        system_params = self.config_loader.get_system_parameters()
+        current_ph = system_params['default_ph']
         
         # Update root model with actual tank volume (important for NFT channel calculations)
         system_type_enum = {
@@ -745,11 +786,11 @@ class CROPGROHydroponicSimulator:
                 # Get optimal concentrations from dynamic nutrient solution CSV or fallback to defaults
                 nutrient_solution_params = getattr(self.system_config, 'nutrient_solution', {})
                 optimal_concentrations = {
-                    'N-NO3': nutrient_solution_params.get('N-NO3', {}).get('initial_ppm', 200),
-                    'P-PO4': nutrient_solution_params.get('P-PO4', {}).get('initial_ppm', 50),
-                    'K': nutrient_solution_params.get('K', {}).get('initial_ppm', 300),
-                    'Ca': nutrient_solution_params.get('Ca', {}).get('initial_ppm', 150),
-                    'Mg': nutrient_solution_params.get('Mg', {}).get('initial_ppm', 50)
+                    'N-NO3': nutrient_solution_params['N-NO3']['initial_ppm'],
+                    'P-PO4': nutrient_solution_params['P-PO4']['initial_ppm'],
+                    'K': nutrient_solution_params['K']['initial_ppm'],
+                    'Ca': nutrient_solution_params['Ca']['initial_ppm'],
+                    'Mg': nutrient_solution_params['Mg']['initial_ppm']
                 }
                 
                 # Note: Total nutrient mass varies with tank volume, but concentration stays constant
@@ -767,7 +808,7 @@ class CROPGROHydroponicSimulator:
                         current_concentrations[nutrient_id] = target
                 
                 # Reset pH with fresh solution
-                current_ph = 6.0
+                current_ph = system_params['default_ph']
                 logger.info(f"  pH: reset to {current_ph:.1f}")
             
             # Run daily simulation step
@@ -1035,10 +1076,11 @@ class CROPGROHydroponicSimulator:
         
         n_no3_conc = nutrient_concentrations.get('N-NO3', 0.0)  # mg/L
         
-        # Hydroponic nitrogen stress thresholds (mg/L N-NO3)
-        optimal_n_min = 100.0   # Below this: some stress
-        optimal_n_max = 400.0   # Above this: potential toxicity
-        severe_deficiency = 20.0  # Below this: severe stress
+        # Hydroponic nitrogen stress thresholds from CSV parameters
+        nitrogen_params = self.config_loader.get_nitrogen_balance_parameters()
+        optimal_n_min = nitrogen_params['optimal_n_min']   # Below this: some stress
+        optimal_n_max = nitrogen_params['optimal_n_max']   # Above this: potential toxicity
+        severe_deficiency = nitrogen_params['severe_deficiency_threshold']  # Below this: severe stress
         
         if n_no3_conc < severe_deficiency:
             nitrogen_stress_level = 0.8  # Severe deficiency
@@ -1077,11 +1119,7 @@ class CROPGROHydroponicSimulator:
         
         # 6. pH STRESS
         ph = plant_state.get('ph', 6.0)
-        if 5.5 <= ph <= 6.5:
-            ph_factor = 1.0
-        else:
-            ph_deviation = min(abs(ph - 5.5), abs(ph - 6.5))
-            ph_factor = max(0.0, 1.0 - ph_deviation * 0.2)
+        ph_factor = calculate_ph_effect(ph)
         
         # 7. OXYGEN STRESS (minimal in hydroponics)
         oxygen_factor = 0.95  # Assume good aeration in hydroponic systems
@@ -1903,13 +1941,8 @@ class CROPGROHydroponicSimulator:
         return max(0.05, min(5.0, ec))
     
     def _calculate_vpd(self, temp: float, rel_humidity: float) -> float:
-        """Calculate vapor pressure deficit"""
-        # Saturation vapor pressure (kPa)
-        es = 0.6108 * np.exp(17.27 * temp / (temp + 237.3))
-        # Actual vapor pressure (kPa)
-        ea = es * rel_humidity / 100.0
-        # VPD (kPa)
-        return max(0.0, es - ea)
+        """Calculate vapor pressure deficit using centralized utility"""
+        return calculate_vpd(temp, rel_humidity)
     
     def _calculate_eto_reference(self, temperature: float, humidity: float, solar_radiation: float) -> float:
         """Calculate reference evapotranspiration using Penman-Monteith equation"""

@@ -23,6 +23,7 @@ class SimulationConfig:
     stress: Dict[str, Any]
     roots: Dict[str, Any]
     phenology: Dict[str, Any]
+    thermal_requirements: Dict[str, Any]
     photosynthesis: Dict[str, Any]
     system: Dict[str, Any]
     genetics: Dict[str, Any]
@@ -61,6 +62,7 @@ class ConfigLoader:
                 stress=config_data.get('stress', {}),
                 roots=config_data.get('roots', {}),
                 phenology=config_data.get('phenology', {}),
+                thermal_requirements=config_data.get('thermal_requirements', {}),
                 photosynthesis=config_data.get('photosynthesis', {}),
                 system=config_data.get('system', {}),
                 genetics=config_data.get('genetics', {})
@@ -201,6 +203,10 @@ class ConfigLoader:
     def get_canopy_parameters(self) -> Dict[str, Any]:
         """Get canopy parameters."""
         return self.config.canopy if self.config else {}
+    
+    def get_thermal_requirements(self) -> Dict[str, Any]:
+        """Get thermal requirements parameters."""
+        return self.config.thermal_requirements if self.config else {}
     
     def get_value(self, section: str, key: str, default: Any = None) -> Any:
         """Get a specific configuration value with fallback."""

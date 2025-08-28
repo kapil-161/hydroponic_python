@@ -9,3 +9,11 @@ bolting_photoperiod_threshold,14.0,hours,Day length above which bolting may occu
 bolting_temperature_threshold,25.0,celsius,Temperature above which bolting may occur
 cold_requirement_days,0.0,days,Days of cold needed for vernalization
 thermal_time_scale,0.85,fraction,Scaling factor for thermal time calculation
+vernalization_required,false,boolean,Whether plant requires vernalization
+vernalization_temperature,5.0,celsius,Optimal vernalization temperature
+vernalization_days,0.0,days,Days of cold required for vernalization
+stress_acceleration_factor,1.5,fraction,How much stress speeds development
+drought_threshold,0.3,fraction,Threshold for drought stress effects
+heat_threshold,30.0,celsius,Temperature threshold for heat stress
+photoperiod_slope,0.1,fraction,Sensitivity to photoperiod changes
+head_formation_node_requirement,8,count,Minimum number of nodes required for head formation

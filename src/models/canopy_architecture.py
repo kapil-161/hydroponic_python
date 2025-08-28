@@ -39,37 +39,38 @@ class CanopyArchitectureParameters:
     """Parameters for canopy architecture model."""
     
     # Canopy structure
-    number_of_layers: int = 10               # Number of canopy layers (model constant)
-    max_lai: float = None                    # Maximum leaf area index
+    number_of_layers: int                    # Number of canopy layers
+    max_lai: float                           # Maximum leaf area index
     
     # Light extinction
-    extinction_coefficient: float = None     # Light extinction coefficient (k)
-    diffuse_extinction_coeff: float = 0.7   # Extinction for diffuse light (model constant)
-    beam_extinction_coeff: float = 0.4      # Extinction for direct beam light (model constant)
-    
-    # Leaf angle distribution
-    leaf_angle_distribution: str = "spherical"  # Type of leaf angle distribution (model constant)
-    mean_leaf_angle: float = 45.0            # Mean leaf angle (degrees) (model constant)
-    leaf_angle_variance: float = 20.0        # Variance in leaf angles (model constant)
+    extinction_coefficient: float            # Light extinction coefficient (k)
+    diffuse_extinction_coeff: float          # Extinction for diffuse light
+    beam_extinction_coeff: float             # Extinction for direct beam light
     
     # Plant geometry
-    row_spacing: float = 0.30                # m between rows (model constant)
-    plant_spacing: float = 0.25              # m between plants in row (model constant)
-    plant_height: float = 0.25               # m maximum plant height (model constant)
-    canopy_width: float = None               # m canopy width
+    row_spacing: float                       # m between rows
+    mean_leaf_angle: float                   # Mean leaf angle (degrees)
+    canopy_width: float                      # m canopy width
+    
+    # Leaf angle distribution
+    leaf_angle_distribution: str             # Type of leaf angle distribution
+    leaf_angle_variance: float               # Variance in leaf angles
+    
+    plant_spacing: float                     # m between plants in row
+    plant_height: float                      # m maximum plant height
     
     # Leaf properties
-    leaf_reflectance: float = 0.10           # Fraction of light reflected (biochemical constant)
-    leaf_transmittance: float = 0.05         # Fraction of light transmitted (biochemical constant)
-    leaf_absorptance: float = 0.85           # Fraction of light absorbed (biochemical constant)
+    leaf_reflectance: float                  # Fraction of light reflected
+    leaf_transmittance: float                # Fraction of light transmitted
+    leaf_absorptance: float                  # Fraction of light absorbed
     
     # Shading parameters
-    self_shading_factor: float = 0.8         # Factor for self-shading within plant (model constant)
-    neighbor_shading_distance: float = 0.5   # m distance for neighbor shading (model constant)
+    self_shading_factor: float               # Factor for self-shading within plant
+    neighbor_shading_distance: float         # m distance for neighbor shading
     
     # Photosynthesis scaling
-    sunlit_fraction_method: str = "campbell"  # Method for calculating sunlit fraction (model constant)
-    clumping_index: float = 0.9              # Leaf clumping index (0-1) (model constant)
+    sunlit_fraction_method: str              # Method for calculating sunlit fraction
+    clumping_index: float                    # Leaf clumping index (0-1)
     
     def __post_init__(self):
         """Load parameters from JSON config if not provided."""
@@ -93,15 +94,15 @@ class CanopyArchitectureParameters:
     def from_config(cls, config_dict: dict) -> 'CanopyArchitectureParameters':
         """Create CanopyArchitectureParameters from configuration dictionary."""
         return cls(
-            number_of_layers=config_dict.get('number_of_layers', 10),
+            number_of_layers=config_dict['number_of_layers'],
             max_lai=config_dict.get('max_lai'),
             extinction_coefficient=config_dict.get('extinction_coefficient'),
-            diffuse_extinction_coeff=config_dict.get('diffuse_extinction_coeff', 0.7),
-            beam_extinction_coeff=config_dict.get('beam_extinction_coeff', 0.4),
+            diffuse_extinction_coeff=config_dict['diffuse_extinction_coeff'],
+            beam_extinction_coeff=config_dict['beam_extinction_coeff'],
             leaf_angle_distribution=config_dict.get('leaf_angle_distribution', 'spherical'),
-            mean_leaf_angle=config_dict.get('mean_leaf_angle', 45.0),
+            mean_leaf_angle=config_dict['mean_leaf_angle'],
             leaf_angle_variance=config_dict.get('leaf_angle_variance', 20.0),
-            row_spacing=config_dict.get('row_spacing', 0.30),
+            row_spacing=config_dict['row_spacing'],
             plant_spacing=config_dict.get('plant_spacing', 0.25),
             plant_height=config_dict.get('plant_height', 0.25),
             canopy_width=config_dict.get('canopy_width'),

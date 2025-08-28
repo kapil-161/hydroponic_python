@@ -15,3 +15,6 @@ V11+_to_HI,120.0,Growing degree days from mature vegetative to head initiation
 HI_to_HD,180.0,Growing degree days from head initiation to head development
 HD_to_HM,200.0,Growing degree days from head development to harvest maturity
 HM_to_PM,100.0,Growing degree days from harvest to physiological maturity
+vegetative_default,45.0,Default GDD for vegetative stage transitions
+head_formation_default,100.0,Default GDD for head formation stages
+reproductive_default,80.0,Default GDD for reproductive stage transitions

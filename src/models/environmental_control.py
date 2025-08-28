@@ -13,6 +13,7 @@ from typing import Dict, Tuple, Optional, List
 from dataclasses import dataclass
 from enum import Enum
 import math
+from ..utils.temperature_utils import calculate_vpd
 
 
 class ControlStrategy(Enum):
@@ -27,41 +28,41 @@ class ControlStrategy(Enum):
 class EnvironmentalSetpoints:
     """Target environmental conditions."""
     # VPD and humidity targets
-    target_vpd: float = 0.8        # kPa - optimal for lettuce
-    vpd_tolerance: float = 0.1     # ±0.1 kPa acceptable range
-    min_humidity: float = 60.0     # % minimum to prevent stress
-    max_humidity: float = 80.0     # % maximum to prevent disease
+    target_vpd: float        # kPa - optimal for lettuce
+    vpd_tolerance: float     # ±0.1 kPa acceptable range
+    min_humidity: float     # % minimum to prevent stress
+    max_humidity: float     # % maximum to prevent disease
     
     # Temperature targets
-    day_temp: float = 22.0         # °C optimal day temperature
-    night_temp: float = 18.0       # °C optimal night temperature
-    temp_tolerance: float = 2.0    # ±2°C acceptable range
+    day_temp: float         # °C optimal day temperature
+    night_temp: float       # °C optimal night temperature
+    temp_tolerance: float    # acceptable temperature range
     
     # CO2 targets
-    target_co2: float = 1200.0     # μmol/mol optimal enrichment
-    ambient_co2: float = 400.0     # μmol/mol ambient level
-    co2_tolerance: float = 100.0   # ±100 μmol/mol acceptable
+    target_co2: float     # μmol/mol optimal enrichment
+    ambient_co2: float     # μmol/mol ambient level
+    co2_tolerance: float   # acceptable CO2 tolerance
     
     # Photoperiod settings
-    light_hours: float = 16.0      # hours per day
-    light_intensity: float = 200.0 # μmol/m²/s PPFD
+    light_hours: float      # hours per day
+    light_intensity: float # μmol/m²/s PPFD
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'EnvironmentalSetpoints':
         """Create EnvironmentalSetpoints from configuration dictionary."""
         return cls(
-            target_vpd=config_dict.get('target_vpd', 0.8),
-            vpd_tolerance=config_dict.get('vpd_tolerance', 0.1),
-            min_humidity=config_dict.get('min_humidity', 60.0),
-            max_humidity=config_dict.get('max_humidity', 80.0),
-            day_temp=config_dict.get('day_temp', 22.0),
-            night_temp=config_dict.get('night_temp', 18.0),
-            temp_tolerance=config_dict.get('temp_tolerance', 2.0),
-            target_co2=config_dict.get('target_co2', 1200.0),
-            ambient_co2=config_dict.get('ambient_co2', 400.0),
-            co2_tolerance=config_dict.get('co2_tolerance', 100.0),
-            light_hours=config_dict.get('light_hours', 16.0),
-            light_intensity=config_dict.get('light_intensity', 200.0)
+            target_vpd=config_dict['target_vpd'],
+            vpd_tolerance=config_dict['vpd_tolerance'],
+            min_humidity=config_dict['min_humidity'],
+            max_humidity=config_dict['max_humidity'],
+            day_temp=config_dict['day_temp'],
+            night_temp=config_dict['night_temp'],
+            temp_tolerance=config_dict['temp_tolerance'],
+            target_co2=config_dict['target_co2'],
+            ambient_co2=config_dict['ambient_co2'],
+            co2_tolerance=config_dict['co2_tolerance'],
+            light_hours=config_dict['light_hours'],
+            light_intensity=config_dict['light_intensity_control']
         )
 
 
@@ -69,19 +70,18 @@ class EnvironmentalSetpoints:
 class ControlEquipment:
     """Equipment specifications for environmental control."""
     # Humidity control equipment
-    humidifier_capacity: float = 5.0      # L/h water addition rate
-    dehumidifier_capacity: float = 10.0   # L/h water removal rate
+    humidifier_capacity: float = None     # L/h water addition rate
+    dehumidifier_capacity: float = None   # L/h water removal rate
+    co2_injection_rate: float = None      # μmol/mol/min maximum injection
+    co2_sensor_accuracy: float = None     # ±μmol/mol sensor precision
+    co2_mixing_time: float = None         # minutes for full mixing
+    circulation_fan_power: float = None   # W power consumption
+    
     humidifier_efficiency: float = 0.85   # Efficiency factor
     dehumidifier_efficiency: float = 0.90 # Efficiency factor
     
-    # CO2 enrichment equipment  
-    co2_injection_rate: float = 50.0      # μmol/mol/min maximum injection
-    co2_sensor_accuracy: float = 25.0     # ±μmol/mol sensor precision
-    co2_mixing_time: float = 2.0          # minutes for full mixing
-    
     # Ventilation and air circulation
     air_exchange_rate: float = 0.5        # air changes per hour
-    circulation_fan_power: float = 100.0  # W power consumption
     
     # Energy costs ($/kWh)
     electricity_cost: float = 0.12
@@ -90,15 +90,15 @@ class ControlEquipment:
     def from_config(cls, config_dict: dict) -> 'ControlEquipment':
         """Create ControlEquipment from configuration dictionary."""
         return cls(
-            humidifier_capacity=config_dict.get('humidifier_capacity', 5.0),
-            dehumidifier_capacity=config_dict.get('dehumidifier_capacity', 10.0),
+            humidifier_capacity=config_dict['humidifier_capacity'],
+            dehumidifier_capacity=config_dict['dehumidifier_capacity'],
             humidifier_efficiency=config_dict.get('humidifier_efficiency', 0.85),
             dehumidifier_efficiency=config_dict.get('dehumidifier_efficiency', 0.90),
-            co2_injection_rate=config_dict.get('co2_injection_rate', 50.0),
-            co2_sensor_accuracy=config_dict.get('co2_sensor_accuracy', 25.0),
-            co2_mixing_time=config_dict.get('co2_mixing_time', 2.0),
+            co2_injection_rate=config_dict['co2_injection_rate'],
+            co2_sensor_accuracy=config_dict['co2_sensor_accuracy'],
+            co2_mixing_time=config_dict['co2_mixing_time'],
             air_exchange_rate=config_dict.get('air_exchange_rate', 0.5),
-            circulation_fan_power=config_dict.get('circulation_fan_power', 100.0),
+            circulation_fan_power=config_dict['circulation_fan_power'],
             electricity_cost=config_dict.get('electricity_cost', 0.12)
         )
 
@@ -136,7 +136,7 @@ class EnvironmentalControlSystem:
     
     def calculate_vpd(self, temperature: float, relative_humidity: float) -> float:
         """
-        Calculate vapor pressure deficit using precise formulation.
+        Calculate vapor pressure deficit using centralized utility.
         
         Args:
             temperature: Air temperature (°C)
@@ -145,15 +145,7 @@ class EnvironmentalControlSystem:
         Returns:
             VPD in kPa
         """
-        # Saturation vapor pressure using Magnus formula
-        es = 0.6108 * math.exp(17.27 * temperature / (temperature + 237.3))
-        
-        # Actual vapor pressure
-        ea = es * (relative_humidity / 100.0)
-        
-        # VPD is the difference
-        vpd = es - ea
-        return max(0.0, vpd)
+        return calculate_vpd(temperature, relative_humidity)
     
     def calculate_optimal_humidity(self, temperature: float, target_vpd: float) -> float:
         """

@@ -33,17 +33,14 @@ class TemperatureStressType(Enum):
 
 @dataclass
 class TemperatureStressParameters:
-    optimal_temp_min: float = 18.0
-    optimal_temp_max: float = 24.0
-
-    heat_threshold_mild: float = 28.0
-    heat_threshold_severe: float = 35.0
-    heat_lethal_temperature: float = 45.0
-
-    cold_threshold_mild: float = 12.0
-    cold_threshold_severe: float = 5.0
-    frost_threshold: float = -1.0
-
+    optimal_temp_min: float = None
+    optimal_temp_max: float = None
+    heat_threshold_mild: float = None
+    heat_threshold_severe: float = None
+    heat_lethal_temperature: float = None
+    cold_threshold_mild: float = None
+    cold_threshold_severe: float = None
+    frost_threshold: float = -1.0  # Keep only frost as it's rarely used
     photosynthesis_heat_sensitivity: float = 0.85
     photosynthesis_cold_sensitivity: float = 0.75
     respiration_heat_sensitivity: float = 0.60
@@ -52,30 +49,27 @@ class TemperatureStressParameters:
     growth_cold_sensitivity: float = 0.80
     development_heat_sensitivity: float = 0.70
     development_cold_sensitivity: float = 0.65
-
     acclimation_rate: float = 0.05
     max_acclimation_days: int = 14
     acclimation_decay_rate: float = 0.02
-
     heat_damage_threshold: float = 0.7
     cold_damage_threshold: float = 0.6
     frost_damage_rate: float = 0.2
     recovery_rate_heat: float = 0.08
     recovery_rate_cold: float = 0.05
-
     stress_memory_duration: int = 7
     memory_effect_strength: float = 0.3
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> "TemperatureStressParameters":
         return cls(
-            optimal_temp_min=config.get("optimal_temp_min", 18.0),
-            optimal_temp_max=config.get("optimal_temp_max", 24.0),
-            heat_threshold_mild=config.get("heat_threshold_mild", 28.0),
-            heat_threshold_severe=config.get("heat_threshold_severe", 35.0),
-            heat_lethal_temperature=config.get("heat_lethal_temperature", 45.0),
-            cold_threshold_mild=config.get("cold_threshold_mild", 12.0),
-            cold_threshold_severe=config.get("cold_threshold_severe", 5.0),
+            optimal_temp_min=config["optimal_temp_min"],
+            optimal_temp_max=config["optimal_temp_max"],
+            heat_threshold_mild=config["heat_threshold_mild"],
+            heat_threshold_severe=config["heat_threshold_severe"],
+            heat_lethal_temperature=config["heat_lethal_temperature"],
+            cold_threshold_mild=config["cold_threshold_mild"],
+            cold_threshold_severe=config["cold_threshold_severe"],
             frost_threshold=config.get("frost_threshold", -1.0),
             photosynthesis_heat_sensitivity=config.get("photosynthesis_heat_sensitivity", 0.85),
             photosynthesis_cold_sensitivity=config.get("photosynthesis_cold_sensitivity", 0.75),

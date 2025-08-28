@@ -8,3 +8,10 @@ temp_stress_factor,0.05,fraction,Stress multiplier per degree temperature deviat
 heat_stress_threshold,0.03,fraction,Stress per degree above optimal air temperature
 cold_stress_threshold,0.02,fraction,Stress per degree below optimal air temperature
 water_stress_factor,0.004,fraction,Stress per percent below optimal humidity
+optimal_temp_min,18.0,celsius,Lower bound of optimal temperature range
+optimal_temp_max,24.0,celsius,Upper bound of optimal temperature range
+heat_threshold_mild,28.0,celsius,Temperature where mild heat stress begins
+heat_threshold_severe,35.0,celsius,Temperature where severe heat stress begins
+heat_lethal_temperature,45.0,celsius,Temperature where lethal heat stress begins
+cold_threshold_mild,12.0,celsius,Temperature where mild cold stress begins
+cold_threshold_severe,5.0,celsius,Temperature where severe cold stress begins

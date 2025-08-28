@@ -8,3 +8,8 @@ canopy_width,0.3,meters,Width of plant canopy
 canopy_height,0.25,meters,Height of plant canopy
 leaf_area_ratio,0.8,fraction,Ratio of productive leaf area to total leaf area
 light_interception_efficiency,0.95,fraction,Efficiency of light interception by leaves
+number_of_layers,10,count,Number of canopy layers for light modeling
+diffuse_extinction_coeff,0.7,coefficient,Extinction coefficient for diffuse light
+beam_extinction_coeff,0.4,coefficient,Extinction coefficient for direct beam light
+mean_leaf_angle,45.0,degrees,Mean leaf angle from horizontal
+row_spacing,0.30,meters,Distance between plant rows

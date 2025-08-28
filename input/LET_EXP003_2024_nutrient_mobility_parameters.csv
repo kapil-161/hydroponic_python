@@ -1,0 +1,5 @@
+parameter_name,value,unit,description
+xylem_transport_capacity,0.1,fraction,Capacity of xylem to transport nutrients
+phloem_transport_capacity,0.05,fraction,Capacity of phloem to transport nutrients
+temperature_q10,2.0,factor,Q10 temperature factor for nutrient transport
+transpiration_coupling,0.8,fraction,Coupling between transpiration and nutrient uptake

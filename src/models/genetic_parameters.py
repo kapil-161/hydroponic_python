@@ -62,32 +62,32 @@ class GeneticCoefficients:
     Similar to CROPGRO cultivar files (.CUL files)
     """
     # Phenological development parameters
-    EM_FL: float = 30.0      # Days from emergence to first flower (GDD)
-    FL_SH: float = 15.0      # Days from first flower to first seed (GDD)  
-    FL_SD: float = 25.0      # Days from first flower to first pod (GDD)
-    SD_PM: float = 35.0      # Days from first seed to physiological maturity (GDD)
-    FL_LF: float = 10.0      # Days from first flower to end of leaf expansion (GDD)
+    EM_FL: float = 0.0      # Days from emergence to first flower (GDD)
+    FL_SH: float = 0.0      # Days from first flower to first seed (GDD)  
+    FL_SD: float = 0.0      # Days from first flower to first pod (GDD)
+    SD_PM: float = 0.0      # Days from first seed to physiological maturity (GDD)
+    FL_LF: float = 0.0      # Days from first flower to end of leaf expansion (GDD)
     
     # Temperature response parameters
-    LFMAX: float = 1.2       # Maximum leaf photosynthesis rate (mg CO2/m²/s)
-    SLAVR: float = 180.0     # Specific leaf area of cultivar under standard growth conditions (cm²/g)
-    SIZLF: float = 25.0      # Maximum size of full leaf (three leaflets) (cm²)
-    XFRT: float = 1.0        # Maximum fraction of daily growth that is partitioned to reproductive growth
-    WTPSD: float = 0.15      # Maximum weight per seed (g)
-    SFDUR: float = 20.0      # Seed filling duration for cultivar (GDD)
-    SDPDV: float = 2.5       # Average seed per pod under standard growing conditions
-    PODUR: float = 8.0       # Time required for cultivar to reach final pod load (GDD)
+    LFMAX: float = 0.0       # Maximum leaf photosynthesis rate (mg CO2/m²/s)
+    SLAVR: float = 0.0     # Specific leaf area of cultivar under standard growth conditions (cm²/g)
+    SIZLF: float = 0.0      # Maximum size of full leaf (three leaflets) (cm²)
+    XFRT: float = 0.0        # Maximum fraction of daily growth that is partitioned to reproductive growth
+    SFDUR: float = 0.0      # Seed filling duration for cultivar (GDD)
+    SDPDV: float = 0.0       # Average seed per pod under standard growing conditions
+    PODUR: float = 0.0       # Time required for cultivar to reach final pod load (GDD)
+    WTPSD: float = 0.0      # Maximum weight per seed (g)
     
     # Stress tolerance coefficients
-    THRSH: float = 78.0      # The maximum ratio of seed/(seed+shell) at maturity
-    SDPRO: float = 0.40      # Fraction protein in seeds
-    SDLIP: float = 0.20      # Fraction oil in seeds
+    THRSH: float = 0.0      # The maximum ratio of seed/(seed+shell) at maturity
+    SDPRO: float = 0.0      # Fraction protein in seeds
+    SDLIP: float = 0.0      # Fraction oil in seeds
     
     # Hydroponic-specific parameters
-    EC_TOLERANCE: float = 1.3    # Maximum EC tolerance (dS/m)
-    NITRATE_EFFICIENCY: float = 0.85  # Nitrogen use efficiency factor
-    ROOT_ACTIVITY: float = 1.5   # Root activity coefficient
-    PHOTOSYNTHETIC_CAPACITY: float = 2.0  # Relative photosynthetic capacity
+    EC_TOLERANCE: float = 0.0    # Maximum EC tolerance (dS/m)
+    ROOT_ACTIVITY: float = 0.0   # Root activity coefficient
+    PHOTOSYNTHETIC_CAPACITY: float = 0.0  # Relative photosynthetic capacity
+    NITRATE_EFFICIENCY: float = 0.0  # Nitrogen use efficiency factor
 
 
 @dataclass
@@ -106,9 +106,9 @@ class CultivarProfile:
     trait_values: Dict[GeneticTrait, float] = field(default_factory=dict)
     
     # Performance characteristics
-    yield_potential: float = 1.0      # Relative yield potential
-    adaptation_score: float = 1.0     # Environmental adaptation score
-    commercial_rating: float = 1.0    # Commercial viability rating
+    yield_potential: float = 1.0      # Relative yield potential (acceptable default)
+    adaptation_score: float = 1.0     # Environmental adaptation score (acceptable default)
+    commercial_rating: float = 1.0    # Commercial viability rating (acceptable default)
     
     # Breeding information
     pedigree: List[str] = field(default_factory=list)

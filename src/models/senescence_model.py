@@ -49,42 +49,58 @@ class SenescenceParameters:
     """Parameters for senescence model."""
     
     # Age-based senescence
-    natural_lifespan_gdd: float = 700.0       # GDD for natural leaf lifespan
-    age_senescence_rate: float = 0.005        # Daily senescence rate when old
+    natural_lifespan_gdd: float       # GDD for natural leaf lifespan
+    age_senescence_rate: float        # Daily senescence rate when old
     
     # Stress-induced senescence thresholds
-    water_stress_threshold: float = 0.4       # Below this triggers senescence
-    nitrogen_stress_threshold: float = 0.5    # Below this triggers senescence
-    temperature_stress_threshold: float = 0.6 # Below this triggers senescence
-    light_stress_threshold: float = 0.3       # Below this triggers senescence
+    water_stress_threshold: float       # Below this triggers senescence
+    nitrogen_stress_threshold: float    # Below this triggers senescence
+    temperature_stress_threshold: float # Below this triggers senescence
+    light_stress_threshold: float       # Below this triggers senescence
     
     # Stress senescence rates
-    water_stress_rate: float = 0.015          # Daily rate under water stress
-    nitrogen_stress_rate: float = 0.012       # Daily rate under N stress
-    temperature_stress_rate: float = 0.020    # Daily rate under temp stress
-    light_stress_rate: float = 0.008          # Daily rate under light stress
+    water_stress_rate: float          # Daily rate under water stress
+    nitrogen_stress_rate: float       # Daily rate under N stress
+    temperature_stress_rate: float    # Daily rate under temp stress
+    light_stress_rate: float          # Daily rate under light stress
     
     # Senescence progression
-    early_senescence_threshold: float = 0.05  # Tissue damage to trigger early senescence
-    active_senescence_threshold: float = 0.20 # Tissue damage for active senescence
-    late_senescence_threshold: float = 0.60   # Tissue damage for late senescence
-    death_threshold: float = 0.90             # Tissue damage for death
+    early_senescence_threshold: float  # Tissue damage to trigger early senescence
+    active_senescence_threshold: float # Tissue damage for active senescence
+    late_senescence_threshold: float   # Tissue damage for late senescence
+    death_threshold: float             # Tissue damage for death
     
     # Nutrient remobilization efficiency
-    remobilization_efficiency: Dict[str, float] = None
+    remobilization_efficiency: Dict[str, float]
     
     # Recovery parameters
-    recovery_rate: float = 0.002              # Daily recovery rate under good conditions
-    max_recovery: float = 0.1                 # Maximum recovery from senescence damage
+    recovery_rate: float              # Daily recovery rate under good conditions
+    max_recovery: float                 # Maximum recovery from senescence damage
     
     # Developmental senescence
-    reproductive_priority_factor: float = 1.5  # Senescence acceleration during reproduction
-    lower_canopy_factor: float = 1.2          # Senescence acceleration for shaded leaves
+    reproductive_priority_factor: float  # Senescence acceleration during reproduction
+    lower_canopy_factor: float          # Senescence acceleration for shaded leaves
     
-    def __post_init__(self):
-        if self.remobilization_efficiency is None:
-            # Default remobilization efficiencies for different nutrients
-            self.remobilization_efficiency = {
+    
+    @classmethod
+    def from_config(cls, config_dict: dict) -> 'SenescenceParameters':
+        """Create SenescenceParameters from configuration dictionary with clear error reporting."""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        def _get_required_param(param_dict: dict, param_name: str, param_source: str) -> any:
+            """Get a required parameter with clear error message if missing."""
+            if param_name not in param_dict:
+                available_params = list(param_dict.keys()) if param_dict else 'None'
+                error_msg = f"❌ Missing required parameter '{param_name}' in {param_source}. Available parameters: {available_params}"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+            return param_dict[param_name]
+        
+        # Handle remobilization efficiency with defaults for missing values
+        remob_eff = config_dict.get('remobilization_efficiency', {})
+        if not remob_eff:
+            remob_eff = {
                 'nitrogen': 0.70,     # 70% of N can be remobilized
                 'phosphorus': 0.60,   # 60% of P can be remobilized
                 'potassium': 0.80,    # 80% of K can be remobilized
@@ -98,32 +114,27 @@ class SenescenceParameters:
                 'boron': 0.05,        # 5% of B (immobile)
                 'molybdenum': 0.25    # 25% of Mo
             }
-    
-    @classmethod
-    def from_config(cls, config_dict: dict) -> 'SenescenceParameters':
-        """Create SenescenceParameters from configuration dictionary."""
-        remob_eff = config_dict.get('remobilization_efficiency', {})
         
         return cls(
-            natural_lifespan_gdd=config_dict.get('natural_lifespan_gdd', 700.0),
-            age_senescence_rate=config_dict.get('age_senescence_rate', 0.005),
-            water_stress_threshold=config_dict.get('water_stress_threshold', 0.4),
-            nitrogen_stress_threshold=config_dict.get('nitrogen_stress_threshold', 0.5),
-            temperature_stress_threshold=config_dict.get('temperature_stress_threshold', 0.6),
-            light_stress_threshold=config_dict.get('light_stress_threshold', 0.3),
-            water_stress_rate=config_dict.get('water_stress_rate', 0.015),
-            nitrogen_stress_rate=config_dict.get('nitrogen_stress_rate', 0.012),
-            temperature_stress_rate=config_dict.get('temperature_stress_rate', 0.020),
-            light_stress_rate=config_dict.get('light_stress_rate', 0.008),
-            early_senescence_threshold=config_dict.get('early_senescence_threshold', 0.05),
-            active_senescence_threshold=config_dict.get('active_senescence_threshold', 0.20),
-            late_senescence_threshold=config_dict.get('late_senescence_threshold', 0.60),
-            death_threshold=config_dict.get('death_threshold', 0.90),
-            remobilization_efficiency=remob_eff if remob_eff else None,
-            recovery_rate=config_dict.get('recovery_rate', 0.002),
-            max_recovery=config_dict.get('max_recovery', 0.1),
-            reproductive_priority_factor=config_dict.get('reproductive_priority_factor', 1.5),
-            lower_canopy_factor=config_dict.get('lower_canopy_factor', 1.2)
+            natural_lifespan_gdd=_get_required_param(config_dict, 'natural_lifespan_gdd', 'senescence_parameters.csv'),
+            age_senescence_rate=_get_required_param(config_dict, 'age_senescence_rate', 'senescence_parameters.csv'),
+            water_stress_threshold=_get_required_param(config_dict, 'water_stress_threshold', 'senescence_parameters.csv'),
+            nitrogen_stress_threshold=_get_required_param(config_dict, 'nitrogen_stress_threshold', 'senescence_parameters.csv'),
+            temperature_stress_threshold=_get_required_param(config_dict, 'temperature_stress_threshold', 'senescence_parameters.csv'),
+            light_stress_threshold=_get_required_param(config_dict, 'light_stress_threshold', 'senescence_parameters.csv'),
+            water_stress_rate=_get_required_param(config_dict, 'water_stress_rate', 'senescence_parameters.csv'),
+            nitrogen_stress_rate=_get_required_param(config_dict, 'nitrogen_stress_rate', 'senescence_parameters.csv'),
+            temperature_stress_rate=_get_required_param(config_dict, 'temperature_stress_rate', 'senescence_parameters.csv'),
+            light_stress_rate=_get_required_param(config_dict, 'light_stress_rate', 'senescence_parameters.csv'),
+            early_senescence_threshold=_get_required_param(config_dict, 'early_senescence_threshold', 'senescence_parameters.csv'),
+            active_senescence_threshold=_get_required_param(config_dict, 'active_senescence_threshold', 'senescence_parameters.csv'),
+            late_senescence_threshold=_get_required_param(config_dict, 'late_senescence_threshold', 'senescence_parameters.csv'),
+            death_threshold=_get_required_param(config_dict, 'death_threshold', 'senescence_parameters.csv'),
+            remobilization_efficiency=remob_eff,
+            recovery_rate=_get_required_param(config_dict, 'recovery_rate', 'senescence_parameters.csv'),
+            max_recovery=_get_required_param(config_dict, 'max_recovery', 'senescence_parameters.csv'),
+            reproductive_priority_factor=_get_required_param(config_dict, 'reproductive_priority_factor', 'senescence_parameters.csv'),
+            lower_canopy_factor=_get_required_param(config_dict, 'lower_canopy_factor', 'senescence_parameters.csv')
         )
 
 
@@ -521,16 +532,17 @@ class AdvancedSenescenceModel:
         return self.remobilization_pool.copy()
     
 def create_lettuce_senescence_model() -> AdvancedSenescenceModel:
-    """Create senescence model with lettuce-specific parameters."""
+    """Create senescence model with lettuce-specific parameters from CSV config."""
     try:
         from ..utils.config_loader import get_config_loader
         config_loader = get_config_loader()
         senescence_config = config_loader.get_senescence_parameters()
         parameters = SenescenceParameters.from_config(senescence_config)
         return AdvancedSenescenceModel(parameters)
-    except ImportError:
-        # Fallback to default values if config loader not available
-        return AdvancedSenescenceModel()
+    except Exception as e:
+        print(f"⚠️ Could not load senescence parameters from CSV: {e}")
+        print("Please ensure senescence_parameters.csv exists with all required parameters")
+        raise
 
 
 def demonstrate_senescence_model():
