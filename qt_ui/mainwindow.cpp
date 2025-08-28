@@ -24,21 +24,36 @@ MainWindow::MainWindow(QWidget *parent)
     resize(1600, 1000);
     
     // Set input directory to the project's input folder
-    // Try going up two levels (from build -> qt_ui -> hydroponic_python -> input)
-    m_inputDirectory = QDir::currentPath() + "/../../input";
+    // Use application directory path instead of current working directory
+    QString appDir = QCoreApplication::applicationDirPath();
+    qDebug() << "MainWindow: Application directory:" << appDir;
+    qDebug() << "MainWindow: Current working directory:" << QDir::currentPath();
     
-    if (!QDir(m_inputDirectory).exists()) {
-        // Try one level up (from qt_ui -> hydroponic_python -> input)
-        m_inputDirectory = QDir::currentPath() + "/../input";
-        
-        if (!QDir(m_inputDirectory).exists()) {
-            // Try in current directory
-            m_inputDirectory = QDir::currentPath() + "/input";
-            
-            if (!QDir(m_inputDirectory).exists()) {
-                m_inputDirectory = QDir::currentPath();
-            }
+    // Try relative to application directory first
+    QStringList possiblePaths = {
+        appDir + "/../../input",           // from build -> qt_ui -> hydroponic_python -> input
+        appDir + "/../input",              // from qt_ui -> hydroponic_python -> input  
+        appDir + "/input",                 // input in same directory as executable
+        QDir::currentPath() + "/../../input", // fallback to old method
+        QDir::currentPath() + "/../input",
+        QDir::currentPath() + "/input",
+        QDir::currentPath()
+    };
+    
+    m_inputDirectory = "";
+    for (const QString &path : possiblePaths) {
+        QString canonicalPath = QDir(path).canonicalPath();
+        qDebug() << "MainWindow: Trying input directory:" << path << "-> canonical:" << canonicalPath;
+        if (QDir(canonicalPath).exists() && QDir(canonicalPath).entryList(QStringList() << "*.csv", QDir::Files).count() > 0) {
+            m_inputDirectory = canonicalPath;
+            qDebug() << "MainWindow: Found input directory with CSV files:" << m_inputDirectory;
+            break;
         }
+    }
+    
+    if (m_inputDirectory.isEmpty()) {
+        m_inputDirectory = appDir;
+        qDebug() << "MainWindow: No CSV files found, using application directory:" << m_inputDirectory;
     }
     
     setupUI();
@@ -195,8 +210,9 @@ void MainWindow::createBatchGenerator()
     m_treatmentLayout = new QVBoxLayout(treatmentWidget);
     
     // Create treatment categories
-    createTreatmentCategory("🌱 Varieties", {"EXP001_2024", "EXP002_2024", "EXP003_2024"}, {"EXP001_2024"});
+    createTreatmentCategory("🌱 Varieties", {"BAS_EXP001_2024", "LET_EXP001_2024", "LET_EXP002_2024", "LET_EXP003_2024", "TOM_EXP001_2024"}, {"LET_EXP001_2024"});
     createTreatmentCategory("🌡️ Temperature (°C)", {"20", "23", "26", "29"}, {"23"});
+    createTreatmentCategory("🌿 Root Zone Temp (°C)", {"18", "20", "22", "25"}, {"20"});
     createTreatmentCategory("💧 Nitrogen (mg/L)", {"150", "200", "250", "300"}, {"200"});
     createTreatmentCategory("🔬 pH Levels", {"5.5", "6.0", "6.5", "7.0"}, {"6.0"});
     createTreatmentCategory("💡 Light Hours", {"12", "14", "16", "18"}, {"16"});
@@ -338,7 +354,8 @@ void MainWindow::createTreatmentCategory(const QString &categoryName, const QStr
         // Extract category name more reliably
         QString cleanCategory;
         if (categoryName.contains("Varieties")) cleanCategory = "Varieties";
-        else if (categoryName.contains("Temperature")) cleanCategory = "Temperature";
+        else if (categoryName.contains("Temperature") && !categoryName.contains("Root Zone")) cleanCategory = "Temperature";
+        else if (categoryName.contains("Root Zone")) cleanCategory = "RootZoneTemp";
         else if (categoryName.contains("Nitrogen")) cleanCategory = "Nitrogen";
         else if (categoryName.contains("pH")) cleanCategory = "pH";
         else if (categoryName.contains("Light")) cleanCategory = "Light";
@@ -605,7 +622,7 @@ void MainWindow::generateBatchFile()
     
     // Generate batch file content for multiple treatment combinations
     QString batchContent;
-    QString singleOutputFile = QString("outputs/%1_%2_combined_results.csv").arg(cropType, experimentName);
+    QString singleOutputFile = QString("../outputs/%1_%2_combined_results.csv").arg(cropType, experimentName);
     
 #ifdef Q_OS_WIN
     batchContent = "@echo off\n"
@@ -703,7 +720,23 @@ void MainWindow::generateBatchFile()
     
     for (int i = 0; i < combinations.size(); ++i) {
         QString combo = combinations[i];
-        QString treatmentId = QString("T%1").arg(i + 1, 2, 10, QChar('0'));
+        QString basicTreatmentId = QString("T%1").arg(i + 1, 2, 10, QChar('0'));
+        
+        // Generate meaningful treatment ID with parameter values
+        QString meaningfulTreatmentId = basicTreatmentId;
+        QStringList comboParts = combo.split("_");
+        for (const QString &part : comboParts) {
+            if (part.contains(":")) {
+                QStringList keyValue = part.split(":");
+                if (keyValue.size() == 2) {
+                    QString category = keyValue[0].toLower();
+                    QString value = keyValue[1];
+                    meaningfulTreatmentId += "_" + category.toUpper() + value;
+                }
+            }
+        }
+        
+        QString treatmentId = basicTreatmentId; // Keep using basic ID for file operations
         QString tempOutputFile = QString("temp_treatments/treatment_%1.csv").arg(treatmentId);
         
         // Create treatment-specific input files and run simulation
@@ -711,7 +744,7 @@ void MainWindow::generateBatchFile()
             "echo \"[%1/%2] Running Treatment %8: %3\"\n"
             "echo \"Creating treatment-specific input files...\"\n"
             "mkdir -p temp_input_%8\n"
-            "cp -r input/* temp_input_%8/\n"
+            "cp -r ../input/* temp_input_%8/\n"
         ).arg(QString::number(i + 1), QString::number(combinations.size()), combo, treatmentId);
         
         // Parse the combination to get treatment parameters
@@ -726,7 +759,37 @@ void MainWindow::generateBatchFile()
                     if (category == "ec") {
                         batchContent += QString(
                             "echo \"Setting EC to %1 for treatment %2...\"\n"
-                            "sed -i '' 's/EC,.*/EC,%1/' temp_input_%2/%3_%4_nutrient_solution.csv\n"
+                            "sed -i '' 's/initial_ec,.*/initial_ec,%1/' temp_input_%2/%3_%4_system_settings.csv\n"
+                        ).arg(value, treatmentId, cropType, experimentName);
+                    } else if (category == "ph") {
+                        batchContent += QString(
+                            "echo \"Setting pH to %1 for treatment %2...\"\n"
+                            "sed -i '' 's/initial_ph,.*/initial_ph,%1/' temp_input_%2/%3_%4_system_settings.csv\n"
+                        ).arg(value, treatmentId, cropType, experimentName);
+                    } else if (category == "nitrogen") {
+                        batchContent += QString(
+                            "echo \"Setting Nitrogen to %1 ppm for treatment %2...\"\n"
+                            "sed -i '' 's/N-NO3,200/N-NO3,%1/' temp_input_%2/%3_%4_nutrient_solution.csv\n"
+                        ).arg(value, treatmentId, cropType, experimentName);
+                    } else if (category == "temperature") {
+                        batchContent += QString(
+                            "echo \"Setting temperature to %1°C for treatment %2...\"\n"
+                            "sed -i '' 's/target_temperature,.*/target_temperature,%1/' temp_input_%2/%3_%4_system_settings.csv\n"
+                        ).arg(value, treatmentId, cropType, experimentName);
+                    } else if (category == "rootzonetemp") {
+                        batchContent += QString(
+                            "echo \"Setting root zone temperature to %1°C for treatment %2...\"\n"
+                            "sed -i '' 's/optimal_temperature,.*/optimal_temperature,%1/' temp_input_%2/%3_%4_root_zone_parameters.csv\n"
+                        ).arg(value, treatmentId, cropType, experimentName);
+                    } else if (category == "light") {
+                        batchContent += QString(
+                            "echo \"Setting light intensity to %1 MJ/m²/day for treatment %2...\"\n"
+                            "sed -i '' 's/optimal_light_intensity,.*/optimal_light_intensity,%1/' temp_input_%2/%3_%4_environment_parameters.csv\n"
+                        ).arg(value, treatmentId, cropType, experimentName);
+                    } else if (category == "co2") {
+                        batchContent += QString(
+                            "echo \"Setting CO2 to %1 ppm for treatment %2...\"\n"
+                            "sed -i '' 's/co2_concentration,.*/co2_concentration,%1/' temp_input_%2/%3_%4_system_settings.csv\n"
                         ).arg(value, treatmentId, cropType, experimentName);
                     }
                 }
@@ -734,10 +797,9 @@ void MainWindow::generateBatchFile()
         }
         
         batchContent += QString(
-            "python3 cropgro_cli.py --cultivar %4_%5 --days %6 --treatment-id %8 --input-dir temp_input_%8 --output-csv %7\n"
+            "python3 ../cropgro_cli.py --cultivar %4_%5 --days %6 --treatment-id %8 --input-dir temp_input_%8 --output-csv %7\n"
             "if [ $? -ne 0 ]; then\n"
             "    echo \"Treatment %8 failed!\"\n"
-            "    read -p \"Press Enter to continue...\"\n"
             "    exit 1\n"
             "fi\n"
             "echo \"Treatment %8 completed successfully!\"\n"
@@ -748,15 +810,35 @@ void MainWindow::generateBatchFile()
     
     // Combine all treatment files into single CSV with Treatment_ID column
     batchContent += "echo \"Combining all treatments into single CSV file...\"\n";
-    batchContent += "echo \"Date,Day,System_ID,Crop_ID,Treatment_ID,ETO_Ref_mm,ETC_Prime_mm,Transpiration_mm,Water_Total_L,Tank_Volume_L,Temp_C,Solar_Rad_MJ,VPD_kPa,WUE_kg_m3,pH,EC,RZT_C,RZT_Growth_Factor,RZT_Nutrient_Factor,V_Stage,Leaf_Number,Leaf_Area_m2,Avg_Leaf_Area_cm2,CO2_umol_mol,VPD_Actual_kPa,Env_Photo_Factor,Env_Transp_Factor,N-NO3_mg_L,P-PO4_mg_L,K_mg_L,Ca_mg_L,Mg_mg_L,LAI,Growth_Stage,Total_Biomass_g,Integrated_Stress,Temperature_Stress,Water_Stress,Nutrient_Stress,Nitrogen_Stress,Salinity_Stress\" > " + singleOutputFile + "\n";
+    batchContent += "echo \"Date,Day,Treatment_ID,System_ID,Crop_ID,ETO_Ref_mm,ETC_Prime_mm,Transpiration_mm,Water_Total_L,Tank_Volume_L,Temp_C,Solar_Rad_MJ,VPD_kPa,WUE_kg_m3,pH,EC,RZT_C,RZT_Growth_Factor,RZT_Nutrient_Factor,V_Stage,Leaf_Number,Leaf_Area_m2,Avg_Leaf_Area_cm2,CO2_umol_mol,VPD_Actual_kPa,Env_Photo_Factor,Env_Transp_Factor,N-NO3_mg_L,P-PO4_mg_L,K_mg_L,Ca_mg_L,Mg_mg_L,LAI,Growth_Stage,Total_Biomass_g,Integrated_Stress,Temperature_Stress,Water_Stress,Nutrient_Stress,Nitrogen_Stress,Salinity_Stress\" > " + singleOutputFile + "\n";
     
-    // Combine all treatment files
-    batchContent += "for file in temp_treatments/treatment_*.csv; do\n";
-    batchContent += "    treatment_id=$(basename \"$file\" .csv | sed 's/treatment_//')\n";
-    batchContent += "    tail -n +2 \"$file\" | while IFS=, read -r date day system_id crop_id rest; do\n";
-    batchContent += "        echo \"$date,$day,$system_id,$crop_id," + QString("%1_%2").arg(cropType, experimentName) + "_${treatment_id},$rest\" >> " + singleOutputFile + "\n";
-    batchContent += "    done\n";
-    batchContent += "done\n\n";
+    // Generate treatment ID mapping
+    for (int i = 0; i < combinations.size(); ++i) {
+        QString combo = combinations[i];
+        QString basicTreatmentId = QString("T%1").arg(i + 1, 2, 10, QChar('0'));
+        
+        // Generate meaningful treatment ID with parameter values
+        QString meaningfulTreatmentId = basicTreatmentId;
+        QStringList mappingParts = combo.split("_");
+        for (const QString &part : mappingParts) {
+            if (part.contains(":")) {
+                QStringList keyValue = part.split(":");
+                if (keyValue.size() == 2) {
+                    QString category = keyValue[0].toLower();
+                    QString value = keyValue[1];
+                    meaningfulTreatmentId += "_" + category.toUpper() + value;
+                }
+            }
+        }
+        
+        // Add mapping line for this treatment
+        batchContent += QString("if [ -f temp_treatments/treatment_%1.csv ]; then\n").arg(basicTreatmentId);
+        batchContent += QString("    tail -n +2 temp_treatments/treatment_%1.csv | while IFS=, read -r date day treatment_id system_id crop_id rest; do\n").arg(basicTreatmentId);
+        batchContent += QString("        echo \"$date,$day,%1,$system_id,$crop_id,$rest\" >> %2\n").arg(meaningfulTreatmentId, singleOutputFile);
+        batchContent += "    done\n";
+        batchContent += "fi\n";
+    }
+    batchContent += "\n";
     
     // Clean up temporary files
     batchContent += "echo \"Cleaning up temporary files...\"\n";
@@ -764,7 +846,6 @@ void MainWindow::generateBatchFile()
     
     batchContent += "echo \"All treatments completed and combined successfully!\"\n";
     batchContent += "echo \"Combined results saved to: " + singleOutputFile + "\"\n";
-    batchContent += "read -p \"Press Enter to continue...\"\n";
 #endif
     
     m_batchPreview->setPlainText(batchContent);
@@ -777,7 +858,14 @@ void MainWindow::generateBatchFile()
     batchFileName = QString("run_simulation_%1_%2.sh").arg(cropType, experimentName);
 #endif
     
-    QString batchPath = QDir::currentPath() + "/" + batchFileName;
+    // Determine the correct directory for batch file
+    QString appDir = QCoreApplication::applicationDirPath();
+    QString batchDir = appDir;
+    if (batchDir.endsWith("/qt_ui/build")) {
+        batchDir = appDir + "/.."; // Go to qt_ui directory
+    }
+    qDebug() << "MainWindow: Batch file directory:" << batchDir;
+    QString batchPath = batchDir + "/" + batchFileName;
     QFile batchFile(batchPath);
     if (batchFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QTextStream out(&batchFile);
@@ -814,45 +902,85 @@ void MainWindow::runSimulation()
             this, &MainWindow::onSimulationFinished);
     
     QString fullExperimentName = QString("%1_%2").arg(cropType, experimentName);
-    QString outputFileName = QString("outputs/%1_results.csv").arg(fullExperimentName);
-    QString dailyOutputFileName = QString("outputs/%1_daily_results.csv").arg(fullExperimentName);
     
     // Set working directory to the hydroponic_python root
-    QString workingDir = QDir::currentPath();
-    // If we're in qt_ui/build, go up two levels to reach hydroponic_python
-    if (workingDir.endsWith("/qt_ui/build")) {
-        workingDir = QDir::currentPath() + "/../..";
-    } else if (workingDir.endsWith("/qt_ui")) {
-        workingDir = QDir::currentPath() + "/..";
+    QString appDir = QCoreApplication::applicationDirPath();
+    QString workingDir = appDir;
+    // If app is in qt_ui/build, go up two levels to reach hydroponic_python
+    if (appDir.endsWith("/qt_ui/build")) {
+        workingDir = appDir + "/../..";
+    } else if (appDir.endsWith("/qt_ui")) {
+        workingDir = appDir + "/..";
     } else {
-        workingDir = QDir::currentPath() + "/..";
+        workingDir = appDir + "/..";
     }
+    workingDir = QDir(workingDir).canonicalPath();
+    qDebug() << "MainWindow: Working directory for simulation:" << workingDir;
     
-    QStringList arguments;
-    arguments << "cropgro_cli.py";
-    arguments << "--cultivar" << fullExperimentName;
-    arguments << "--days" << QString::number(m_durationSpinBox->value());
-    arguments << "--output-csv" << outputFileName;  // Generate experiment-specific daily CSV
+    // Check if we have multiple treatments (multi-treatment scenario)
+    QStringList treatmentCombinations = generateTreatmentCombinations();
+    bool isMultiTreatment = treatmentCombinations.size() > 1;
     
-    qDebug() << "MainWindow: Executing simulation command:";
-    qDebug() << "MainWindow: Working directory:" << workingDir;
-    qDebug() << "MainWindow: Command: python3" << arguments.join(" ");
-    
-    // Store expected output filenames for results loading
-    m_resultsFile = workingDir + "/" + outputFileName;
-    
-    m_progressBar->setVisible(true);
-    m_progressBar->setRange(0, 0); // Indeterminate progress
-    m_statusLabel->setText("Running simulation...");
-    m_runSimulationButton->setEnabled(false);
-    
-    qDebug() << "MainWindow: Setting working directory to:" << workingDir;
-    m_simulationProcess->setWorkingDirectory(workingDir);
-    m_simulationProcess->start("python3", arguments);
-    
-    if (!m_simulationProcess->waitForStarted()) {
-        // Try python instead of python3
-        m_simulationProcess->start("python", arguments);
+    if (isMultiTreatment) {
+        // Run the batch script for multi-treatment
+        QString batchFileName = QString("run_simulation_%1.sh").arg(fullExperimentName);
+        QString qtUiDir = workingDir + "/qt_ui";
+        QString batchFilePath = qtUiDir + "/" + batchFileName;
+        
+        qDebug() << "MainWindow: Looking for batch file:" << batchFilePath;
+        qDebug() << "MainWindow: Batch file exists:" << QFile::exists(batchFilePath);
+        
+        if (!QFile::exists(batchFilePath)) {
+            QMessageBox::warning(this, "Run Simulation", 
+                QString("Batch file not found: %1\nPlease generate the batch file first.").arg(batchFilePath));
+            return;
+        }
+        
+        qDebug() << "MainWindow: Running multi-treatment batch script:";
+        qDebug() << "MainWindow: Working directory:" << qtUiDir;
+        qDebug() << "MainWindow: Command: bash" << batchFileName;
+        
+        // Store expected output filenames for results loading (combined results)
+        m_resultsFile = workingDir + "/outputs/" + fullExperimentName + "_combined_results.csv";
+        
+        m_progressBar->setVisible(true);
+        m_progressBar->setRange(0, 0); // Indeterminate progress
+        m_statusLabel->setText("Running multi-treatment simulation...");
+        m_runSimulationButton->setEnabled(false);
+        
+        // Change to qt_ui directory (not build) and run the batch script
+        m_simulationProcess->setWorkingDirectory(qtUiDir);
+        m_simulationProcess->start("bash", QStringList() << batchFileName);
+        
+    } else {
+        // Run single treatment simulation
+        QString outputFileName = QString("outputs/%1_results.csv").arg(fullExperimentName);
+        
+        QStringList arguments;
+        arguments << "cropgro_cli.py";
+        arguments << "--cultivar" << fullExperimentName;
+        arguments << "--days" << QString::number(m_durationSpinBox->value());
+        arguments << "--output-csv" << outputFileName;
+        
+        qDebug() << "MainWindow: Running single treatment simulation:";
+        qDebug() << "MainWindow: Working directory:" << workingDir;
+        qDebug() << "MainWindow: Command: python3" << arguments.join(" ");
+        
+        // Store expected output filenames for results loading
+        m_resultsFile = workingDir + "/" + outputFileName;
+        
+        m_progressBar->setVisible(true);
+        m_progressBar->setRange(0, 0); // Indeterminate progress
+        m_statusLabel->setText("Running simulation...");
+        m_runSimulationButton->setEnabled(false);
+        
+        m_simulationProcess->setWorkingDirectory(workingDir);
+        m_simulationProcess->start("python3", arguments);
+        
+        if (!m_simulationProcess->waitForStarted()) {
+            // Try python instead of python3
+            m_simulationProcess->start("python", arguments);
+        }
     }
 }
 
@@ -1096,6 +1224,7 @@ QMap<QString, QStringList> MainWindow::getSelectedTreatments() const
                 QString fullCategory;
                 if (category == "Varieties") fullCategory = "Varieties";
                 else if (category == "Temperature") fullCategory = "Temperature";
+                else if (category == "RootZoneTemp") fullCategory = "RootZoneTemp";
                 else if (category == "Nitrogen") fullCategory = "Nitrogen";
                 else if (category == "pH") fullCategory = "pH";
                 else if (category == "Light") fullCategory = "Light";
@@ -1170,6 +1299,8 @@ QStringList MainWindow::parseTreatmentCombination(const QString &combo) const
                 // Map treatment categories to CLI parameters
                 if (category == "temperature") {
                     cliParams << QString("--temperature %1").arg(value);
+                } else if (category == "rootzonetemp") {
+                    cliParams << QString("--root-zone-temp %1").arg(value);
                 } else if (category == "nitrogen") {
                     cliParams << QString("--nitrogen %1").arg(value);
                 } else if (category == "ph") {

@@ -1,0 +1,11 @@
+parameter_name,value,unit,description
+optimal_light_intensity,15.0,MJ_per_m2_per_day,Ideal daily light for maximum photosynthesis
+min_ec,0.8,dS_per_m,Minimum electrical conductivity before stress
+max_ec,2.6,dS_per_m,Maximum safe electrical conductivity
+optimal_ec,2.0,dS_per_m,Best electrical conductivity for growth
+optimal_vpd_min,0.6,kPa,Lower bound of optimal vapor pressure deficit
+optimal_vpd_max,1.0,kPa,Upper bound of optimal vapor pressure deficit
+optimal_temperature,20.0,celsius,Ideal root zone temperature
+optimal_temperature_max,26.0,celsius,Maximum air temperature before stress
+optimal_temperature_min,16.0,celsius,Minimum air temperature before stress
+min_humidity,60.0,percent,Minimum relative humidity before stress
