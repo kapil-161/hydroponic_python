@@ -102,6 +102,19 @@ class RespirationParameters:
             n_effect_slope=get_param('n_effect_slope', 0.1),  # Default: 0.1 g C/g N
             reference_leaf_n=get_param('reference_leaf_n', 0.04)  # Default: 4% N content
         )
+    
+    def get_default_growth_composition(self, config_dict: dict) -> Dict[str, float]:
+        """Get default growth composition from CSV config."""
+        def get_param(param_name: str, default_value: float) -> float:
+            return config_dict.get(param_name, default_value)
+        
+        return {
+            'protein': get_param('protein_fraction', 0.15),
+            'carbohydrate': get_param('carbohydrate_fraction', 0.70),
+            'lipid': get_param('lipid_fraction', 0.05),
+            'organic_acid': get_param('organic_acid_fraction', 0.05),
+            'lignin': get_param('lignin_fraction', 0.05)
+        }
 
 
 @dataclass
@@ -138,8 +151,9 @@ class EnhancedRespirationModel:
     - Temperature acclimation
     """
     
-    def __init__(self, parameters: Optional[RespirationParameters] = None):
+    def __init__(self, parameters: Optional[RespirationParameters] = None, config_dict: Optional[dict] = None):
         self.params = parameters or RespirationParameters()
+        self.config_dict = config_dict or {}
         self.temperature_history: List[float] = []
         self.acclimated_reference_temp: float = self.params.reference_temperature
         
@@ -278,20 +292,12 @@ class EnhancedRespirationModel:
         if new_growth <= 0:
             return 0.0
         
-        # Simple approach: fixed biosynthetic cost
-        if growth_composition is None:
-            growth_cost = self.params.biosynthetic_cost  # g glucose/g biomass
-            growth_efficiency = self.params.growth_efficiency
-            
-            # Growth respiration = biosynthetic cost * (1 - efficiency) * new growth
-            glucose_required = growth_cost * new_growth
-            glucose_respired = glucose_required * (1.0 - growth_efficiency)
-            
-            # Convert glucose to carbon (glucose = C6H12O6, MW = 180, C content = 40%)
-            carbon_respired = glucose_respired * 0.4
-            
-        else:
-            # Detailed approach based on biochemical composition
+        # Use detailed composition by default if config is available
+        if growth_composition is None and self.config_dict:
+            growth_composition = self.params.get_default_growth_composition(self.config_dict)
+        
+        # Detailed approach based on biochemical composition (now the default)
+        if growth_composition is not None:
             # Different biosynthetic costs for protein, carbohydrate, lipid
             costs = {
                 'protein': 1.89,      # g glucose/g protein
@@ -307,6 +313,18 @@ class EnhancedRespirationModel:
                 total_glucose_cost += cost * fraction * new_growth
             
             glucose_respired = total_glucose_cost * (1.0 - self.params.growth_efficiency)
+            carbon_respired = glucose_respired * 0.4
+            
+        else:
+            # Fallback to simple approach only if no composition data available
+            growth_cost = self.params.biosynthetic_cost  # g glucose/g biomass
+            growth_efficiency = self.params.growth_efficiency
+            
+            # Growth respiration = biosynthetic cost * (1 - efficiency) * new growth
+            glucose_required = growth_cost * new_growth
+            glucose_respired = glucose_required * (1.0 - growth_efficiency)
+            
+            # Convert glucose to carbon (glucose = C6H12O6, MW = 180, C content = 40%)
             carbon_respired = glucose_respired * 0.4
         
         return carbon_respired
@@ -420,7 +438,7 @@ def create_lettuce_respiration_model(system_config=None) -> EnhancedRespirationM
         
         # Create parameters from CSV config
         parameters = RespirationParameters.from_config(respiration_params)
-        return EnhancedRespirationModel(parameters)
+        return EnhancedRespirationModel(parameters, respiration_params)
         
     except Exception as e:
         print(f"Warning: Could not load CSV respiration parameters: {e}")

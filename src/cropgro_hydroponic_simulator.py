@@ -43,6 +43,7 @@ from .models.stress_models import create_lettuce_integrated_stress_model
 from .models.stress_models import create_lettuce_temperature_stress_model
 from .models.root_system_model import create_enhanced_root_uptake_model, HydroponicSystemType
 from .models.root_zone_temperature import create_lettuce_rzt_model
+from .models.ph_model import create_lettuce_ph_model
 from .models.environmental_control import create_lettuce_environmental_control_system
 from .models.photosynthesis_model import create_lettuce_photosynthesis_model
 from .models.nutrient_models import NutrientConcentrationModel
@@ -308,6 +309,11 @@ class CROPGROHydroponicSimulator:
         logger.info("Initializing root zone temperature model...")
         # Load root zone temperature model using CSV configuration
         self.rzt_model = create_lettuce_rzt_model(self.system_config)
+        
+        # 13. pH MODEL  
+        logger.info("Initializing comprehensive pH model...")
+        # Load pH model with buffer chemistry using CSV configuration
+        self.ph_model = create_lettuce_ph_model(self.system_config)
         
         # Initialize state variables
         self._initialize_plant_state()
@@ -684,15 +690,60 @@ class CROPGROHydroponicSimulator:
                     concentration_reduction = total_uptake_mg / volume_m3  # mg/L reduction (mg per m³)
                     current_concentrations[nutrient_id] = max(0.0, current_concentrations[nutrient_id] - concentration_reduction)
 
-            # Update pH with drift and passive buffering; slight downward drift over time
-            no3_uptake_total_mg = getattr(daily_result, 'N-NO3_uptake_rate', 0.0) * max(1, plant_count)
-            if no3_uptake_total_mg == 0.0:
-                est_n_mg = getattr(daily_result, 'nitrogen_uptake_mg', 0.0) * max(1, plant_count)
-                no3_uptake_total_mg = est_n_mg * (62.0 / 14.0)
-            # Nitrate uptake tends to acidify (release of H+)
-            uptake_drift = -min(0.03, no3_uptake_total_mg / 20000.0)
-            natural_acidification = -0.005
-            current_ph = max(5.5, min(6.5, current_ph + uptake_drift + natural_acidification))
+            # Update pH using comprehensive chemistry model
+            # Calculate total nutrient uptake for all plants from daily_result
+            total_nutrient_uptake = {}
+            
+            # Get uptake rates from the daily result (these are already per-plant rates)
+            uptake_mapping = {
+                'NO3': 'N-NO3_uptake_rate',
+                'NH4': 'N-NH4_uptake_rate',  # If available
+                'PO4': 'P-PO4_uptake_rate',
+                'K': 'K_uptake_rate',
+                'Ca': 'Ca_uptake_rate', 
+                'Mg': 'Mg_uptake_rate'
+            }
+            
+            for nutrient_id, result_key in uptake_mapping.items():
+                per_plant_uptake = getattr(daily_result, result_key, 0.0)
+                total_nutrient_uptake[nutrient_id] = per_plant_uptake * max(1, plant_count)
+            
+            # Use comprehensive pH model for accurate pH dynamics
+            # Get EC from the simulation result or estimate from concentrations
+            current_ec = self._calculate_ec(current_concentrations) if hasattr(self, '_calculate_ec') else 1.8
+            
+            ph_response = self.ph_model.daily_update(
+                nutrient_uptake=total_nutrient_uptake,
+                nutrient_concentrations=current_concentrations,
+                temperature=daily_temp,
+                ec=current_ec
+            )
+            
+            # Update pH and apply nutrient availability effects
+            current_ph = ph_response['final_ph']
+            current_concentrations = ph_response['available_nutrients']
+            
+            # Store pH model results for inclusion in daily results
+            daily_result.ph_change_from_uptake = ph_response['ph_change_from_uptake']
+            daily_result.ph_change_from_drift = ph_response['ph_change_from_drift']
+            daily_result.acid_dosed_ml_per_L = ph_response['acid_dosed_ml_per_L']
+            daily_result.base_dosed_ml_per_L = ph_response['base_dosed_ml_per_L']
+            daily_result.buffer_capacity = ph_response['buffer_capacity']
+            
+            # Store phosphate speciation data
+            phosphate_species = ph_response['phosphate_species']
+            daily_result.phosphate_h2po4_mg_L = phosphate_species.get('H2PO4', 0.0)
+            daily_result.phosphate_hpo4_mg_L = phosphate_species.get('HPO4', 0.0)
+            
+            # Calculate total precipitation
+            precipitation = ph_response['nutrient_precipitation']
+            daily_result.nutrient_precipitation_mg_L = sum(precipitation.values())
+            
+            # Log significant pH changes or dosing
+            if abs(ph_response['ph_change_from_uptake']) > 0.05:
+                logger.info(f"Day {day}: Significant pH change from uptake: {ph_response['ph_change_from_uptake']:.3f}")
+            if ph_response['acid_dosed_ml_per_L'] > 0.1 or ph_response['base_dosed_ml_per_L'] > 0.1:
+                logger.info(f"Day {day}: pH control - Acid: {ph_response['acid_dosed_ml_per_L']:.2f} mL/L, Base: {ph_response['base_dosed_ml_per_L']:.2f} mL/L")
 
             # Update tank volume
             current_tank_volume = daily_result.tank_volume
@@ -1007,12 +1058,16 @@ class CROPGROHydroponicSimulator:
                                       stage_props: Dict[str, Any]) -> Dict[str, float]:
         """Calculate growth rates driven by carbon assimilation"""
         # Calculate photosynthesis
+        # Get canopy parameters for LAI thresholds
+        canopy_params = getattr(self.system_config, 'canopy_parameters', {})
+        
         detailed_photosynthesis = self.photosynthesis_model.calculate_daily_assimilation(
             par_umol_m2_s=env_conditions['light_environment'].ppfd_above_canopy,
             co2_ppm=env_conditions['actual_co2'],
             temp_c=env_conditions['actual_temperature'],
             lai=self.current_lai,
-            photoperiod_hours=daylength
+            photoperiod_hours=daylength,
+            config_dict=canopy_params
         )
         
         # Apply genetic and stress modifiers ONLY ONCE
@@ -1134,12 +1189,16 @@ class CROPGROHydroponicSimulator:
         
         # === STEP 4: PHOTOSYNTHESIS ===
         # Calculate carbon assimilation based on environment and stress
+        # Get canopy parameters for LAI thresholds
+        canopy_params = getattr(self.system_config, 'canopy_parameters', {})
+        
         detailed_photosynthesis = self.photosynthesis_model.calculate_daily_assimilation(
             par_umol_m2_s=env_conditions['light_environment'].ppfd_above_canopy,
             co2_ppm=env_conditions['actual_co2'],
             temp_c=env_conditions['actual_temperature'],
             lai=self.current_lai,
-            photoperiod_hours=daylength
+            photoperiod_hours=daylength,
+            config_dict=canopy_params
         )
         
         # Apply stress effects to photosynthesis (use overall stress factor from centralized calculation)
@@ -1243,8 +1302,18 @@ class CROPGROHydroponicSimulator:
         # Distribute uptaken nutrients within the plant
         
         # Extract nitrogen uptake from root model (authoritative source)
-        nitrogen_uptake_mg_per_day = root_response.get('NO3_uptake_rate', 0.0)
+        # CRITICAL FIX: Root model returns NO3 uptake (mg NO3/day), convert to elemental N
+        no3_uptake_mg_per_day = root_response.get('NO3_uptake_rate', 0.0)
+        # Convert NO3 to elemental N: molecular weight NO3=62, N=14, so N = NO3 * (14/62)
+        nitrogen_uptake_mg_per_day = no3_uptake_mg_per_day * (14.0 / 62.0)
         nitrogen_uptake_g_per_day = nitrogen_uptake_mg_per_day / 1000.0
+        
+        # Extract phosphorus uptake with unit conversion
+        # CRITICAL FIX: Root model returns PO4 uptake (mg PO4/day), convert to elemental P
+        po4_uptake_mg_per_day = root_response.get('PO4_uptake_rate', 0.0)
+        # Convert PO4 to elemental P: molecular weight PO4=95, P=31, so P = PO4 * (31/95)
+        phosphorus_uptake_mg_per_day = po4_uptake_mg_per_day * (31.0 / 95.0)
+        phosphorus_uptake_g_per_day = phosphorus_uptake_mg_per_day / 1000.0
         
         # Use nitrogen balance model for internal allocation and transport only
         nitrogen_response = self.nitrogen_model.update_nitrogen_pools(
@@ -1585,8 +1654,12 @@ class CROPGROHydroponicSimulator:
         cropgro_result.age_factor = respiration_response.age_factor
         
         # 5. NITROGEN DYNAMICS - USE ROOT MODEL AS SINGLE SOURCE OF TRUTH
-        # CRITICAL FIX: Get nitrogen uptake ONLY from the authoritative root model
-        cropgro_result.nitrogen_uptake_mg = nitrogen_uptake_mg_per_day  # Direct from root model
+        # CRITICAL FIX: Store corrected elemental nitrogen uptake (not NO3)
+        cropgro_result.nitrogen_uptake_mg = nitrogen_uptake_mg_per_day  # Elemental N from NO3 conversion
+        
+        # 6. PHOSPHORUS DYNAMICS - USE ROOT MODEL AS SINGLE SOURCE OF TRUTH
+        # CRITICAL FIX: Store corrected elemental phosphorus uptake (not PO4)
+        cropgro_result.phosphorus_uptake_mg = phosphorus_uptake_mg_per_day  # Elemental P from PO4 conversion
         
         # Validate that root model is providing realistic uptake
         # Only warn if there ARE nutrients available but still zero uptake
@@ -1881,10 +1954,15 @@ class CROPGROHydroponicSimulator:
             cavitation_factor = max(0.1, 1.0 + (adjusted_leaf_potential - cavitation_threshold) / 1.0)
             hydraulic_water_uptake *= cavitation_factor
         
-        # Total water uptake limited by hydraulic capacity
+        # Total water uptake limited by hydraulic capacity and plant physiology
         total_uptake = max(0.1, hydraulic_water_uptake + metabolic_water)
         
-        return min(total_uptake, transpiration_demand * 1.2)  # Cannot exceed 120% of transpiration demand
+        # Plants can uptake more water than immediate transpiration demand for:
+        # 1. Water storage in tissues (especially in stems and roots)
+        # 2. Metabolic processes (cell expansion, biochemical reactions)
+        # 3. Maintaining turgor pressure
+        # Therefore, no artificial cap based on transpiration demand
+        return total_uptake
     
     def _calculate_osmotic_adjustment(self, stress_factors: Dict[str, Any]) -> float:
         """
@@ -2200,13 +2278,27 @@ class CROPGROHydroponicSimulator:
         output.append(f"  • Growth Respiration: {getattr(daily_result, 'growth_respiration', 0.0):.4f}")
         output.append(f"  • Net Assimilation: {getattr(daily_result, 'net_assimilation', 0.0):.4f}")
         
-        # 5. NITROGEN DYNAMICS
-        output.append(f"\n🧪 NITROGEN DYNAMICS:")
+        # 5. NUTRIENT SOLUTION STATUS
+        output.append(f"\n💧 NUTRIENT SOLUTION STATUS:")
+        nutrient_concs = getattr(daily_result, 'nutrient_concentrations', {})
+        output.append(f"  • N-NO₃: {nutrient_concs.get('N-NO3', 0.0):.0f} ppm")
+        output.append(f"  • P-PO₄: {nutrient_concs.get('P-PO4', 0.0):.0f} ppm") 
+        output.append(f"  • K: {nutrient_concs.get('K', 0.0):.0f} ppm")
+        output.append(f"  • Ca: {nutrient_concs.get('Ca', 0.0):.0f} ppm")
+        output.append(f"  • Mg: {nutrient_concs.get('Mg', 0.0):.0f} ppm")
+        output.append(f"  • EC: {getattr(daily_result, 'ec', 1.5):.1f} dS/m")
+        output.append(f"  • Solution pH: {getattr(daily_result, 'solution_ph', 6.0):.1f}")
+        output.append(f"  • Tank Volume: {getattr(daily_result, 'tank_volume', 1000):.0f} L")
+        
+        # 6. NUTRIENT UPTAKE DYNAMICS  
+        output.append(f"\n🧪 NUTRIENT UPTAKE DYNAMICS:")
         output.append(f"  • N Uptake: {getattr(daily_result, 'nitrogen_uptake_mg', 0.0):.2f} mg/day")
-        output.append(f"  • N Demand: {getattr(daily_result, 'nitrogen_demand_mg', 0.0):.2f} mg/day")
+        output.append(f"  • P Uptake: {getattr(daily_result, 'phosphorus_uptake_mg', 0.0):.2f} mg/day")
+        output.append(f"  • K Uptake: {getattr(daily_result, 'K_uptake_rate', 0.0):.2f} mg/day")
+        output.append(f"  • Ca Uptake: {getattr(daily_result, 'Ca_uptake_rate', 0.0):.2f} mg/day")
+        output.append(f"  • Mg Uptake: {getattr(daily_result, 'Mg_uptake_rate', 0.0):.2f} mg/day")
         output.append(f"  • N Stress Level: {1.0 - getattr(daily_result, 'nitrogen_stress_factor', 1.0):.3f}")
         output.append(f"  • Leaf N Concentration: {getattr(daily_result, 'leaf_nitrogen_conc', 0.0):.3f}%")
-        output.append(f"  • Root N Concentration: {getattr(daily_result, 'root_nitrogen_conc', 0.0):.3f}%")
         
         # 6. STRESS RESPONSES
         output.append(f"\n😰 STRESS RESPONSES:")
@@ -2248,6 +2340,46 @@ class CROPGROHydroponicSimulator:
         output.append(f"  • Controlled CO₂: {getattr(daily_result, 'controlled_co2', 400.0):.0f} μmol/mol")
         output.append(f"  • VPD Target: {getattr(daily_result, 'vpd_target', 0.8):.2f} kPa")
         output.append(f"  • Environmental Cost: ${getattr(daily_result, 'environmental_cost', 0.0):.3f}/hour")
+        
+        # 11. WATER SYSTEM DYNAMICS
+        output.append(f"\n💦 WATER SYSTEM DYNAMICS:")
+        output.append(f"  • Transpiration Rate: {getattr(daily_result, 'transpiration_rate', 0.0):.2f} L/m²/day")
+        output.append(f"  • Total Water Uptake: {getattr(daily_result, 'total_water_uptake', 0.0):.2f} L/day")
+        output.append(f"  • Water Use Efficiency: {getattr(daily_result, 'water_use_efficiency', 0.0):.1f} kg/m³")
+        output.append(f"  • VPD: {getattr(daily_result, 'vpd', 0.0):.2f} kPa")
+        output.append(f"  • Solution Temperature: {getattr(daily_result, 'rzt', 20.0):.1f}°C")
+        output.append(f"  • RZT Growth Factor: {getattr(daily_result, 'rzt_growth_factor', 1.0):.3f}")
+        output.append(f"  • RZT Nutrient Factor: {getattr(daily_result, 'rzt_nutrient_factor', 1.0):.3f}")
+        
+        # 12. SYSTEM EFFICIENCY METRICS
+        output.append(f"\n📊 SYSTEM EFFICIENCY METRICS:")
+        total_biomass = getattr(daily_result, 'total_biomass', 0.0)
+        days_elapsed = getattr(daily_result, 'day', 1)
+        daily_growth = getattr(daily_result, 'daily_growth_rate', 0.0)
+        n_uptake = getattr(daily_result, 'nitrogen_uptake_mg', 0.0)
+        
+        # Calculate efficiency metrics
+        growth_rate_per_day = daily_growth if daily_growth > 0 else 0.0
+        nitrogen_use_efficiency = (growth_rate_per_day / max(0.1, n_uptake)) * 1000 if n_uptake > 0 else 0.0  # g biomass per g N
+        biomass_per_day = total_biomass / max(1, days_elapsed)
+        
+        output.append(f"  • Average Growth Rate: {biomass_per_day:.2f} g/plant/day")
+        output.append(f"  • Nitrogen Use Efficiency: {nitrogen_use_efficiency:.1f} g biomass/g N")
+        output.append(f"  • Light Use Efficiency: {getattr(daily_result, 'light_use_efficiency', 0.0):.3f} g/MJ")
+        output.append(f"  • Days to Harvest: {max(0, 45 - days_elapsed)} days (est.)")
+        output.append(f"  • Projected Yield: {total_biomass * (45 / max(1, days_elapsed)):.1f} g/plant")
+        
+        # 13. COMPREHENSIVE pH DYNAMICS  
+        output.append(f"\n🧪 COMPREHENSIVE pH DYNAMICS:")
+        output.append(f"  • Solution pH: {getattr(daily_result, 'solution_ph', 6.0):.2f}")
+        output.append(f"  • pH Change from Uptake: {getattr(daily_result, 'ph_change_from_uptake', 0.0):.3f}")
+        output.append(f"  • pH Natural Drift: {getattr(daily_result, 'ph_change_from_drift', 0.0):.3f}")
+        output.append(f"  • Acid Dosed: {getattr(daily_result, 'acid_dosed_ml_per_L', 0.0):.2f} mL/L")
+        output.append(f"  • Base Dosed: {getattr(daily_result, 'base_dosed_ml_per_L', 0.0):.2f} mL/L")
+        output.append(f"  • Buffer Capacity: {getattr(daily_result, 'buffer_capacity', 0.0):.1f} mEq/L")
+        output.append(f"  • H₂PO₄⁻ (Available P): {getattr(daily_result, 'phosphate_h2po4_mg_L', 0.0):.1f} mg/L")
+        output.append(f"  • HPO₄²⁻ (Less Available P): {getattr(daily_result, 'phosphate_hpo4_mg_L', 0.0):.1f} mg/L")
+        output.append(f"  • Nutrient Precipitation: {getattr(daily_result, 'nutrient_precipitation_mg_L', 0.0):.1f} mg/L")
         
         output.append("\n" + "=" * 70)
         

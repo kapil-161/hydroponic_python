@@ -14,3 +14,11 @@ tissue_factor_stems,0.8,multiplier,Respiration factor for stem tissues
 tissue_factor_roots,1.2,multiplier,Respiration factor for root tissues
 tissue_factor_reproductive,1.5,multiplier,Respiration factor for reproductive tissues
 acclimation_rate,0.05,per_celsius_per_day,Rate of temperature acclimation
+acclimation_memory,7.0,days,Days of temperature memory for acclimation
+n_effect_slope,0.1,fraction,Respiration response to leaf nitrogen content
+reference_leaf_n,0.04,fraction,Reference leaf nitrogen content for respiration calculations
+protein_fraction,0.15,fraction,Protein fraction in new biomass growth
+carbohydrate_fraction,0.70,fraction,Carbohydrate fraction in new biomass growth
+lipid_fraction,0.05,fraction,Lipid fraction in new biomass growth
+organic_acid_fraction,0.05,fraction,Organic acid fraction in new biomass growth
+lignin_fraction,0.05,fraction,Lignin fraction in new biomass growth

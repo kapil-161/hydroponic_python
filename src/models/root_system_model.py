@@ -762,25 +762,35 @@ class EnhancedRootUptakeModel:
         self.root_architecture = create_lettuce_root_architecture_model(system_type, tank_volume, system_config)
         self.system_type = system_type
         self.tank_volume = tank_volume
+        # Load realistic uptake parameters from CSV configuration
+        nutrient_params = getattr(system_config, 'nutrient_parameters', {}) if system_config else {}
+        
+        # Extract CSV uptake parameters with strict error handling
+        try:
+            base_uptake_rates = {
+                'NO3': nutrient_params['no3_uptake_vmax'],
+                'NH4': nutrient_params['nh4_uptake_vmax'], 
+                'PO4': nutrient_params['po4_uptake_vmax'],
+                'K': nutrient_params['k_uptake_vmax'],
+                'Ca': 0.015,    # Default for Ca (not critical)
+                'Mg': 0.012,    # Default for Mg (not critical)
+                'SO4': 0.010,   # Default for SO4 (not critical)
+            }
+            michaelis_constants = {
+                'NO3': nutrient_params['no3_uptake_km'],
+                'NH4': nutrient_params['nh4_uptake_km'],
+                'PO4': nutrient_params['po4_uptake_km'], 
+                'K': nutrient_params['k_uptake_km'],
+                'Ca': 25.0,     # Default for Ca
+                'Mg': 20.0,     # Default for Mg
+                'SO4': 30.0,    # Default for SO4
+            }
+        except KeyError as e:
+            raise KeyError(f"Required uptake parameter '{e.args[0]}' not found in CSV configuration. Add to nutrient_parameters_consolidated.csv")
+        
         self.uptake_params = RootUptakeParameters(
-            base_uptake_rates={
-                'NO3': 0.15,    # mg/cm²/day - realistic for hydroponic lettuce
-                'NH4': 0.09,    # mg/cm²/day - reduced from 3.6
-                'PO4': 0.03,    # mg/cm²/day - reduced from 1.2
-                'K': 0.12,      # mg/cm²/day - reduced from 4.8
-                'Ca': 0.06,     # mg/cm²/day - reduced from 2.4
-                'Mg': 0.05,     # mg/cm²/day - reduced from 1.9
-                'SO4': 0.04,    # mg/cm²/day - reduced from 1.4
-            },
-            michaelis_constants={
-                'NO3': 6.0,
-                'NH4': 20.0,
-                'PO4': 5.0,
-                'K': 30.0,
-                'Ca': 40.0,
-                'Mg': 25.0,
-                'SO4': 35.0,
-            },
+            base_uptake_rates=base_uptake_rates,
+            michaelis_constants=michaelis_constants,
         )
 
     def daily_update(self,

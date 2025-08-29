@@ -9,7 +9,7 @@ Based on recent research (2021-2024):
 """
 
 import numpy as np
-from typing import Dict, Tuple, Optional, List
+from typing import Dict, Tuple, Optional, List, Any
 from dataclasses import dataclass
 from enum import Enum
 import math
@@ -352,17 +352,108 @@ class EnvironmentalControlSystem:
             'action': 'no_control'
         }
     
+    def _calculate_time_based_co2_target(self, base_target: float, photoperiod_time: float, 
+                                       light_on: bool, config_dict: Optional[Dict[str, Any]] = None) -> float:
+        """Calculate CO2 target based on time within photoperiod using CSV parameters."""
+        if not light_on:
+            return self.setpoints.ambient_co2
+        
+        if not config_dict:
+            # Fallback to original behavior if no config
+            return base_target
+        
+        # Load time-based parameters from CSV - ERROR if missing
+        required_params = [
+            'co2_enrichment_start_hour', 'co2_enrichment_duration', 
+            'co2_enrichment_strategy', 'co2_morning_target', 'co2_afternoon_target'
+        ]
+        
+        for param in required_params:
+            if param not in config_dict:
+                raise KeyError(f"Required CO2 enrichment parameter '{param}' not found in CSV configuration")
+        
+        start_hour = config_dict['co2_enrichment_start_hour']
+        duration = config_dict['co2_enrichment_duration']
+        strategy = config_dict['co2_enrichment_strategy']
+        morning_target = config_dict['co2_morning_target']
+        afternoon_target = config_dict['co2_afternoon_target']
+        
+        if strategy == "morning_only":
+            # Enrichment only during specific morning hours
+            enrichment_end = start_hour + duration
+            if start_hour <= photoperiod_time < enrichment_end:
+                return morning_target
+            else:
+                return afternoon_target
+                
+        elif strategy == "full_day":
+            # Full day enrichment with different targets
+            enrichment_end = start_hour + duration
+            if start_hour <= photoperiod_time < enrichment_end:
+                return morning_target
+            else:
+                return base_target  # Use original target for rest of day
+                
+        elif strategy == "adaptive":
+            # Adaptive strategy based on photoperiod progress
+            # Higher enrichment early, gradual reduction
+            enrichment_end = start_hour + duration
+            if start_hour <= photoperiod_time < enrichment_end:
+                # Gradual reduction during enrichment period
+                progress = (photoperiod_time - start_hour) / duration
+                return morning_target * (1.0 - 0.3 * progress)  # 30% reduction over time
+            else:
+                return afternoon_target
+        else:
+            # Unknown strategy, use base target
+            return base_target
+    
+    def calculate_photoperiod_time(self, current_hour: float, light_start_hour: float = 6.0) -> float:
+        """
+        Calculate hours elapsed since photoperiod started.
+        
+        Args:
+            current_hour: Current hour of day (0.0-24.0)
+            light_start_hour: Hour when lights turn on (default 6:00 AM)
+            
+        Returns:
+            Hours elapsed since photoperiod started (0.0 = lights just turned on)
+            Returns -1.0 if lights are currently off
+        """
+        light_end_hour = light_start_hour + self.setpoints.light_hours
+        
+        # Handle day rollover
+        if light_end_hour > 24.0:
+            # Photoperiod crosses midnight
+            if current_hour >= light_start_hour or current_hour < (light_end_hour - 24.0):
+                if current_hour >= light_start_hour:
+                    return current_hour - light_start_hour
+                else:
+                    return (24.0 - light_start_hour) + current_hour
+            else:
+                return -1.0  # Lights off
+        else:
+            # Normal photoperiod within single day
+            if light_start_hour <= current_hour < light_end_hour:
+                return current_hour - light_start_hour
+            else:
+                return -1.0  # Lights off
+    
     def calculate_co2_control_action(self, current_co2: float, target_co2: float,
                                    light_on: bool = True,
-                                   strategy: ControlStrategy = ControlStrategy.PID) -> Dict[str, float]:
+                                   strategy: ControlStrategy = ControlStrategy.PID,
+                                   photoperiod_time: float = 0.0,
+                                   config_dict: Optional[Dict[str, Any]] = None) -> Dict[str, float]:
         """
-        Calculate CO2 control actions with intelligent strategies.
+        Calculate CO2 control actions with intelligent time-based strategies.
         
         Args:
             current_co2: Current CO2 concentration (μmol/mol)
             target_co2: Target CO2 concentration (μmol/mol)
             light_on: Whether grow lights are currently on
             strategy: Control strategy to use
+            photoperiod_time: Hours since photoperiod started (0.0 = start of light period)
+            config_dict: Configuration parameters from CSV
             
         Returns:
             Dictionary with control actions and parameters
@@ -383,16 +474,11 @@ class EnvironmentalControlSystem:
             }
         
         else:  # Default to PID for any other strategy
-            # Smart CO2 management with timing optimization
-            
-            # Morning enrichment strategy (first 4 hours of photoperiod)
-            # Research shows morning-only enrichment can be as effective
-            morning_enrichment = True  # Could be time-based
-            
-            if not morning_enrichment and light_on:
-                # Reduce target during afternoon to save CO2
-                target_co2 *= 0.7
-                error = target_co2 - current_co2
+            # Time-based CO2 enrichment strategy using CSV parameters
+            target_co2 = self._calculate_time_based_co2_target(
+                target_co2, photoperiod_time, light_on, config_dict
+            )
+            error = target_co2 - current_co2
             
             # PID control with intelligent modifications
             params = self.pid_params['co2']

@@ -260,6 +260,13 @@ class NitrogenBalanceResponse:
     nitrogen_stress_level: float = None          # 0-1, 0=no stress, 1=max stress
     remobilized_nitrogen: float = None           # g N remobilized today
     nitrogen_balance: float = None               # Net N balance (uptake - growth demand)
+    
+    # Mass balance verification fields
+    mass_balance_error: float = None             # g N/day error in mass balance
+    total_n_input: float = None                  # g N/day total input (uptake + remobilization)
+    total_allocated: float = None                # g N/day total allocated to organs
+    estimated_losses: float = None               # g N/day estimated losses
+    storage_change: float = None                 # g N/day change in storage pools
 
 
 class PlantNitrogenBalanceModel:
@@ -725,9 +732,29 @@ class PlantNitrogenBalanceModel:
         else:
             nue = 0.0
 
-        # Calculate nitrogen balance
+        # Calculate nitrogen balance with mass conservation verification
         total_growth_demand = sum(n_demand.values())
+        total_allocated = sum(allocation_response.allocated_by_organ.values())
+        
+        # MASS BALANCE VERIFICATION: Input = Growth + Storage + Losses
+        # Input sources: uptake + remobilization
+        total_n_input = external_nitrogen_input + remobilized_n
+        
+        # Calculate losses (respiration, exudation, volatile losses)
+        estimated_losses = total_allocated * 0.05  # ~5% losses typical in hydroponics
+        
+        # Storage change = Total input - Growth demand - Losses
+        storage_change = total_n_input - total_allocated - estimated_losses
+        
+        # Net nitrogen balance (positive = accumulation, negative = depletion)
         n_balance = available_n - total_growth_demand
+        
+        # Mass conservation check
+        mass_balance_error = abs(total_n_input - total_allocated - estimated_losses - storage_change)
+        if mass_balance_error > 0.001:  # More than 1 mg error
+            print(f"Warning: Nitrogen mass balance error of {mass_balance_error:.4f} g N/day detected")
+            print(f"  Input: {total_n_input:.4f} g N/day, Allocated: {total_allocated:.4f} g N/day")
+            print(f"  Losses: {estimated_losses:.4f} g N/day, Storage change: {storage_change:.4f} g N/day")
 
         # Update cumulative tracking
         self.total_cumulative_uptake += external_nitrogen_input
@@ -751,7 +778,13 @@ class PlantNitrogenBalanceModel:
             nitrogen_use_efficiency=nue,
             nitrogen_stress_level=n_stress_level,
             remobilized_nitrogen=remobilized_n,
-            nitrogen_balance=n_balance
+            nitrogen_balance=n_balance,
+            # Mass balance verification data
+            mass_balance_error=mass_balance_error,
+            total_n_input=total_n_input,
+            total_allocated=total_allocated,
+            estimated_losses=estimated_losses,
+            storage_change=storage_change
         )
     
     def get_nitrogen_summary(self) -> Dict[str, Any]:

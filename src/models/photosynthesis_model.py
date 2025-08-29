@@ -78,9 +78,12 @@ class PhotosynthesisModel:
         temp_k = temp_c + 273.15
         return rate_25 * np.exp(ea * (temp_k - 298.15) / (298.15 * self.params.r * temp_k))
 
-    def calculate_daily_assimilation(self, par_umol_m2_s: float, co2_ppm: float, temp_c: float, lai: float, photoperiod_hours: float = 16.0) -> float:
-        """Calculate daily carbon assimilation (g C/m2/day).
+    def calculate_daily_assimilation(self, par_umol_m2_s: float, co2_ppm: float, temp_c: float, lai: float, photoperiod_hours: float = 16.0, ec_factor: float = 1.0, config_dict: Optional[Dict[str, Any]] = None) -> float:
+        """Calculate daily carbon assimilation (g C/m2 ground area/day).
 
+        This function calculates photosynthesis PER UNIT LEAF AREA first, then scales by 
+        effective LAI to get total canopy assimilation per unit ground area.
+        
         Uses photoperiod_hours to integrate over light period rather than 24h.
         Includes real-world light penetration and shading constraints.
         """
@@ -92,11 +95,19 @@ class PhotosynthesisModel:
         jmax_base = self._arrhenius_temp_response(self.params.jmax_25, self.params.eaj, temp_c)
         rd = self._arrhenius_temp_response(self.params.rd_25, self.params.ear, temp_c)
         
+        # Load LAI thresholds from CSV configuration
+        enzyme_saturation_lai = 5.0  # Default
+        light_penetration_lai = 6.0  # Default
+        
+        if config_dict:
+            enzyme_saturation_lai = config_dict.get('enzyme_saturation_lai', 5.0)
+            light_penetration_lai = config_dict.get('light_penetration_lai', 6.0)
+        
         # Real-world enzyme saturation at high LAI
         # RuBisCO and electron transport capacity don't scale infinitely with leaf area
-        if lai > 5.0:
-            # Enzyme limitation factor - diminishing returns above LAI 5
-            enzyme_saturation_factor = 1.0 - 0.1 * (lai - 5.0)  # 10% reduction per LAI unit above 5
+        if lai > enzyme_saturation_lai:
+            # Enzyme limitation factor - diminishing returns above threshold
+            enzyme_saturation_factor = 1.0 - 0.1 * (lai - enzyme_saturation_lai)
             enzyme_saturation_factor = max(0.3, enzyme_saturation_factor)  # Minimum 30% capacity
             vcmax = vcmax_base * enzyme_saturation_factor
             jmax = jmax_base * enzyme_saturation_factor
@@ -116,21 +127,29 @@ class PhotosynthesisModel:
         j = (i2 + jmax - np.sqrt((i2 + jmax)**2 - 4 * self.params.theta * i2 * jmax)) / (2 * self.params.theta)
         aj = j * (ci - self.params.gamma_star) / (4 * (ci + 2 * self.params.gamma_star))
 
-        # Net carbon: integrate gross photosynthesis over photoperiod 
-        # NOTE: Dark respiration is handled separately by the respiration model
-        # to avoid double-counting and unit mismatches
+        # Net photosynthesis: subtract dark respiration (Farquhar model standard)
+        # Dark respiration occurs during both light and dark periods
+        net_photosynthesis_rate = max(0.0, min(ac, aj) - rd)
+        
+        # Integrate net photosynthesis over photoperiod
         photoperiod_seconds = max(0.0, photoperiod_hours) * 3600.0
-        gross_day_umol = max(0.0, min(ac, aj)) * photoperiod_seconds
-        # Do NOT subtract respiration here - it's handled by the respiration model
-        net_umol_day = gross_day_umol
+        net_day_umol = net_photosynthesis_rate * photoperiod_seconds
+        
+        # Dark respiration continues during dark period (24 - photoperiod_hours)
+        dark_period_hours = max(0.0, 24.0 - photoperiod_hours)
+        dark_period_seconds = dark_period_hours * 3600.0
+        dark_respiration_umol = rd * dark_period_seconds
+        
+        # Total daily net carbon = net photosynthesis - dark period respiration
+        net_umol_day = max(0.0, net_day_umol - dark_respiration_umol)
         # Convert from umol CO2 to g C: 1 umol CO2 ≈ 1.201e-5 g C
         g_c_m2_day = max(0.0, net_umol_day) * 1.201e-5
 
-        # Real-world light penetration constraints
+        # Real-world light penetration constraints using CSV parameters
         # Effective LAI decreases with canopy density due to shading
-        if lai > 6.0:
-            # Severe shading above LAI 6 - diminishing returns
-            light_penetration_factor = 6.0 / lai  # Linear decline in effectiveness
+        if lai > light_penetration_lai:
+            # Severe shading above threshold - diminishing returns
+            light_penetration_factor = light_penetration_lai / lai  # Linear decline in effectiveness
             effective_par = par_umol_m2_s * light_penetration_factor
             
             # Recalculate with reduced light
@@ -143,13 +162,18 @@ class PhotosynthesisModel:
             net_umol_day = gross_day_umol_shaded
             g_c_m2_day = max(0.0, net_umol_day) * 1.201e-5
             
-            # Only 6.0 effective LAI contributes fully, rest at diminishing returns
-            effective_lai = 6.0 + (lai - 6.0) * 0.2  # 20% efficiency for excess canopy
+            # Only threshold LAI contributes fully, rest at diminishing returns
+            effective_lai = light_penetration_lai + (lai - light_penetration_lai) * 0.2  # 20% efficiency for excess canopy
         else:
             effective_lai = lai
         
-        # Scale by effective LAI to get realistic assimilation per ground area
+        # Scale by effective LAI to get total canopy assimilation per ground area
+        # g_c_m2_day is per unit leaf area, effective_lai converts to per unit ground area
         total_g_c_m2_day = g_c_m2_day * effective_lai
+        
+        # Apply EC stress factor to final photosynthesis
+        # EC stress affects stomatal conductance and nutrient availability
+        total_g_c_m2_day *= ec_factor
 
         return max(0.0, total_g_c_m2_day)
 

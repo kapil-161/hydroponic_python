@@ -189,6 +189,11 @@ class DailyResults:
     leaf_nitrogen_conc: float = 0.0
     root_nitrogen_conc: float = 0.0
     nitrogen_remobilization: float = 0.0
+    
+    # Phosphorus dynamics detailed
+    phosphorus_uptake_mg: float = 0.0
+    
+    # Nutrient remobilization
     phosphorus_remobilization: float = 0.0
     potassium_remobilization: float = 0.0
     
@@ -226,6 +231,16 @@ class DailyResults:
     transpiration_rate: float = 0.0
     total_water_uptake: float = 0.0
     solution_ph: float = 6.0
+    
+    # Comprehensive pH modeling results
+    ph_change_from_uptake: float = 0.0
+    ph_change_from_drift: float = 0.0
+    acid_dosed_ml_per_L: float = 0.0
+    base_dosed_ml_per_L: float = 0.0
+    buffer_capacity: float = 0.0
+    phosphate_h2po4_mg_L: float = 0.0
+    phosphate_hpo4_mg_L: float = 0.0
+    nutrient_precipitation_mg_L: float = 0.0
     solution_ec: float = 1.5
 
 
@@ -262,6 +277,11 @@ class SimulationResults:
                 'VPD_kPa': result.vpd,
                 'WUE_kg_m3': result.water_use_efficiency,
                 'pH': result.ph,
+                'pH_Change_Uptake': result.ph_change_from_uptake,
+                'pH_Drift': result.ph_change_from_drift,
+                'Acid_Dosed_mL_L': result.acid_dosed_ml_per_L,
+                'Base_Dosed_mL_L': result.base_dosed_ml_per_L,
+                'Buffer_Capacity': result.buffer_capacity,
                 'EC': result.ec,
                 'RZT_C': result.rzt,
                 'RZT_Growth_Factor': result.rzt_growth_factor,

@@ -9,3 +9,8 @@ optimal_temperature,20.0,celsius,Ideal root zone temperature
 optimal_temperature_max,26.0,celsius,Maximum air temperature before stress
 optimal_temperature_min,16.0,celsius,Minimum air temperature before stress
 min_humidity,60.0,percent,Minimum relative humidity before stress
+co2_enrichment_start_hour,0.0,hours,Hour after photoperiod start to begin CO2 enrichment
+co2_enrichment_duration,4.0,hours,Duration of CO2 enrichment period
+co2_morning_target,1200.0,ppm,CO2 target during morning enrichment period
+co2_afternoon_target,800.0,ppm,CO2 target during afternoon period
+co2_enrichment_strategy,morning_only,text,CO2 enrichment strategy (morning_only/full_day/adaptive)
