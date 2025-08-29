@@ -42,11 +42,11 @@ from .models.nutrient_models import create_lettuce_nutrient_mobility_model
 from .models.stress_models import create_lettuce_integrated_stress_model
 from .models.stress_models import create_lettuce_temperature_stress_model
 from .models.root_system_model import create_enhanced_root_uptake_model, HydroponicSystemType
-from .models.root_zone_temperature import RootZoneTemperatureModel, RZTParameters
-from .models.environmental_control import EnvironmentalControlSystem
-from .models.photosynthesis_model import PhotosynthesisModel
+from .models.root_zone_temperature import create_lettuce_rzt_model
+from .models.environmental_control import create_lettuce_environmental_control_system
+from .models.photosynthesis_model import create_lettuce_photosynthesis_model
 from .models.nutrient_models import NutrientConcentrationModel
-from .models.leaf_development import LeafDevelopmentModel, LeafParameters
+from .models.leaf_development import create_lettuce_leaf_development_model
 from .data.hydroponic_system import HydroInputData, SimulationResults, DailyResults
 # No longer importing config loader - using CSV data only
 from .utils.weather_generator import WeatherGenerator
@@ -202,145 +202,23 @@ class CROPGROHydroponicSimulator:
         
         # 2. PHENOLOGY AND DEVELOPMENT
         logger.info("Initializing phenology model...")
-        # Load phenology parameters dynamically from CSV files
-        from .models.phenology_model import ComprehensivePhenologyModel, PhenologyParameters
-        
         # Start from transplant stage (V3 - third true leaf) to reflect 2–3 week-old plugs
         transplant_stage = LettuceGrowthStage.THIRD_LEAF
         
-        # Load phenology parameters from CSV files only
-        csv_phenology_params = getattr(self.system_config, 'phenology_parameters', {})
-        csv_thermal_requirements = getattr(self.system_config, 'thermal_requirements', {})
-        
-        if csv_phenology_params or csv_thermal_requirements:
-            # Create configuration dictionary for PhenologyParameters.from_config()
-            config_dict = {}
-            
-            # Add phenology parameters from CSV
-            if csv_phenology_params:
-                config_dict.update(csv_phenology_params)
-            
-            # Add thermal requirements from CSV
-            if csv_thermal_requirements:
-                config_dict['thermal_requirements'] = csv_thermal_requirements
-            
-            # Use from_config method to create parameters with CSV data
-            pheno_params = PhenologyParameters.from_config(config_dict)
-            self.phenology_model = ComprehensivePhenologyModel(pheno_params, transplant_stage)
-            phenology_count = len(csv_phenology_params) if csv_phenology_params else 0
-            thermal_count = len(csv_thermal_requirements) if csv_thermal_requirements else 0
-            total_params = phenology_count + thermal_count
-            logger.info(f"Loaded {total_params} phenology parameters from CSV files ({phenology_count} phenology + {thermal_count} thermal)")
-        else:
-            # Fallback to hardcoded parameters (should not happen with proper CSV setup)
-            logger.warning("No phenology parameters found in CSV files, using defaults")
-            self.phenology_model = create_lettuce_phenology_model(transplant_stage)
+        # Load phenology model using CSV configuration
+        self.phenology_model = create_lettuce_phenology_model(self.system_config, transplant_stage)
         # Leaf development model for realistic LAI and leaf metrics - use dynamic CSV parameters
         logger.info("Initializing leaf development model...")
-        
-        # Load leaf development parameters from CSV
-        leaf_dev_params = getattr(self.system_config, 'leaf_development_parameters', {})
-        
-        if leaf_dev_params:
-            # Check for required parameters and show clear error messages
-            required_params = [
-                'base_phyllochron', 'min_temp', 'opt_temp_min', 'opt_temp_max', 
-                'max_temp', 'max_leaf_number', 'leaf_appearance_rate', 
-                'initial_leaf_number', 'specific_leaf_area'
-            ]
-            
-            missing_params = []
-            for param in required_params:
-                if param not in leaf_dev_params:
-                    missing_params.append(param)
-            
-            if missing_params:
-                error_msg = f"❌ Missing leaf development parameters in CSV: {missing_params}"
-                logger.error(error_msg)
-                raise ValueError(error_msg)
-            
-            self.leaf_model = LeafDevelopmentModel(LeafParameters(
-                base_phyllochron=leaf_dev_params['base_phyllochron'],
-                min_temp=leaf_dev_params['min_temp'],
-                opt_temp_min=leaf_dev_params['opt_temp_min'],
-                opt_temp_max=leaf_dev_params['opt_temp_max'],
-                max_temp=leaf_dev_params['max_temp'],
-                max_leaf_number=leaf_dev_params['max_leaf_number'],
-                leaf_appearance_rate=leaf_dev_params['leaf_appearance_rate'],
-                initial_leaf_number=leaf_dev_params['initial_leaf_number'],
-                specific_leaf_area=leaf_dev_params['specific_leaf_area']
-            ))
-            logger.info(f"✓ Loaded leaf development model with {len(leaf_dev_params)} CSV parameters")
-        else:
-            error_msg = f"❌ Leaf development parameters CSV file not found: {self.system_config.cultivar_id}_leaf_development_parameters.csv"
-            logger.error(error_msg)
-            raise FileNotFoundError(error_msg)
+        # Load leaf development model using CSV configuration
+        self.leaf_model = create_lettuce_leaf_development_model(self.system_config)
         
         # 3. RESPIRATION MODEL
         logger.info("Initializing respiration model...")
-        # Load respiration parameters dynamically from CSV
-        respiration_params = getattr(self.system_config, 'respiration_parameters', {})
-        
-        if respiration_params:
-            from .models.respiration_model import EnhancedRespirationModel, RespirationParameters
-            # Create respiration parameters from CSV config
-            resp_params = RespirationParameters.from_config(respiration_params)
-            
-            # Map CSV parameters to model parameters
-            param_mapping = {
-                'maintenance_coefficient': 'maintenance_coefficient',
-                'temperature_coefficient': 'temperature_coefficient',
-                'biomass_coefficient': 'biomass_coefficient',
-                'q10_factor': 'q10_factor',
-                'base_temperature': 'base_temperature',
-                'maintenance_base_rate': 'maintenance_base_rate',
-                'reference_temperature': 'reference_temperature',
-                'growth_efficiency': 'growth_efficiency',
-                'age_effect_coefficient': 'age_effect_coefficient',
-                'max_age_effect': 'max_age_effect',
-                'tissue_factor_leaves': 'tissue_factor_leaves',
-                'tissue_factor_stems': 'tissue_factor_stems',
-                'tissue_factor_roots': 'tissue_factor_roots',
-                'tissue_factor_reproductive': 'tissue_factor_reproductive',
-                'acclimation_rate': 'acclimation_rate'
-            }
-            
-            # Update parameters with CSV values
-            for csv_param, model_param in param_mapping.items():
-                if csv_param in respiration_params:
-                    setattr(resp_params, model_param, respiration_params[csv_param])
-            
-            self.respiration_model = EnhancedRespirationModel(resp_params)
-        else:
-            self.respiration_model = create_lettuce_respiration_model()
+        self.respiration_model = create_lettuce_respiration_model(self.system_config)
         
         # 4. SENESCENCE MODEL
         logger.info("Initializing senescence model...")
-        # Load senescence parameters dynamically from CSV
-        senescence_params = getattr(self.system_config, 'senescence_parameters', {})
-        
-        if senescence_params:
-            from .models.senescence_model import AdvancedSenescenceModel, SenescenceParameters
-            # Create dynamic senescence parameters
-            sen_params = SenescenceParameters()
-            
-            # Map CSV parameters to model parameters
-            param_mapping = {
-                'senescence_rate': 'senescence_rate',
-                'nitrogen_recovery': 'nitrogen_recovery',
-                'age_factor': 'age_factor',
-                'stress_acceleration': 'stress_acceleration',
-                'minimum_leaf_life': 'minimum_leaf_life'
-            }
-            
-            # Update parameters with CSV values
-            for csv_param, model_param in param_mapping.items():
-                if csv_param in senescence_params:
-                    setattr(sen_params, model_param, senescence_params[csv_param])
-            
-            self.senescence_model = AdvancedSenescenceModel(sen_params)
-        else:
-            self.senescence_model = create_lettuce_senescence_model()
+        self.senescence_model = create_lettuce_senescence_model(self.system_config)
         
         # 5. CANOPY ARCHITECTURE
         logger.info("Initializing canopy architecture model...")
@@ -386,12 +264,12 @@ class CROPGROHydroponicSimulator:
         
         # 7. NUTRIENT MOBILITY
         logger.info("Initializing nutrient mobility model...")
-        self.mobility_model = create_lettuce_nutrient_mobility_model()
+        self.mobility_model = create_lettuce_nutrient_mobility_model(self.system_config)
         
         # 8. STRESS MODELS
         logger.info("Initializing stress models...")
-        self.integrated_stress = create_lettuce_integrated_stress_model()
-        self.temperature_stress = create_lettuce_temperature_stress_model()
+        self.integrated_stress = create_lettuce_integrated_stress_model(self.system_config)
+        self.temperature_stress = create_lettuce_temperature_stress_model(self.system_config)
         
         # 9. ROOT ARCHITECTURE
         logger.info("Initializing root architecture model...")
@@ -402,7 +280,7 @@ class CROPGROHydroponicSimulator:
         }.get(system_type, HydroponicSystemType.NFT)
         
         # Initialize with default tank volume, will be updated in simulate() method
-        self.root_model = create_enhanced_root_uptake_model(system_type_enum, 1500.0)
+        self.root_model = create_enhanced_root_uptake_model(system_type_enum, 1500.0, self.system_config)
         
         # 10. ENVIRONMENTAL CONTROL
         logger.info("Initializing environmental control...")
@@ -417,83 +295,19 @@ class CROPGROHydroponicSimulator:
             env_control_config['target_co2'] = env_control_params['co2_setpoint']
         
         # Initialize with dynamic configuration or defaults
-        if env_control_config:
-            from .models.environmental_control import EnvironmentalSetpoints
-            setpoints = EnvironmentalSetpoints.from_config(env_control_config)
-            self.environmental_control = EnvironmentalControlSystem(setpoints=setpoints)
-        else:
-            self.environmental_control = EnvironmentalControlSystem()
+        # Load environmental control system using CSV configuration
+        self.environmental_control = create_lettuce_environmental_control_system(self.system_config)
         
         # 11. BASIC MODELS (Enhanced)
-        # Load photosynthesis parameters dynamically from CSV
-        photosynthesis_params = getattr(self.system_config, 'photosynthesis_parameters', {})
-        
-        if photosynthesis_params:
-            from .models.photosynthesis_model import PhotosynthesisParameters
-            # Create dynamic photosynthesis parameters
-            ps_params = PhotosynthesisParameters()
-            
-            # Map CSV parameters to model parameters
-            param_mapping = {
-                'kc': 'kc',
-                'ko': 'ko', 
-                'gamma_star': 'gamma_star',
-                'jmax_25': 'jmax_25',
-                'vcmax_25': 'vcmax_25',
-                'theta': 'theta',
-                'phi_psii': 'phi_psii',
-                'alpha': 'alpha',
-                'rd_25': 'rd_25',
-                'eaj': 'eaj',
-                'eav': 'eav',
-                'ear': 'ear',
-                'r': 'r',
-                'ci_fraction': 'ci_fraction',
-                # Additional missing parameters
-                'light_use_efficiency': 'light_use_efficiency',
-                'light_saturation': 'light_saturation_point',
-                'max_carboxylation': 'vcmax_25'  # Map to existing vcmax parameter
-            }
-            
-            # Update parameters with CSV values
-            for csv_param, model_param in param_mapping.items():
-                if csv_param in photosynthesis_params:
-                    setattr(ps_params, model_param, photosynthesis_params[csv_param])
-            
-            # Integrate chlorophyll ratio if available from nitrogen parameters
-            if hasattr(self, 'chlorophyll_ratio'):
-                ps_params.chlorophyll_ratio = self.chlorophyll_ratio
-            
-            self.photosynthesis_model = PhotosynthesisModel(ps_params)
-        else:
-            self.photosynthesis_model = PhotosynthesisModel()
+        # Load photosynthesis model using CSV configuration
+        self.photosynthesis_model = create_lettuce_photosynthesis_model(self.system_config)
             
         self.nutrient_concentration_model = NutrientConcentrationModel()
         
         # 12. ROOT ZONE TEMPERATURE MODEL
         logger.info("Initializing root zone temperature model...")
-        # Load root zone parameters dynamically from CSV
-        root_zone_params = getattr(self.system_config, 'root_zone_parameters', {})
-        
-        if root_zone_params:
-            # Create dynamic root zone temperature parameters
-            rzt_config = {}
-            
-            # Map CSV parameters to RZT model parameters
-            if 'optimal_temperature' in root_zone_params:
-                # Convert optimal temperature to offset from air temperature (assume 20°C air temp baseline)
-                optimal_rzt_offset = root_zone_params['optimal_temperature'] - 20.0
-                rzt_config['optimal_rzt_offset'] = max(0.0, optimal_rzt_offset)  # Ensure positive offset
-            if 'root_conductivity' in root_zone_params:
-                # Use root conductivity to modify growth slope (higher conductivity = better uptake)
-                base_slope = 0.08
-                conductivity_factor = root_zone_params['root_conductivity'] / 0.1  # Relative to baseline
-                rzt_config['linear_growth_slope'] = base_slope * conductivity_factor
-            
-            rzt_params = RZTParameters.from_config(rzt_config)
-            self.rzt_model = RootZoneTemperatureModel(rzt_params)
-        else:
-            self.rzt_model = RootZoneTemperatureModel()
+        # Load root zone temperature model using CSV configuration
+        self.rzt_model = create_lettuce_rzt_model(self.system_config)
         
         # Initialize state variables
         self._initialize_plant_state()
@@ -748,8 +562,9 @@ class CROPGROHydroponicSimulator:
         density_multiplier = crop_params['plant_density']  # Must come from CSV
         base_density = max(0.1, self.plant_count / self.system_area)
         self.plant_density = base_density * density_multiplier
-        system_params = self.config_loader.get_system_parameters()
-        current_ph = system_params['default_ph']
+        # Get system parameters from CSV data loaded in system_config
+        system_params = getattr(self.system_config, 'system_parameters', {})
+        current_ph = system_params.get('default_ph', 6.0)
         
         # Update root model with actual tank volume (important for NFT channel calculations)
         system_type_enum = {
@@ -785,13 +600,26 @@ class CROPGROHydroponicSimulator:
                 
                 # Get optimal concentrations from dynamic nutrient solution CSV or fallback to defaults
                 nutrient_solution_params = getattr(self.system_config, 'nutrient_solution', {})
-                optimal_concentrations = {
-                    'N-NO3': nutrient_solution_params['N-NO3']['initial_ppm'],
-                    'P-PO4': nutrient_solution_params['P-PO4']['initial_ppm'],
-                    'K': nutrient_solution_params['K']['initial_ppm'],
-                    'Ca': nutrient_solution_params['Ca']['initial_ppm'],
-                    'Mg': nutrient_solution_params['Mg']['initial_ppm']
-                }
+                
+                # Handle both old nested format and new consolidated format
+                if nutrient_solution_params and isinstance(list(nutrient_solution_params.values())[0], dict):
+                    # Old nested format
+                    optimal_concentrations = {
+                        'N-NO3': nutrient_solution_params.get('N-NO3', {}).get('initial_ppm', 300.0),
+                        'P-PO4': nutrient_solution_params.get('P-PO4', {}).get('initial_ppm', 50.0),
+                        'K': nutrient_solution_params.get('K', {}).get('initial_ppm', 300.0),
+                        'Ca': nutrient_solution_params.get('Ca', {}).get('initial_ppm', 150.0),
+                        'Mg': nutrient_solution_params.get('Mg', {}).get('initial_ppm', 50.0)
+                    }
+                else:
+                    # New consolidated format
+                    optimal_concentrations = {
+                        'N-NO3': nutrient_solution_params.get('N-NO3_initial_ppm', 300.0),
+                        'P-PO4': nutrient_solution_params.get('P-PO4_initial_ppm', 50.0),
+                        'K': nutrient_solution_params.get('K_initial_ppm', 300.0),
+                        'Ca': nutrient_solution_params.get('Ca_initial_ppm', 150.0),
+                        'Mg': nutrient_solution_params.get('Mg_initial_ppm', 50.0)
+                    }
                 
                 # Note: Total nutrient mass varies with tank volume, but concentration stays constant
                 # 500mL tank: 100mg NO3 total (200 ppm × 0.5L)
@@ -1077,10 +905,10 @@ class CROPGROHydroponicSimulator:
         n_no3_conc = nutrient_concentrations.get('N-NO3', 0.0)  # mg/L
         
         # Hydroponic nitrogen stress thresholds from CSV parameters
-        nitrogen_params = self.config_loader.get_nitrogen_balance_parameters()
-        optimal_n_min = nitrogen_params['optimal_n_min']   # Below this: some stress
-        optimal_n_max = nitrogen_params['optimal_n_max']   # Above this: potential toxicity
-        severe_deficiency = nitrogen_params['severe_deficiency_threshold']  # Below this: severe stress
+        nitrogen_params = getattr(self.system_config, 'nitrogen_parameters', {})
+        optimal_n_min = nitrogen_params.get('optimal_n_min', 150.0)   # Below this: some stress
+        optimal_n_max = nitrogen_params.get('optimal_n_max', 300.0)   # Above this: potential toxicity
+        severe_deficiency = nitrogen_params.get('severe_deficiency_threshold', 50.0)  # Below this: severe stress
         
         if n_no3_conc < severe_deficiency:
             nitrogen_stress_level = 0.8  # Severe deficiency

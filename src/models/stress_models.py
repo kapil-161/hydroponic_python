@@ -62,7 +62,13 @@ class TemperatureStressParameters:
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> "TemperatureStressParameters":
+        """Create TemperatureStressParameters from CSV configuration data.
+        
+        Args:
+            config: Dictionary containing stress parameters from CSV files
+        """
         return cls(
+            # Temperature thresholds from CSV
             optimal_temp_min=config["optimal_temp_min"],
             optimal_temp_max=config["optimal_temp_max"],
             heat_threshold_mild=config["heat_threshold_mild"],
@@ -70,25 +76,31 @@ class TemperatureStressParameters:
             heat_lethal_temperature=config["heat_lethal_temperature"],
             cold_threshold_mild=config["cold_threshold_mild"],
             cold_threshold_severe=config["cold_threshold_severe"],
-            frost_threshold=config.get("frost_threshold", -1.0),
-            photosynthesis_heat_sensitivity=config.get("photosynthesis_heat_sensitivity", 0.85),
-            photosynthesis_cold_sensitivity=config.get("photosynthesis_cold_sensitivity", 0.75),
-            respiration_heat_sensitivity=config.get("respiration_heat_sensitivity", 0.60),
-            respiration_cold_sensitivity=config.get("respiration_cold_sensitivity", 0.70),
-            growth_heat_sensitivity=config.get("growth_heat_sensitivity", 0.90),
-            growth_cold_sensitivity=config.get("growth_cold_sensitivity", 0.80),
-            development_heat_sensitivity=config.get("development_heat_sensitivity", 0.70),
-            development_cold_sensitivity=config.get("development_cold_sensitivity", 0.65),
-            acclimation_rate=config.get("acclimation_rate", 0.05),
-            max_acclimation_days=config.get("max_acclimation_days", 14),
-            acclimation_decay_rate=config.get("acclimation_decay_rate", 0.02),
-            heat_damage_threshold=config.get("heat_damage_threshold", 0.7),
-            cold_damage_threshold=config.get("cold_damage_threshold", 0.6),
-            frost_damage_rate=config.get("frost_damage_rate", 0.2),
-            recovery_rate_heat=config.get("recovery_rate_heat", 0.08),
-            recovery_rate_cold=config.get("recovery_rate_cold", 0.05),
-            stress_memory_duration=config.get("stress_memory_duration", 7),
-            memory_effect_strength=config.get("memory_effect_strength", 0.3),
+            frost_threshold=config["frost_threshold"],
+            
+            # Process sensitivity parameters from CSV
+            photosynthesis_heat_sensitivity=config["photosynthesis_heat_sensitivity"],
+            photosynthesis_cold_sensitivity=config["photosynthesis_cold_sensitivity"],
+            respiration_heat_sensitivity=config["respiration_heat_sensitivity"],
+            respiration_cold_sensitivity=config["respiration_cold_sensitivity"],
+            growth_heat_sensitivity=config["growth_heat_sensitivity"],
+            growth_cold_sensitivity=config["growth_cold_sensitivity"],
+            development_heat_sensitivity=config["development_heat_sensitivity"],
+            development_cold_sensitivity=config["development_cold_sensitivity"],
+            
+            # Acclimation parameters from CSV
+            acclimation_rate=config["acclimation_rate"],
+            max_acclimation_days=int(config["max_acclimation_days"]),
+            acclimation_decay_rate=config["acclimation_decay_rate"],
+            
+            # Damage and recovery parameters from CSV
+            heat_damage_threshold=config["heat_damage_threshold"],
+            cold_damage_threshold=config["cold_damage_threshold"],
+            frost_damage_rate=config["frost_damage_rate"],
+            recovery_rate_heat=config["recovery_rate_heat"],
+            recovery_rate_cold=config["recovery_rate_cold"],
+            stress_memory_duration=int(config["stress_memory_duration"]),
+            memory_effect_strength=config["memory_effect_strength"],
         )
 
 
@@ -317,15 +329,43 @@ class TemperatureStressModel:
         )
 
 
-def create_lettuce_temperature_stress_model(config_path: Optional[str] = None) -> TemperatureStressModel:
+def create_lettuce_temperature_stress_model(system_config=None) -> TemperatureStressModel:
+    """Create a temperature stress model using CSV configuration data.
+    
+    Args:
+        system_config: System configuration object containing CSV-loaded parameters
+        
+    Returns:
+        TemperatureStressModel configured with CSV parameters
+    """
     try:
-        from ..utils.config_loader import get_config_loader
-
-        config_loader = get_config_loader(config_path)
-        temp_stress_config = config_loader.get_value("temperature_stress", "parameters", {})
-        params = TemperatureStressParameters.from_config(temp_stress_config)
+        # Get stress parameters from CSV data loaded in system_config
+        stress_params = getattr(system_config, 'stress_parameters', {})
+        environment_params = getattr(system_config, 'environment_parameters', {})
+        thermal_params = getattr(system_config, 'thermal_requirements', {})
+        
+        # Combine parameters from different CSV files
+        config = {}
+        
+        # Add stress parameters
+        config.update(stress_params)
+        
+        # Add environment parameters that affect temperature stress
+        if 'optimal_temperature_min' in environment_params:
+            config['optimal_temp_min'] = environment_params['optimal_temperature_min']
+        if 'optimal_temperature_max' in environment_params:
+            config['optimal_temp_max'] = environment_params['optimal_temperature_max']
+            
+        # Add thermal requirements if available
+        config.update(thermal_params)
+        
+        # Create parameters from combined config
+        params = TemperatureStressParameters.from_config(config)
         return TemperatureStressModel(params)
-    except Exception:
+        
+    except Exception as e:
+        print(f"Warning: Could not load CSV stress parameters: {e}")
+        print("Using default temperature stress parameters")
         return TemperatureStressModel(TemperatureStressParameters())
 
 
@@ -509,14 +549,45 @@ class IntegratedStressParameters:
 
     @classmethod
     def from_config(cls, config_dict: dict) -> "IntegratedStressParameters":
+        """Create IntegratedStressParameters from CSV configuration data.
+        
+        Args:
+            config_dict: Dictionary containing stress parameters from CSV files
+        """
+        # Extract parameters from CSV data
         stress_weights = config_dict.get("stress_weights", {})
         stress_interactions = config_dict.get("stress_interactions", {})
         process_sensitivity = config_dict.get("process_sensitivity", {})
         memory_duration = config_dict.get("stress_memory_duration", {})
+        
+        # Convert single stress_memory_duration value to dictionary if needed
+        if isinstance(memory_duration, (int, float)):
+            memory_duration = {
+                StressType.WATER.value: float(memory_duration),
+                StressType.TEMPERATURE.value: float(memory_duration),
+                StressType.NUTRIENT.value: float(memory_duration),
+                StressType.LIGHT.value: float(memory_duration),
+                StressType.SALINITY.value: float(memory_duration),
+                StressType.OXYGEN.value: float(memory_duration),
+                StressType.PH.value: float(memory_duration),
+            }
+        
         recovery_rates = config_dict.get("recovery_rates", {})
         acclimation_rates = config_dict.get("acclimation_rates", {})
         onset_thresholds = config_dict.get("stress_onset_thresholds", {})
         damage_thresholds = config_dict.get("damage_thresholds", {})
+        
+        # If no specific stress weights from CSV, use genetic stress weights if available
+        if not stress_weights and "genetic_stress_weights" in config_dict:
+            genetic_weights = config_dict["genetic_stress_weights"]
+            stress_weights = {
+                StressType.TEMPERATURE.value: genetic_weights.get("temperature_stress_weight", 0.5),
+                StressType.WATER.value: genetic_weights.get("water_stress_weight", 0.25),
+                StressType.NUTRIENT.value: genetic_weights.get("nutrient_stress_weight", 0.25),
+                StressType.LIGHT.value: genetic_weights.get("light_stress_weight", 0.15),
+                StressType.SALINITY.value: genetic_weights.get("salinity_stress_weight", 0.2),
+            }
+        
         return cls(
             stress_weights=stress_weights or None,
             stress_interactions=stress_interactions or None,
@@ -799,25 +870,40 @@ class IntegratedStressModel:
         }
 
 
-def create_lettuce_integrated_stress_model() -> IntegratedStressModel:
+def create_lettuce_integrated_stress_model(system_config=None) -> IntegratedStressModel:
+    """Create an integrated stress model using CSV configuration data.
+    
+    Args:
+        system_config: System configuration object containing CSV-loaded parameters
+        
+    Returns:
+        IntegratedStressModel configured with CSV parameters
+    """
     try:
-        from ..utils.config_loader import get_config_loader
-        config_loader = get_config_loader()
-        stress_config = config_loader.get_value("integrated_stress", "", {})
-        parameters = IntegratedStressParameters.from_config(stress_config)
+        # Get parameters from CSV data loaded in system_config
+        stress_params = getattr(system_config, 'stress_parameters', {})
+        genetic_stress_weights = getattr(system_config, 'genetic_stress_weights', {})
+        environment_params = getattr(system_config, 'environment_parameters', {})
+        
+        # Combine parameters from different CSV files
+        config = {}
+        
+        # Add stress parameters
+        config.update(stress_params)
+        
+        # Add genetic stress weights
+        config['genetic_stress_weights'] = genetic_stress_weights
+        
+        # Add environment parameters that affect stress
+        config.update(environment_params)
+        
+        # Create parameters from combined config
+        parameters = IntegratedStressParameters.from_config(config)
         return IntegratedStressModel(parameters)
-    except Exception:
+        
+    except Exception as e:
+        print(f"Warning: Could not load CSV integrated stress parameters: {e}")
+        print("Using default integrated stress parameters")
         return IntegratedStressModel()
 
 
-if __name__ == "__main__":
-    # Minimal demonstrations
-    print("Unified Stress Models - Demonstration")
-    print("=" * 80)
-    tmodel = create_lettuce_temperature_stress_model()
-    tresp = tmodel.daily_update(30.0)
-    print(f"Temp 30C -> stress {tresp.stress_level:.3f}, overall factor {tresp.process_factors.overall:.3f}")
-
-    imodel = create_lettuce_integrated_stress_model()
-    iresp = imodel.daily_update({"water": 0.7, "temperature": 0.6, "nutrient": 0.8, "light": 0.9, "salinity": 1.0})
-    print(f"Integrated overall factor: {iresp.overall_stress_factor:.3f}, severity: {iresp.stress_severity}")

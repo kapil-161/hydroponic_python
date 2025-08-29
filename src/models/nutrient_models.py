@@ -286,10 +286,10 @@ class NutrientMobilityParameters:
             redistribution_thresholds=redist_thresh or None,
             stress_redistribution_rates=stress_redist or None,
             sink_strength_coefficients=sink_coeffs or None,
-            xylem_transport_capacity=config_dict["xylem_transport_capacity"],
-            phloem_transport_capacity=config_dict["phloem_transport_capacity"],
-            temperature_q10=config_dict["temperature_q10"],
-            transpiration_coupling=config_dict["transpiration_coupling"],
+            xylem_transport_capacity=config_dict.get("xylem_transport_capacity"),
+            phloem_transport_capacity=config_dict.get("phloem_transport_capacity"),
+            temperature_q10=config_dict.get("temperature_q10"),
+            transpiration_coupling=config_dict.get("transpiration_coupling"),
         )
 
 
@@ -603,33 +603,26 @@ class NutrientMobilityModel:
         }
 
 
-def create_lettuce_nutrient_mobility_model() -> NutrientMobilityModel:
-    """Create nutrient mobility model with lettuce-specific parameters."""
+def create_lettuce_nutrient_mobility_model(system_config=None) -> NutrientMobilityModel:
+    """Create nutrient mobility model with lettuce-specific parameters from CSV config.
+    
+    Args:
+        system_config: System configuration object containing CSV-loaded parameters
+        
+    Returns:
+        NutrientMobilityModel configured with CSV parameters
+    """
     try:
-        from ..utils.config_loader import get_config_loader
-        config_loader = get_config_loader()
-        mobility_config = config_loader.get_nutrient_mobility_parameters()
-        parameters = NutrientMobilityParameters.from_config(mobility_config)
+        # Get nutrient mobility parameters from CSV data loaded in system_config
+        nutrient_mobility_params = getattr(system_config, 'nutrient_mobility_parameters', {})
+        
+        # Create parameters from CSV config
+        parameters = NutrientMobilityParameters.from_config(nutrient_mobility_params)
         return NutrientMobilityModel(parameters)
-    except Exception:
+        
+    except Exception as e:
+        print(f"Warning: Could not load CSV nutrient parameters: {e}")
+        print("Using default nutrient parameters")
         return NutrientMobilityModel()
 
 
-if __name__ == "__main__":
-    print("Unified Nutrient Models - Demonstration")
-    # Minimal sanity checks
-    ncm = NutrientConcentrationModel()
-    print("EC factors sample:", {k: ncm.ec_factors[k] for k in list(ncm.ec_factors)[:5]})
-
-    nmm = create_lettuce_nutrient_mobility_model()
-    nmm.initialize_organ_pools("leaves", {"nitrogen": 0.12, "phosphorus": 0.015, "potassium": 0.10}, 4.0)
-    resp = nmm.daily_update(
-        organ_demands={"leaves": {"nitrogen": 0.02}},
-        stress_factors={"water": 0.9},
-        senescence_rates={"leaves": 0.0},
-        growth_stage="vegetative",
-        water_fluxes={"leaves": 0.2},
-        assimilate_fluxes={"leaves": 0.1},
-        temperature=22.0,
-    )
-    print("Redistribution keys:", list(resp.total_redistribution.keys()))

@@ -84,57 +84,63 @@ class SenescenceParameters:
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'SenescenceParameters':
-        """Create SenescenceParameters from configuration dictionary with clear error reporting."""
-        import logging
-        logger = logging.getLogger(__name__)
+        """Create SenescenceParameters from CSV configuration data.
         
-        def _get_required_param(param_dict: dict, param_name: str, param_source: str) -> any:
-            """Get a required parameter with clear error message if missing."""
-            if param_name not in param_dict:
-                available_params = list(param_dict.keys()) if param_dict else 'None'
-                error_msg = f"❌ Missing required parameter '{param_name}' in {param_source}. Available parameters: {available_params}"
-                logger.error(error_msg)
-                raise ValueError(error_msg)
-            return param_dict[param_name]
-        
-        # Handle remobilization efficiency with defaults for missing values
+        Args:
+            config_dict: Dictionary containing senescence parameters from CSV files
+        """
+        # Handle remobilization efficiency from CSV
         remob_eff = config_dict.get('remobilization_efficiency', {})
         if not remob_eff:
+            # Build from individual CSV parameters
             remob_eff = {
-                'nitrogen': 0.70,     # 70% of N can be remobilized
-                'phosphorus': 0.60,   # 60% of P can be remobilized
-                'potassium': 0.80,    # 80% of K can be remobilized
-                'magnesium': 0.30,    # 30% of Mg can be remobilized
-                'sulfur': 0.50,       # 50% of S can be remobilized
-                'calcium': 0.05,      # 5% of Ca (mostly immobile)
-                'iron': 0.10,         # 10% of Fe
-                'manganese': 0.15,    # 15% of Mn
-                'zinc': 0.20,         # 20% of Zn
-                'copper': 0.15,       # 15% of Cu
-                'boron': 0.05,        # 5% of B (immobile)
-                'molybdenum': 0.25    # 25% of Mo
+                'nitrogen': config_dict['nitrogen_recovery'],
+                'phosphorus': config_dict['phosphorus_recovery'],
+                'potassium': config_dict['potassium_recovery'],
+                'magnesium': config_dict['magnesium_recovery'],
+                'sulfur': config_dict['sulfur_recovery'],
+                'calcium': config_dict['calcium_recovery'],
+                'iron': config_dict['iron_recovery'],
+                'manganese': config_dict['manganese_recovery'],
+                'zinc': config_dict['zinc_recovery'],
+                'copper': config_dict['copper_recovery'],
+                'boron': config_dict['boron_recovery'],
+                'molybdenum': config_dict['molybdenum_recovery']
             }
         
         return cls(
-            natural_lifespan_gdd=_get_required_param(config_dict, 'natural_lifespan_gdd', 'senescence_parameters.csv'),
-            age_senescence_rate=_get_required_param(config_dict, 'age_senescence_rate', 'senescence_parameters.csv'),
-            water_stress_threshold=_get_required_param(config_dict, 'water_stress_threshold', 'senescence_parameters.csv'),
-            nitrogen_stress_threshold=_get_required_param(config_dict, 'nitrogen_stress_threshold', 'senescence_parameters.csv'),
-            temperature_stress_threshold=_get_required_param(config_dict, 'temperature_stress_threshold', 'senescence_parameters.csv'),
-            light_stress_threshold=_get_required_param(config_dict, 'light_stress_threshold', 'senescence_parameters.csv'),
-            water_stress_rate=_get_required_param(config_dict, 'water_stress_rate', 'senescence_parameters.csv'),
-            nitrogen_stress_rate=_get_required_param(config_dict, 'nitrogen_stress_rate', 'senescence_parameters.csv'),
-            temperature_stress_rate=_get_required_param(config_dict, 'temperature_stress_rate', 'senescence_parameters.csv'),
-            light_stress_rate=_get_required_param(config_dict, 'light_stress_rate', 'senescence_parameters.csv'),
-            early_senescence_threshold=_get_required_param(config_dict, 'early_senescence_threshold', 'senescence_parameters.csv'),
-            active_senescence_threshold=_get_required_param(config_dict, 'active_senescence_threshold', 'senescence_parameters.csv'),
-            late_senescence_threshold=_get_required_param(config_dict, 'late_senescence_threshold', 'senescence_parameters.csv'),
-            death_threshold=_get_required_param(config_dict, 'death_threshold', 'senescence_parameters.csv'),
+            # Age-based senescence parameters
+            natural_lifespan_gdd=config_dict['natural_lifespan_gdd'],
+            age_senescence_rate=config_dict['age_senescence_rate'],
+            
+            # Stress-induced senescence thresholds
+            water_stress_threshold=config_dict['water_stress_threshold'],
+            nitrogen_stress_threshold=config_dict['nitrogen_stress_threshold'],
+            temperature_stress_threshold=config_dict['temperature_stress_threshold'],
+            light_stress_threshold=config_dict['light_stress_threshold'],
+            
+            # Stress senescence rates
+            water_stress_rate=config_dict['water_stress_rate'],
+            nitrogen_stress_rate=config_dict['nitrogen_stress_rate'],
+            temperature_stress_rate=config_dict['temperature_stress_rate'],
+            light_stress_rate=config_dict['light_stress_rate'],
+            
+            # Senescence progression thresholds
+            early_senescence_threshold=config_dict['early_senescence_threshold'],
+            active_senescence_threshold=config_dict['active_senescence_threshold'],
+            late_senescence_threshold=config_dict['late_senescence_threshold'],
+            death_threshold=config_dict['death_threshold'],
+            
+            # Nutrient remobilization efficiency
             remobilization_efficiency=remob_eff,
-            recovery_rate=_get_required_param(config_dict, 'recovery_rate', 'senescence_parameters.csv'),
-            max_recovery=_get_required_param(config_dict, 'max_recovery', 'senescence_parameters.csv'),
-            reproductive_priority_factor=_get_required_param(config_dict, 'reproductive_priority_factor', 'senescence_parameters.csv'),
-            lower_canopy_factor=_get_required_param(config_dict, 'lower_canopy_factor', 'senescence_parameters.csv')
+            
+            # Recovery parameters
+            recovery_rate=config_dict['recovery_rate'],
+            max_recovery=config_dict['max_recovery'],
+            
+            # Developmental senescence
+            reproductive_priority_factor=config_dict['reproductive_priority_factor'],
+            lower_canopy_factor=config_dict['lower_canopy_factor']
         )
 
 
@@ -531,75 +537,37 @@ class AdvancedSenescenceModel:
         """
         return self.remobilization_pool.copy()
     
-def create_lettuce_senescence_model() -> AdvancedSenescenceModel:
-    """Create senescence model with lettuce-specific parameters from CSV config."""
+def create_lettuce_senescence_model(system_config=None) -> AdvancedSenescenceModel:
+    """Create senescence model with lettuce-specific parameters from CSV config.
+    
+    Args:
+        system_config: System configuration object containing CSV-loaded parameters
+        
+    Returns:
+        AdvancedSenescenceModel configured with CSV parameters
+    """
     try:
-        from ..utils.config_loader import get_config_loader
-        config_loader = get_config_loader()
-        senescence_config = config_loader.get_senescence_parameters()
-        parameters = SenescenceParameters.from_config(senescence_config)
+        # Get senescence parameters from CSV data loaded in system_config
+        senescence_params = getattr(system_config, 'senescence_parameters', {})
+        nitrogen_params = getattr(system_config, 'nitrogen_parameters', {})
+        
+        # Combine parameters from different CSV files
+        config = {}
+        
+        # Add senescence parameters
+        config.update(senescence_params)
+        
+        # Add nitrogen parameters that affect senescence
+        if 'senescence_rate' in nitrogen_params:
+            config['nitrogen_recovery'] = nitrogen_params['senescence_rate']
+        
+        # Create parameters from combined config
+        parameters = SenescenceParameters.from_config(config)
         return AdvancedSenescenceModel(parameters)
+        
     except Exception as e:
-        print(f"⚠️ Could not load senescence parameters from CSV: {e}")
-        print("Please ensure senescence_parameters.csv exists with all required parameters")
-        raise
+        print(f"Warning: Could not load CSV senescence parameters: {e}")
+        print("Using default senescence parameters")
+        return AdvancedSenescenceModel()
 
 
-def demonstrate_senescence_model():
-    """Demonstrate senescence model capabilities."""
-    model = create_lettuce_senescence_model()
-    
-    print("=" * 80)
-    print("ADVANCED SENESCENCE MODEL DEMONSTRATION")
-    print("=" * 80)
-    
-    # Create test cohorts
-    cohort_data = {
-        1: {'age_gdd': 800, 'area': 0.005, 'biomass': 1.2, 'canopy_position': 0.8},  # Old, top
-        2: {'age_gdd': 600, 'area': 0.004, 'biomass': 1.0, 'canopy_position': 0.5},  # Middle age, middle
-        3: {'age_gdd': 400, 'area': 0.003, 'biomass': 0.8, 'canopy_position': 0.2},  # Young, bottom
-    }
-    
-    # Simulate different stress scenarios
-    scenarios = [
-        ("Normal conditions", {'water': 1.0, 'nitrogen': 1.0, 'temperature': 1.0, 'light': 1.0}),
-        ("Water stress", {'water': 0.3, 'nitrogen': 1.0, 'temperature': 1.0, 'light': 1.0}),
-        ("Nitrogen stress", {'water': 1.0, 'nitrogen': 0.4, 'temperature': 1.0, 'light': 1.0}),
-        ("Heat stress", {'water': 1.0, 'nitrogen': 1.0, 'temperature': 0.5, 'light': 1.0}),
-        ("Shading stress", {'water': 1.0, 'nitrogen': 1.0, 'temperature': 1.0, 'light': 0.2}),
-    ]
-    
-    developmental_state = {'is_reproductive': False}
-    
-    print(f"{'Scenario':<15} {'Total Sen.':<10} {'Remob. N':<9} {'Stage':<15} {'Active Types':<20}")
-    print("-" * 80)
-    
-    for scenario_name, stress in scenarios:
-        response = model.daily_update(cohort_data, stress, developmental_state)
-        
-        remob_n = response.remobilized_nutrients.get('nitrogen', 0.0)
-        stage = response.average_senescence_stage.value
-        active_types = [t.value.split('_')[0] for t in response.active_senescence_types[:3]]
-        
-        print(f"{scenario_name:<15} {response.total_senescence_rate:<10.3f} "
-              f"{remob_n:<9.4f} {stage:<15} {', '.join(active_types):<20}")
-    
-    # Show cohort details
-    print(f"\nCohort senescence details:")
-    print(f"{'Cohort':<7} {'Age(GDD)':<9} {'Damage':<7} {'Stage':<15} {'Daily Rate':<11}")
-    print("-" * 50)
-    
-    for cohort_id, state in response.cohort_responses.items():
-        print(f"{cohort_id:<7} {state.age_gdd:<9.0f} {state.senescence_damage:<7.3f} "
-              f"{state.senescence_stage.value:<15} {state.daily_senescence_rate:<11.4f}")
-    
-    # Show remobilization pool
-    print(f"\nRemobilization pool:")
-    remob_pool = model.get_remobilization_pool()
-    for nutrient, amount in remob_pool.items():
-        if amount > 0:
-            print(f"  {nutrient}: {amount:.4f} g")
-
-
-if __name__ == "__main__":
-    demonstrate_senescence_model()

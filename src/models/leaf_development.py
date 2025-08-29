@@ -11,8 +11,7 @@ Key concepts implemented:
 6. Total leaf area index (LAI) calculation
 """
 
-import numpy as np
-from typing import Dict, Tuple, Optional
+from typing import Dict, Optional
 from dataclasses import dataclass
 from enum import Enum
 
@@ -54,7 +53,7 @@ class LeafParameters:
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'LeafParameters':
-        """Create LeafParameters from configuration dictionary."""
+        """Create LeafParameters from CSV configuration data."""
         return cls(
             base_phyllochron=config_dict['base_phyllochron'],
             min_temp=config_dict['min_temp'],
@@ -64,12 +63,12 @@ class LeafParameters:
             max_leaf_number=config_dict['max_leaf_number'],
             initial_leaf_number=config_dict['initial_leaf_number'],
             leaf_appearance_rate=config_dict['leaf_appearance_rate'],
-            max_individual_leaf_area=config_dict.get('max_individual_leaf_area', 0.006),
-            leaf_area_expansion_rate=config_dict.get('leaf_area_expansion_rate', 0.12),
+            max_individual_leaf_area=config_dict['max_individual_leaf_area'],
+            leaf_area_expansion_rate=config_dict['leaf_area_expansion_rate'],
             specific_leaf_area=config_dict['specific_leaf_area'],
-            water_stress_threshold=config_dict.get('water_stress_threshold', 0.5),
-            nitrogen_stress_threshold=config_dict.get('nitrogen_stress_threshold', 0.6),
-            temperature_stress_sensitivity=config_dict.get('temperature_stress_sensitivity', 0.8)
+            water_stress_threshold=config_dict['water_stress_threshold'],
+            nitrogen_stress_threshold=config_dict['nitrogen_stress_threshold'],
+            temperature_stress_sensitivity=config_dict['temperature_stress_sensitivity']
         )
 
 
@@ -346,36 +345,29 @@ class LeafDevelopmentModel:
             'senesced_area_daily': senesced_area,
             'average_leaf_area': total_area / max(1, active_leaves)
         }
-    
-    
 
-def demonstrate_leaf_development_model():
-    """Demonstrate leaf development dynamics over 30 days."""
+
+def create_lettuce_leaf_development_model(system_config=None) -> LeafDevelopmentModel:
+    """Create leaf development model with lettuce-specific parameters from CSV config.
+    
+    Args:
+        system_config: System configuration object containing CSV-loaded parameters
+        
+    Returns:
+        LeafDevelopmentModel configured with CSV parameters
+    """
     try:
-        from ..utils.config_loader import get_config_loader
-        config_loader = get_config_loader()
-        ld_config = config_loader.get_leaf_development_parameters()
-        model = LeafDevelopmentModel(LeafParameters.from_config(ld_config))
-    except Exception:
-        model = LeafDevelopmentModel()
-
-    print("=" * 80)
-    print("LEAF DEVELOPMENT MODEL DEMONSTRATION")
-    print("=" * 80)
-
-    print(f"{'Day':<4} {'Temp':<6} {'Leaves':<7} {'LAI':<6} {'Area(m2)':<9}")
-    print("-" * 80)
-    for day in range(1, 31):
-        # Mildly varying temp and no stress
-        temp = 22.0 + 2.0 * np.sin(day * np.pi / 15)
-        daily_tt = model.calculate_thermal_time(temp)
-        stress = model.calculate_stress_factors(1.0, 1.0, 1.0)
-        _ = model.update_v_stage(daily_tt, stress)
-        stats = model.update_leaf_areas(daily_tt, stress)
-        if day % 3 == 1:
-            print(f"{day:<4} {temp:<6.1f} {int(model.current_v_stage):<7} {stats['leaf_area_index']:<6.2f} {stats['total_leaf_area_m2']:<9.3f}")
+        # Get leaf development parameters from CSV data loaded in system_config
+        leaf_params = getattr(system_config, 'leaf_development_parameters', {})
+        
+        # Create parameters from CSV config
+        parameters = LeafParameters.from_config(leaf_params)
+        return LeafDevelopmentModel(parameters)
+        
+    except Exception as e:
+        print(f"Warning: Could not load CSV leaf development parameters: {e}")
+        print("Using default leaf development parameters")
+        return LeafDevelopmentModel()
 
 
-if __name__ == "__main__":
-    demonstrate_leaf_development_model()
 

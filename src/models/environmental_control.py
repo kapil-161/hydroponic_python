@@ -550,57 +550,32 @@ class EnvironmentalControlSystem:
         return min(50.0, (max_efficiency / current_efficiency - 1.0) * 100.0)
 
 
-def demonstrate_environmental_control():
-    """Demonstrate environmental control system capabilities."""
-    controller = create_lettuce_environmental_control()
+def create_lettuce_environmental_control_system(system_config=None) -> EnvironmentalControlSystem:
+    """Create environmental control system with lettuce-specific parameters from CSV config.
     
-    print("=" * 80)
-    print("ENVIRONMENTAL CONTROL SYSTEM DEMONSTRATION")
-    print("=" * 80)
-    
-    # Test scenarios
-    scenarios = [
-        ("Optimal", 22.0, 70.0, 1200.0, True),
-        ("Too Humid", 22.0, 85.0, 1200.0, True),
-        ("Too Dry", 25.0, 50.0, 1200.0, True),
-        ("Low CO2", 22.0, 70.0, 400.0, True),
-        ("High CO2", 22.0, 70.0, 1800.0, True),
-        ("Night Cycle", 18.0, 70.0, 400.0, False),
-    ]
-    
-    print(f"{'Scenario':<12} {'VPD':<6} {'Status':<15} {'Photo Factor':<12} {'Actions':<20} {'Cost/hr':<10}")
-    print("-" * 80)
-    
-    for scenario_name, temp, rh, co2, light_on in scenarios:
-        current_conditions = {
-            'temperature': temp,
-            'humidity': rh,
-            'co2': co2,
-            'light_intensity': 200.0
-        }
+    Args:
+        system_config: System configuration object containing CSV-loaded parameters
         
-        light_schedule = {'light_on': light_on}
+    Returns:
+        EnvironmentalControlSystem configured with CSV parameters
+    """
+    try:
+        setpoints = None
+        equipment = None
         
-        results = controller.calculate_comprehensive_control(
-            current_conditions, light_schedule, ControlStrategy.PID
-        )
+        # Get environmental control parameters from CSV data loaded in system_config
+        if system_config:
+            env_setpoints = getattr(system_config, 'environmental_control_parameters', {})
+            if env_setpoints:
+                setpoints = EnvironmentalSetpoints.from_config(env_setpoints)
+                
+            env_equipment = getattr(system_config, 'control_equipment_parameters', {})
+            if env_equipment:
+                equipment = ControlEquipment.from_config(env_equipment)
         
-        vpd = results['current_conditions']['vpd_kPa']
-        status = results['recommendations']['vpd_status']
-        photo_factor = results['plant_factors']['combined_photosynthesis_factor']
-        priority = results['recommendations']['priority_action']
-        cost = results['control_actions']['total_operating_cost']
+        return EnvironmentalControlSystem(setpoints, equipment)
         
-        print(f"{scenario_name:<12} {vpd:<6.2f} {status:<15} {photo_factor:<12.2f} "
-              f"{priority:<20} ${cost:<9.3f}")
-    
-    print(f"\nKey Insights:")
-    print(f"• Optimal VPD range: {controller.setpoints.target_vpd - controller.setpoints.vpd_tolerance:.1f}-"
-          f"{controller.setpoints.target_vpd + controller.setpoints.vpd_tolerance:.1f} kPa")
-    print(f"• CO2 enrichment target: {controller.setpoints.target_co2:.0f} μmol/mol during photoperiod")
-    print(f"• Environmental control can improve photosynthesis by 40-60%")
-    print(f"• Operating costs typically $0.05-0.50 per hour depending on conditions")
-
-
-if __name__ == "__main__":
-    demonstrate_environmental_control()
+    except Exception as e:
+        print(f"Warning: Could not load CSV environmental control parameters: {e}")
+        print("Using default environmental control parameters")
+        return EnvironmentalControlSystem()

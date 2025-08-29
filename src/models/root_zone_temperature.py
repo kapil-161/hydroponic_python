@@ -213,35 +213,29 @@ class RootZoneTemperatureModel:
             factor = 1.0 - (temperature_excess * self.params.root_metabolism_sensitivity_high)
         
         return np.clip(factor, 0.3, 1.6)
-    
-    
 
-def demonstrate_rzt_model():
-    """Demonstrate root zone temperature effects across temperatures."""
+
+def create_lettuce_rzt_model(system_config=None) -> RootZoneTemperatureModel:
+    """Create root zone temperature model with lettuce-specific parameters from CSV config.
+    
+    Args:
+        system_config: System configuration object containing CSV-loaded parameters
+        
+    Returns:
+        RootZoneTemperatureModel configured with CSV parameters
+    """
     try:
-        from ..utils.config_loader import get_config_loader
-        config_loader = get_config_loader()
-        rzt_cfg = config_loader.get_rzt_parameters()
-        model = RootZoneTemperatureModel(RZTParameters.from_config(rzt_cfg))
-    except Exception:
-        model = RootZoneTemperatureModel()
-
-    print("=" * 80)
-    print("ROOT ZONE TEMPERATURE (RZT) MODEL DEMONSTRATION")
-    print("=" * 80)
-
-    air_temp = 22.0
-    print(f"{'RZT':<6} {'Growth':<8} {'Nutrient':<9} {'Water':<7} {'Photosyn':<8} {'Metab':<7}")
-    print("-" * 80)
-    for rzt in [14, 16, 18, 20, 22, 24, 28, 32, 36]:
-        g = model.calculate_rzt_growth_factor(rzt, air_temp)
-        n = model.calculate_nutrient_uptake_factor(rzt, air_temp)
-        w = model.calculate_water_uptake_factor(rzt, air_temp)
-        p = model.calculate_photosynthesis_factor(rzt, air_temp)
-        m = model.calculate_root_metabolism_factor(rzt, air_temp)
-        print(f"{rzt:<6.0f} {g:<8.2f} {n:<9.2f} {w:<7.2f} {p:<8.2f} {m:<7.2f}")
+        # Get root zone temperature parameters from CSV data loaded in system_config
+        rzt_params = getattr(system_config, 'root_zone_temperature_parameters', {})
+        
+        # Create parameters from CSV config
+        parameters = RZTParameters.from_config(rzt_params)
+        return RootZoneTemperatureModel(parameters)
+        
+    except Exception as e:
+        print(f"Warning: Could not load CSV root zone temperature parameters: {e}")
+        print("Using default root zone temperature parameters")
+        return RootZoneTemperatureModel()
 
 
-if __name__ == "__main__":
-    demonstrate_rzt_model()
 

@@ -17,7 +17,6 @@ Research basis:
 - Masclaux-Daubresse et al. (2010) - Nitrogen remobilization
 """
 
-import numpy as np
 from typing import Dict, Tuple, Optional, Any, List
 from dataclasses import dataclass
 from enum import Enum
@@ -175,7 +174,7 @@ class NitrogenBalanceParameters:
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'NitrogenBalanceParameters':
-        """Create NitrogenBalanceParameters from configuration dictionary."""
+        """Create NitrogenBalanceParameters from CSV configuration data."""
         uptake_kinetics = config_dict.get('uptake_kinetics', {})
         allocation_coeffs = config_dict.get('allocation_coefficients', {})
         critical_n_concs = config_dict.get('critical_n_concentrations', {})
@@ -192,11 +191,11 @@ class NitrogenBalanceParameters:
             remobilization_rates=remob_rates if remob_rates else None,
             remobilization_efficiency=remob_efficiency if remob_efficiency else None,
             photosynthetic_n_use_efficiency=config_dict['photosynthetic_n_use_efficiency'],
-            growth_n_use_efficiency=config_dict.get('growth_n_use_efficiency', 25.0),
-            n_stress_threshold=config_dict.get('n_stress_threshold', 0.7),
-            luxury_uptake_threshold=config_dict.get('luxury_uptake_threshold', 1.3),
-            specific_root_activity=config_dict.get('specific_root_activity', 0.05),
-            root_zone_exploration=config_dict.get('root_zone_exploration', 0.8)
+            growth_n_use_efficiency=config_dict['growth_n_use_efficiency'],
+            n_stress_threshold=config_dict['n_stress_threshold'],
+            luxury_uptake_threshold=config_dict['luxury_uptake_threshold'],
+            specific_root_activity=config_dict['specific_root_activity'],
+            root_zone_exploration=config_dict['root_zone_exploration']
         )
 
 
@@ -789,119 +788,26 @@ class PlantNitrogenBalanceModel:
         return summary
 
 
-def create_lettuce_nitrogen_balance_model() -> PlantNitrogenBalanceModel:
-    """Create nitrogen balance model with lettuce-specific parameters."""
+def create_lettuce_nitrogen_balance_model(system_config=None) -> PlantNitrogenBalanceModel:
+    """Create nitrogen balance model with lettuce-specific parameters from CSV config.
+    
+    Args:
+        system_config: System configuration object containing CSV-loaded parameters
+        
+    Returns:
+        PlantNitrogenBalanceModel configured with CSV parameters
+    """
     try:
-        from ..utils.config_loader import get_config_loader
-        config_loader = get_config_loader()
-        nitrogen_config = config_loader.get_nitrogen_balance_parameters()
-        parameters = NitrogenBalanceParameters.from_config(nitrogen_config)
+        # Get nitrogen balance parameters from CSV data loaded in system_config
+        nitrogen_params = getattr(system_config, 'nitrogen_parameters', {})
+        
+        # Create parameters from CSV config
+        parameters = NitrogenBalanceParameters.from_config(nitrogen_params)
         return PlantNitrogenBalanceModel(parameters)
-    except ImportError:
-        # Fallback to default values if config loader not available
+        
+    except Exception as e:
+        print(f"Warning: Could not load CSV nitrogen balance parameters: {e}")
+        print("Using default nitrogen balance parameters")
         return PlantNitrogenBalanceModel()
 
 
-def demonstrate_nitrogen_balance_model():
-    """Demonstrate nitrogen balance model capabilities."""
-    # Create model with reduced uptake rates for realistic demo
-    params = NitrogenBalanceParameters()
-    # Reduce uptake rates
-    for n_form in params.uptake_kinetics:
-        params.uptake_kinetics[n_form]['vmax'] *= 0.1  # Reduce by 90%
-    
-    model = PlantNitrogenBalanceModel(params)
-    
-    print("=" * 80)
-    print("PLANT NITROGEN BALANCE MODEL DEMONSTRATION")
-    print("=" * 80)
-    
-    # Initialize plant organs
-    model.initialize_organ('leaves', 3.0, 0.045)     # 3g leaves, 4.5% N
-    model.initialize_organ('stems', 1.0, 0.020)      # 1g stems, 2.0% N  
-    model.initialize_organ('roots', 2.0, 0.025)      # 2g roots, 2.5% N
-    
-    print("Initial plant state:")
-    for organ_name, state in model.organ_states.items():
-        print(f"  {organ_name}: {state.dry_mass:.1f}g, {state.nitrogen_concentration*100:.1f}% N, {state.nitrogen_status}")
-    
-    # Simulate nitrogen balance over time
-    print(f"\nSimulating nitrogen balance:")
-    print(f"{'Day':<4} {'Uptake':<7} {'Remob':<6} {'LeafN%':<7} {'Stress':<7} {'NUE':<6} {'Balance':<8}")
-    print("-" * 80)
-    
-    for day in range(1, 21):
-        # Varying solution conditions (reduced concentrations)
-        solution_concs = {
-            'NO3': 150.0 + 20.0 * np.sin(day * 2 * np.pi / 10),  # mg N/L
-            'NH4': 15.0 + 5.0 * np.sin(day * 2 * np.pi / 7),
-            'AA': 3.0,
-            'UREA': 5.0
-        }
-        
-        # Environmental factors
-        env_factors = {
-            'temperature_factor': 0.9 + 0.1 * np.sin(day * 2 * np.pi / 5),
-            'water_status': 0.95,
-            'root_health': 0.9,
-            'ph_factor': 0.95
-        }
-        
-        # Growth rates (g/day) - increased to match N uptake
-        if day < 15:  # Vegetative growth
-            growth_rates = {'leaves': 0.5, 'stems': 0.2, 'roots': 0.3}
-            growth_stage = 'vegetative'
-        else:  # Slower growth, some stress
-            growth_rates = {'leaves': 0.3, 'stems': 0.1, 'roots': 0.2}
-            growth_stage = 'vegetative'
-        
-        # Stress levels
-        stress_factors = {
-            'water': 0.9,
-            'temperature': 0.85 + 0.1 * np.sin(day * 2 * np.pi / 8),
-            'light': 0.9
-        }
-        
-        # Senescence rates (minimal for vegetative stage)
-        senescence_rates = {'leaves': 0.001, 'stems': 0.0005, 'roots': 0.0002}
-        
-        # Get current root mass
-        root_mass = model.organ_states['roots'].dry_mass
-        
-        # Daily update
-        response = model.daily_update(
-            root_mass=root_mass,
-            solution_concentrations=solution_concs,
-            environmental_factors=env_factors,
-            organ_growth_rates=growth_rates,
-            growth_stage=growth_stage,
-            stress_factors=stress_factors,
-            senescence_rates=senescence_rates
-        )
-        
-        # Print daily summary
-        leaf_n_pct = model.organ_states['leaves'].nitrogen_concentration * 100
-        
-        print(f"{day:<4} {response.uptake_response.total_uptake:<7.3f} "
-              f"{response.remobilized_nitrogen:<6.3f} {leaf_n_pct:<7.2f} "
-              f"{response.nitrogen_stress_level:<7.3f} {response.nitrogen_use_efficiency:<6.1f} "
-              f"{response.nitrogen_balance:<8.3f}")
-    
-    # Final summary
-    summary = model.get_nitrogen_summary()
-    print(f"\nFinal nitrogen balance summary:")
-    print(f"• Total plant nitrogen: {summary['total_plant_nitrogen']:.2f} g N")
-    print(f"• Total biomass: {summary['total_biomass']:.1f} g")
-    print(f"• Nitrogen use efficiency: {summary['nitrogen_use_efficiency']:.1f} g biomass/g N")
-    print(f"• Cumulative uptake: {summary['cumulative_uptake']:.2f} g N")
-    print(f"• Cumulative remobilization: {summary['cumulative_remobilization']:.3f} g N")
-    print(f"• Nitrogen stress level: {summary['nitrogen_stress_level']:.3f}")
-    
-    print(f"\nOrgan nitrogen concentrations:")
-    for organ, conc in summary['organ_n_concentrations'].items():
-        status = summary['organ_n_status'][organ]
-        print(f"  {organ}: {conc*100:.2f}% N ({status})")
-
-
-if __name__ == "__main__":
-    demonstrate_nitrogen_balance_model()

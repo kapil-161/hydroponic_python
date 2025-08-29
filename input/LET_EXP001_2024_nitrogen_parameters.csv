@@ -5,3 +5,14 @@ translocation_rate,0.4,fraction,Rate of nitrogen movement between plant parts
 protein_synthesis,0.6,fraction,Portion of nitrogen used for protein synthesis
 chlorophyll_ratio,0.02,fraction,Fraction of leaf nitrogen in chlorophyll
 senescence_rate,0.6,fraction,Nitrogen recovered during leaf senescence
+nitrate_reduction_rate,0.5,per_hour,Rate of nitrate reduction to nitrite
+ammonium_assimilation_rate,0.8,per_hour,Rate of ammonium assimilation into amino acids
+amino_acid_uptake_rate,0.3,per_hour,Rate of amino acid uptake from solution
+photosynthetic_n_use_efficiency,35.0,g_DM_per_g_N,Photosynthetic nitrogen use efficiency
+growth_n_use_efficiency,25.0,g_DM_per_g_N,Growth nitrogen use efficiency
+n_stress_threshold,0.7,fraction,Nitrogen stress threshold
+luxury_uptake_threshold,1.3,fraction,Luxury nitrogen uptake threshold
+specific_root_activity,0.05,mg_N_per_cm_per_day,Specific root activity for nitrogen uptake
+root_zone_exploration,0.8,fraction,Root zone exploration efficiency
+xylem_transport_capacity,0.8,fraction,Xylem transport capacity for nutrient movement
+transpiration_coupling,0.6,fraction,Coupling between transpiration and nutrient transport

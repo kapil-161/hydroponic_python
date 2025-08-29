@@ -239,13 +239,13 @@ class RootArchitectureParameters:
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'RootArchitectureParameters':
-        """Create RootArchitectureParameters from configuration dictionary."""
+        """Create RootArchitectureParameters from CSV configuration data."""
         return cls(
             container_volume=config_dict['container_volume'],
             channel_length=config_dict['channel_length'],
-            fine_root_half_life_days=config_dict.get('fine_root_half_life_days', 45.0),
-            medium_root_half_life_days=config_dict.get('medium_root_half_life_days', 90.0),
-            coarse_root_half_life_days=config_dict.get('coarse_root_half_life_days', 180.0)
+            fine_root_half_life_days=config_dict['fine_root_half_life_days'],
+            medium_root_half_life_days=config_dict['medium_root_half_life_days'],
+            coarse_root_half_life_days=config_dict['coarse_root_half_life_days']
         )
 
 
@@ -556,16 +556,19 @@ class RootArchitectureModel:
 
 
 def create_lettuce_root_architecture_model(system_type: HydroponicSystemType = HydroponicSystemType.NFT, 
-                                          tank_volume: float = 1500.0) -> RootArchitectureModel:
-    """Create a root architecture model optimized for lettuce"""
+                                          tank_volume: float = 1500.0, system_config=None) -> RootArchitectureModel:
+    """Create a root architecture model optimized for lettuce using CSV configuration"""
+    
+    # Get root parameters from CSV if available
+    root_params = getattr(system_config, 'root_parameters', {}) if system_config else {}
     
     if system_type == HydroponicSystemType.NFT:
         # NFT: Root zone is independent of tank volume - determined by channel dimensions
         params = RootArchitectureParameters(
             system_type=system_type,
-            container_volume=tank_volume,  # Tank volume for nutrient storage only
+            container_volume=root_params.get('container_volume', tank_volume),
             # NFT channel configuration for 20 lettuce plants
-            channel_length=200.0,    # cm (2 meters) - TODO: Load from config
+            channel_length=root_params.get('channel_length', 200.0),    # cm (2 meters)
             channel_width=10.0,      # cm  
             channel_depth=8.0,       # cm
             n_channels=4,            # 4 channels, 5 plants each
@@ -755,8 +758,8 @@ class EnhancedRootUptakeModel:
     """
 
     def __init__(self, system_type: HydroponicSystemType = HydroponicSystemType.NFT, 
-                 tank_volume: float = 1500.0):
-        self.root_architecture = create_lettuce_root_architecture_model(system_type, tank_volume)
+                 tank_volume: float = 1500.0, system_config=None):
+        self.root_architecture = create_lettuce_root_architecture_model(system_type, tank_volume, system_config)
         self.system_type = system_type
         self.tank_volume = tank_volume
         self.uptake_params = RootUptakeParameters(
@@ -1035,51 +1038,11 @@ class EnhancedRootUptakeModel:
 
 
 def create_enhanced_root_uptake_model(system_type: HydroponicSystemType = HydroponicSystemType.NFT,
-                                      tank_volume: float = 1500.0) -> EnhancedRootUptakeModel:
-    return EnhancedRootUptakeModel(system_type, tank_volume)
+                                      tank_volume: float = 1500.0, system_config=None) -> EnhancedRootUptakeModel:
+    return EnhancedRootUptakeModel(system_type, tank_volume, system_config)
 
 
 # =========================
 # Demonstration
 # =========================
 
-if __name__ == "__main__":
-    print("Unified Root System Model - Demonstration")
-    print("=" * 80)
-
-    # 1) Root Architecture quick run
-    arch = create_lettuce_root_architecture_model(HydroponicSystemType.NFT)
-    metrics = arch.daily_update({'temperature': 20.0, 'flow_rate': 1.5, 'oxygen_level': 8.0},
-                                {'nitrogen_stress': 0.9, 'water_stress': 0.95, 'temperature_stress': 0.9})
-    print(f"Root length: {metrics['total_root_length']:.1f} cm, surface: {metrics['total_root_surface_area']:.0f} cm²")
-
-    # 2) Enhanced uptake quick run
-    model = create_enhanced_root_uptake_model(HydroponicSystemType.NFT)
-    results = model.daily_update(
-        {'temperature': 22.0, 'flow_rate': 1.5, 'oxygen_level': 8.0},
-        {'nitrogen_stress': 0.95, 'water_stress': 0.95, 'temperature_stress': 0.95},
-        {'NO3': 6.0, 'K': 120.0}
-    )
-    print(f"NO3 uptake: {results.get('NO3_uptake_rate', 0.0):.2f} mg/day, total: {results.get('total_nutrient_uptake', 0.0):.2f} mg/day")
-
-    # 3) Hydroponic root dynamics utilities
-    hrm = HydroponicRootModel(HydroponicSystemType.NFT)
-    sample_roots = HydroponicRootSystem(
-        total_root_mass=10.0,
-        total_root_length=6000.0,
-        root_surface_area=2500.0,
-        specific_root_length=600.0,
-        root_diameter=0.02,
-        solution_root_fraction=0.6,
-        media_root_fraction=0.2,
-        air_root_fraction=0.2,
-        primary_zone_roots=6.0,
-        secondary_zone_roots=4.0,
-        feeder_root_density=5.0,
-        root_growth_rate=0.8,
-        root_senescence_rate=0.03,
-        uptake_efficiency=0.85,
-        system_type=HydroponicSystemType.NFT,
-    )
-    capacity = hrm.calculate_nutrient_uptake_capacity(sample_roots, solution_volume=50.0)
-    print(f"Capacity: {capacity:.1f} mg/day, Health: {hrm._calculate_health_score(sample_roots):.1f}")

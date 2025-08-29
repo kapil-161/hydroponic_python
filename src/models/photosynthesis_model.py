@@ -30,99 +30,48 @@ class PhotosynthesisParameters:
     ear: float = None           # Activation energy for Rd (J/mol)
     o2_mmol_mol: float = 210.0  # Atmospheric O2 concentration (physical constant)
     
-    def __post_init__(self):
-        """Load parameters from centralized JSON config if not provided."""
-        try:
-            from ..utils.config_loader import get_config_loader
-            loader = get_config_loader()
-            cfg = loader.get_photosynthesis_parameters()
-
-            # Load all parameters from config - strict access
-            if self.kc is None:
-                self.kc = cfg['kc']
-            if self.ko is None:
-                self.ko = cfg['ko']
-            if self.gamma_star is None:
-                self.gamma_star = cfg['gamma_star']
-            if self.jmax_25 is None:
-                self.jmax_25 = cfg['jmax_25']
-            if self.vcmax_25 is None:
-                self.vcmax_25 = cfg['vcmax_25']
-            if self.theta is None:
-                self.theta = cfg['theta']
-            if self.alpha is None:
-                self.alpha = cfg['alpha']
-            if self.rd_25 is None:
-                self.rd_25 = cfg['rd_25']
-            if self.eaj is None:
-                self.eaj = cfg['eaj']
-            if self.eav is None:
-                self.eav = cfg['eav']
-            if self.ear is None:
-                self.ear = cfg['ear']
-            if self.phi_psii is None:
-                self.phi_psii = cfg['phi_psii']
-            if self.r is None:
-                self.r = cfg['r']
-            if self.ci_fraction is None:
-                self.ci_fraction = cfg['ci_fraction']
-            # Optional override for O2 concentration (mmol/mol) with validation
-            self.o2_mmol_mol = self._validate_parameter(
-                cfg.get('o2_mmol_mol', cfg.get('O2_MMOL_MOL', 210.0)),
-                200.0, 220.0, 210.0, 'o2_mmol_mol'
-            )
-            # Internal CO2 fraction (0.65–0.85 typical for C3) with validation
-            self.ci_fraction = self._validate_parameter(
-                cfg.get('ci_fraction', cfg.get('CI_FRACTION', 0.75)),
-                0.65, 0.85, 0.75, 'ci_fraction'
-            )
-        except Exception:
-            # Config loader not available; leave any explicitly provided values as-is
-            # and rely on defaults above where needed.
-            pass
-    
-    def _validate_parameter(self, value: float, min_val: float, max_val: float, default: float, param_name: str) -> float:
-        """Validate parameter is within biological bounds."""
-        if value is None:
-            return default
-        if not (min_val <= value <= max_val):
-            import warnings
-            warnings.warn(f"Parameter {param_name}={value} outside valid range [{min_val}, {max_val}]. Using default {default}")
-            return default
-        return value
     
     @classmethod
-    def from_dict(cls, config_dict: dict) -> 'PhotosynthesisParameters':
-        """Create PhotosynthesisParameters from configuration dictionary."""
+    def from_config(cls, config_dict: dict) -> 'PhotosynthesisParameters':
+        """Create PhotosynthesisParameters from CSV configuration data."""
         return cls(
-            kc=config_dict.get('kc'),
-            ko=config_dict.get('ko'),
-            gamma_star=config_dict.get('gamma_star'),
-            jmax_25=config_dict.get('jmax_25'),
-            vcmax_25=config_dict.get('vcmax_25'),
-            theta=config_dict.get('theta'),
-            phi_psii=config_dict.get('phi_psii', 0.3),
-            alpha=config_dict.get('alpha'),
-            rd_25=config_dict.get('rd_25'),
-            eaj=config_dict.get('eaj'),
-            eav=config_dict.get('eav'),
-            ear=config_dict.get('ear'),
-            r=config_dict.get('r', 8.314)
+            # Michaelis-Menten constants
+            kc=config_dict['kc'],
+            ko=config_dict['ko'],
+            gamma_star=config_dict['gamma_star'],
+            
+            # Maximum rates at 25C
+            jmax_25=config_dict['jmax_25'],
+            vcmax_25=config_dict['vcmax_25'],
+            
+            # Light response parameters
+            theta=config_dict['theta'],
+            alpha=config_dict['alpha'],
+            
+            # Respiration
+            rd_25=config_dict['rd_25'],
+            
+            # Activation energies
+            eaj=config_dict['eaj'],
+            eav=config_dict['eav'],
+            ear=config_dict['ear'],
+            
+            # Required parameters
+            phi_psii=config_dict['phi_psii'],
+            r=config_dict['r'],
+            ci_fraction=config_dict['ci_fraction'],
+            
+            # Physical constants
+            o2_mmol_mol=config_dict['o2_mmol_mol']
         )
+    
 
 
 class PhotosynthesisModel:
     """Simplified Farquhar-type model for daily carbon assimilation."""
 
     def __init__(self, parameters: Optional[PhotosynthesisParameters] = None):
-        if parameters is None:
-            # Load parameters strictly from JSON config
-            from ..utils.config_loader import get_config_loader
-            loader = get_config_loader()
-            p_cfg = loader.get_photosynthesis_parameters()
-            self.params = PhotosynthesisParameters.from_dict(p_cfg)
-        else:
-            self.params = parameters
+        self.params = parameters or PhotosynthesisParameters()
 
     def _arrhenius_temp_response(self, rate_25: float, ea: float, temp_c: float) -> float:
         """Calculate temperature response using Arrhenius equation."""
@@ -205,35 +154,27 @@ class PhotosynthesisModel:
         return max(0.0, total_g_c_m2_day)
 
 
-
-def demonstrate_photosynthesis_model():
-    """Demonstrate photosynthesis model with sample conditions."""
-    from ..utils.config_loader import get_config_loader
-    config_loader = get_config_loader()
-    p_config = config_loader.get_photosynthesis_parameters()
-    model = PhotosynthesisModel(PhotosynthesisParameters.from_dict(p_config))
-
-    print("=" * 80)
-    print("PHOTOSYNTHESIS MODEL DEMONSTRATION")
-    print("=" * 80)
-
-    # Sample scenarios: varying PAR and LAI at fixed CO2 and temperature
-    co2_ppm = 1200.0
-    temp_c = 24.0
-    scenarios = [
-        (200.0, 1.0),
-        (600.0, 2.5),
-        (1000.0, 3.5),
-        (1500.0, 5.0),
-    ]
-
-    print(f"{'PAR':<7} {'LAI':<5} {'Assim gC/m2/day':<18}")
-    print("-" * 80)
-    for par, lai in scenarios:
-        assimilation = model.calculate_daily_assimilation(par, co2_ppm, temp_c, lai)
-        print(f"{par:<7.0f} {lai:<5.1f} {assimilation:<18.2f}")
+def create_lettuce_photosynthesis_model(system_config=None) -> PhotosynthesisModel:
+    """Create photosynthesis model with lettuce-specific parameters from CSV config.
+    
+    Args:
+        system_config: System configuration object containing CSV-loaded parameters
+        
+    Returns:
+        PhotosynthesisModel configured with CSV parameters
+    """
+    try:
+        # Get photosynthesis parameters from CSV data loaded in system_config
+        photosynthesis_params = getattr(system_config, 'photosynthesis_parameters', {})
+        
+        # Create parameters from CSV config
+        parameters = PhotosynthesisParameters.from_config(photosynthesis_params)
+        return PhotosynthesisModel(parameters)
+        
+    except Exception as e:
+        print(f"Warning: Could not load CSV photosynthesis parameters: {e}")
+        print("Using default photosynthesis parameters")
+        return PhotosynthesisModel()
 
 
-if __name__ == "__main__":
-    demonstrate_photosynthesis_model()
 

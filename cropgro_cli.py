@@ -197,31 +197,46 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
             except Exception as e:
                 print(f"⚠️  Could not load crop parameters: {e}")
 
-        # 7. Load genetic parameters
-        genetic_file = f'{input_dir}/{cultivar_id}_genetic_parameters.csv'
+        # 7. Load genetic parameters (consolidated)
+        genetic_file = f'{input_dir}/{cultivar_id}_genetic_parameters_consolidated.csv'
         if Path(genetic_file).exists():
             try:
                 df = pd.read_csv(genetic_file)
-                # Store all genetic parameters dynamically
+                # Store all genetic parameters dynamically with category support
                 genetic_params = {}
-                for _, row in df.iterrows():
-                    if row['cultivar_id'] == cultivar_id:  # Filter by current cultivar
-                        param_name = row['parameter']
-                        param_value = row['value']
-                        # Convert to appropriate type
-                        try:
-                            if param_value != param_value:  # Check for NaN
-                                param_value = ""
-                            elif str(param_value).replace('.', '').isdigit():
-                                param_value = float(param_value)
-                        except:
-                            pass  # Keep as string
-                        genetic_params[param_name] = param_value
-                        params_loaded.append(f"{param_name}={param_value}")
+                genetic_stress_weights = {}
+                breeding_weights = {}
                 
-                # Add genetic parameters to system_config
+                for _, row in df.iterrows():
+                    param_name = row['parameter_name']
+                    param_value = row['value']
+                    category = row.get('category', 'genetic_coefficients')
+                    
+                    # Convert to appropriate type
+                    try:
+                        if param_value != param_value:  # Check for NaN
+                            param_value = ""
+                        elif str(param_value).replace('.', '').isdigit():
+                            param_value = float(param_value)
+                    except:
+                        pass  # Keep as string
+                    
+                    # Store in appropriate category
+                    if category == 'genetic_coefficients':
+                        genetic_params[param_name] = param_value
+                    elif category == 'stress_weights':
+                        genetic_stress_weights[param_name] = param_value
+                    elif category == 'breeding_weights':
+                        breeding_weights[param_name] = param_value
+                    
+                    params_loaded.append(f"{param_name}={param_value}")
+                
+                # Add all genetic parameters to system_config
                 system_config.genetic_parameters = genetic_params
-                print(f"✓ Genetic parameters loaded: {len(genetic_params)} parameters for {cultivar_id}")
+                system_config.genetic_stress_weights = genetic_stress_weights
+                system_config.breeding_weights = breeding_weights
+                total_params = len(genetic_params) + len(genetic_stress_weights) + len(breeding_weights)
+                print(f"✓ Genetic parameters loaded: {total_params} parameters ({len(genetic_params)} coefficients, {len(genetic_stress_weights)} stress weights, {len(breeding_weights)} breeding weights)")
             except Exception as e:
                 print(f"⚠️  Could not load genetic parameters: {e}")
 
@@ -252,16 +267,21 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
             except Exception as e:
                 print(f"⚠️  Could not load photosynthesis parameters: {e}")
 
-        # 9. Load nitrogen parameters
-        nitrogen_file = f'{input_dir}/{cultivar_id}_nitrogen_parameters.csv'
-        if Path(nitrogen_file).exists():
+        # 9. Load nutrient parameters (consolidated)
+        nutrient_file = f'{input_dir}/{cultivar_id}_nutrient_parameters_consolidated.csv'
+        if Path(nutrient_file).exists():
             try:
-                df = pd.read_csv(nitrogen_file)
-                # Store all nitrogen parameters dynamically
+                df = pd.read_csv(nutrient_file)
+                # Store all nutrient parameters dynamically with category support
                 nitrogen_params = {}
+                nutrient_mobility_params = {}
+                nutrient_solution_params = {}
+                
                 for _, row in df.iterrows():
                     param_name = row['parameter_name']
                     param_value = row['value']
+                    category = row.get('category', 'nitrogen_balance')
+                    
                     # Convert to appropriate type
                     try:
                         if param_value != param_value:  # Check for NaN
@@ -270,14 +290,25 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                             param_value = float(param_value)
                     except:
                         pass  # Keep as string
-                    nitrogen_params[param_name] = param_value
+                    
+                    # Store in appropriate category
+                    if category == 'nitrogen_balance':
+                        nitrogen_params[param_name] = param_value
+                    elif category == 'nutrient_mobility':
+                        nutrient_mobility_params[param_name] = param_value
+                    elif category == 'nutrient_solution':
+                        nutrient_solution_params[param_name] = param_value
+                    
                     params_loaded.append(f"{param_name}={param_value}")
                 
-                # Add nitrogen parameters to system_config
+                # Add all nutrient parameters to system_config
                 system_config.nitrogen_parameters = nitrogen_params
-                print(f"✓ Nitrogen parameters loaded: {len(nitrogen_params)} parameters")
+                system_config.nutrient_mobility_parameters = nutrient_mobility_params
+                system_config.nutrient_solution = nutrient_solution_params
+                total_params = len(nitrogen_params) + len(nutrient_mobility_params) + len(nutrient_solution_params)
+                print(f"✓ Nutrient parameters loaded: {total_params} parameters ({len(nitrogen_params)} nitrogen, {len(nutrient_mobility_params)} mobility, {len(nutrient_solution_params)} solution)")
             except Exception as e:
-                print(f"⚠️  Could not load nitrogen parameters: {e}")
+                print(f"⚠️  Could not load nutrient parameters: {e}")
 
         # 10. Load stress parameters
         stress_file = f'{input_dir}/{cultivar_id}_stress_parameters.csv'
@@ -333,16 +364,20 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
             except Exception as e:
                 print(f"⚠️  Could not load respiration parameters: {e}")
 
-        # 12. Load phenology parameters
-        phenology_file = f'{input_dir}/{cultivar_id}_phenology_parameters.csv'
+        # 12. Load phenology parameters (consolidated)
+        phenology_file = f'{input_dir}/{cultivar_id}_phenology_parameters_consolidated.csv'
         if Path(phenology_file).exists():
             try:
                 df = pd.read_csv(phenology_file)
-                # Store all phenology parameters dynamically
+                # Store all phenology parameters dynamically with category support
                 phenology_params = {}
+                thermal_requirements = {}
+                
                 for _, row in df.iterrows():
                     param_name = row['parameter_name']
                     param_value = row['value']
+                    category = row.get('category', 'development_parameters')
+                    
                     # Convert to appropriate type
                     try:
                         if param_value != param_value:  # Check for NaN
@@ -353,12 +388,20 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                             param_value = float(param_value)
                     except:
                         pass  # Keep as string
-                    phenology_params[param_name] = param_value
+                    
+                    # Store in appropriate category
+                    if category == 'development_parameters':
+                        phenology_params[param_name] = param_value
+                    elif category == 'thermal_requirements':
+                        thermal_requirements[param_name] = param_value
+                    
                     params_loaded.append(f"{param_name}={param_value}")
                 
-                # Add phenology parameters to system_config
+                # Add all phenology parameters to system_config
                 system_config.phenology_parameters = phenology_params
-                print(f"✓ Phenology parameters loaded: {len(phenology_params)} parameters")
+                system_config.thermal_requirements = thermal_requirements
+                total_params = len(phenology_params) + len(thermal_requirements)
+                print(f"✓ Phenology parameters loaded: {total_params} parameters ({len(phenology_params)} development, {len(thermal_requirements)} thermal)")
             except Exception as e:
                 print(f"⚠️  Could not load phenology parameters: {e}")
 
@@ -389,13 +432,13 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
             except Exception as e:
                 print(f"⚠️  Could not load senescence parameters: {e}")
 
-        # 14. Load root zone parameters
-        root_zone_file = f'{input_dir}/{cultivar_id}_root_zone_parameters.csv'
-        if Path(root_zone_file).exists():
+        # 14. Load root parameters (split)
+        root_file = f'{input_dir}/{cultivar_id}_root_parameters.csv'
+        if Path(root_file).exists():
             try:
-                df = pd.read_csv(root_zone_file)
-                # Store all root zone parameters dynamically
-                root_zone_params = {}
+                df = pd.read_csv(root_file)
+                # Store all root parameters dynamically
+                root_params = {}
                 for _, row in df.iterrows():
                     param_name = row['parameter_name']
                     param_value = row['value']
@@ -407,16 +450,43 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                             param_value = float(param_value)
                     except:
                         pass  # Keep as string
-                    root_zone_params[param_name] = param_value
+                    root_params[param_name] = param_value
                     params_loaded.append(f"{param_name}={param_value}")
                 
-                # Add root zone parameters to system_config
-                system_config.root_zone_parameters = root_zone_params
-                print(f"✓ Root zone parameters loaded: {len(root_zone_params)} parameters")
+                # Add root parameters to system_config
+                system_config.root_parameters = root_params
+                print(f"✓ Root parameters loaded: {len(root_params)} parameters")
             except Exception as e:
-                print(f"⚠️  Could not load root zone parameters: {e}")
+                print(f"⚠️  Could not load root parameters: {e}")
 
-        # 15. Load system parameters
+        # 15. Load root zone temperature parameters (split)
+        root_zone_temp_file = f'{input_dir}/{cultivar_id}_root_zone_temperature_parameters.csv'
+        if Path(root_zone_temp_file).exists():
+            try:
+                df = pd.read_csv(root_zone_temp_file)
+                # Store all root zone temperature parameters dynamically
+                root_zone_temp_params = {}
+                for _, row in df.iterrows():
+                    param_name = row['parameter_name']
+                    param_value = row['value']
+                    # Convert to appropriate type
+                    try:
+                        if param_value != param_value:  # Check for NaN
+                            param_value = ""
+                        elif str(param_value).replace('.', '').isdigit():
+                            param_value = float(param_value)
+                    except:
+                        pass  # Keep as string
+                    root_zone_temp_params[param_name] = param_value
+                    params_loaded.append(f"{param_name}={param_value}")
+                
+                # Add root zone temperature parameters to system_config
+                system_config.root_zone_temperature_parameters = root_zone_temp_params
+                print(f"✓ Root zone temperature parameters loaded: {len(root_zone_temp_params)} parameters")
+            except Exception as e:
+                print(f"⚠️  Could not load root zone temperature parameters: {e}")
+
+        # 16. Load system parameters
         system_params_file = f'{input_dir}/{cultivar_id}_system_parameters.csv'
         if Path(system_params_file).exists():
             try:
@@ -443,7 +513,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
             except Exception as e:
                 print(f"⚠️  Could not load system parameters: {e}")
 
-        # 16. Load water parameters
+        # 17. Load water parameters
         water_params_file = f'{input_dir}/{cultivar_id}_water_parameters.csv'
         if Path(water_params_file).exists():
             try:
@@ -472,34 +542,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
             except Exception as e:
                 print(f"⚠️  Could not load water parameters: {e}")
 
-        # 17. Load thermal requirements
-        thermal_params_file = f'{input_dir}/{cultivar_id}_thermal_requirements.csv'
-        if Path(thermal_params_file).exists():
-            try:
-                df = pd.read_csv(thermal_params_file)
-                # Store all thermal requirement parameters dynamically
-                thermal_params = {}
-                for _, row in df.iterrows():
-                    stage_transition = row['stage_transition']
-                    thermal_time = row['thermal_time_gdd']
-                    # Convert to appropriate type
-                    try:
-                        if thermal_time != thermal_time:  # Check for NaN
-                            continue
-                        thermal_params[stage_transition] = float(thermal_time)
-                        params_loaded.append(f"{stage_transition}={float(thermal_time)}")
-                    except (ValueError, TypeError):
-                        try:
-                            thermal_params[stage_transition] = str(thermal_time)
-                            params_loaded.append(f"{stage_transition}={thermal_time}")
-                        except Exception:
-                            continue
-                
-                # Add thermal requirements to system_config
-                system_config.thermal_requirements = thermal_params
-                print(f"✓ Thermal requirements loaded: {len(thermal_params)} parameters")
-            except Exception as e:
-                print(f"⚠️  Could not load thermal requirements: {e}")
+
 
         # 18. Load model constants
         model_constants_file = f'{input_dir}/{cultivar_id}_model_constants.csv'
@@ -530,65 +573,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
             except Exception as e:
                 print(f"⚠️  Could not load model constants: {e}")
 
-        # 19. Load nutrient solution parameters
-        nutrient_solution_file = f'{input_dir}/{cultivar_id}_nutrient_solution.csv'
-        if Path(nutrient_solution_file).exists():
-            try:
-                df = pd.read_csv(nutrient_solution_file)
-                # Store all nutrient solution parameters dynamically
-                nutrient_solution = {}
-                for _, row in df.iterrows():
-                    nutrient_name = row['nutrient_name']
-                    nutrient_symbol = row['symbol']
-                    # Store each nutrient with its parameters
-                    nutrient_solution[nutrient_symbol] = {
-                        'name': nutrient_name,
-                        'initial_ppm': float(row['initial_ppm']),
-                        'optimal_ppm': float(row['optimal_ppm']),
-                        'minimum_ppm': float(row['minimum_ppm']),
-                        'max_ppm': float(row['max_ppm']),
-                        'description': row['description']
-                    }
-                    # Add to params_loaded for counting
-                    for param in ['initial_ppm', 'optimal_ppm', 'minimum_ppm', 'max_ppm']:
-                        params_loaded.append(f"{nutrient_symbol}_{param}={row[param]}")
-                
-                # Add nutrient solution to system_config
-                system_config.nutrient_solution = nutrient_solution
-                print(f"✓ Nutrient solution loaded: {len(nutrient_solution) * 4} parameters for {len(nutrient_solution)} nutrients")
-            except Exception as e:
-                print(f"⚠️  Could not load nutrient solution: {e}")
-
-        # 20. Load genetic stress weights
-        genetic_stress_file = f'{input_dir}/{cultivar_id}_genetic_stress_weights.csv'
-        if Path(genetic_stress_file).exists():
-            try:
-                df = pd.read_csv(genetic_stress_file)
-                # Store all genetic stress weight parameters dynamically
-                genetic_stress_weights = {}
-                for _, row in df.iterrows():
-                    param_name = row['parameter_name']
-                    param_value = row['value']
-                    # Convert to appropriate type
-                    try:
-                        if param_value != param_value:  # Check for NaN
-                            continue
-                        genetic_stress_weights[param_name] = float(param_value)
-                        params_loaded.append(f"{param_name}={float(param_value)}")
-                    except (ValueError, TypeError):
-                        try:
-                            genetic_stress_weights[param_name] = str(param_value)
-                            params_loaded.append(f"{param_name}={param_value}")
-                        except Exception:
-                            continue
-                
-                # Add genetic stress weights to system_config
-                system_config.genetic_stress_weights = genetic_stress_weights
-                print(f"✓ Genetic stress weights loaded: {len(genetic_stress_weights)} parameters")
-            except Exception as e:
-                print(f"⚠️  Could not load genetic stress weights: {e}")
-
-        # 21. Load system settings
+        # 19. Load system settings
         system_settings_file = f'{input_dir}/{cultivar_id}_system_settings.csv'
         if Path(system_settings_file).exists():
             try:
@@ -619,7 +604,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
             except Exception as e:
                 print(f"⚠️  Could not load system settings: {e}")
 
-        # 22. Load experiment settings
+        # 20. Load experiment settings
         experiment_settings_file = f'{input_dir}/{cultivar_id}_experiment_settings.csv'
         if Path(experiment_settings_file).exists():
             try:
@@ -655,7 +640,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
             except Exception as e:
                 print(f"⚠️  Could not load experiment settings: {e}")
 
-        # 23. Load leaf development parameters
+        # 21. Load leaf development parameters
         leaf_development_file = f'{input_dir}/{cultivar_id}_leaf_development_parameters.csv'
         if Path(leaf_development_file).exists():
             try:
@@ -737,7 +722,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 setattr(system_config, config_attr, system_settings[csv_param])
                 print(f"✓ Updated {config_attr} = {system_settings[csv_param]} from CSV")
 
-    # 23. Load weather data
+    # 22. Load weather data
     weather_data_file = f'{input_dir}/{cultivar_id}_weather.csv'
     weather_list = []
     if Path(weather_data_file).exists():

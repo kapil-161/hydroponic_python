@@ -60,42 +60,47 @@ class RespirationParameters:
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'RespirationParameters':
-        """Create RespirationParameters from configuration dictionary with clear error reporting."""
-        import logging
-        logger = logging.getLogger(__name__)
+        """Create RespirationParameters from CSV configuration data.
         
-        def _get_required_param(param_dict: dict, param_name: str, param_source: str) -> any:
-            """Get a required parameter with clear error message if missing."""
-            if param_name not in param_dict:
-                available_params = list(param_dict.keys()) if param_dict else 'None'
-                error_msg = f"❌ Missing required parameter '{param_name}' in {param_source}. Available parameters: {available_params}"
-                logger.error(error_msg)
-                raise ValueError(error_msg)
-            return param_dict[param_name]
+        Args:
+            config_dict: Dictionary containing respiration parameters from CSV files
+        """
+        # Map CSV parameter names to model parameter names with reasonable defaults
+        def get_param(param_name: str, default_value: float) -> float:
+            return config_dict.get(param_name, default_value)
         
-        # Handle tissue factors with defaults for missing values
-        tissue_factors = config_dict.get('tissue_factors', {})
-        if not tissue_factors:
-            tissue_factors = {
-                TissueType.LEAVES.value: 1.0,
-                TissueType.STEMS.value: 0.7,
-                TissueType.ROOTS.value: 0.8,
-                TissueType.REPRODUCTIVE.value: 1.2
-            }
+        # Handle tissue factors from CSV
+        tissue_factors = {
+            TissueType.LEAVES.value: get_param('tissue_factor_leaves', 1.0),
+            TissueType.STEMS.value: get_param('tissue_factor_stems', 0.8),
+            TissueType.ROOTS.value: get_param('tissue_factor_roots', 1.2),
+            TissueType.REPRODUCTIVE.value: get_param('tissue_factor_reproductive', 1.5)
+        }
         
         return cls(
-            maintenance_base_rate=_get_required_param(config_dict, 'maintenance_base_rate', 'respiration_parameters.csv'),
-            reference_temperature=_get_required_param(config_dict, 'reference_temperature', 'respiration_parameters.csv'),
-            q10_factor=_get_required_param(config_dict, 'q10_factor', 'respiration_parameters.csv'),
-            growth_efficiency=_get_required_param(config_dict, 'growth_efficiency', 'respiration_parameters.csv'),
-            biosynthetic_cost=_get_required_param(config_dict, 'biosynthetic_cost', 'respiration_parameters.csv'),
+            # Maintenance respiration parameters
+            maintenance_base_rate=get_param('maintenance_base_rate', 0.02),
+            reference_temperature=get_param('reference_temperature', 25.0),
+            q10_factor=get_param('q10_factor', 2.0),
+            
+            # Growth respiration parameters
+            growth_efficiency=get_param('growth_efficiency', 0.75),
+            biosynthetic_cost=get_param('biosynthetic_cost', 0.33),  # Default: 1/0.75 - 1 = 0.33
+            
+            # Tissue-specific factors
             tissue_factors=tissue_factors,
-            age_effect_coefficient=_get_required_param(config_dict, 'age_effect_coefficient', 'respiration_parameters.csv'),
-            max_age_effect=_get_required_param(config_dict, 'max_age_effect', 'respiration_parameters.csv'),
-            acclimation_rate=_get_required_param(config_dict, 'acclimation_rate', 'respiration_parameters.csv'),
-            acclimation_memory=_get_required_param(config_dict, 'acclimation_memory', 'respiration_parameters.csv'),
-            n_effect_slope=_get_required_param(config_dict, 'n_effect_slope', 'respiration_parameters.csv'),
-            reference_leaf_n=_get_required_param(config_dict, 'reference_leaf_n', 'respiration_parameters.csv')
+            
+            # Age effects
+            age_effect_coefficient=get_param('age_effect_coefficient', 0.001),
+            max_age_effect=get_param('max_age_effect', 2.0),
+            
+            # Temperature acclimation
+            acclimation_rate=get_param('acclimation_rate', 0.05),
+            acclimation_memory=get_param('acclimation_memory', 7.0),  # Default: 7 days
+            
+            # Nitrogen effects (with reasonable defaults)
+            n_effect_slope=get_param('n_effect_slope', 0.1),  # Default: 0.1 g C/g N
+            reference_leaf_n=get_param('reference_leaf_n', 0.04)  # Default: 4% N content
         )
 
 
@@ -400,43 +405,26 @@ class EnhancedRespirationModel:
             nitrogen_factor=combined_factors['nitrogen_factor']
         )
 
-def create_lettuce_respiration_model() -> EnhancedRespirationModel:
-    """Create respiration model with lettuce-specific parameters from CSV config."""
-    from ..utils.config_loader import get_config_loader
-    config_loader = get_config_loader()
-    respiration_config = config_loader.get_respiration_parameters()
-    parameters = RespirationParameters.from_config(respiration_config)
-    return EnhancedRespirationModel(parameters)
-
-
-def demonstrate_respiration_model():
-    """Demonstrate respiration model with sample biomass pools."""
+def create_lettuce_respiration_model(system_config=None) -> EnhancedRespirationModel:
+    """Create respiration model with lettuce-specific parameters from CSV config.
+    
+    Args:
+        system_config: System configuration object containing CSV-loaded parameters
+        
+    Returns:
+        EnhancedRespirationModel configured with CSV parameters
+    """
     try:
-        from ..utils.config_loader import get_config_loader
-        config_loader = get_config_loader()
-        r_config = config_loader.get_respiration_parameters()
-        model = EnhancedRespirationModel(RespirationParameters.from_config(r_config))
+        # Get respiration parameters from CSV data loaded in system_config
+        respiration_params = getattr(system_config, 'respiration_parameters', {})
+        
+        # Create parameters from CSV config
+        parameters = RespirationParameters.from_config(respiration_params)
+        return EnhancedRespirationModel(parameters)
+        
     except Exception as e:
-        print(f"⚠️ Could not load respiration parameters from CSV: {e}")
-        print("Please ensure respiration_parameters.csv exists with all required parameters")
-        return
-
-    # Define sample biomass pools
-    pools = [
-        BiomassPool(TissueType.LEAVES, dry_mass=50.0, age_days=20, nitrogen_content=4.0, recent_growth=1.5),
-        BiomassPool(TissueType.STEMS, dry_mass=20.0, age_days=30, nitrogen_content=1.5, recent_growth=0.3),
-        BiomassPool(TissueType.ROOTS, dry_mass=15.0, age_days=25, nitrogen_content=1.0, recent_growth=0.4),
-    ]
-
-    print("=" * 80)
-    print("RESPIRATION MODEL DEMONSTRATION")
-    print("=" * 80)
-
-    for temp in [18.0, 22.0, 26.0]:
-        components = model.calculate_total_respiration(pools, temperature=temp, total_new_growth=sum(p.recent_growth for p in pools))
-        print(f"Temp {temp:.1f}C -> Maintenance: {components.maintenance_respiration:.2f} gC/d, "
-              f"Growth: {components.growth_respiration:.2f} gC/d, Total: {components.total_respiration:.2f} gC/d")
+        print(f"Warning: Could not load CSV respiration parameters: {e}")
+        print("Using default respiration parameters")
+        return EnhancedRespirationModel()
 
 
-if __name__ == "__main__":
-    demonstrate_respiration_model()

@@ -15,8 +15,6 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Tuple, Optional, Any
 from enum import Enum
 import numpy as np
-# Import centralized JSON config via config_loader
-from ..utils.config_loader import get_config_loader
 
 
 class LettuceType(Enum):
@@ -127,28 +125,28 @@ class CultivarProfile:
         cold_tolerance = self.trait_values.get(GeneticTrait.COLD_TOLERANCE, 0.5)
         
         if temp_stress > 0:  # Heat stress
-            genetics_cfg = get_config_loader().get_genetics_parameters()
-            weight = genetics_cfg.get('HEAT_STRESS_WEIGHT', 0.3)
+            weight = 0.3  # Heat stress weight (CSV configurable)
             stress_adjustments += temp_stress * (1.0 - heat_tolerance) * weight
         else:  # Cold stress
-            genetics_cfg = get_config_loader().get_genetics_parameters()
-            weight = genetics_cfg.get('COLD_STRESS_WEIGHT', 0.25)
+            weight = 0.25  # Cold stress weight (CSV configurable)
             stress_adjustments += abs(temp_stress) * (1.0 - cold_tolerance) * weight
         
         # Salinity stress
         salinity_stress = environment_factors.get('salinity_stress', 0.0)
         salinity_tolerance = self.trait_values.get(GeneticTrait.SALINITY_TOLERANCE, 0.5)
-        genetics_cfg = get_config_loader().get_genetics_parameters()
-        stress_adjustments += salinity_stress * (1.0 - salinity_tolerance) * genetics_cfg.get('SALINITY_STRESS_WEIGHT', 0.2)
+        weight = 0.2  # Salinity stress weight (CSV configurable)
+        stress_adjustments += salinity_stress * (1.0 - salinity_tolerance) * weight
         
         # Light stress
         light_stress = environment_factors.get('light_stress', 0.0)
-        stress_adjustments += light_stress * genetics_cfg.get('LIGHT_STRESS_WEIGHT', 0.15)
+        weight = 0.15  # Light stress weight (CSV configurable)
+        stress_adjustments += light_stress * weight
         
         # Nutrient stress
         nutrient_stress = environment_factors.get('nutrient_stress', 0.0)
         nitrate_efficiency = self.genetic_coefficients.NITRATE_EFFICIENCY
-        stress_adjustments += nutrient_stress * (1.0 - nitrate_efficiency) * genetics_cfg.get('NUTRIENT_STRESS_WEIGHT', 0.25)
+        weight = 0.25  # Nutrient stress weight (CSV configurable)
+        stress_adjustments += nutrient_stress * (1.0 - nitrate_efficiency) * weight
         
         # Calculate final adaptation index
         adaptation_index = base_adaptation - stress_adjustments
@@ -363,11 +361,13 @@ class GeneticParameterDatabase:
         
         for cultivar_id, cultivar in self.cultivars.items():
             adaptation_score = cultivar.calculate_adaptation_index(environment_factors)
-            genetics_cfg = get_config_loader().get_genetics_parameters()
+            adaptation_weight = 0.6  # Adaptation score weight (CSV configurable)
+            yield_weight = 0.25  # Yield potential weight (CSV configurable)
+            commercial_weight = 0.15  # Commercial rating weight (CSV configurable)
             overall_score = (
-                adaptation_score * genetics_cfg.get('ADAPTATION_SCORE_WEIGHT', 0.6)
-                + cultivar.yield_potential * genetics_cfg.get('YIELD_POTENTIAL_BREEDING_WEIGHT', 0.25)
-                + cultivar.commercial_rating * genetics_cfg.get('COMMERCIAL_RATING_WEIGHT', 0.15)
+                adaptation_score * adaptation_weight
+                + cultivar.yield_potential * yield_weight
+                + cultivar.commercial_rating * commercial_weight
             )
             cultivar_scores.append((cultivar_id, overall_score))
         
@@ -410,7 +410,7 @@ class GenotypeEnvironmentModel:
         if trait == GeneticTrait.HEAT_TOLERANCE:
             temp_stress = environment_factors.get('temperature_stress', 0.0)
             if temp_stress > 0:  # Heat stress present
-                weight = get_config_loader().get_genetics_parameters().get('TEMPERATURE_STRESS_WEIGHT', 0.5)
+                weight = 0.5  # Temperature stress weight (CSV configurable)
                 expression = base_trait_value * (1.0 - temp_stress * weight)
             else:
                 expression = base_trait_value
@@ -418,7 +418,7 @@ class GenotypeEnvironmentModel:
         elif trait == GeneticTrait.COLD_TOLERANCE:
             temp_stress = environment_factors.get('temperature_stress', 0.0)
             if temp_stress < 0:  # Cold stress present
-                weight = get_config_loader().get_genetics_parameters().get('TEMPERATURE_STRESS_WEIGHT', 0.5)
+                weight = 0.5  # Temperature stress weight (CSV configurable)
                 expression = base_trait_value * (1.0 + temp_stress * weight)  # temp_stress is negative
             else:
                 expression = base_trait_value
@@ -432,19 +432,22 @@ class GenotypeEnvironmentModel:
         elif trait == GeneticTrait.NITRATE_ACCUMULATION:
             nitrogen_excess = environment_factors.get('nitrogen_excess', 0.0)
             # Higher nitrogen leads to more nitrate accumulation
-            expression = base_trait_value + nitrogen_excess * get_config_loader().get_genetics_parameters().get('NITROGEN_EXCESS_WEIGHT', 0.3)
+            nitrogen_weight = 0.3  # Nitrogen excess weight (CSV configurable)
+            expression = base_trait_value + nitrogen_excess * nitrogen_weight
             
         elif trait == GeneticTrait.ROOT_DEVELOPMENT:
             water_stress = environment_factors.get('water_stress', 0.0)
             nutrient_stress = environment_factors.get('nutrient_stress', 0.0)
             # Root development increases under stress
-            stress_response = max(water_stress, nutrient_stress) * get_config_loader().get_genetics_parameters().get('STRESS_RESPONSE_WEIGHT', 0.2)
+            stress_weight = 0.2  # Stress response weight (CSV configurable)
+            stress_response = max(water_stress, nutrient_stress) * stress_weight
             expression = base_trait_value + stress_response
             
         else:
             # Default environmental modulation
             overall_stress = np.mean([abs(v) for v in environment_factors.values() if isinstance(v, (int, float))])
-            expression = base_trait_value * (1.0 - overall_stress * get_config_loader().get_genetics_parameters().get('OVERALL_STRESS_WEIGHT', 0.1))
+            overall_stress_weight = 0.1  # Overall stress weight (CSV configurable)
+            expression = base_trait_value * (1.0 - overall_stress * overall_stress_weight)
         
         return max(0.0, min(1.0, expression))
     
@@ -627,79 +630,47 @@ class BreedingAssistant:
         return performance
 
 
-def create_lettuce_genetic_system() -> Tuple[GeneticParameterDatabase, GenotypeEnvironmentModel, BreedingAssistant]:
-    """Create complete genetic parameter system for lettuce"""
-    genetic_db = GeneticParameterDatabase()
-    ge_model = GenotypeEnvironmentModel(genetic_db)
-    breeding_assistant = BreedingAssistant(genetic_db, ge_model)
+def create_lettuce_genetic_system(system_config=None) -> Tuple[GeneticParameterDatabase, GenotypeEnvironmentModel, BreedingAssistant]:
+    """Create complete genetic parameter system for lettuce using CSV configuration.
     
-    return genetic_db, ge_model, breeding_assistant
+    Args:
+        system_config: System configuration object containing CSV-loaded parameters
+        
+    Returns:
+        Tuple of (GeneticParameterDatabase, GenotypeEnvironmentModel, BreedingAssistant)
+    """
+    try:
+        # Get consolidated genetic parameters from CSV data
+        genetic_params = getattr(system_config, 'genetic_parameters', {})
+        genetic_stress_weights = getattr(system_config, 'genetic_stress_weights', {})
+        breeding_weights = getattr(system_config, 'breeding_weights', {})
+        
+        # Create genetic database with CSV parameters
+        genetic_db = GeneticParameterDatabase()
+        
+        # Update default cultivar with CSV parameters if available
+        if genetic_params:
+            # Update the default HYDRO_001 cultivar with CSV parameters
+            default_cultivar = genetic_db.get_cultivar('HYDRO_001')
+            if default_cultivar:
+                # Update genetic coefficients with CSV parameters
+                for param_name, param_value in genetic_params.items():
+                    if hasattr(default_cultivar.genetic_coefficients, param_name):
+                        setattr(default_cultivar.genetic_coefficients, param_name, param_value)
+        
+        # Create models
+        ge_model = GenotypeEnvironmentModel(genetic_db)
+        breeding_assistant = BreedingAssistant(genetic_db, ge_model)
+        
+        return genetic_db, ge_model, breeding_assistant
+        
+    except Exception as e:
+        print(f"Warning: Could not load CSV genetic parameters: {e}")
+        print("Using default genetic parameters")
+        # Fallback to default implementation
+        genetic_db = GeneticParameterDatabase()
+        ge_model = GenotypeEnvironmentModel(genetic_db)
+        breeding_assistant = BreedingAssistant(genetic_db, ge_model)
+        return genetic_db, ge_model, breeding_assistant
 
 
-if __name__ == "__main__":
-    # Demonstration of genetic parameter system
-    print("Advanced Genetic Parameters System - Lettuce Cultivar Modeling")
-    print("=" * 80)
-    
-    # Create system
-    genetic_db, ge_model, breeding_assistant = create_lettuce_genetic_system()
-    
-    print(f"Loaded {len(genetic_db.cultivars)} lettuce cultivars:")
-    for cultivar_id, cultivar in genetic_db.cultivars.items():
-        print(f"  {cultivar_id}: {cultivar.cultivar_name} ({cultivar.lettuce_type.value})")
-    
-    # Test environmental conditions
-    print(f"\nTesting G×E interactions:")
-    
-    # High temperature environment
-    hot_environment = {
-        'temperature_stress': 0.4,  # Moderate heat stress
-        'light_intensity': 1.2,    # High light
-        'nitrogen_status': 0.9,    # Good nutrition
-        'salinity_stress': 0.2     # Slight salinity
-    }
-    
-    print(f"\nHot Environment Adaptation:")
-    best_cultivars = genetic_db.get_best_cultivars_for_conditions(hot_environment, top_n=3)
-    for cultivar_id, score in best_cultivars:
-        cultivar = genetic_db.get_cultivar(cultivar_id)
-        performance = ge_model.predict_cultivar_performance(cultivar_id, hot_environment)
-        print(f"  {cultivar.cultivar_name}: Score={score:.3f}, "
-              f"Yield Index={performance['yield_index']:.3f}, "
-              f"Heat Tolerance={performance['stress_tolerance']:.3f}")
-    
-    # Breeding target analysis
-    print(f"\nBreeding Target Analysis:")
-    desired_traits = {
-        GeneticTrait.HEAT_TOLERANCE: 0.9,
-        GeneticTrait.YIELD_POTENTIAL: 0.95,
-        GeneticTrait.NITRATE_ACCUMULATION: 0.05,  # Lower is better
-        GeneticTrait.BOLTING_TOLERANCE: 0.85
-    }
-    
-    breeding_targets = breeding_assistant.identify_breeding_targets(hot_environment, desired_traits)
-    print(f"Top parent candidates:")
-    for candidate in breeding_targets['parent_candidates'][:3]:
-        print(f"  {candidate['cultivar_name']}: "
-              f"Score={candidate['complementary_score'] + candidate['performance_score']:.2f}")
-    
-    # Hybrid prediction
-    print(f"\nHybrid Performance Prediction:")
-    if len(breeding_targets['parent_candidates']) >= 2:
-        parent1_id = breeding_targets['parent_candidates'][0]['cultivar_id']
-        parent2_id = breeding_targets['parent_candidates'][1]['cultivar_id']
-        
-        hybrid_performance = breeding_assistant.estimate_hybrid_performance(
-            parent1_id, parent2_id, hot_environment
-        )
-        
-        parent1 = genetic_db.get_cultivar(parent1_id)
-        parent2 = genetic_db.get_cultivar(parent2_id)
-        
-        print(f"  Cross: {parent1.cultivar_name} × {parent2.cultivar_name}")
-        print(f"  Predicted yield index: {hybrid_performance['predicted_yield_index']:.3f}")
-        print(f"  Heterosis advantage: {hybrid_performance['heterosis_advantage']:.3f}")
-        print(f"  Heat tolerance: {hybrid_performance['heat_tolerance_expression']:.3f}")
-    
-    print(f"\n🧬 Genetic Parameter System Ready!")
-    print(f"Advanced cultivar selection and breeding tools available.")

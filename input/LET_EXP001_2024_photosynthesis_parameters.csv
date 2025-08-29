@@ -18,3 +18,4 @@ eav,65330.0,J_per_mol,Activation energy for Vcmax
 ear,46390.0,J_per_mol,Activation energy for dark respiration
 r,8.314,J_per_mol_per_K,Gas constant
 ci_fraction,0.7,fraction,Ratio of intercellular to atmospheric CO2
+o2_mmol_mol,210.0,mmol_per_mol,Oxygen concentration in air

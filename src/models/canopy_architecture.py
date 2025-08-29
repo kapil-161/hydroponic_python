@@ -72,47 +72,30 @@ class CanopyArchitectureParameters:
     sunlit_fraction_method: str              # Method for calculating sunlit fraction
     clumping_index: float                    # Leaf clumping index (0-1)
     
-    def __post_init__(self):
-        """Load parameters from JSON config if not provided."""
-        try:
-            from ..utils.config_loader import get_config_loader
-            loader = get_config_loader()
-            cfg = loader.get_canopy_architecture_parameters()
-
-            if self.max_lai is None:
-                self.max_lai = cfg.get('max_lai', float('inf'))  # Natural unlimited growth
-            if self.extinction_coefficient is None:
-                self.extinction_coefficient = cfg.get('extinction_coefficient', 0.69)
-            if self.canopy_width is None:
-                # Stored in meters in the JSON config
-                self.canopy_width = cfg.get('canopy_width', 0.20)
-        except Exception:
-            # Leave values as provided
-            pass
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'CanopyArchitectureParameters':
-        """Create CanopyArchitectureParameters from configuration dictionary."""
+        """Create CanopyArchitectureParameters from CSV configuration data."""
         return cls(
             number_of_layers=config_dict['number_of_layers'],
-            max_lai=config_dict.get('max_lai'),
-            extinction_coefficient=config_dict.get('extinction_coefficient'),
+            max_lai=config_dict['max_lai'],
+            extinction_coefficient=config_dict['extinction_coefficient'],
             diffuse_extinction_coeff=config_dict['diffuse_extinction_coeff'],
             beam_extinction_coeff=config_dict['beam_extinction_coeff'],
-            leaf_angle_distribution=config_dict.get('leaf_angle_distribution', 'spherical'),
+            leaf_angle_distribution=config_dict['leaf_angle_distribution'],
             mean_leaf_angle=config_dict['mean_leaf_angle'],
-            leaf_angle_variance=config_dict.get('leaf_angle_variance', 20.0),
+            leaf_angle_variance=config_dict['leaf_angle_variance'],
             row_spacing=config_dict['row_spacing'],
-            plant_spacing=config_dict.get('plant_spacing', 0.25),
-            plant_height=config_dict.get('plant_height', 0.25),
-            canopy_width=config_dict.get('canopy_width'),
-            leaf_reflectance=config_dict.get('leaf_reflectance', 0.10),
-            leaf_transmittance=config_dict.get('leaf_transmittance', 0.05),
-            leaf_absorptance=config_dict.get('leaf_absorptance', 0.85),
-            self_shading_factor=config_dict.get('self_shading_factor', 0.8),
-            neighbor_shading_distance=config_dict.get('neighbor_shading_distance', 0.5),
-            sunlit_fraction_method=config_dict.get('sunlit_fraction_method', 'campbell'),
-            clumping_index=config_dict.get('clumping_index', 0.9),
+            plant_spacing=config_dict['plant_spacing'],
+            plant_height=config_dict['plant_height'],
+            canopy_width=config_dict['canopy_width'],
+            leaf_reflectance=config_dict['leaf_reflectance'],
+            leaf_transmittance=config_dict['leaf_transmittance'],
+            leaf_absorptance=config_dict['leaf_absorptance'],
+            self_shading_factor=config_dict['self_shading_factor'],
+            neighbor_shading_distance=config_dict['neighbor_shading_distance'],
+            sunlit_fraction_method=config_dict['sunlit_fraction_method'],
+            clumping_index=config_dict['clumping_index'],
         )
 
 
@@ -478,73 +461,26 @@ class CanopyArchitectureModel:
             canopy_photosynthesis=canopy_photosynthesis
         )
     
-def create_lettuce_canopy_model() -> CanopyArchitectureModel:
-    """Create canopy architecture model with lettuce-specific parameters from JSON config."""
-    from ..utils.config_loader import get_config_loader
-    config_loader = get_config_loader()
-    canopy_config = config_loader.get_canopy_architecture_parameters()
-    parameters = CanopyArchitectureParameters.from_config(canopy_config)
-    return CanopyArchitectureModel(parameters)
-
-
-def demonstrate_canopy_architecture_model():
-    """Demonstrate canopy architecture model capabilities."""
-    model = create_lettuce_canopy_model()
+def create_lettuce_canopy_model(system_config=None) -> CanopyArchitectureModel:
+    """Create canopy architecture model with lettuce-specific parameters from CSV config.
     
-    print("=" * 80)
-    print("CANOPY ARCHITECTURE MODEL DEMONSTRATION")
-    print("=" * 80)
-    
-    # Create light environment
-    light_env = LightEnvironment(
-        ppfd_above_canopy=1500.0,  # μmol/m²/s
-        direct_beam_fraction=0.7,
-        diffuse_fraction=0.3,
-        solar_zenith_angle=30.0    # degrees
-    )
-    
-    # Test different LAI values
-    lai_values = [1.0, 2.5, 4.0, 5.5]
-    canopy_height = 0.20  # 20 cm
-    
-    print(f"{'LAI':<6} {'LightInt':<9} {'SunlitLAI':<10} {'ShadedLAI':<10} {'AvgPPFD':<9} {'ExtCoeff':<9}")
-    print("-" * 80)
-    
-    for lai in lai_values:
-        response = model.daily_update(
-            total_lai=lai,
-            canopy_height=canopy_height,
-            light_env=light_env,
-            air_temperature=22.0,
-            co2_concentration=1200.0
-        )
+    Args:
+        system_config: System configuration object containing CSV-loaded parameters
         
-        avg_ppfd = response.total_absorbed_ppfd / max(lai, 0.1)
+    Returns:
+        CanopyArchitectureModel configured with CSV parameters
+    """
+    try:
+        # Get canopy parameters from CSV data loaded in system_config
+        canopy_params = getattr(system_config, 'canopy_parameters', {})
         
-        print(f"{lai:<6.1f} {response.light_interception_fraction:<9.3f} "
-              f"{response.sunlit_lai:<10.2f} {response.shaded_lai:<10.2f} "
-              f"{avg_ppfd:<9.0f} {response.average_extinction_coefficient:<9.3f}")
-    
-    # Show layer details for LAI = 4.0
-    print(f"\nCanopy layer details (LAI = 4.0):")
-    response = model.daily_update(4.0, canopy_height, light_env)
-    
-    print(f"{'Layer':<6} {'Height':<10} {'LAD':<8} {'Sunlit%':<8} {'PPFD_sun':<9} {'PPFD_sh':<8} {'Temp':<6}")
-    print("-" * 80)
-    
-    for i, layer in enumerate(response.canopy_layers[:6]):  # Show top 6 layers
-        height_str = f"{layer.height_bottom:.2f}-{layer.height_top:.2f}"
-        print(f"{i:<6} {height_str:<10} {layer.leaf_area_density:<8.2f} "
-              f"{layer.fraction_sunlit*100:<8.1f} {layer.ppfd_sunlit:<9.0f} "
-              f"{layer.ppfd_shaded:<8.0f} {layer.temperature:<6.1f}")
-    
-    print(f"\nCanopy summary:")
-    print(f"• Total light interception: {response.light_interception_fraction:.1%}")
-    print(f"• Sunlit LAI: {response.sunlit_lai:.2f}")
-    print(f"• Shaded LAI: {response.shaded_lai:.2f}")
-    print(f"• Average extinction coefficient: {response.average_extinction_coefficient:.3f}")
-    print(f"• Canopy photosynthesis: {response.canopy_photosynthesis:.1f} μmol CO2/m²/s")
+        # Create parameters from CSV config
+        parameters = CanopyArchitectureParameters.from_config(canopy_params)
+        return CanopyArchitectureModel(parameters)
+        
+    except Exception as e:
+        print(f"Warning: Could not load CSV canopy parameters: {e}")
+        print("Using default canopy parameters")
+        return CanopyArchitectureModel()
 
 
-if __name__ == "__main__":
-    demonstrate_canopy_architecture_model()

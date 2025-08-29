@@ -1,3 +1,2 @@
 parameter_name,value,unit,description
-optimal_temperature,20.0,celsius,Optimal root zone temperature for nutrient uptake
 root_conductivity,0.1,fraction,Root hydraulic conductivity factor
