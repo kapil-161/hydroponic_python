@@ -29,10 +29,10 @@ V7_to_V8,15.0,gdd,Growing degree days from seventh to eighth leaf,thermal_requir
 V8_to_V9,35.0,gdd,Growing degree days from eighth to ninth leaf,thermal_requirements
 V9_to_V10,35.0,gdd,Growing degree days from ninth to tenth leaf,thermal_requirements
 V10_to_V11+,40.0,gdd,Growing degree days from tenth leaf to mature vegetative,thermal_requirements
-V11+_to_HI,120.0,gdd,Growing degree days from mature vegetative to head initiation,thermal_requirements
-HI_to_HD,180.0,gdd,Growing degree days from head initiation to head development,thermal_requirements
-HD_to_HM,200.0,gdd,Growing degree days from head development to harvest maturity,thermal_requirements
+V11+_to_HI,100.0,gdd,Growing degree days from mature vegetative to head initiation,thermal_requirements
+HI_to_HD,150.0,gdd,Growing degree days from head initiation to head development,thermal_requirements
+HD_to_HM,160.0,gdd,Growing degree days from head development to harvest maturity,thermal_requirements
 HM_to_PM,100.0,gdd,Growing degree days from harvest to physiological maturity,thermal_requirements
 vegetative_default,35.0,gdd,Default thermal time for vegetative stage transitions,thermal_requirements
-head_formation_default,150.0,gdd,Default thermal time for head formation stage transitions,thermal_requirements
-reproductive_default,200.0,gdd,Default thermal time for reproductive stage transitions,thermal_requirements
+head_formation_default,120.0,gdd,Default thermal time for head formation stage transitions,thermal_requirements
+reproductive_default,160.0,gdd,Default thermal time for reproductive stage transitions,thermal_requirements

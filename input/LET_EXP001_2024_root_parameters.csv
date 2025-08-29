@@ -1,7 +1,7 @@
 parameter_name,value,unit,description
-root_conductivity,0.1,fraction,Root hydraulic conductivity factor
+root_conductivity,0.15,fraction,Root hydraulic conductivity factor
 container_volume,1500.0,liters,Container volume for root growth
 channel_length,200.0,cm,Length of hydroponic channels
-fine_root_half_life_days,45.0,days,Half-life of fine roots
+fine_root_half_life_days,60.0,days,Half-life of fine roots
 medium_root_half_life_days,90.0,days,Half-life of medium roots
 coarse_root_half_life_days,180.0,days,Half-life of coarse roots

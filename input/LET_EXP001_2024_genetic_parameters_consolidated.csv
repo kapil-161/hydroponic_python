@@ -7,10 +7,10 @@ G1,7.5,factor,Scattering factor for leaf number,genetic_coefficients
 G2,0.0025,factor,Scattering factor for leaf size,genetic_coefficients
 G3,1.2,factor,Scattering factor for leaf weight,genetic_coefficients
 PHINT,95.0,days,Interval between leaf tip appearances,genetic_coefficients
-SLAVR,275.0,cm2_g,Specific leaf area of leaves,genetic_coefficients
-SIZLF,180.0,cm2,Maximum leaf size,genetic_coefficients
+SLAVR,300.0,cm2_g,Specific leaf area of leaves,genetic_coefficients
+SIZLF,200.0,cm2,Maximum leaf size,genetic_coefficients
 XFRT,1.0,fraction,Maximum fraction of daily growth partitioned to reproductive growth,genetic_coefficients
-WTLF,0.75,g,Maximum weight of a leaf,genetic_coefficients
+WTLF,1.0,g,Maximum weight of a leaf,genetic_coefficients
 SFDUR,25.0,days,Seed filling duration for pod cohort,genetic_coefficients
 SDPDV,1.8,count,Average seed per pod under standard conditions,genetic_coefficients
 PODUR,10.0,days,Time required for cultivar to reach final pod load under optimal conditions,genetic_coefficients

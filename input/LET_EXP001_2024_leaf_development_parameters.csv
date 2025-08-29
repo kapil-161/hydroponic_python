@@ -1,15 +1,15 @@
 parameter_name,value,unit,description
-base_phyllochron,45.0,celsius_day,Base phyllochron for lettuce leaf development
+base_phyllochron,40.0,celsius_day,Base phyllochron for lettuce leaf development
 min_temp,4.0,celsius,Base temperature for development
 opt_temp_min,18.0,celsius,Lower optimum temperature
 opt_temp_max,24.0,celsius,Upper optimum temperature
 max_temp,35.0,celsius,Maximum temperature for development
-max_leaf_number,25.0,count,Maximum number of leaves for lettuce
+max_leaf_number,30.0,count,Maximum number of leaves for lettuce
 initial_leaf_number,2.0,count,Cotyledons plus first true leaves
 leaf_appearance_rate,0.025,leaves_per_day,Rate of leaf appearance
-specific_leaf_area,250.0,cm2_per_g,Leaf area per unit dry weight
+specific_leaf_area,300.0,cm2_per_g,Leaf area per unit dry weight
 max_individual_leaf_area,0.006,m2,Maximum area of individual leaf
-leaf_area_expansion_rate,0.12,per_day,Rate of leaf area expansion
+leaf_area_expansion_rate,0.15,per_day,Rate of leaf area expansion
 water_stress_threshold,0.5,fraction,Water stress threshold for leaf development
 nitrogen_stress_threshold,0.6,fraction,Nitrogen stress threshold for leaf development
 temperature_stress_sensitivity,0.8,fraction,Temperature stress sensitivity
