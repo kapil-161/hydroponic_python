@@ -1,6 +1,6 @@
 constant_name,value,unit,description
-carbon_to_biomass_ratio,0.45,fraction,Fraction of carbon in dry plant biomass
-growth_respiration_fraction,0.10,fraction,Energy lost during growth processes
+carbon_to_biomass_ratio,0.43,fraction,Fraction of carbon in dry plant biomass
+growth_respiration_fraction,0.12,fraction,Energy lost during growth processes
 vegetative_leaf_allocation,0.60,fraction,Portion of growth going to leaves in vegetative stage
 vegetative_stem_allocation,0.20,fraction,Portion of growth going to stems in vegetative stage
 vegetative_root_allocation,0.20,fraction,Portion of growth going to roots in vegetative stage

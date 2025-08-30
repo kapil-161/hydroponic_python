@@ -6,10 +6,10 @@ LET_EXP001_2024,Salanova Green Butter,P5,850.0,Grain filling duration
 LET_EXP001_2024,Salanova Green Butter,G1,7.5,Scattering factor for leaf number
 LET_EXP001_2024,Salanova Green Butter,G2,0.0025,Scattering factor for leaf size
 LET_EXP001_2024,Salanova Green Butter,G3,1.2,Scattering factor for leaf weight
-LET_EXP001_2024,Salanova Green Butter,PHINT,95.0,Interval between leaf tip appearances
-LET_EXP001_2024,Salanova Green Butter,SLAVR,275.0,Specific leaf area of leaves
+LET_EXP001_2024,Salanova Green Butter,PHINT,120.0,Interval between leaf tip appearances
+LET_EXP001_2024,Salanova Green Butter,SLAVR,250.0,Specific leaf area of leaves
 LET_EXP001_2024,Salanova Green Butter,SIZLF,180.0,Maximum leaf size
-LET_EXP001_2024,Salanova Green Butter,XFRT,1.0,Maximum fraction of daily growth partitioned to reproductive growth
+LET_EXP001_2024,Salanova Green Butter,XFRT,0.8,Maximum fraction of daily growth partitioned to reproductive growth
 LET_EXP001_2024,Salanova Green Butter,WTLF,0.75,Maximum weight of a leaf
 LET_EXP001_2024,Salanova Green Butter,SFDUR,25.0,Seed filling duration for pod cohort
 LET_EXP001_2024,Salanova Green Butter,SDPDV,1.8,Average seed per pod under standard conditions

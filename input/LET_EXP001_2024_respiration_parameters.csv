@@ -1,10 +1,10 @@
 parameter_name,value,unit,description
-maintenance_coefficient,0.015,fraction,Base respiration rate for maintaining plant tissues
+maintenance_coefficient,0.010,fraction,Base respiration rate for maintaining plant tissues
 temperature_coefficient,0.08,per_celsius,How much respiration increases per degree temperature
 biomass_coefficient,0.02,fraction,Respiration rate proportional to plant biomass
-q10_factor,2.0,ratio,Respiration rate doubles every 10°C temperature increase
+q10_factor,1.8,ratio,Respiration rate doubles every 10°C temperature increase
 base_temperature,5.0,celsius,Minimum temperature for respiration calculations
-maintenance_base_rate,0.02,g_C_per_g_biomass_per_day,Maintenance respiration rate at reference temperature
+maintenance_base_rate,0.015,g_C_per_g_biomass_per_day,Maintenance respiration rate at reference temperature
 reference_temperature,25.0,celsius,Reference temperature for respiration calculations
 growth_efficiency,0.75,fraction,Conversion efficiency from glucose to biomass
 biosynthetic_cost,0.33,fraction,Glucose cost per unit biomass synthesis

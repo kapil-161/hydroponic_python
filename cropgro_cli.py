@@ -61,6 +61,22 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
         # 1. Load environmental control parameters comprehensively
         # Use treatment_id for file paths, fall back to cultivar_id if treatment_id not provided
         file_prefix = treatment_id if treatment_id else cultivar_id
+        
+        # Auto-detect available prefixes if the default doesn't work
+        if not Path(f'{input_dir}/{file_prefix}_environment_parameters.csv').exists():
+            print(f"⚠️  File not found: {file_prefix}_environment_parameters.csv")
+            # Look for available prefixes by scanning environment_parameters.csv files
+            available_prefixes = []
+            for csv_file in Path(input_dir).glob('*_environment_parameters.csv'):
+                prefix = csv_file.stem.replace('_environment_parameters', '')
+                available_prefixes.append(prefix)
+            
+            if available_prefixes:
+                file_prefix = available_prefixes[0]  # Use the first available prefix
+                print(f"🔍 Auto-detected treatment ID: {file_prefix}")
+            else:
+                print(f"❌ No environment_parameters.csv files found in {input_dir}/")
+                return
         env_control_file = f'{input_dir}/{file_prefix}_environmental_control_parameters.csv'
         if Path(env_control_file).exists():
             try:
@@ -806,13 +822,13 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
     print(f"Duration: {len(results.daily_results)} days")
     print(f"Final stage: {getattr(results.daily_results[-1], 'growth_stage', 'Unknown')}")
 
-    return results
+    return results, file_prefix
 
 
 def main():
     parser = argparse.ArgumentParser(description="CROPGRO Hydroponic Simulator CLI")
     parser.add_argument('--days', type=int, default=120, help='Max simulation days')
-    parser.add_argument('--cultivar', type=str, default='HYDRO_001', help='Cultivar ID')
+    parser.add_argument('--cultivar', type=str, default='LET_EXP001_2024', help='Cultivar ID')
     parser.add_argument('--system', type=str, default='NFT', choices=['NFT', 'DWC', 'AEROPONICS'], help='Hydroponic system type')
     parser.add_argument('--output-csv', type=str, help='Path to write CSV of daily results')
     parser.add_argument('--output-json', type=str, help='Path to write JSON with all daily details')
@@ -827,7 +843,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        results = run_simulation(args.days, args.cultivar, args.system, args.print_daily, args.treatment_id, args.input_dir)
+        results, detected_file_prefix = run_simulation(args.days, args.cultivar, args.system, args.print_daily, args.treatment_id, args.input_dir)
 
         # Output CSV via DataFrame (curated columns)
         if args.output_csv:
@@ -860,6 +876,17 @@ def main():
             with open(out_path, 'w') as f:
                 json.dump(out, f, indent=2)
             print(f"Saved JSON: {out_path}")
+
+        # Auto-save results if no output options were specified
+        if not args.output_csv and not args.daily_csv and not args.output_json:
+            df = results.to_dataframe()
+            # Use the detected file prefix from the simulation
+            filename = f"{detected_file_prefix}_results.csv"
+            outputs_dir = Path("outputs")
+            outputs_dir.mkdir(exist_ok=True)
+            out_path = outputs_dir / filename
+            df.to_csv(out_path, index=False)
+            print(f"📄 Auto-saved results: {out_path}")
 
         if args.print_summary:
             print("\nSummary stats:")
