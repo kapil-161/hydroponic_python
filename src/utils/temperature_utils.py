@@ -28,7 +28,7 @@ def calculate_q10_temperature_factor(temperature: float,
     Returns:
         Temperature factor (1.0 at reference temperature)
     """
-    temp_diff = temperature - reference_temp
+    temp_diff = float(temperature) - reference_temp
     factor = q10_factor ** (temp_diff / 10.0)
     return clamp_value(factor, min_factor, max_factor)
 

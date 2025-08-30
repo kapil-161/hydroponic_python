@@ -558,7 +558,7 @@ class NutrientMobilityModel:
     def calculate_transport_fluxes(self, sink_demands: Dict[str, Dict[str, float]], source_supplies: Dict[str, Dict[str, float]], transport_capacities: Dict[str, Dict[str, float]], temperature: float) -> List[NutrientTransportFlux]:
         fluxes: List[NutrientTransportFlux] = []
         # Apply Q10 temperature response to transport kinetics (rates), not to capacity
-        temp_factor = self.params.temperature_q10 ** ((temperature - 25.0) / 10.0)
+        temp_factor = self.params.temperature_q10 ** ((float(temperature) - 25.0) / 10.0)
         temp_factor = max(0.5, min(2.0, temp_factor))
         for nutrient in self.params.mobility_classifications:
             mobility_info = self.params.mobility_classifications[nutrient]

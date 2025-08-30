@@ -233,7 +233,7 @@ class ComprehensivePhenologyModel:
         Returns:
             Daily thermal time (Growing Degree Days)
         """
-        T = temperature
+        T = float(temperature)  # Ensure temperature is numeric
         Tbase = self.params.base_temperature
         Topt1 = self.params.optimal_temperature_min
         Topt2 = self.params.optimal_temperature_max
@@ -362,10 +362,10 @@ class ComprehensivePhenologyModel:
             risk += min(max_risk, photoperiod_risk)
         
         # High temperature risk
-        if temperature > self.params.bolting_temperature_threshold:
+        if float(temperature) > self.params.bolting_temperature_threshold:
             divisor = self.params.bolting_temperature_divisor
             max_risk = self.params.bolting_temperature_risk_max
-            temp_risk = (temperature - self.params.bolting_temperature_threshold) / divisor
+            temp_risk = (float(temperature) - self.params.bolting_temperature_threshold) / divisor
             risk += min(max_risk, temp_risk)
         
         # Cumulative stress risk (sustained conditions)

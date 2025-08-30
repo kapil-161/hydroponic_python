@@ -75,7 +75,7 @@ class PhotosynthesisModel:
 
     def _arrhenius_temp_response(self, rate_25: float, ea: float, temp_c: float) -> float:
         """Calculate temperature response using Arrhenius equation."""
-        temp_k = temp_c + 273.15
+        temp_k = float(temp_c) + 273.15
         return rate_25 * np.exp(ea * (temp_k - 298.15) / (298.15 * self.params.r * temp_k))
 
     def calculate_daily_assimilation(self, par_umol_m2_s: float, co2_ppm: float, temp_c: float, lai: float, photoperiod_hours: float = 16.0, ec_factor: float = 1.0, config_dict: Optional[Dict[str, Any]] = None) -> float:
@@ -118,7 +118,8 @@ class PhotosynthesisModel:
         # Rubisco-limited rate (Ac)
         # O2 concentration: convert mmol/mol to μmol/mol for consistency with ci and kinetic constants
         o2_umol_mol = self.params.o2_mmol_mol * 1000.0  # 210 mmol/mol → 210,000 μmol/mol
-        ac = vcmax * (ci - self.params.gamma_star) / (ci + self.params.kc * (1 + o2_umol_mol / self.params.ko))
+        ko_umol_mol = self.params.ko * 1000.0  # Convert Ko from mmol/mol to μmol/mol
+        ac = vcmax * (ci - self.params.gamma_star) / (ci + self.params.kc * (1 + o2_umol_mol / ko_umol_mol))
 
         # Light-limited rate (Aj)
         # J = (alpha * PAR * Jmax) / sqrt( (alpha * PAR)^2 + Jmax^2 )
@@ -174,6 +175,7 @@ class PhotosynthesisModel:
         # Apply EC stress factor to final photosynthesis
         # EC stress affects stomatal conductance and nutrient availability
         total_g_c_m2_day *= ec_factor
+
 
         return max(0.0, total_g_c_m2_day)
 

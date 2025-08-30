@@ -22,6 +22,13 @@ po4_uptake_vmax,0.008,mg_per_cm2_per_day,Maximum PO4 uptake rate per root surfac
 po4_uptake_km,5.0,mg_per_L,Half-saturation constant for PO4 uptake,root_uptake
 k_uptake_vmax,0.025,mg_per_cm2_per_day,Maximum K uptake rate per root surface area,root_uptake
 k_uptake_km,18.0,mg_per_L,Half-saturation constant for K uptake,root_uptake
+ec_factor_n_no3,0.018,mS_per_cm_per_mg_per_L,Electrical conductivity contribution of nitrate-nitrogen,ec_factors
+ec_factor_p_po4,0.012,mS_per_cm_per_mg_per_L,Electrical conductivity contribution of phosphate,ec_factors
+ec_factor_k,0.024,mS_per_cm_per_mg_per_L,Electrical conductivity contribution of potassium,ec_factors
+ec_factor_ca,0.015,mS_per_cm_per_mg_per_L,Electrical conductivity contribution of calcium,ec_factors
+ec_factor_mg,0.022,mS_per_cm_per_mg_per_L,Electrical conductivity contribution of magnesium,ec_factors
+ec_factor_s_so4,0.016,mS_per_cm_per_mg_per_L,Electrical conductivity contribution of sulfate-sulfur,ec_factors
+ec_factor_fe,0.004,mS_per_cm_per_mg_per_L,Electrical conductivity contribution of iron,ec_factors
 ph_target_min,5.8,pH_units,Minimum target pH for hydroponic solution,ph_management
 ph_target_max,6.2,pH_units,Maximum target pH for hydroponic solution,ph_management
 ph_buffer_capacity,2.5,meq_per_L,Buffer capacity of nutrient solution,ph_management

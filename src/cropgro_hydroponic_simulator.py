@@ -303,7 +303,7 @@ class CROPGROHydroponicSimulator:
         # Load photosynthesis model using CSV configuration
         self.photosynthesis_model = create_lettuce_photosynthesis_model(self.system_config)
             
-        self.nutrient_concentration_model = NutrientConcentrationModel()
+        self.nutrient_concentration_model = NutrientConcentrationModel(getattr(self.system_config, 'nutrient_parameters', {}))
         
         # 12. ROOT ZONE TEMPERATURE MODEL
         logger.info("Initializing root zone temperature model...")
@@ -505,7 +505,11 @@ class CROPGROHydroponicSimulator:
         transplant_sla = self.leaf_model.params.specific_leaf_area  # cm²/g
         transplant_leaf_area_m2 = (initial_leaf_biomass * transplant_sla) / 10000.0
         default_system_area = getattr(self, 'system_area', 1.0)  # Default 1 m² if not set yet
-        self.current_lai = min(0.07, max(0.01, transplant_leaf_area_m2 / max(1e-6, default_system_area)))
+        calculated_lai = transplant_leaf_area_m2 / max(1e-6, default_system_area)
+        
+        # Use calculated LAI without artificial minimum - let biology determine the starting LAI
+        # Early transplants naturally start with small LAI (~0.1-0.3) which is realistic
+        self.current_lai = calculated_lai
         # Use dynamic canopy height from CSV
         canopy_params = getattr(self.system_config, 'canopy_parameters', {})
         self.canopy_height = canopy_params['canopy_height']  # Must come from CSV
@@ -579,7 +583,7 @@ class CROPGROHydroponicSimulator:
             'AEROPONICS': HydroponicSystemType.AEROPONICS
         }.get(input_data.system_config.system_type, HydroponicSystemType.NFT)
         
-        self.root_model = create_enhanced_root_uptake_model(system_type_enum, current_tank_volume)
+        self.root_model = create_enhanced_root_uptake_model(system_type_enum, current_tank_volume, self.system_config)
         
         # Main simulation loop - run until maturity or max days
         day = 1
@@ -842,8 +846,8 @@ class CROPGROHydroponicSimulator:
         )
         
         # Use parameters ONLY from CSV config - no fallbacks to hardcoded values
-        actual_temperature = getattr(self.system_config, 'temperature', temperature)
-        actual_humidity = getattr(self.system_config, 'humidity', humidity)
+        actual_temperature = float(getattr(self.system_config, 'temperature', temperature))
+        actual_humidity = float(getattr(self.system_config, 'humidity', humidity))
         # Use CO2 from CSV configuration only
         actual_co2 = getattr(self.system_config, 'controlled_co2', 400)
         actual_vpd = env_control_response['current_conditions'].get('vpd_kPa', 0.8)
@@ -947,7 +951,7 @@ class CROPGROHydroponicSimulator:
         # In controlled environment hydroponics, light is usually adequate
         # Optimal light intensity reduced for more realistic LED systems
         optimal_light = 12.0  # MJ/m²/day - realistic for LED hydroponics
-        light_factor = min(1.0, max(0.0, solar_radiation / optimal_light))
+        light_factor = min(1.0, max(0.0, float(solar_radiation) / optimal_light))
         
         # 4. NITROGEN STRESS (hydroponic-specific calculation)
         # For hydroponic systems, nitrogen stress should be primarily based on solution concentration
@@ -1100,7 +1104,8 @@ class CROPGROHydroponicSimulator:
         c_bm = self.params.carbon_to_biomass_ratio
         rg = max(0.0, self.params.growth_respiration_fraction)
         # Convert available net carbon to biomass after accounting for construction costs
-        available_biomass_growth = max(0.0, net_carbon_assimilation / (c_bm * (1.0 + rg)))
+        # Total carbon needed = c_bm (structure) + c_bm * rg (construction respiration)
+        available_biomass_growth = max(0.0, net_carbon_assimilation / c_bm / (1.0 + rg))
         
         # Allocate biomass based on developmental stage using configured fractions
         if stage_props['is_vegetative']:
@@ -1201,6 +1206,7 @@ class CROPGROHydroponicSimulator:
             config_dict=canopy_params
         )
         
+        
         # Apply stress effects to photosynthesis (use overall stress factor from centralized calculation)
         canopy_photosynthesis = (
             detailed_photosynthesis *
@@ -1219,6 +1225,7 @@ class CROPGROHydroponicSimulator:
             0.0  # No growth respiration yet, will be calculated after growth
         )
         
+        
         # === STEP 6: GROWTH ===
         # Allocate assimilated carbon to different plant parts
         
@@ -1229,7 +1236,8 @@ class CROPGROHydroponicSimulator:
         c_bm = self.params.carbon_to_biomass_ratio
         rg = max(0.0, self.params.growth_respiration_fraction)
         # Biomass growth requires carbon: c_bm for structure plus c_bm*rg for construction respiration
-        available_biomass_growth = max(0.0, net_carbon_for_growth / (c_bm * (1.0 + rg)))
+        available_biomass_growth = max(0.0, net_carbon_for_growth / c_bm / (1.0 + rg))
+        
         
         # Calculate biomass allocation using functional balance theory
         allocation_fractions = self._calculate_functional_balance_allocation(
@@ -1397,42 +1405,31 @@ class CROPGROHydroponicSimulator:
         _ = self.leaf_model.update_v_stage(daily_tt_leaf, leaf_stress)
         leaf_stats = self.leaf_model.update_leaf_areas(daily_tt_leaf, leaf_stress)
         
-        # Update LAI based on leaf development
-        sla_cm2_per_g = getattr(self.leaf_model.params, 'specific_leaf_area', 250.0)
+        # DSSAT-style LAI calculation: use leaf development model directly
+        # The leaf model tracks actual leaf area development, not just biomass conversion
+        total_modeled_leaf_area_m2 = leaf_stats['total_leaf_area_m2'] * self.plant_count
+        
+        # Calculate SLA dynamically based on current conditions (DSSAT approach)
         leaf_biomass_g_current = self.biomass_pools[0].dry_mass
-        biomass_based_area_m2 = (leaf_biomass_g_current * sla_cm2_per_g) / 10000.0
-        model_based_area_m2 = leaf_stats['total_leaf_area_m2']
-        one_plant_leaf_area_m2 = max(model_based_area_m2, biomass_based_area_m2)
-        total_leaf_area_m2 = one_plant_leaf_area_m2 * self.plant_count
-        # Physical space constraints in real hydroponic systems
-        theoretical_lai = total_leaf_area_m2 / max(1e-6, self.system_area)
-        
-        # Real-world growing space limitations - use dynamic maximum LAI from CSV
-        canopy_params = getattr(self.system_config, 'canopy_parameters', {})
-        maximum_lai = canopy_params.get('maximum_lai', 8.0)  # Use CSV value or fallback
-        
-        if theoretical_lai > maximum_lai:
-            # Physical collision and overlap of leaves - can't pack infinitely
-            space_limitation_factor = maximum_lai / theoretical_lai
-            # Structural failure - plants can't support massive leaf area
-            if theoretical_lai > 15.0:
-                structural_failure_factor = 15.0 / theoretical_lai
-                space_limitation_factor *= structural_failure_factor
-            
-            self.current_lai = theoretical_lai * space_limitation_factor
-            
-            # Additional real-world problems with dense canopies
-            if theoretical_lai > 12.0:
-                # Heat buildup and poor air circulation
-                heat_stress = min(0.3, (theoretical_lai - 12.0) * 0.05)  # Up to 30% heat stress
-                # Disease pressure increases exponentially in dense canopies
-                disease_pressure = min(0.4, (theoretical_lai - 12.0) * 0.08)  # Up to 40% disease loss
-                
-                # Apply realistic canopy stress penalties
-                canopy_stress_factor = 1.0 - heat_stress - disease_pressure
-                self.current_lai *= max(0.3, canopy_stress_factor)  # Minimum 30% survival
+        if leaf_biomass_g_current > 0.001:  # Avoid division by zero
+            # Current SLA from actual leaf area vs biomass
+            current_sla_cm2_per_g = (total_modeled_leaf_area_m2 * 10000.0) / (leaf_biomass_g_current * self.plant_count)
         else:
-            self.current_lai = theoretical_lai
+            # Use initial SLA for very young plants
+            current_sla_cm2_per_g = getattr(self.leaf_model.params, 'specific_leaf_area', 250.0)
+        
+        # DSSAT method: LAI = Total Leaf Area / Ground Area (AREALF approach)
+        calculated_lai = total_modeled_leaf_area_m2 / max(1e-6, self.system_area)
+        
+        # Apply biological maximum constraints (following DSSAT)
+        canopy_params = getattr(self.system_config, 'canopy_parameters', {})
+        maximum_lai = canopy_params.get('maximum_lai', 8.0)
+        
+        # DSSAT constrains LAI realistically
+        self.current_lai = min(calculated_lai, maximum_lai)
+        
+        # Store dynamic SLA for debugging/output
+        self.current_sla = current_sla_cm2_per_g
         
         # Update canopy height
         if stage_props['is_vegetative']:
@@ -1576,22 +1573,17 @@ class CROPGROHydroponicSimulator:
         active_leaves = leaf_stats['active_leaf_count']
         cropgro_result.leaf_number = int(visible_leaves)
         
-        cropgro_result.leaf_area_m2 = one_plant_leaf_area_m2
+        # Use modeled leaf area per plant (DSSAT approach)
+        cropgro_result.leaf_area_m2 = leaf_stats['total_leaf_area_m2']
         
-        # Calculate realistic average leaf area using active leaves (those contributing area)
+        # Calculate realistic average leaf area using active leaves (DSSAT approach)
         if active_leaves > 0:
-            cropgro_result.average_leaf_area_cm2 = (one_plant_leaf_area_m2 / active_leaves) * 1.0e4
+            cropgro_result.average_leaf_area_cm2 = (leaf_stats['total_leaf_area_m2'] / active_leaves) * 1.0e4
         else:
             cropgro_result.average_leaf_area_cm2 = 0.0
         
-        # Cap unrealistic leaf sizes (max ~100 cm² per leaf for lettuce)
-        max_realistic_leaf_area = 100.0  # cm²
-        if cropgro_result.average_leaf_area_cm2 > max_realistic_leaf_area:
-            # If average is too large, it means we have few large leaves
-            # Adjust to show more realistic average while maintaining total area
-            estimated_realistic_leaf_count = max(1, int(one_plant_leaf_area_m2 * 1.0e4 / max_realistic_leaf_area))
-            cropgro_result.average_leaf_area_cm2 = min(max_realistic_leaf_area, 
-                                                      (one_plant_leaf_area_m2 * 1.0e4) / estimated_realistic_leaf_count)
+        # Use leaf development model's built-in constraints (already realistic)
+        # No need for additional capping as the leaf model handles biological limits
 
         # === DETAILED CANOPY ARCHITECTURE RESULTS ===
         cropgro_result.canopy_layers = len(canopy_response.canopy_layers) if hasattr(canopy_response, 'canopy_layers') else 0
@@ -2062,9 +2054,9 @@ class CROPGROHydroponicSimulator:
     def _calculate_solution_temperature(self, air_temp: float, solar_radiation: float, tank_volume: float, day: int) -> float:
         """Calculate hydroponic solution temperature with simple thermal mass and solar gain model."""
         thermal_mass_factor = min(1.0, max(0.1, tank_volume / 1000.0))
-        solar_heating = solar_radiation * 0.15  # °C increase per MJ/m²
-        prev_ts = getattr(self, 'prev_solution_temp', air_temp)
-        temp_change = (air_temp + solar_heating - prev_ts)
+        solar_heating = float(solar_radiation) * 0.15  # °C increase per MJ/m²
+        prev_ts = getattr(self, 'prev_solution_temp', float(air_temp))
+        temp_change = (float(air_temp) + solar_heating - prev_ts)
         lagged_change = temp_change * (0.3 / thermal_mass_factor)
         solution_temp = prev_ts + lagged_change
         solution_temp = max(10.0, min(35.0, solution_temp))

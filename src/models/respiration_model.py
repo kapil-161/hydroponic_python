@@ -182,9 +182,10 @@ class EnhancedRespirationModel:
         )
         
         # Prevent excessive respiration at very high temperatures
-        if temperature > 40.0:
+        temp = float(temperature)
+        if temp > 40.0:
             # Protein denaturation effects
-            excess_temp = temperature - 40.0
+            excess_temp = temp - 40.0
             factor *= np.exp(-0.1 * excess_temp)
         
         return factor

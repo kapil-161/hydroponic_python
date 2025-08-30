@@ -154,46 +154,48 @@ class TemperatureStressModel:
         self.last_temperature: Optional[float] = None
 
     def classify_temperature_stress(self, temperature: float) -> TemperatureStressType:
-        if self.params.optimal_temp_min <= temperature <= self.params.optimal_temp_max:
+        temp = float(temperature)  # Ensure temperature is numeric
+        if self.params.optimal_temp_min <= temp <= self.params.optimal_temp_max:
             return TemperatureStressType.OPTIMAL
-        elif temperature < self.params.frost_threshold:
+        elif temp < self.params.frost_threshold:
             return TemperatureStressType.FROST
-        elif temperature < self.params.optimal_temp_min:
+        elif temp < self.params.optimal_temp_min:
             return TemperatureStressType.COLD
         else:
             return TemperatureStressType.HEAT
 
     def calculate_base_stress_level(self, temperature: float) -> float:
-        if self.params.optimal_temp_min <= temperature <= self.params.optimal_temp_max:
+        temp = float(temperature)  # Ensure temperature is numeric
+        if self.params.optimal_temp_min <= temp <= self.params.optimal_temp_max:
             return 0.0
-        if temperature > self.params.optimal_temp_max:
-            if temperature <= self.params.heat_threshold_mild:
-                excess_temp = temperature - self.params.optimal_temp_max
+        if temp > self.params.optimal_temp_max:
+            if temp <= self.params.heat_threshold_mild:
+                excess_temp = temp - self.params.optimal_temp_max
                 mild_range = self.params.heat_threshold_mild - self.params.optimal_temp_max
                 return 0.3 * (excess_temp / mild_range)
-            elif temperature <= self.params.heat_threshold_severe:
-                excess_temp = temperature - self.params.heat_threshold_mild
+            elif temp <= self.params.heat_threshold_severe:
+                excess_temp = temp - self.params.heat_threshold_mild
                 moderate_range = self.params.heat_threshold_severe - self.params.heat_threshold_mild
                 return 0.3 + 0.4 * (excess_temp / moderate_range)
             else:
-                excess_temp = temperature - self.params.heat_threshold_severe
+                excess_temp = temp - self.params.heat_threshold_severe
                 severe_range = self.params.heat_lethal_temperature - self.params.heat_threshold_severe
                 return 0.7 + 0.3 * min(1.0, excess_temp / severe_range)
         else:
-            if temperature >= self.params.cold_threshold_mild:
-                temp_deficit = self.params.optimal_temp_min - temperature
+            if temp >= self.params.cold_threshold_mild:
+                temp_deficit = self.params.optimal_temp_min - temp
                 mild_range = self.params.optimal_temp_min - self.params.cold_threshold_mild
                 return 0.2 * (temp_deficit / mild_range)
-            elif temperature >= self.params.cold_threshold_severe:
-                temp_deficit = self.params.cold_threshold_mild - temperature
+            elif temp >= self.params.cold_threshold_severe:
+                temp_deficit = self.params.cold_threshold_mild - temp
                 moderate_range = self.params.cold_threshold_mild - self.params.cold_threshold_severe
                 return 0.2 + 0.3 * (temp_deficit / moderate_range)
-            elif temperature >= self.params.frost_threshold:
-                temp_deficit = self.params.cold_threshold_severe - temperature
+            elif temp >= self.params.frost_threshold:
+                temp_deficit = self.params.cold_threshold_severe - temp
                 severe_range = self.params.cold_threshold_severe - self.params.frost_threshold
                 return 0.5 + 0.3 * (temp_deficit / severe_range)
             else:
-                return 0.8 + 0.2 * min(1.0, abs(temperature - self.params.frost_threshold) / 5.0)
+                return 0.8 + 0.2 * min(1.0, abs(temp - self.params.frost_threshold) / 5.0)
 
     def update_acclimation(self, temperature: float, stress_type: TemperatureStressType):
         self.acclimation.acclimation_history.append(temperature)

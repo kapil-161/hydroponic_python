@@ -119,7 +119,7 @@ class LeafDevelopmentModel:
         Calculate daily thermal time using cardinal temperature approach.
         Based on DSSAT CROPGRO temperature response function.
         """
-        T = temperature
+        T = float(temperature)  # Ensure temperature is numeric
         Tmin = self.params.min_temp
         Topt1 = self.params.opt_temp_min  
         Topt2 = self.params.opt_temp_max
@@ -266,35 +266,25 @@ class LeafDevelopmentModel:
                 # Cell expansion requires water for turgor pressure
                 cell_expansion_factor = water_factor * nitrogen_factor
                 
-                # Natural cellular growth - both division and expansion operate independently
-                cell_division_rate = base_expansion_rate * cell_division_factor
-                cell_expansion_rate = base_expansion_rate * cell_expansion_factor
+                # Realistic leaf growth - cells divide and expand with diminishing returns
+                cell_division_factor_applied = base_expansion_rate * cell_division_factor
+                cell_expansion_factor_applied = base_expansion_rate * cell_expansion_factor
                 
-                # Pure cellular biology - growth continues as long as resources available
-                relative_expansion_rate = cell_division_rate + cell_expansion_rate
+                # Use multiplicative factors (not additive) for realistic growth
+                # Prevent excessive multiplication - use the more limiting factor
+                combined_growth_factor = min(cell_division_factor_applied, cell_expansion_factor_applied)
                 
-                # No artificial size limits - cells keep dividing and expanding naturally
-                size_factor = 1.0  # Natural growth continues
+                # Linear growth toward genetic maximum, not exponential
+                remaining_growth_potential = max(0.0, cohort.max_potential_area - cohort.current_area)
                 
-                # Carbon drives continuous growth
-                carbon_limited_rate = relative_expansion_rate
+                # Daily increase is proportional to remaining potential (sigmoidal growth)
+                daily_increase = remaining_growth_potential * combined_growth_factor
                 
-                daily_increase = (cohort.current_area * carbon_limited_rate * size_factor)
-                
-                # Real-world cell wall mechanical limits
-                # Cell walls have tensile strength limits - can't expand infinitely
-                max_realistic_leaf_area = self.params.max_individual_leaf_area * 3.0  # 3x genetic maximum
-                
-                if cohort.current_area > max_realistic_leaf_area:
-                    # Cell wall stress reduces expansion rate
-                    wall_stress_factor = max_realistic_leaf_area / cohort.current_area
-                    daily_increase *= wall_stress_factor ** 2  # Quadratic penalty
-                
-                # Physical constraint - leaves can't exceed structural limits
+                # Apply daily growth with realistic limits
                 proposed_area = cohort.current_area + max(0.0, daily_increase)
-                max_physical_area = self.params.max_individual_leaf_area * 4.0  # Absolute physical limit
                 
-                cohort.current_area = min(proposed_area, max_physical_area)
+                # Enforce genetic maximum as absolute limit (no 3x or 4x overrides)
+                cohort.current_area = min(proposed_area, cohort.max_potential_area)
                 
                 # Natural maturation based on thermal age, not artificial size limits
                 if cohort.thermal_time_since_appearance > 300:  # Mature after natural cellular development
