@@ -178,9 +178,9 @@ class RootArchitectureParameters:
     branching_angle_std: float = 15.0          # degrees
 
     # Root type distributions (fractions)
-    fine_root_fraction: float = 0.6
-    medium_root_fraction: float = 0.3
-    coarse_root_fraction: float = 0.1
+    fine_root_fraction: float = 0.60
+    medium_root_fraction: float = 0.25
+    coarse_root_fraction: float = 0.15
 
     # Diameter distributions (mm)
     fine_diameter_mean: float = 0.15
@@ -375,7 +375,9 @@ class RootArchitectureModel:
                             self.params.coarse_diameter_mean, self.params.coarse_diameter_std))
 
                     cohort_length = zone_growth * fraction * branching_mult
-                    if cohort_length > 0.1:
+                    # Lower threshold for coarse roots to allow formation
+                    min_threshold = 0.05 if root_type == RootType.COARSE else 0.1
+                    if cohort_length > min_threshold:
                         diameter_cm = diameter / 10.0
                         volume = math.pi * (diameter_cm/2)**2 * cohort_length
                         biomass = volume * 0.3
@@ -576,9 +578,9 @@ def create_lettuce_root_architecture_model(system_type: HydroponicSystemType = H
             # Growth parameters
             primary_root_growth_rate=2.0,
             lateral_root_density=3.5,
-            fine_root_fraction=0.65,
-            medium_root_fraction=0.30,
-            coarse_root_fraction=0.05,
+            fine_root_fraction=0.60,
+            medium_root_fraction=0.25,
+            coarse_root_fraction=0.15,
             fine_diameter_mean=0.12,
             fine_diameter_std=0.04,
             medium_diameter_mean=0.4,
@@ -597,9 +599,9 @@ def create_lettuce_root_architecture_model(system_type: HydroponicSystemType = H
             root_zone_independent=False,
             primary_root_growth_rate=2.0,
             lateral_root_density=3.5,
-            fine_root_fraction=0.65,
-            medium_root_fraction=0.30,
-            coarse_root_fraction=0.05,
+            fine_root_fraction=0.60,
+            medium_root_fraction=0.25,
+            coarse_root_fraction=0.15,
             fine_diameter_mean=0.12,
             fine_diameter_std=0.04,
             medium_diameter_mean=0.4,

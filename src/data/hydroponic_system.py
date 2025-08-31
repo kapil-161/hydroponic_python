@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 from datetime import datetime
 import pandas as pd
+import math
 
 
 @dataclass
@@ -81,8 +82,8 @@ class DailyResults:
     leaf_number: int = 0  # Current number of active leaves
     leaf_area_m2: float = 0.0  # Total leaf area per plant (m²)
     average_leaf_area_cm2: float = 0.0  # Average leaf area (cm²)
-    co2_concentration: float = 400.0  # CO2 concentration (μmol/mol)
-    vpd_actual: float = 0.8  # Actual VPD (kPa)
+    co2_concentration: float = 400.0  # CO2 concentration (μmol/mol) - will be overridden by simulation
+    vpd_actual: float = 0.8  # Actual VPD (kPa) - will be overridden by simulation
     env_photosynthesis_factor: float = 1.0  # Environmental photosynthesis enhancement
     env_transpiration_factor: float = 1.0  # Environmental transpiration factor
     
@@ -261,9 +262,19 @@ class SimulationResults:
         """Convert results to pandas DataFrame for analysis."""
         data = []
         for result in self.daily_results:
+            # Calculate DAS (Days After Sowing) and DAT (Days After Transplanting)
+            # Get transplanting period from the simulation (passed dynamically)
+            if not hasattr(self, 'transplanting_period_days'):
+                raise AttributeError("transplanting_period_days not found in results - check experiment settings CSV")
+            
+            das = result.day + self.transplanting_period_days  # Add transplanting period
+            dat = result.day  # Days since transplanting (simulation starts from transplant)
+            
             row = {
                 'Date': result.date.strftime('%Y-%m-%d'),
                 'Day': result.day,
+                'DAS': das,
+                'DAT': dat,
                 'Treatment_ID': self.treatment_id if self.treatment_id else 'DEFAULT',
                 'System_ID': self.system_id,
                 'Crop_ID': self.crop_id,
@@ -305,6 +316,8 @@ class SimulationResults:
                 row['LAI'] = result.lai
             if hasattr(result, 'height'):
                 row['Height_m'] = result.height
+            if hasattr(result, 'canopy_height_cm'):
+                row['Plant_Height_cm'] = result.canopy_height_cm
             if hasattr(result, 'kcb_dynamic'):
                 row['Kcb_dynamic'] = result.kcb_dynamic
             if hasattr(result, 'growth_stage'):
@@ -327,6 +340,34 @@ class SimulationResults:
                 row['Nitrogen_Stress'] = result.nitrogen_stress_factor
             if hasattr(result, 'salinity_stress'):
                 row['Salinity_Stress'] = result.salinity_stress
+            
+            # Add root architecture metrics
+            if hasattr(result, 'fine_root_length'):
+                row['Fine_Root_Length_cm'] = result.fine_root_length
+            if hasattr(result, 'coarse_root_length'):
+                row['Coarse_Root_Length_cm'] = result.coarse_root_length
+            if hasattr(result, 'root_length_density'):
+                row['Root_Length_Density_cm_cm3'] = result.root_length_density
+            
+            # Add individual biomass components (dry and fresh weights)
+            if hasattr(result, 'leaf_biomass'):
+                row['Shoot_Dry_Weight_g'] = getattr(result, 'leaf_biomass', 0.0) + getattr(result, 'stem_biomass', 0.0)
+                row['Leaf_Dry_Weight_g'] = result.leaf_biomass
+                row['Stem_Dry_Weight_g'] = getattr(result, 'stem_biomass', 0.0)
+                # Calculate fresh weight using dynamic dry matter content
+                # Dry matter content varies with development, environment, and plant part
+                shoot_dry_matter = calculate_dynamic_dry_matter_content(result, 'shoot')
+                leaf_dry_matter = calculate_dynamic_dry_matter_content(result, 'leaf')
+                stem_dry_matter = calculate_dynamic_dry_matter_content(result, 'stem')
+                
+                row['Shoot_Fresh_Weight_g'] = row['Shoot_Dry_Weight_g'] / shoot_dry_matter
+                row['Leaf_Fresh_Weight_g'] = result.leaf_biomass / leaf_dry_matter
+                row['Stem_Fresh_Weight_g'] = getattr(result, 'stem_biomass', 0.0) / stem_dry_matter
+            if hasattr(result, 'root_biomass'):
+                row['Root_Dry_Weight_g'] = result.root_biomass
+                # Dynamic root dry matter content
+                root_dry_matter = calculate_dynamic_dry_matter_content(result, 'root')
+                row['Root_Fresh_Weight_g'] = result.root_biomass / root_dry_matter
 
             # Round floats with field-specific precision to preserve signal
             precision_overrides = {
@@ -337,6 +378,18 @@ class SimulationResults:
                 'pH': 2,
                 'Water_Total_L': 2,
                 'Tank_Volume_L': 2,
+                'Fine_Root_Length_cm': 1,
+                'Coarse_Root_Length_cm': 1,
+                'Root_Length_Density_cm_cm3': 3,
+                'Shoot_Dry_Weight_g': 2,
+                'Shoot_Fresh_Weight_g': 1,
+                'Leaf_Dry_Weight_g': 2,
+                'Leaf_Fresh_Weight_g': 1,
+                'Stem_Dry_Weight_g': 2,
+                'Stem_Fresh_Weight_g': 1,
+                'Root_Dry_Weight_g': 2,
+                'Root_Fresh_Weight_g': 1,
+                'Plant_Height_cm': 1,
             }
             for key, value in row.items():
                 if isinstance(value, float):
@@ -410,3 +463,97 @@ class DefaultConfigurations:
         ]
         
         return {nutrient.nutrient_id: nutrient for nutrient in nutrients}
+
+
+def calculate_dynamic_dry_matter_content(result, plant_part: str) -> float:
+    """
+    Calculate dynamic dry matter content based on plant development, environment, and plant part.
+    Dry matter content varies with:
+    1. Plant development stage (young vs mature)
+    2. Environmental stress (water, temperature, salinity)
+    3. Plant part (leaves, stems, roots have different water contents)
+    4. Growth rate (fast growth = higher water content)
+    
+    Returns fraction (0.0-1.0) of dry matter in fresh weight.
+    """
+    
+    # Get development stage information
+    day = getattr(result, 'day', 1)
+    growth_stage = getattr(result, 'growth_stage', 'V4')
+    total_biomass = getattr(result, 'total_biomass_g', 1.0)
+    
+    # Get stress factors if available
+    water_stress = getattr(result, 'water_stress', 0.0)
+    temperature_stress = getattr(result, 'temperature_stress', 0.0)
+    integrated_stress = getattr(result, 'integrated_stress', 0.0)
+    
+    # Base dry matter content by plant part (mature, unstressed conditions)
+    base_dry_matter = {
+        'leaf': 0.06,    # Young lettuce leaves: 5-7%
+        'stem': 0.05,    # Lettuce stems/petioles: 4-6% 
+        'shoot': 0.055,  # Combined shoot
+        'root': 0.09     # Root tissue: 8-10%
+    }
+    
+    # Development factor: young plants have higher water content (lower dry matter)
+    if day <= 10:
+        development_factor = 0.7 + (day / 10) * 0.3  # 70-100% of mature dry matter
+    elif day <= 30:
+        development_factor = 1.0  # Peak dry matter content
+    else:
+        development_factor = 1.0 + min(0.2, (day - 30) * 0.005)  # Slight increase with age
+    
+    # Growth stage factor: different stages accumulate water differently
+    stage_factors = {
+        'VE': 0.6, 'V1': 0.7, 'V2': 0.8, 'V3': 0.85, 'V4': 0.9,
+        'V5': 0.95, 'V6': 1.0, 'V7': 1.0, 'V8': 1.0, 'V9': 1.0, 'V10': 1.0,
+        'V11+': 1.05, 'HI': 1.1, 'HD': 1.15, 'HM': 1.2  # Head formation increases dry matter
+    }
+    stage_factor = stage_factors.get(growth_stage, 1.0)
+    
+    # Stress effects on water content
+    # Water stress increases dry matter content (less water uptake)
+    water_stress_factor = 1.0 + water_stress * 0.3  # Up to 30% increase in dry matter
+    
+    # Temperature stress affects cellular water content
+    temp_stress_factor = 1.0 + temperature_stress * 0.2  # Up to 20% increase
+    
+    # Integrated stress combines all factors
+    stress_factor = 1.0 + integrated_stress * 0.25  # Up to 25% increase
+    
+    # Growth rate factor: fast growing tissue has more water
+    biomass_growth_rate = total_biomass / max(1, day)  # g/day
+    if biomass_growth_rate > 3.0:  # Fast growth
+        growth_rate_factor = 0.9
+    elif biomass_growth_rate < 1.0:  # Slow growth
+        growth_rate_factor = 1.1
+    else:
+        growth_rate_factor = 1.0
+    
+    # Plant part specific adjustments
+    part_adjustment = {
+        'leaf': 1.0,     # Base reference
+        'stem': 0.85,    # Stems have more water (petioles, midribs)
+        'shoot': 0.92,   # Combined shoot average
+        'root': 1.5      # Roots have much higher dry matter content
+    }
+    
+    # Calculate final dry matter content
+    base_dm = base_dry_matter.get(plant_part, 0.06)
+    
+    final_dry_matter = (base_dm * 
+                       development_factor * 
+                       stage_factor * 
+                       water_stress_factor * 
+                       temp_stress_factor * 
+                       stress_factor * 
+                       growth_rate_factor * 
+                       part_adjustment.get(plant_part, 1.0))
+    
+    # Biological limits: lettuce dry matter content ranges
+    if plant_part == 'root':
+        final_dry_matter = max(0.07, min(0.15, final_dry_matter))  # 7-15% for roots
+    else:
+        final_dry_matter = max(0.035, min(0.10, final_dry_matter))  # 3.5-10% for shoots
+    
+    return final_dry_matter

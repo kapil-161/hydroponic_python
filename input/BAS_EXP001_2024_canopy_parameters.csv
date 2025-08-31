@@ -8,7 +8,7 @@ mean_leaf_angle,45.0,degrees,Average angle of leaves from horizontal
 leaf_angle,45.0,degrees,Average angle of leaves from horizontal
 specific_leaf_area,275.0,cm2_per_g,Leaf area per unit leaf weight
 leaf_thickness,0.3,mm,Average thickness of leaves
-max_lai,8.0,m2_per_m2,Maximum leaf area index plants can achieve
+max_lai,4.5,m2_per_m2,Maximum leaf area index plants can achieve
 enzyme_saturation_lai,5.0,m2_per_m2,LAI threshold for enzyme saturation effects
 light_penetration_lai,6.0,m2_per_m2,LAI threshold for light penetration limits
 canopy_width,0.3,meters,Width of plant canopy

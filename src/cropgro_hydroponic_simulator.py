@@ -510,9 +510,30 @@ class CROPGROHydroponicSimulator:
         # Use calculated LAI without artificial minimum - let biology determine the starting LAI
         # Early transplants naturally start with small LAI (~0.1-0.3) which is realistic
         self.current_lai = calculated_lai
-        # Use dynamic canopy height from CSV
-        canopy_params = getattr(self.system_config, 'canopy_parameters', {})
-        self.canopy_height = canopy_params['canopy_height']  # Must come from CSV
+        # Set realistic transplant height instead of mature canopy height
+        # Transplants (V3 stage) typically 10-12 cm tall
+        self.canopy_height = 0.10  # 10 cm for transplant stage
+        
+        # Get transplanting period dynamically from experiment settings CSV
+        experiment_settings = getattr(self.system_config, 'experiment_settings', {})
+        sowing_date_str = experiment_settings.get('sowing_date')
+        transplanting_date_str = experiment_settings.get('transplanting_date')
+        
+        if not sowing_date_str or not transplanting_date_str:
+            raise ValueError("Missing sowing_date or transplanting_date in experiment settings CSV")
+        
+        # Calculate transplanting period dynamically
+        from datetime import datetime
+        try:
+            sowing_date = datetime.strptime(sowing_date_str, '%Y-%m-%d')
+            transplanting_date = datetime.strptime(transplanting_date_str, '%Y-%m-%d')
+            self.transplanting_period_days = (transplanting_date - sowing_date).days
+            
+            if self.transplanting_period_days <= 0:
+                raise ValueError(f"Invalid date order: transplanting_date must be after sowing_date")
+                
+        except ValueError as e:
+            raise ValueError(f"Invalid date format in experiment settings: {e}. Expected format: YYYY-MM-DD")
         
         # Simulation tracking
         self.simulation_day = 0
@@ -600,52 +621,14 @@ class CROPGROHydroponicSimulator:
             daily_solar = weather.solar_radiation
             daylength = 13.5 + 1.5 * np.sin(day * 2 * np.pi / 365)  # Seasonal variation
             
-            # WEEKLY SOLUTION CHANGES (DR. NEMALI METHOD) - AT BEGINNING OF DAY
-            # Complete solution replacement every 7 days to maintain optimal nutrient levels
-            if day % 7 == 1 and day > 1:
-                logger.info(f"Day {day}: Weekly solution change - replacing with fresh nutrient solution")
-                
-                # COMPLETE SOLUTION REPLACEMENT based on PDF methodology
-                # Constant concentrations regardless of tank volume (proper hydroponic practice)
-                
-                # Get optimal concentrations from dynamic nutrient solution CSV or fallback to defaults
-                nutrient_solution_params = getattr(self.system_config, 'nutrient_solution', {})
-                
-                # Handle both old nested format and new consolidated format
-                if nutrient_solution_params and isinstance(list(nutrient_solution_params.values())[0], dict):
-                    # Old nested format
-                    optimal_concentrations = {
-                        'N-NO3': nutrient_solution_params.get('N-NO3', {}).get('initial_ppm', 300.0),
-                        'P-PO4': nutrient_solution_params.get('P-PO4', {}).get('initial_ppm', 50.0),
-                        'K': nutrient_solution_params.get('K', {}).get('initial_ppm', 300.0),
-                        'Ca': nutrient_solution_params.get('Ca', {}).get('initial_ppm', 150.0),
-                        'Mg': nutrient_solution_params.get('Mg', {}).get('initial_ppm', 50.0)
-                    }
-                else:
-                    # New consolidated format
-                    optimal_concentrations = {
-                        'N-NO3': nutrient_solution_params.get('N-NO3_initial_ppm', 300.0),
-                        'P-PO4': nutrient_solution_params.get('P-PO4_initial_ppm', 50.0),
-                        'K': nutrient_solution_params.get('K_initial_ppm', 300.0),
-                        'Ca': nutrient_solution_params.get('Ca_initial_ppm', 150.0),
-                        'Mg': nutrient_solution_params.get('Mg_initial_ppm', 50.0)
-                    }
-                
-                # Note: Total nutrient mass varies with tank volume, but concentration stays constant
-                # 500mL tank: 100mg NO3 total (200 ppm × 0.5L)
-                # 1500mL tank: 300mg NO3 total (200 ppm × 1.5L)
-                
-                # Replace with fresh solution at optimal concentrations
-                for nutrient_id, params in input_data.nutrient_params.items():
-                    if nutrient_id in optimal_concentrations:
-                        current_concentrations[nutrient_id] = optimal_concentrations[nutrient_id]
-                        logger.info(f"  {nutrient_id}: reset to {optimal_concentrations[nutrient_id]} ppm")
-                    else:
-                        # For other nutrients, use recharge concentration
-                        target = params.recharge_conc if hasattr(params, 'recharge_conc') else params.initial_conc
-                        current_concentrations[nutrient_id] = target
-                
-                # Reset pH with fresh solution
+            # REALISTIC NUTRIENT MANAGEMENT
+            # Individual nutrient monitoring and targeted supplementation
+            nutrient_management_performed = self._perform_realistic_nutrient_management(
+                day, current_concentrations, input_data, logger
+            )
+            
+            # Update pH only if nutrients were changed
+            if nutrient_management_performed:
                 current_ph = system_params['default_ph']
                 logger.info(f"  pH: reset to {current_ph:.1f}")
             
@@ -783,6 +766,9 @@ class CROPGROHydroponicSimulator:
             treatment_id=treatment_id
         )
         
+        # Pass transplanting period to results for dynamic DAS calculation
+        results.transplanting_period_days = self.transplanting_period_days
+        
         # Add metadata as custom attributes
         results.metadata = {
             'cultivar_id': self.current_cultivar,
@@ -847,12 +833,21 @@ class CROPGROHydroponicSimulator:
             current_conditions, light_schedule
         )
         
-        # Use parameters ONLY from CSV config - no fallbacks to hardcoded values
-        actual_temperature = float(getattr(self.system_config, 'temperature', temperature))
-        actual_humidity = float(getattr(self.system_config, 'humidity', humidity))
-        # Use CO2 from CSV configuration only
-        actual_co2 = getattr(self.system_config, 'controlled_co2', 400)
-        actual_vpd = env_control_response['current_conditions'].get('vpd_kPa', 0.8)
+        # Use DYNAMIC weather data instead of static config values
+        actual_temperature = temperature  # Use actual weather data temperature
+        actual_humidity = humidity        # Use actual weather data humidity
+        
+        # Implement realistic CO2 management strategy
+        env_params = getattr(self.system_config, 'environment_parameters', {})
+        base_co2_enrichment = env_params.get('co2_morning_target', 800.0)
+        
+        # CO2 strategy based on multiple factors
+        actual_co2 = self._calculate_dynamic_co2(
+            solar_radiation, day, base_co2_enrichment
+        )
+            
+        # Calculate VPD from actual temperature and humidity
+        actual_vpd = self._calculate_vpd(actual_temperature, actual_humidity)
         # Cache VPD for water model
         self._last_vpd = actual_vpd
         
@@ -864,6 +859,65 @@ class CROPGROHydroponicSimulator:
             'actual_vpd': actual_vpd,
             'env_control_response': env_control_response
         }
+    
+    def _calculate_dynamic_co2(self, solar_radiation: float, day: int, base_enrichment: float) -> float:
+        """
+        Calculate realistic CO2 concentration based on:
+        1. Light availability (higher CO2 when sunny)
+        2. Growth stage (optimize for different phases)
+        3. Economic efficiency (reduce when not beneficial)
+        4. Time of day simulation
+        """
+        # Base ambient CO2
+        ambient_co2 = 400.0
+        
+        # Light-dependent CO2 strategy
+        # Only enrich CO2 when light is sufficient for photosynthesis (>8 MJ/m²/day)
+        light_threshold = 8.0
+        if solar_radiation < light_threshold:
+            # Low light - minimal enrichment to save costs
+            return ambient_co2 + 50.0  # 450 ppm
+            
+        # Growth stage optimization
+        stage_props = self.phenology_model.get_stage_properties()
+        current_stage = stage_props.get('stage_name', 'V4')
+        stage_factor = self._get_co2_stage_factor(current_stage)
+        
+        # Light intensity factor (more CO2 on sunny days)
+        max_solar = 20.0  # Typical max for the region
+        light_factor = min(1.2, solar_radiation / max_solar)
+        
+        # Calculate optimized CO2 level
+        optimized_co2 = base_enrichment * stage_factor * light_factor
+        
+        # Economic cap - don't exceed 1200 ppm (diminishing returns)
+        max_economic_co2 = 1200.0
+        final_co2 = min(optimized_co2, max_economic_co2)
+        
+        # Ensure minimum enrichment during daylight
+        min_daylight_co2 = 500.0
+        return max(final_co2, min_daylight_co2)
+    
+    def _get_co2_stage_factor(self, growth_stage: str) -> float:
+        """
+        Get CO2 optimization factor based on growth stage.
+        Higher CO2 during rapid vegetative growth, moderate during head formation.
+        """
+        stage_factors = {
+            'VE': 0.7,   # Emergence - low demand
+            'V4': 0.8,   # Early vegetative
+            'V5': 0.9,   # Building leaf area
+            'V6': 1.0,   # Peak vegetative growth
+            'V7': 1.1,   # Rapid expansion
+            'V8': 1.2,   # Maximum growth rate
+            'V9': 1.2,   # Continued rapid growth
+            'V10': 1.1,  # Preparing for head formation
+            'V11+': 1.0, # Head initiation
+            'HI': 0.9,   # Head formation - focus on filling
+            'HD': 0.8,   # Head development - slower growth
+            'HM': 0.6    # Harvest maturity - minimal needs
+        }
+        return stage_factors.get(growth_stage, 1.0)
     
     def _calculate_unified_stress_factors(self, env_conditions: Dict[str, Any], 
                                         nutrient_concentrations: Dict[str, float], 
@@ -892,8 +946,8 @@ class CROPGROHydroponicSimulator:
         
         # === CALCULATE SUPPORTING VALUES ONCE ===
         
-        # Use EC ONLY from CSV configuration - no fallbacks
-        ec_current = getattr(self.system_config, 'solution_ec', 1.5)
+        # Calculate EC dynamically from nutrient concentrations (not static from CSV)
+        ec_current = self._calculate_ec(nutrient_concentrations)
         
         # Calculate solution temperature once
         solution_temperature = self._calculate_solution_temperature(
@@ -1516,13 +1570,14 @@ class CROPGROHydroponicSimulator:
             solar_radiation=solar_radiation,
             vpd=vpd_calculated,  # Pre-calculated
             # WUE (daily): growth per unit transpiration (g/L ≡ kg/m³) - reuse transpiration
-            water_use_efficiency=(
-                total_new_growth / max(1e-6, transpiration * self.system_area)
-            ),
+            # Fix: Use realistic minimum transpiration and cap maximum WUE
+            water_use_efficiency=min(500.0, max(0.1, 
+                total_new_growth / max(0.01, transpiration * self.system_area)
+            )),
             
             # Solution properties  
             ph=ph,  # Use dynamic pH from hydroponic system
-            ec=stress_factors['ec_current'],  # Pre-calculated EC
+            ec=stress_factors['ec_current'],  # Dynamic EC from nutrient concentrations
             rzt=stress_factors['solution_temperature'],  # Pre-calculated solution temperature
             rzt_growth_factor=self.rzt_model.calculate_rzt_growth_factor(
                 stress_factors['solution_temperature'], temperature
@@ -1568,11 +1623,13 @@ class CROPGROHydroponicSimulator:
         cropgro_result.shaded_lai = canopy_response.shaded_lai
         
         # Leaf metrics
-        cropgro_result.v_stage = self.leaf_model.current_v_stage
-        
-        # Use visible_leaf_count for consistency with V-stage (leaves that have appeared)
+        # Fix V-Stage/Leaf Number synchronization
+        # Both should represent the same biological concept: visible/emerged leaves
         visible_leaves = leaf_stats.get('visible_leaf_count', leaf_stats['active_leaf_count'])
         active_leaves = leaf_stats['active_leaf_count']
+        
+        # V-stage should match visible leaf count for consistency
+        cropgro_result.v_stage = float(visible_leaves)  # Fix: Use actual visible leaves
         cropgro_result.leaf_number = int(visible_leaves)
         
         # Use modeled leaf area per plant (DSSAT approach)
@@ -2404,3 +2461,93 @@ class CROPGROHydroponicSimulator:
                 setattr(updated_coeffs, coeff_attr, genetic_params[csv_param])
         
         logger.info(f"Updated cultivar {self.current_cultivar} with {len(genetic_params)} dynamic genetic parameters")
+    
+    def _perform_realistic_nutrient_management(self, day, current_concentrations, input_data, logger):
+        """
+        Perform realistic nutrient management with individual nutrient monitoring.
+        
+        Returns True if any nutrient management was performed, False otherwise.
+        """
+        management_performed = False
+        
+        # Get optimal concentrations from CSV configuration
+        nutrient_solution_params = getattr(self.system_config, 'nutrient_solution', {})
+        
+        # Handle both old nested format and new consolidated format
+        if nutrient_solution_params and isinstance(list(nutrient_solution_params.values())[0], dict):
+            # Old nested format
+            optimal_concentrations = {
+                'N-NO3': nutrient_solution_params.get('N-NO3', {}).get('initial_ppm', 200.0),
+                'P-PO4': nutrient_solution_params.get('P-PO4', {}).get('initial_ppm', 50.0),
+                'K': nutrient_solution_params.get('K', {}).get('initial_ppm', 300.0),
+                'Ca': nutrient_solution_params.get('Ca', {}).get('initial_ppm', 150.0),
+                'Mg': nutrient_solution_params.get('Mg', {}).get('initial_ppm', 50.0)
+            }
+        else:
+            # New consolidated format
+            optimal_concentrations = {
+                'N-NO3': nutrient_solution_params.get('N-NO3_initial_ppm', 200.0),
+                'P-PO4': nutrient_solution_params.get('P-PO4_initial_ppm', 50.0),
+                'K': nutrient_solution_params.get('K_initial_ppm', 300.0),
+                'Ca': nutrient_solution_params.get('Ca_initial_ppm', 150.0),
+                'Mg': nutrient_solution_params.get('Mg_initial_ppm', 50.0)
+            }
+        
+        # Individual nutrient management based on depletion thresholds
+        for nutrient_id, optimal_ppm in optimal_concentrations.items():
+            current_ppm = current_concentrations.get(nutrient_id, optimal_ppm)
+            depletion_percent = (optimal_ppm - current_ppm) / optimal_ppm
+            
+            # Nutrient-specific management triggers
+            management_trigger = False
+            supplement_amount = 0.0
+            
+            if nutrient_id == 'N-NO3':
+                # Nitrogen: Critical for growth, supplement when < 70% of optimal
+                if depletion_percent > 0.3:
+                    management_trigger = True
+                    supplement_amount = optimal_ppm * 0.8  # Restore to 80% of optimal
+            elif nutrient_id == 'K':
+                # Potassium: Supplement when < 60% of optimal, higher frequency
+                if depletion_percent > 0.4:
+                    management_trigger = True
+                    supplement_amount = optimal_ppm * 0.9  # Restore to 90% of optimal
+            elif nutrient_id == 'P-PO4':
+                # Phosphorus: Less frequent, supplement when < 50% of optimal
+                if depletion_percent > 0.5:
+                    management_trigger = True
+                    supplement_amount = optimal_ppm * 0.75  # Restore to 75% of optimal
+            elif nutrient_id in ['Ca', 'Mg']:
+                # Secondary nutrients: Less frequent supplementation
+                if depletion_percent > 0.4 and day % 3 == 0:  # Every 3 days if depleted
+                    management_trigger = True
+                    supplement_amount = optimal_ppm * 0.85  # Restore to 85% of optimal
+            
+            # Random variation in management timing (±1 day)
+            if management_trigger and np.random.random() > 0.3:  # 70% chance of actually supplementing
+                current_concentrations[nutrient_id] = supplement_amount
+                logger.info(f"Day {day}: {nutrient_id} supplemented to {supplement_amount:.1f} ppm (was {current_ppm:.1f} ppm)")
+                management_performed = True
+        
+        # Complete solution change: Less frequent, variable timing
+        if day > 10:  # Not in first week
+            # Probability-based solution change (roughly every 10-14 days with variation)
+            days_since_start = day - 1
+            prob_solution_change = 0.05 + 0.02 * (days_since_start % 14) / 14  # 5-7% daily probability
+            
+            if np.random.random() < prob_solution_change or day % 12 == 0:  # Forced every 12 days as backup
+                logger.info(f"Day {day}: Complete solution change - replacing with fresh nutrient solution")
+                
+                # Replace all nutrients
+                for nutrient_id, params in input_data.nutrient_params.items():
+                    if nutrient_id in optimal_concentrations:
+                        current_concentrations[nutrient_id] = optimal_concentrations[nutrient_id]
+                        logger.info(f"  {nutrient_id}: reset to {optimal_concentrations[nutrient_id]} ppm")
+                    else:
+                        # For other nutrients, use recharge concentration
+                        target = params.recharge_conc if hasattr(params, 'recharge_conc') else params.initial_conc
+                        current_concentrations[nutrient_id] = target
+                
+                management_performed = True
+        
+        return management_performed

@@ -39,8 +39,8 @@ carbonate_buffer_pka,6.35,pH_units,pKa of carbonic acid buffer system,ph_chemist
 phosphate_buffer_pka1,2.15,pH_units,First pKa of phosphoric acid,ph_chemistry
 phosphate_buffer_pka2,7.20,pH_units,Second pKa of phosphoric acid,ph_chemistry
 phosphate_buffer_pka3,12.35,pH_units,Third pKa of phosphoric acid,ph_chemistry
-ph_adjustment_rate,0.5,pH_per_hour,Maximum pH adjustment rate for control system,ph_control
-ph_deadband,0.1,pH_units,pH deadband for control system activation,ph_control
+ph_adjustment_rate,1.0,pH_per_hour,Maximum pH adjustment rate for control system,ph_control
+ph_deadband,0.05,pH_units,pH deadband for control system activation,ph_control
 xylem_transport_capacity,0.15,fraction,Capacity of xylem to transport nutrients,nutrient_mobility
 phloem_transport_capacity,0.08,fraction,Capacity of phloem to transport nutrients,nutrient_mobility
 temperature_q10,2.0,factor,Q10 temperature factor for nutrient transport,nutrient_mobility
