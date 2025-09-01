@@ -275,9 +275,107 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
     # treatment_id parameter is passed directly to the function
     results = simulator.run_simulation(input_data, max_days=days, target_maturity='harvest', treatment_id=treatment_id)
 
-    if print_daily:
+    if print_daily and not args.summary_only:
         for dr in results.daily_results:
             print(simulator.display_detailed_results(dr))
+
+    # Print final summary
+    print("\n" + "="*80)
+    print("🎯 FINAL SIMULATION SUMMARY")
+    print("="*80)
+    
+    final_result = results.daily_results[-1]
+    total_days = len(results.daily_results)
+    final_biomass = getattr(final_result, 'total_biomass', 0.0)
+    final_stage = getattr(final_result, 'growth_stage', 'Unknown')
+    plant_count = getattr(final_result, 'plant_count', 12)
+    system_area = getattr(final_result, 'system_area_m2', 1.0)
+    
+    # Calculate totals
+    total_system_biomass = final_biomass * plant_count
+    system_yield = total_system_biomass / system_area
+    
+    # Calculate growth rates
+    if total_days > 1:
+        initial_biomass = getattr(results.daily_results[0], 'total_biomass', 0.0)
+        total_growth = final_biomass - initial_biomass
+        avg_daily_growth = total_growth / (total_days - 1)
+        total_system_growth = total_growth * plant_count
+        avg_system_growth = total_system_growth / (total_days - 1)
+    else:
+        total_growth = 0.0
+        avg_daily_growth = 0.0
+        total_system_growth = 0.0
+        avg_system_growth = 0.0
+    
+    print(f"\n📊 SIMULATION OVERVIEW:")
+    print(f"  • Duration: {total_days} days")
+    print(f"  • Final Stage: {final_stage}")
+    print(f"  • System: {plant_count} plants × {system_area} m² = {plant_count/system_area:.1f} plants/m²")
+    
+    print(f"\n⚖️  FINAL BIOMASS RESULTS:")
+    print(f"  {'Metric':<25} {'Per Plant':<15} {'Total System':<15} {'Per m²':<15}")
+    print(f"  {'-'*25} {'-'*15} {'-'*15} {'-'*15}")
+    print(f"  {'Final Biomass':<25} {final_biomass:<15.2f} g {total_system_biomass:<15.1f} g {system_yield:<15.1f} g/m²")
+    print(f"  {'Total Growth':<25} {total_growth:<15.2f} g {total_system_growth:<15.1f} g {(total_system_growth/system_area):<15.1f} g/m²")
+    print(f"  {'Avg Daily Growth':<25} {avg_daily_growth:<15.3f} g/day {avg_system_growth:<15.2f} g/day {(avg_system_growth/system_area):<15.2f} g/m²/day")
+    
+    # Show efficiency metrics
+    final_lai = getattr(final_result, 'lai', 0.0)
+    final_leaf_area = getattr(final_result, 'leaf_area_m2', 0.0) * 10000  # cm²
+    total_leaf_area = final_leaf_area * plant_count
+    
+    print(f"\n🌿 FINAL CANOPY STATUS:")
+    print(f"  • Per Plant: {final_leaf_area:.1f} cm² leaf area")
+    print(f"  • Total System: {total_leaf_area:.0f} cm² leaf area")
+    print(f"  • System LAI: {final_lai:.3f}")
+    
+    # Show environmental summary
+    final_temp = getattr(final_result, 'temp_c', 25.0)
+    final_ec = getattr(final_result, 'ec', 1.5)
+    final_ph = getattr(final_result, 'solution_ph', 6.0)
+    
+    print(f"\n🌡️  FINAL ENVIRONMENTAL STATUS:")
+    print(f"  • Temperature: {final_temp:.1f}°C")
+    print(f"  • EC: {final_ec:.2f} dS/m")
+    print(f"  • pH: {final_ph:.2f}")
+    
+    # Show stress summary
+    final_stress = getattr(final_result, 'integrated_stress', 0.0)
+    if final_stress < 0.1:
+        stress_status = "🟢 None"
+    elif final_stress < 0.3:
+        stress_status = "🟡 Mild"
+    elif final_stress < 0.6:
+        stress_status = "🟠 Moderate"
+    else:
+        stress_status = "🔴 Severe"
+    
+    print(f"  • Integrated Stress: {final_stress:.3f} {stress_status}")
+    
+    # Show projections if growth is positive
+    if avg_daily_growth > 0:
+        # Estimate days to harvest (assuming ~800 GDD for lettuce)
+        final_gdd = getattr(final_result, 'accumulated_gdd', 0.0)
+        harvest_gdd = 800.0
+        remaining_gdd = max(0, harvest_gdd - final_gdd)
+        
+        # Estimate days based on thermal time
+        avg_thermal_time = getattr(final_result, 'thermal_time_daily', 16.0)
+        days_to_harvest = remaining_gdd / max(0.1, avg_thermal_time) if avg_thermal_time > 0 else 0
+        
+        projected_final_biomass = final_biomass + (avg_daily_growth * days_to_harvest)
+        projected_system_yield = projected_final_biomass * plant_count / system_area
+        
+        print(f"\n🔮 HARVEST PROJECTIONS:")
+        print(f"  • Days to Harvest: {days_to_harvest:.1f} days")
+        print(f"  • Projected Final Biomass: {projected_final_biomass:.1f} g/plant")
+        print(f"  • Projected System Yield: {projected_system_yield:.1f} g/m²")
+    
+    print(f"\n{'-'*80}")
+    print(f"📋 Note: All biomass values shown are PER PLANT. Multiply by {plant_count} for total system values.")
+    print(f"📋 Note: System yield is calculated as total system biomass ÷ system area.")
+    print(f"{'='*80}")
 
     print(f"✅ Simulation completed successfully!")
     print(f"Duration: {len(results.daily_results)} days")
@@ -296,12 +394,81 @@ def main():
     parser.add_argument('--daily-csv', action='store_true', help='Automatically save daily CSV with timestamp in outputs/ directory')
     parser.add_argument('--print-daily', action='store_true', help='Print detailed per-day results to stdout')
     parser.add_argument('--print-summary', action='store_true', help='Print summary stats to stdout')
+    parser.add_argument('--summary-only', action='store_true', help='Show only final summary (no daily details)')
+    
+    # Add help text about output options
+    parser.add_argument('--help-output', action='store_true', help='Show detailed help about output options')
     
     # Treatment identifier for batch processing
     parser.add_argument('--treatment-id', type=str, help='Treatment identifier (e.g., T01, T02)')
     parser.add_argument('--input-dir', type=str, default='input', help='Input directory containing CSV configuration files')
 
     args = parser.parse_args()
+
+    # Handle help output option
+    if args.help_output:
+        print("""
+🌱 CROPGRO HYDROPONIC SIMULATOR - OUTPUT OPTIONS HELP
+========================================================
+
+📊 OUTPUT FORMATS:
+
+1. DEFAULT OUTPUT (no flags):
+   • Shows basic simulation completion message
+   • Auto-saves results to CSV file
+   • Minimal console output
+
+2. --print-daily:
+   • Shows detailed daily results for each day
+   • Includes per-plant vs per-system categorization
+   • Shows carbon balance, nutrient status, stress factors
+   • Best for debugging and detailed analysis
+
+3. --summary-only:
+   • Shows only the final summary table
+   • No daily details
+   • Quick overview of final results
+   • Good for batch processing
+
+4. --print-summary:
+   • Shows basic summary statistics
+   • Minimal formatting
+   • Good for scripting and automation
+
+5. --daily-csv:
+   • Auto-saves detailed CSV with timestamp
+   • Useful for data analysis and plotting
+
+6. --output-csv <path>:
+   • Saves results to specified CSV path
+   • Custom file location
+
+7. --output-json <path>:
+   • Saves full results to JSON format
+   • Includes all simulation data
+   • Good for programmatic access
+
+📋 PER-PLANT vs PER-SYSTEM VALUES:
+
+• PER-PLANT: Individual plant biomass, growth rates, stress levels
+• PER-SYSTEM: Total system biomass, environmental conditions, nutrient concentrations
+• System yield = Total system biomass ÷ System area (g/m²)
+
+🔍 EXAMPLE USAGE:
+
+# Quick simulation with auto-save
+python3 cropgro_cli.py --days 30 --cultivar LET_EXP001_2024
+
+# Detailed daily output
+python3 cropgro_cli.py --days 30 --cultivar LET_EXP001_2024 --print-daily
+
+# Summary only (no daily details)
+python3 cropgro_cli.py --days 30 --cultivar LET_EXP001_2024 --summary-only
+
+# Save to custom location
+python3 cropgro_cli.py --days 30 --cultivar LET_EXP001_2024 --output-csv my_results.csv
+        """)
+        return
 
     try:
         results, detected_file_prefix = run_simulation(args.days, args.cultivar, args.system, args.print_daily, args.treatment_id, args.input_dir)

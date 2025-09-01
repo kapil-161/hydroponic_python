@@ -2306,152 +2306,173 @@ class CROPGROHydroponicSimulator:
         }
     
     def display_detailed_results(self, daily_result) -> str:
-        """Display comprehensive CROPGRO results for a single day"""
+        """Display comprehensive CROPGRO results for a single day with clear per-plant vs per-system categorization"""
         output = []
-        output.append(f"\n🌱 DETAILED CROPGRO RESULTS - DAY {daily_result.day}")
-        output.append("=" * 70)
         
-        # 1. PHENOLOGICAL DEVELOPMENT
-        output.append(f"\n📅 PHENOLOGICAL DEVELOPMENT:")
-        output.append(f"  • Growth Stage: {getattr(daily_result, 'growth_stage', 'N/A')}")
-        output.append(f"  • Accumulated GDD: {getattr(daily_result, 'accumulated_gdd', 0.0):.1f}°C-days")
-        output.append(f"  • Daily Thermal Time: {getattr(daily_result, 'thermal_time_daily', 0.0):.1f}°C-days")
-        output.append(f"  • Development Rate: {getattr(daily_result, 'development_rate', 0.0):.4f}")
-        output.append(f"  • Vegetative Phase: {'Yes' if getattr(daily_result, 'is_vegetative', True) else 'No'}")
-        output.append(f"  • Reproductive Phase: {'Yes' if getattr(daily_result, 'is_reproductive', False) else 'No'}")
+        # Header with day and stage
+        growth_stage = getattr(daily_result, 'growth_stage', 'N/A')
+        day = getattr(daily_result, 'day', 0)
+        output.append(f"\n{'='*80}")
+        output.append(f"🌱 DAY {day:2d} - {growth_stage:>15} - CROPGRO HYDROPONIC SIMULATION")
+        output.append(f"{'='*80}")
         
-        # 2. BIOMASS AND GROWTH
-        output.append(f"\n⚖️  BIOMASS AND GROWTH:")
-        output.append(f"  • Total Biomass: {getattr(daily_result, 'total_biomass', 0.0):.2f} g")
-        output.append(f"  • Leaf Biomass: {getattr(daily_result, 'leaf_biomass', 0.0):.2f} g")
-        output.append(f"  • Stem Biomass: {getattr(daily_result, 'stem_biomass', 0.0):.2f} g")
-        output.append(f"  • Root Biomass: {getattr(daily_result, 'root_biomass', 0.0):.2f} g")
-        output.append(f"  • Daily Growth Rate: {getattr(daily_result, 'daily_growth_rate', 0.0):.3f} g/day")
-        output.append(f"  • Leaf Growth Rate: {getattr(daily_result, 'leaf_growth_rate', 0.0):.3f} g/day")
-        output.append(f"  • Root Growth Rate: {getattr(daily_result, 'root_growth_rate', 0.0):.3f} g/day")
-        
-        # 3. CANOPY ARCHITECTURE  
-        output.append(f"\n🍃 CANOPY ARCHITECTURE:")
-        output.append(f"  • LAI (Leaf Area Index): {getattr(daily_result, 'lai', 0.0):.2f}")
-        output.append(f"  • Canopy Height: {getattr(daily_result, 'canopy_height_cm', 0.0):.1f} cm")
-        output.append(f"  • Light Interception: {getattr(daily_result, 'light_interception', 0.0):.3f}")
-        output.append(f"  • Canopy Photosynthesis: {getattr(daily_result, 'canopy_photosynthesis', 0.0):.3f} μmol CO₂/m²/s")
-        output.append(f"  • Total Absorbed PPFD: {getattr(daily_result, 'total_absorbed_ppfd', 0.0):.1f} μmol/m²/s")
-        output.append(f"  • Sunlit LAI: {getattr(daily_result, 'sunlit_lai', 0.0):.2f}")
-        output.append(f"  • Shaded LAI: {getattr(daily_result, 'shaded_lai', 0.0):.2f}")
-        
-        # 4. PHYSIOLOGICAL PROCESSES
-        output.append(f"\n🔄 PHYSIOLOGICAL PROCESSES:")
-        output.append(f"  • Photosynthesis Rate: {getattr(daily_result, 'photosynthesis_rate', 0.0):.4f}")
-        output.append(f"  • Respiration Rate: {getattr(daily_result, 'respiration_rate', 0.0):.4f}")
-        output.append(f"  • Maintenance Respiration: {getattr(daily_result, 'maintenance_respiration', 0.0):.4f}")
-        output.append(f"  • Growth Respiration: {getattr(daily_result, 'growth_respiration', 0.0):.4f}")
-        output.append(f"  • Net Assimilation: {getattr(daily_result, 'net_assimilation', 0.0):.4f}")
-        
-        # 5. NUTRIENT SOLUTION STATUS
-        output.append(f"\n💧 NUTRIENT SOLUTION STATUS:")
-        nutrient_concs = getattr(daily_result, 'nutrient_concentrations', {})
-        output.append(f"  • N-NO₃: {nutrient_concs.get('N-NO3', 0.0):.0f} ppm")
-        output.append(f"  • P-PO₄: {nutrient_concs.get('P-PO4', 0.0):.0f} ppm") 
-        output.append(f"  • K: {nutrient_concs.get('K', 0.0):.0f} ppm")
-        output.append(f"  • Ca: {nutrient_concs.get('Ca', 0.0):.0f} ppm")
-        output.append(f"  • Mg: {nutrient_concs.get('Mg', 0.0):.0f} ppm")
-        output.append(f"  • EC: {getattr(daily_result, 'ec', 1.5):.1f} dS/m")
-        output.append(f"  • Solution pH: {getattr(daily_result, 'solution_ph', 6.0):.1f}")
-        output.append(f"  • Tank Volume: {getattr(daily_result, 'tank_volume', 1000):.0f} L")
-        
-        # 6. NUTRIENT UPTAKE DYNAMICS  
-        output.append(f"\n🧪 NUTRIENT UPTAKE DYNAMICS:")
-        output.append(f"  • N Uptake: {getattr(daily_result, 'nitrogen_uptake_mg', 0.0):.2f} mg/day")
-        output.append(f"  • P Uptake: {getattr(daily_result, 'phosphorus_uptake_mg', 0.0):.2f} mg/day")
-        output.append(f"  • K Uptake: {getattr(daily_result, 'K_uptake_rate', 0.0):.2f} mg/day")
-        output.append(f"  • Ca Uptake: {getattr(daily_result, 'Ca_uptake_rate', 0.0):.2f} mg/day")
-        output.append(f"  • Mg Uptake: {getattr(daily_result, 'Mg_uptake_rate', 0.0):.2f} mg/day")
-        output.append(f"  • N Stress Level: {1.0 - getattr(daily_result, 'nitrogen_stress_factor', 1.0):.3f}")
-        output.append(f"  • Leaf N Concentration: {getattr(daily_result, 'leaf_nitrogen_conc', 0.0):.3f}%")
-        
-        # 6. STRESS RESPONSES
-        output.append(f"\n😰 STRESS RESPONSES:")
-        output.append(f"  • Temperature Stress: {getattr(daily_result, 'temperature_stress_level', 0.0):.3f}")
-        output.append(f"  • Temp Effect on Photosynthesis: {getattr(daily_result, 'temperature_stress_photosynthesis', 1.0):.3f}")
-        output.append(f"  • Temp Effect on Growth: {getattr(daily_result, 'temperature_stress_growth', 1.0):.3f}")
-        output.append(f"  • Integrated Stress Factor: {getattr(daily_result, 'integrated_stress_factor', 1.0):.3f}")
-        output.append(f"  • Water Stress: {getattr(daily_result, 'water_stress', 1.0):.3f}")
-        output.append(f"  • Nutrient Stress: {getattr(daily_result, 'nutrient_stress', 1.0):.3f}")
-        output.append(f"  • Salinity Stress: {getattr(daily_result, 'salinity_stress', 1.0):.3f}")
-        
-        # 7. SENESCENCE AND REMOBILIZATION
-        output.append(f"\n🍂 SENESCENCE AND REMOBILIZATION:")
-        output.append(f"  • Total Senescence Rate: {getattr(daily_result, 'senescence_rate', 0.0):.5f}")
-        output.append(f"  • Leaf Senescence Rate: {getattr(daily_result, 'leaf_senescence_rate', 0.0):.5f}")
-        output.append(f"  • N Remobilization: {getattr(daily_result, 'nitrogen_remobilization', 0.0):.3f} mg/day")
-        output.append(f"  • P Remobilization: {getattr(daily_result, 'phosphorus_remobilization', 0.0):.3f} mg/day")
-        output.append(f"  • K Remobilization: {getattr(daily_result, 'potassium_remobilization', 0.0):.3f} mg/day")
-        
-        # 8. ROOT ARCHITECTURE
-        output.append(f"\n🌿 ROOT ARCHITECTURE:")
-        output.append(f"  • Root Length Density: {getattr(daily_result, 'root_length_density', 0.0):.3f} cm/cm³")
-        output.append(f"  • Root Surface Area: {getattr(daily_result, 'root_surface_area', 0.0):.2f} cm²")
-        output.append(f"  • Root Volume: {getattr(daily_result, 'root_volume', 0.0):.3f} cm³")
-        output.append(f"  • Root Activity Factor: {getattr(daily_result, 'root_activity_factor', 1.0):.3f}")
-        
-        # 9. GENETIC PARAMETERS
-        output.append(f"\n🧬 GENETIC PARAMETERS EFFECTS:")
-        output.append(f"  • Cultivar Adaptation Index: {getattr(daily_result, 'cultivar_adaptation_index', 1.0):.3f}")
-        output.append(f"  • Yield Potential: {getattr(daily_result, 'cultivar_yield_potential', 1.0):.3f}")
-        output.append(f"  • Photosynthesis Capacity: {getattr(daily_result, 'genetic_photosynthesis_capacity', 1.0):.3f}")
-        output.append(f"  • Nitrate Efficiency: {getattr(daily_result, 'genetic_nitrate_efficiency', 1.0):.3f}")
-        output.append(f"  • EC Tolerance: {getattr(daily_result, 'genetic_ec_tolerance', 1.5):.1f} dS/m")
-        
-        # 10. ENVIRONMENTAL CONTROL
-        output.append(f"\n🌡️  ENVIRONMENTAL CONTROL:")
-        output.append(f"  • Controlled Temperature: {getattr(daily_result, 'controlled_temperature', daily_result.temp_avg):.1f}°C")
-        output.append(f"  • Controlled Humidity: {getattr(daily_result, 'controlled_humidity', 70.0):.1f}%")
-        output.append(f"  • Controlled CO₂: {getattr(daily_result, 'controlled_co2', 400.0):.0f} μmol/mol")
-        output.append(f"  • VPD Target: {getattr(daily_result, 'vpd_target', 0.8):.2f} kPa")
-        output.append(f"  • Environmental Cost: ${getattr(daily_result, 'environmental_cost', 0.0):.3f}/hour")
-        
-        # 11. WATER SYSTEM DYNAMICS
-        output.append(f"\n💦 WATER SYSTEM DYNAMICS:")
-        output.append(f"  • Transpiration Rate: {getattr(daily_result, 'transpiration_rate', 0.0):.2f} L/m²/day")
-        output.append(f"  • Total Water Uptake: {getattr(daily_result, 'total_water_uptake', 0.0):.2f} L/day")
-        output.append(f"  • Water Use Efficiency: {getattr(daily_result, 'water_use_efficiency', 0.0):.1f} kg/m³")
-        output.append(f"  • VPD: {getattr(daily_result, 'vpd', 0.0):.2f} kPa")
-        output.append(f"  • Solution Temperature: {getattr(daily_result, 'rzt', 20.0):.1f}°C")
-        output.append(f"  • RZT Growth Factor: {getattr(daily_result, 'rzt_growth_factor', 1.0):.3f}")
-        output.append(f"  • RZT Nutrient Factor: {getattr(daily_result, 'rzt_nutrient_factor', 1.0):.3f}")
-        
-        # 12. SYSTEM EFFICIENCY METRICS
-        output.append(f"\n📊 SYSTEM EFFICIENCY METRICS:")
+        # 1. QUICK SUMMARY (Key metrics at a glance)
+        output.append(f"\n📊 QUICK SUMMARY:")
         total_biomass = getattr(daily_result, 'total_biomass', 0.0)
-        days_elapsed = getattr(daily_result, 'day', 1)
         daily_growth = getattr(daily_result, 'daily_growth_rate', 0.0)
-        n_uptake = getattr(daily_result, 'nitrogen_uptake_mg', 0.0)
+        lai = getattr(daily_result, 'lai', 0.0)
+        plant_height = getattr(daily_result, 'plant_height_cm', 0.0)
         
-        # Calculate efficiency metrics
-        growth_rate_per_day = daily_growth if daily_growth > 0 else 0.0
-        nitrogen_use_efficiency = (growth_rate_per_day / max(0.1, n_uptake)) * 1000 if n_uptake > 0 else 0.0  # g biomass per g N
-        biomass_per_day = total_biomass / max(1, days_elapsed)
+        output.append(f"  🎯 Per Plant: {total_biomass:6.2f} g biomass | {daily_growth:5.3f} g/day growth | {plant_height:5.1f} cm height")
+        output.append(f"  🌿 Canopy: LAI {lai:5.3f} | {getattr(daily_result, 'leaf_number', 0):2d} leaves | {getattr(daily_result, 'leaf_area_m2', 0.0)*10000:5.1f} cm² leaf area")
         
-        output.append(f"  • Average Growth Rate: {biomass_per_day:.2f} g/plant/day")
-        output.append(f"  • Nitrogen Use Efficiency: {nitrogen_use_efficiency:.1f} g biomass/g N")
-        output.append(f"  • Light Use Efficiency: {getattr(daily_result, 'light_use_efficiency', 0.0):.3f} g/MJ")
-        output.append(f"  • Days to Harvest: {max(0, 45 - days_elapsed)} days (est.)")
-        output.append(f"  • Projected Yield: {total_biomass * (45 / max(1, days_elapsed)):.1f} g/plant")
+        # 2. PER-PLANT BIOMASS BREAKDOWN (Individual plant values)
+        output.append(f"\n⚖️  PER-PLANT BIOMASS (Individual Plant Values):")
+        output.append(f"  {'Component':<15} {'Dry Weight (g)':<15} {'Fresh Weight (g)':<15} {'Growth Rate (g/day)':<20}")
+        output.append(f"  {'-'*15} {'-'*15} {'-'*15} {'-'*20}")
+        output.append(f"  {'Total':<15} {total_biomass:<15.2f} {getattr(daily_result, 'shoot_fresh_weight', 0.0):<15.1f} {daily_growth:<20.3f}")
+        output.append(f"  {'Leaves':<15} {getattr(daily_result, 'leaf_dry_weight', 0.0):<15.2f} {getattr(daily_result, 'leaf_fresh_weight', 0.0):<15.1f} {getattr(daily_result, 'leaf_growth_rate', 0.0):<20.3f}")
+        output.append(f"  {'Stems':<15} {getattr(daily_result, 'stem_dry_weight', 0.0):<15.2f} {getattr(daily_result, 'stem_fresh_weight', 0.0):<15.1f} {getattr(daily_result, 'stem_growth_rate', 0.0):<20.3f}")
+        output.append(f"  {'Roots':<15} {getattr(daily_result, 'root_dry_weight', 0.0):<15.2f} {getattr(daily_result, 'root_fresh_weight', 0.0):<15.1f} {getattr(daily_result, 'root_growth_rate', 0.0):<20.3f}")
         
-        # 13. COMPREHENSIVE pH DYNAMICS  
-        output.append(f"\n🧪 COMPREHENSIVE pH DYNAMICS:")
-        output.append(f"  • Solution pH: {getattr(daily_result, 'solution_ph', 6.0):.2f}")
-        output.append(f"  • pH Change from Uptake: {getattr(daily_result, 'ph_change_from_uptake', 0.0):.3f}")
-        output.append(f"  • pH Natural Drift: {getattr(daily_result, 'ph_change_from_drift', 0.0):.3f}")
-        output.append(f"  • Acid Dosed: {getattr(daily_result, 'acid_dosed_ml_per_L', 0.0):.2f} mL/L")
-        output.append(f"  • Base Dosed: {getattr(daily_result, 'base_dosed_ml_per_L', 0.0):.2f} mL/L")
-        output.append(f"  • Buffer Capacity: {getattr(daily_result, 'buffer_capacity', 0.0):.1f} mEq/L")
-        output.append(f"  • H₂PO₄⁻ (Available P): {getattr(daily_result, 'phosphate_h2po4_mg_L', 0.0):.1f} mg/L")
-        output.append(f"  • HPO₄²⁻ (Less Available P): {getattr(daily_result, 'phosphate_hpo4_mg_L', 0.0):.1f} mg/L")
-        output.append(f"  • Nutrient Precipitation: {getattr(daily_result, 'nutrient_precipitation_mg_L', 0.0):.1f} mg/L")
+        # 3. PER-SYSTEM TOTALS (System-wide values)
+        plant_count = getattr(daily_result, 'plant_count', 12)
+        system_biomass = total_biomass * plant_count
+        system_area = getattr(daily_result, 'system_area_m2', 1.0)
+        system_yield = system_biomass / system_area
         
-        output.append("\n" + "=" * 70)
+        output.append(f"\n🏭 PER-SYSTEM TOTALS (12 Plants × 1.0 m²):")
+        output.append(f"  {'Metric':<25} {'Per Plant':<15} {'Total System':<15} {'Per m²':<15}")
+        output.append(f"  {'-'*25} {'-'*15} {'-'*15} {'-'*15}")
+        output.append(f"  {'Biomass':<25} {total_biomass:<15.2f} g {system_biomass:<15.1f} g {system_yield:<15.1f} g/m²")
+        output.append(f"  {'Daily Growth':<25} {daily_growth:<15.3f} g/day {(daily_growth * plant_count):<15.2f} g/day {(daily_growth * plant_count / system_area):<15.2f} g/m²/day")
+        output.append(f"  {'Leaf Area':<25} {getattr(daily_result, 'leaf_area_m2', 0.0)*10000:<15.1f} cm² {(getattr(daily_result, 'leaf_area_m2', 0.0) * plant_count * 10000):<15.0f} cm² {lai:<15.3f} LAI")
+        
+        # 4. CARBON BALANCE (Per plant physiology)
+        output.append(f"\n🔄 CARBON BALANCE (Per Plant):")
+        net_assimilation = getattr(daily_result, 'net_assimilation', 0.0)
+        photosynthesis = getattr(daily_result, 'photosynthesis_rate', 0.0)
+        respiration = getattr(daily_result, 'respiration_rate', 0.0)
+        maint_resp = getattr(daily_result, 'maintenance_respiration', 0.0)
+        growth_resp = getattr(daily_result, 'growth_respiration', 0.0)
+        
+        output.append(f"  {'Process':<20} {'Rate (g/day)':<15} {'Balance':<15}")
+        output.append(f"  {'-'*20} {'-'*15} {'-'*15}")
+        output.append(f"  {'Photosynthesis':<20} {photosynthesis:<15.4f} {'→':<15}")
+        output.append(f"  {'Maintenance Resp.':<20} {maint_resp:<15.4f} {'←':<15}")
+        output.append(f"  {'Growth Resp.':<20} {growth_resp:<15.4f} {'←':<15}")
+        output.append(f"  {'Total Respiration':<20} {respiration:<15.4f} {'←':<15}")
+        output.append(f"  {'NET ASSIMILATION':<20} {net_assimilation:<15.4f} {'=':<15}")
+        
+        # 5. NUTRIENT STATUS (System-wide concentrations)
+        output.append(f"\n💧 NUTRIENT SOLUTION STATUS (System-wide):")
+        output.append(f"  {'Nutrient':<10} {'Concentration':<15} {'Uptake (mg/day)':<20} {'Status':<15}")
+        output.append(f"  {'-'*10} {'-'*15} {'-'*20} {'-'*15}")
+        
+        nutrients = [
+            ('N-NO₃', getattr(daily_result, 'n_no3_mg_l', 0.0), getattr(daily_result, 'nitrogen_uptake_mg', 0.0)),
+            ('P-PO₄', getattr(daily_result, 'p_po4_mg_l', 0.0), getattr(daily_result, 'phosphorus_uptake_mg', 0.0)),
+            ('K', getattr(daily_result, 'k_mg_l', 0.0), getattr(daily_result, 'k_uptake_rate', 0.0)),
+            ('Ca', getattr(daily_result, 'ca_mg_l', 0.0), getattr(daily_result, 'ca_uptake_rate', 0.0)),
+            ('Mg', getattr(daily_result, 'mg_mg_l', 0.0), getattr(daily_result, 'mg_uptake_rate', 0.0))
+        ]
+        
+        for name, conc, uptake in nutrients:
+            status = "🟢 Optimal" if conc > 50 else "🟡 Low" if conc > 20 else "🔴 Critical"
+            output.append(f"  {name:<10} {conc:<15.1f} mg/L {uptake:<20.2f} {status:<15}")
+        
+        # System parameters
+        output.append(f"  {'EC':<10} {getattr(daily_result, 'ec', 1.5):<15.2f} dS/m {'':<20} {'🟢 Optimal' if getattr(daily_result, 'ec', 1.5) > 1.0 else '🔴 Low':<15}")
+        output.append(f"  {'pH':<10} {getattr(daily_result, 'solution_ph', 6.0):<15.2f} {'':<20} {'🟢 Optimal' if 5.5 <= getattr(daily_result, 'solution_ph', 6.0) <= 6.5 else '🟡 Off-target':<15}")
+        output.append(f"  {'Volume':<10} {getattr(daily_result, 'tank_volume_l', 1000):<15.0f} L {'':<20} {'🟢 Adequate':<15}")
+        
+        # 6. ENVIRONMENTAL CONDITIONS (System-wide)
+        output.append(f"\n🌡️  ENVIRONMENTAL CONDITIONS (System-wide):")
+        output.append(f"  {'Parameter':<20} {'Value':<15} {'Target':<15} {'Status':<15}")
+        output.append(f"  {'-'*20} {'-'*15} {'-'*15} {'-'*15}")
+        
+        temp = getattr(daily_result, 'temp_c', 25.0)
+        temp_status = "🟢 Optimal" if 20 <= temp <= 28 else "🟡 Warm" if temp > 28 else "🟡 Cool"
+        output.append(f"  {'Temperature':<20} {temp:<15.1f}°C {'20-28°C':<15} {temp_status:<15}")
+        
+        humidity = getattr(daily_result, 'humidity', 60.0)
+        humidity_status = "🟢 Optimal" if 50 <= humidity <= 80 else "🟡 Low" if humidity < 50 else "🟡 High"
+        output.append(f"  {'Humidity':<20} {humidity:<15.1f}% {'50-80%':<15} {humidity_status:<15}")
+        
+        co2 = getattr(daily_result, 'co2_umol_mol', 400.0)
+        co2_status = "🟢 Optimal" if co2 >= 400 else "🟡 Low"
+        output.append(f"  {'CO₂':<20} {co2:<15.0f} ppm {'≥400 ppm':<15} {co2_status:<15}")
+        
+        vpd = getattr(daily_result, 'vpd_kpa', 0.8)
+        vpd_status = "🟢 Optimal" if 0.6 <= vpd <= 1.2 else "🟡 High" if vpd > 1.2 else "🟡 Low"
+        output.append(f"  {'VPD':<20} {vpd:<15.2f} kPa {'0.6-1.2 kPa':<15} {vpd_status:<15}")
+        
+        # 7. STRESS FACTORS (Per plant)
+        output.append(f"\n😰 STRESS FACTORS (Per Plant):")
+        output.append(f"  {'Stress Type':<20} {'Level':<15} {'Effect':<15} {'Status':<15}")
+        output.append(f"  {'-'*20} {'-'*15} {'-'*15} {'-'*15}")
+        
+        stresses = [
+            ('Temperature', getattr(daily_result, 'temperature_stress', 0.0), getattr(daily_result, 'temperature_stress_factor', 1.0), ''),
+            ('Water', getattr(daily_result, 'water_stress', 0.0), getattr(daily_result, 'water_stress_factor', 1.0), ''),
+            ('Nutrient', getattr(daily_result, 'nutrient_stress', 0.0), getattr(daily_result, 'nutrient_stress_factor', 1.0), ''),
+            ('Nitrogen', getattr(daily_result, 'nitrogen_stress', 0.0), getattr(daily_result, 'nitrogen_stress_factor', 1.0), ''),
+            ('Salinity', getattr(daily_result, 'salinity_stress', 0.0), getattr(daily_result, 'salinity_stress_factor', 1.0), '')
+        ]
+        
+        for name, level, effect, _ in stresses:
+            if level < 0.1:
+                status = "🟢 None"
+            elif level < 0.3:
+                status = "🟡 Mild"
+            elif level < 0.6:
+                status = "🟠 Moderate"
+            else:
+                status = "🔴 Severe"
+            output.append(f"  {name:<20} {level:<15.3f} {effect:<15.3f} {status:<15}")
+        
+        # 8. DEVELOPMENT PROGRESS (Per plant)
+        output.append(f"\n📅 DEVELOPMENT PROGRESS (Per Plant):")
+        gdd = getattr(daily_result, 'accumulated_gdd', 0.0)
+        thermal_time = getattr(daily_result, 'thermal_time_daily', 0.0)
+        dev_rate = getattr(daily_result, 'development_rate', 0.0)
+        
+        # Estimate progress to harvest (assuming ~800 GDD to harvest for lettuce)
+        harvest_gdd = 800.0
+        progress = min(100.0, (gdd / harvest_gdd) * 100) if harvest_gdd > 0 else 0.0
+        
+        output.append(f"  • Accumulated GDD: {gdd:6.1f}°C-days (Target: {harvest_gdd:.0f}°C-days)")
+        output.append(f"  • Daily Thermal Time: {thermal_time:6.1f}°C-days")
+        output.append(f"  • Development Rate: {dev_rate:6.4f}")
+        output.append(f"  • Progress to Harvest: {progress:6.1f}%")
+        
+        # 9. EFFICIENCY METRICS (System-wide)
+        output.append(f"\n📊 EFFICIENCY METRICS (System-wide):")
+        water_use = getattr(daily_result, 'wue_kg_m3', 0.0)
+        light_use = getattr(daily_result, 'light_use_efficiency', 0.0)
+        n_efficiency = (daily_growth / max(0.1, getattr(daily_result, 'nitrogen_uptake_mg', 0.1))) * 1000 if getattr(daily_result, 'nitrogen_uptake_mg', 0.0) > 0 else 0.0
+        
+        output.append(f"  • Water Use Efficiency: {water_use:6.2f} kg/m³")
+        output.append(f"  • Light Use Efficiency: {light_use:6.3f} g/MJ")
+        output.append(f"  • Nitrogen Use Efficiency: {n_efficiency:6.1f} g biomass/g N")
+        output.append(f"  • System Yield: {system_yield:6.1f} g/m²")
+        
+        # 10. PROJECTIONS (Based on current performance)
+        if day > 1 and daily_growth > 0:
+            days_to_harvest = max(0, (harvest_gdd - gdd) / max(0.1, thermal_time)) if thermal_time > 0 else 0
+            projected_yield = total_biomass + (daily_growth * days_to_harvest)
+            projected_system_yield = projected_yield * plant_count / system_area
+            
+            output.append(f"\n🔮 PROJECTIONS (Based on Current Performance):")
+            output.append(f"  • Days to Harvest: {days_to_harvest:6.1f} days")
+            output.append(f"  • Projected Final Biomass: {projected_yield:6.1f} g/plant")
+            output.append(f"  • Projected System Yield: {projected_system_yield:6.1f} g/m²")
+        
+        # Footer
+        output.append(f"\n{'-'*80}")
+        output.append(f"📋 Note: Biomass values are PER PLANT. Multiply by {plant_count} for total system values.")
+        output.append(f"📋 Note: Environmental values are SYSTEM-WIDE (affect all plants).")
+        output.append(f"{'='*80}")
         
         return "\n".join(output)
     
