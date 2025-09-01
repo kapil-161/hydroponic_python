@@ -57,7 +57,7 @@ class RootCohort:
 
     def __post_init__(self):
         self.surface_area = self.calculate_surface_area()
-        self.activity_factor = self.calculate_activity_factor()  # Default values, will be updated
+        self.activity_factor = self.calculate_activity_factor()
         self.specific_length = self.length / max(0.001, self.biomass)  # cm/g
 
     def calculate_surface_area(self) -> float:
@@ -558,8 +558,11 @@ class RootArchitectureModel:
 
 
 def create_lettuce_root_architecture_model(system_type: HydroponicSystemType = HydroponicSystemType.NFT, 
-                                          tank_volume: float = 1500.0, system_config=None) -> RootArchitectureModel:
+                                          tank_volume: float = None, system_config=None) -> RootArchitectureModel:
     """Create a root architecture model optimized for lettuce using CSV configuration"""
+    
+    if tank_volume is None:
+        raise ValueError("❌ Tank volume must be provided - no hardcoded defaults allowed")
     
     # Get root parameters from CSV if available
     root_params = getattr(system_config, 'root_parameters', {}) if system_config else {}
@@ -761,35 +764,35 @@ class EnhancedRootUptakeModel:
     """
 
     def __init__(self, system_type: HydroponicSystemType = HydroponicSystemType.NFT, 
-                 tank_volume: float = 1500.0, system_config=None):
+                 tank_volume: float = None, system_config=None):
+        if tank_volume is None:
+            raise ValueError("❌ Tank volume must be provided - no hardcoded defaults allowed")
         self.root_architecture = create_lettuce_root_architecture_model(system_type, tank_volume, system_config)
         self.system_type = system_type
         self.tank_volume = tank_volume
         # Load realistic uptake parameters from CSV configuration
         nutrient_params = getattr(system_config, 'nutrient_parameters', {}) if system_config else {}
         
-        # Extract CSV uptake parameters with strict error handling
+        # Extract all nutrient uptake parameters from CSV using scientific literature values
+        required_nutrients = ['NO3', 'NH4', 'PO4', 'K', 'Ca', 'Mg', 'SO4']
+        
         try:
-            base_uptake_rates = {
-                'NO3': nutrient_params['no3_uptake_vmax'],
-                'NH4': nutrient_params['nh4_uptake_vmax'], 
-                'PO4': nutrient_params['po4_uptake_vmax'],
-                'K': nutrient_params['k_uptake_vmax'],
-                'Ca': 0.015,    # Default for Ca (not critical)
-                'Mg': 0.012,    # Default for Mg (not critical)
-                'SO4': 0.010,   # Default for SO4 (not critical)
-            }
-            michaelis_constants = {
-                'NO3': nutrient_params['no3_uptake_km'],
-                'NH4': nutrient_params['nh4_uptake_km'],
-                'PO4': nutrient_params['po4_uptake_km'], 
-                'K': nutrient_params['k_uptake_km'],
-                'Ca': 25.0,     # Default for Ca
-                'Mg': 20.0,     # Default for Mg
-                'SO4': 30.0,    # Default for SO4
-            }
+            # All nutrients now required from CSV with scientific values
+            base_uptake_rates = {}
+            michaelis_constants = {}
+            
+            for nutrient in required_nutrients:
+                vmax_key = f'{nutrient.lower()}_uptake_vmax'
+                km_key = f'{nutrient.lower()}_uptake_km'
+                if vmax_key not in nutrient_params or km_key not in nutrient_params:
+                    available_params = list(nutrient_params.keys())
+                    raise KeyError(f"Required nutrient parameters '{vmax_key}' or '{km_key}' not found in CSV. Available: {available_params}")
+                base_uptake_rates[nutrient] = nutrient_params[vmax_key]
+                michaelis_constants[nutrient] = nutrient_params[km_key]
+            
         except KeyError as e:
-            raise KeyError(f"Required uptake parameter '{e.args[0]}' not found in CSV configuration. Add to nutrient_parameters_consolidated.csv")
+            available_params = list(nutrient_params.keys())
+            raise KeyError(f"Required nutrient parameter not found in CSV: {e}. Available: {available_params}")
         
         self.uptake_params = RootUptakeParameters(
             base_uptake_rates=base_uptake_rates,
@@ -1155,7 +1158,7 @@ class EnhancedRootUptakeModel:
 
 
 def create_enhanced_root_uptake_model(system_type: HydroponicSystemType = HydroponicSystemType.NFT,
-                                      tank_volume: float = 1500.0, system_config=None) -> EnhancedRootUptakeModel:
+                                      tank_volume: float = None, system_config=None) -> EnhancedRootUptakeModel:
     return EnhancedRootUptakeModel(system_type, tank_volume, system_config)
 
 

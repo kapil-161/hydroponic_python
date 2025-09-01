@@ -65,55 +65,61 @@ class RespirationParameters:
         Args:
             config_dict: Dictionary containing respiration parameters from CSV files
         """
-        # Map CSV parameter names to model parameter names with reasonable defaults
-        def get_param(param_name: str, default_value: float) -> float:
-            return config_dict.get(param_name, default_value)
+        # Require all parameters from CSV - no hardcoded defaults allowed
+        def get_required_param(param_name: str) -> float:
+            if param_name not in config_dict:
+                available_params = list(config_dict.keys())
+                raise ValueError(f"❌ Missing required respiration parameter '{param_name}' in CSV. Available: {available_params}")
+            return config_dict[param_name]
         
         # Handle tissue factors from CSV
         tissue_factors = {
-            TissueType.LEAVES.value: get_param('tissue_factor_leaves', 1.0),
-            TissueType.STEMS.value: get_param('tissue_factor_stems', 0.8),
-            TissueType.ROOTS.value: get_param('tissue_factor_roots', 1.2),
-            TissueType.REPRODUCTIVE.value: get_param('tissue_factor_reproductive', 1.5)
+            TissueType.LEAVES.value: get_required_param('tissue_factor_leaves'),
+            TissueType.STEMS.value: get_required_param('tissue_factor_stems'),
+            TissueType.ROOTS.value: get_required_param('tissue_factor_roots'),
+            TissueType.REPRODUCTIVE.value: get_required_param('tissue_factor_reproductive')
         }
         
         return cls(
             # Maintenance respiration parameters
-            maintenance_base_rate=get_param('maintenance_base_rate', 0.02),
-            reference_temperature=get_param('reference_temperature', 25.0),
-            q10_factor=get_param('q10_factor', 2.0),
+            maintenance_base_rate=get_required_param('maintenance_base_rate'),
+            reference_temperature=get_required_param('reference_temperature'),
+            q10_factor=get_required_param('q10_factor'),
             
             # Growth respiration parameters
-            growth_efficiency=get_param('growth_efficiency', 0.75),
-            biosynthetic_cost=get_param('biosynthetic_cost', 0.33),  # Default: 1/0.75 - 1 = 0.33
+            growth_efficiency=get_required_param('growth_efficiency'),
+            biosynthetic_cost=get_required_param('biosynthetic_cost'),
             
             # Tissue-specific factors
             tissue_factors=tissue_factors,
             
             # Age effects
-            age_effect_coefficient=get_param('age_effect_coefficient', 0.001),
-            max_age_effect=get_param('max_age_effect', 2.0),
+            age_effect_coefficient=get_required_param('age_effect_coefficient'),
+            max_age_effect=get_required_param('max_age_effect'),
             
             # Temperature acclimation
-            acclimation_rate=get_param('acclimation_rate', 0.05),
-            acclimation_memory=get_param('acclimation_memory', 7.0),  # Default: 7 days
+            acclimation_rate=get_required_param('acclimation_rate'),
+            acclimation_memory=get_required_param('acclimation_memory'),
             
-            # Nitrogen effects (with reasonable defaults)
-            n_effect_slope=get_param('n_effect_slope', 0.1),  # Default: 0.1 g C/g N
-            reference_leaf_n=get_param('reference_leaf_n', 0.04)  # Default: 4% N content
+            # Nitrogen effects
+            n_effect_slope=get_required_param('n_effect_slope'),
+            reference_leaf_n=get_required_param('reference_leaf_n')
         )
     
-    def get_default_growth_composition(self, config_dict: dict) -> Dict[str, float]:
-        """Get default growth composition from CSV config."""
-        def get_param(param_name: str, default_value: float) -> float:
-            return config_dict.get(param_name, default_value)
+    def get_required_growth_composition(self, config_dict: dict) -> Dict[str, float]:
+        """Get required growth composition from CSV config only."""
+        def get_required_param(param_name: str) -> float:
+            if param_name not in config_dict:
+                available_params = list(config_dict.keys())
+                raise ValueError(f"❌ Missing required growth composition parameter '{param_name}' in CSV. Available: {available_params}")
+            return config_dict[param_name]
         
         return {
-            'protein': get_param('protein_fraction', 0.15),
-            'carbohydrate': get_param('carbohydrate_fraction', 0.70),
-            'lipid': get_param('lipid_fraction', 0.05),
-            'organic_acid': get_param('organic_acid_fraction', 0.05),
-            'lignin': get_param('lignin_fraction', 0.05)
+            'protein': get_required_param('protein_fraction'),
+            'carbohydrate': get_required_param('carbohydrate_fraction'),
+            'lipid': get_required_param('lipid_fraction'),
+            'organic_acid': get_required_param('organic_acid_fraction'),
+            'lignin': get_required_param('lignin_fraction')
         }
 
 
@@ -315,7 +321,9 @@ class EnhancedRespirationModel:
             
             total_glucose_cost = 0.0
             for component, fraction in growth_composition.items():
-                cost = costs.get(component, 1.44)  # Default cost
+                cost = costs.get(component)
+                if cost is None:
+                    raise ValueError(f"❌ Respiration cost for {component} must be provided in CSV configuration - no hardcoded defaults allowed")
                 total_glucose_cost += cost * fraction * new_growth
             
             glucose_respired = total_glucose_cost * (1.0 - self.params.growth_efficiency)

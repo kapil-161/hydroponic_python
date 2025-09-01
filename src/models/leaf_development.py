@@ -91,7 +91,9 @@ class LeafDevelopmentModel:
     """
     
     def __init__(self, parameters: Optional[LeafParameters] = None):
-        self.params = parameters or LeafParameters()
+        if parameters is None:
+            raise ValueError("❌ LeafParameters required - no hardcoded defaults allowed")
+        self.params = parameters
         self.leaf_cohorts: Dict[int, LeafCohort] = {}
         self.current_v_stage: float = self.params.initial_leaf_number
         self.cumulative_thermal_time: float = 0.0
@@ -355,9 +357,7 @@ def create_lettuce_leaf_development_model(system_config=None) -> LeafDevelopment
         return LeafDevelopmentModel(parameters)
         
     except Exception as e:
-        print(f"Warning: Could not load CSV leaf development parameters: {e}")
-        print("Using default leaf development parameters")
-        return LeafDevelopmentModel()
+        raise ValueError(f"❌ Failed to load leaf development parameters from CSV: {e}. No hardcoded defaults allowed.")
 
 
 

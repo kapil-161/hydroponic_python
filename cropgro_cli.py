@@ -51,650 +51,111 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
         # Only type affects the engine; keep other fields
         system_config.system_type = system_type.upper()
     
-    # Load parameters from CSV files - NO FALLBACKS TO HARDCODED VALUES
+    # Load parameters from SINGLE MASTER FILE - NO CONFLICTS ALLOWED
     try:
         import pandas as pd
         
-        # Simple direct parameter loading from specific files
-        params_loaded = []
-        
-        # 1. Load environmental control parameters comprehensively
         # Use treatment_id for file paths, fall back to cultivar_id if treatment_id not provided
         file_prefix = treatment_id if treatment_id else cultivar_id
         
-        # Auto-detect available prefixes if the default doesn't work
-        if not Path(f'{input_dir}/{file_prefix}_environment_parameters.csv').exists():
-            print(f"⚠️  File not found: {file_prefix}_environment_parameters.csv")
-            # Look for available prefixes by scanning environment_parameters.csv files
-            available_prefixes = []
-            for csv_file in Path(input_dir).glob('*_environment_parameters.csv'):
-                prefix = csv_file.stem.replace('_environment_parameters', '')
-                available_prefixes.append(prefix)
-            
-            if available_prefixes:
-                file_prefix = available_prefixes[0]  # Use the first available prefix
-                print(f"🔍 Auto-detected treatment ID: {file_prefix}")
-            else:
-                print(f"❌ No environment_parameters.csv files found in {input_dir}/")
-                return
-        env_control_file = f'{input_dir}/{file_prefix}_environmental_control_parameters.csv'
-        if Path(env_control_file).exists():
-            try:
-                df = pd.read_csv(env_control_file)
-                # Store all environmental control parameters dynamically
-                env_control_params = {}
-                for _, row in df.iterrows():
-                    param_name = row['parameter_name']
-                    param_value = float(row['value'])
-                    env_control_params[param_name] = param_value
-                    params_loaded.append(f"{param_name}={param_value}")
-                    
-                    # Also set key system_config values for backward compatibility
-                    if param_name == 'co2_setpoint':
-                        system_config.controlled_co2 = param_value
-                        print(f"✓ CO2 loaded: {param_value} ppm")
-                    elif param_name == 'target_vpd':
-                        print(f"✓ Target VPD loaded: {param_value} kPa")
-                
-                # Add all environmental control parameters to system_config
-                system_config.environmental_control_parameters = env_control_params
-                print(f"✓ Environmental control parameters loaded: {len(env_control_params)} parameters")
-            except Exception as e:
-                print(f"⚠️  Could not load environmental control: {e}")
+        # Load from master parameters file (single source of truth)
+        master_file = f'{input_dir}/{file_prefix}_master_parameters.csv'
+        if not Path(master_file).exists():
+            print(f"❌ Master parameters file not found: {master_file}")
+            print("Please ensure you have a master_parameters.csv file with all parameters")
+            return
         
-        # 2. Try to load EC from environment parameters (min_ec, max_ec)
-        # Using min_ec as the baseline EC value
+        print(f"📋 Loading parameters from master file: {master_file}")
+        
+        # Load all parameters from single master file
         try:
-            df = pd.read_csv(f'{input_dir}/{file_prefix}_environment_parameters.csv')
+            df = pd.read_csv(master_file)
+            params_loaded = []
+            
+            # Group parameters by category
+            parameter_categories = {}
             for _, row in df.iterrows():
-                if row['parameter_name'] == 'min_ec':
-                    system_config.solution_ec = float(row['value'])
-                    params_loaded.append(f"EC={row['value']}")
-                    print(f"✓ EC loaded: {row['value']} dS/m (from min_ec)")
+                param_name = row['parameter_name']
+                param_value = row['value']
+                category = row.get('category', 'general')
+                priority = row.get('priority', 1)
+                
+                # Convert to appropriate type
+                try:
+                    if pd.isna(param_value):
+                        continue
+                    elif str(param_value).lower() in ['true', 'false']:
+                        param_value = str(param_value).lower() == 'true'
+                    elif str(param_value).replace('.', '').replace('-', '').isdigit():
+                        # Convert to float first, then check if it should be int
+                        param_value = float(param_value)
+                        # Convert to int if it's a whole number and the parameter name suggests it should be int
+                        if param_value.is_integer() and any(keyword in param_name.lower() for keyword in ['number', 'count', 'layers', 'plants']):
+                            param_value = int(param_value)
+                    elif str(param_value).startswith('{') and str(param_value).endswith('}'):
+                        # Try to parse as dictionary
+                        try:
+                            import ast
+                            param_value = ast.literal_eval(str(param_value))
+                        except (ValueError, SyntaxError):
+                            pass  # Keep as string if parsing fails
+                except (ValueError, TypeError):
+                    pass  # Keep as string
+                
+                # Store in category
+                if category not in parameter_categories:
+                    parameter_categories[category] = {}
+                parameter_categories[category][param_name] = param_value
+                params_loaded.append(f"{param_name}={param_value}")
+            
+            # Assign categories to system_config
+            for category, params in parameter_categories.items():
+                # Skip invalid categories (must be valid Python identifiers)
+                if pd.isna(category) or not isinstance(category, str) or not category.replace('_', '').isalnum():
+                    continue
+                # Set both with and without _parameters suffix for compatibility
+                setattr(system_config, f"{category}_parameters", params)
+                setattr(system_config, category, params)
+            
+            # Set key system_config values for backward compatibility
+            if 'environment' in parameter_categories:
+                env_params = parameter_categories['environment']
+                if 'optimal_temperature' in env_params:
+                    system_config.temperature = env_params['optimal_temperature']
+                    print(f"✓ Temperature loaded: {env_params['optimal_temperature']}°C")
+                if 'min_humidity' in env_params:
+                    system_config.humidity = env_params['min_humidity']
+                    print(f"✓ Humidity loaded: {env_params['min_humidity']}%")
+                if 'optimal_light_intensity' in env_params:
+                    system_config.solar_radiation = env_params['optimal_light_intensity']
+                    print(f"✓ Light loaded: {env_params['optimal_light_intensity']} MJ/m²/day")
+                if 'min_ec' in env_params:
+                    system_config.solution_ec = env_params['min_ec']
+                    print(f"✓ EC loaded: {env_params['min_ec']} dS/m")
+                if 'target_vpd' in env_params:
+                    print(f"✓ Target VPD loaded: {env_params['target_vpd']} kPa")
+                if 'target_co2' in env_params:
+                    system_config.controlled_co2 = env_params['target_co2']
+                    print(f"✓ CO2 loaded: {env_params['target_co2']} ppm")
+            
+            if 'system' in parameter_categories:
+                sys_params = parameter_categories['system']
+                if 'tank_volume' in sys_params:
+                    system_config.tank_volume = sys_params['tank_volume']
+                    print(f"✓ Tank volume loaded: {sys_params['tank_volume']} L")
+                if 'system_area' in sys_params:
+                    system_config.system_area = sys_params['system_area']
+                    print(f"✓ System area loaded: {sys_params['system_area']} m²")
+                if 'number_of_plants' in sys_params:
+                    system_config.n_plants = sys_params['number_of_plants']
+                    print(f"✓ Number of plants loaded: {sys_params['number_of_plants']}")
+            
+            print(f"📊 Successfully loaded {len(params_loaded)} parameters from master file")
+            print(f"📋 Categories loaded: {list(parameter_categories.keys())}")
+            
         except Exception as e:
-            print(f"⚠️  Could not load EC: {e}")
-        
-        # 3. Try to load pH from system settings
-        system_file = f'{input_dir}/{file_prefix}_system_settings.csv'
-        if Path(system_file).exists():
-            try:
-                df = pd.read_csv(system_file)
-                for _, row in df.iterrows():
-                    if row['setting_name'] == 'initial_ph':
-                        system_config.solution_ph = float(row['value'])
-                        params_loaded.append(f"pH={row['value']}")
-                        print(f"✓ pH loaded: {row['value']}")
-            except Exception as e:
-                print(f"⚠️  Could not load pH: {e}")
-        
-        # 4. Load all environment parameters comprehensively
-        env_file = f'{input_dir}/{file_prefix}_environment_parameters.csv'
-        if Path(env_file).exists():
-            try:
-                df = pd.read_csv(env_file)
-                # Store all environment parameters dynamically
-                env_params = {}
-                for _, row in df.iterrows():
-                    param_name = row['parameter_name']
-                    param_value = row['value']
-                    try:
-                        env_params[param_name] = float(param_value)
-                    except (ValueError, TypeError):
-                        env_params[param_name] = param_value
-                    params_loaded.append(f"{param_name}={param_value}")
-                    
-                    # Also set key system_config values for backward compatibility
-                    if param_name == 'optimal_temperature':
-                        system_config.temperature = param_value
-                        print(f"✓ Temperature loaded: {param_value}°C")
-                    elif param_name == 'min_humidity':
-                        system_config.humidity = param_value
-                        print(f"✓ Humidity loaded: {param_value}%")
-                    elif param_name == 'optimal_light_intensity':
-                        system_config.solar_radiation = param_value
-                        print(f"✓ Light loaded: {param_value} MJ/m²/day")
-                
-                # Add all environment parameters to system_config
-                system_config.environment_parameters = env_params
-                print(f"✓ Environment parameters loaded: {len(env_params)} parameters")
-            except Exception as e:
-                print(f"⚠️  Could not load environment: {e}")
-        
-        # 5. Load canopy parameters
-        canopy_file = f'{input_dir}/{file_prefix}_canopy_parameters.csv'
-        if Path(canopy_file).exists():
-            try:
-                df = pd.read_csv(canopy_file)
-                # Store all canopy parameters dynamically
-                canopy_params = {}
-                for _, row in df.iterrows():
-                    param_name = row['parameter_name']
-                    param_value = row['value']
-                    # Convert to appropriate type
-                    try:
-                        if param_value != param_value:  # Check for NaN
-                            continue
-                        # Convert certain parameters to integers
-                        if param_name in ['number_of_layers']:
-                            canopy_params[param_name] = int(float(param_value))
-                            params_loaded.append(f"{param_name}={int(float(param_value))}")
-                        else:
-                            canopy_params[param_name] = float(param_value)
-                            params_loaded.append(f"{param_name}={float(param_value)}")
-                    except (ValueError, TypeError):
-                        canopy_params[param_name] = str(param_value)
-                        params_loaded.append(f"{param_name}={param_value}")
-                
-                # Add canopy parameters to system_config
-                system_config.canopy_parameters = canopy_params
-                print(f"✓ Canopy parameters loaded: {len(canopy_params)} parameters")
-            except Exception as e:
-                print(f"⚠️  Could not load canopy parameters: {e}")
-
-        # 6. Load crop parameters
-        crop_file = f'{input_dir}/{file_prefix}_crop_parameters.csv'
-        if Path(crop_file).exists():
-            try:
-                df = pd.read_csv(crop_file)
-                # Store all crop parameters dynamically
-                crop_params = {}
-                for _, row in df.iterrows():
-                    param_name = row['parameter_name']
-                    param_value = row['value']
-                    # Convert to appropriate type
-                    try:
-                        if param_value != param_value:  # Check for NaN
-                            param_value = ""
-                        else:
-                            param_value = float(param_value)
-                    except (ValueError, TypeError):
-                        pass  # Keep as string
-                    crop_params[param_name] = param_value
-                    params_loaded.append(f"{param_name}={param_value}")
-                
-                # Add crop parameters to system_config
-                system_config.crop_parameters = crop_params
-                print(f"✓ Crop parameters loaded: {len(crop_params)} parameters")
-            except Exception as e:
-                print(f"⚠️  Could not load crop parameters: {e}")
-
-        # 7. Load genetic parameters (consolidated)
-        genetic_file = f'{input_dir}/{file_prefix}_genetic_parameters_consolidated.csv'
-        if Path(genetic_file).exists():
-            try:
-                df = pd.read_csv(genetic_file)
-                # Store all genetic parameters dynamically with category support
-                genetic_params = {}
-                genetic_stress_weights = {}
-                breeding_weights = {}
-                
-                for _, row in df.iterrows():
-                    param_name = row['parameter_name']
-                    param_value = row['value']
-                    category = row.get('category', 'genetic_coefficients')
-                    
-                    # Convert to appropriate type
-                    try:
-                        if param_value != param_value:  # Check for NaN
-                            param_value = ""
-                        else:
-                            param_value = float(param_value)
-                    except (ValueError, TypeError):
-                        pass  # Keep as string
-                    
-                    # Store in appropriate category
-                    if category == 'genetic_coefficients':
-                        genetic_params[param_name] = param_value
-                    elif category == 'stress_weights':
-                        genetic_stress_weights[param_name] = param_value
-                    elif category == 'breeding_weights':
-                        breeding_weights[param_name] = param_value
-                    
-                    params_loaded.append(f"{param_name}={param_value}")
-                
-                # Add all genetic parameters to system_config
-                system_config.genetic_parameters = genetic_params
-                system_config.genetic_stress_weights = genetic_stress_weights
-                system_config.breeding_weights = breeding_weights
-                total_params = len(genetic_params) + len(genetic_stress_weights) + len(breeding_weights)
-                print(f"✓ Genetic parameters loaded: {total_params} parameters ({len(genetic_params)} coefficients, {len(genetic_stress_weights)} stress weights, {len(breeding_weights)} breeding weights)")
-            except Exception as e:
-                print(f"⚠️  Could not load genetic parameters: {e}")
-
-        # 8. Load photosynthesis parameters
-        photosynthesis_file = f'{input_dir}/{file_prefix}_photosynthesis_parameters.csv'
-        if Path(photosynthesis_file).exists():
-            try:
-                df = pd.read_csv(photosynthesis_file)
-                # Store all photosynthesis parameters dynamically
-                photosynthesis_params = {}
-                for _, row in df.iterrows():
-                    param_name = row['parameter_name']
-                    param_value = row['value']
-                    # Convert to appropriate type
-                    try:
-                        if param_value != param_value:  # Check for NaN
-                            param_value = ""
-                        else:
-                            param_value = float(param_value)
-                    except (ValueError, TypeError):
-                        pass  # Keep as string
-                    photosynthesis_params[param_name] = param_value
-                    params_loaded.append(f"{param_name}={param_value}")
-                
-                # Add photosynthesis parameters to system_config
-                system_config.photosynthesis_parameters = photosynthesis_params
-                print(f"✓ Photosynthesis parameters loaded: {len(photosynthesis_params)} parameters")
-            except Exception as e:
-                print(f"⚠️  Could not load photosynthesis parameters: {e}")
-
-        # 9. Load nutrient parameters (consolidated)
-        nutrient_file = f'{input_dir}/{file_prefix}_nutrient_parameters_consolidated.csv'
-        if Path(nutrient_file).exists():
-            try:
-                df = pd.read_csv(nutrient_file)
-                # Store all nutrient parameters dynamically with category support
-                nitrogen_params = {}
-                nutrient_mobility_params = {}
-                nutrient_solution_params = {}
-                all_nutrient_params = {}  # Combined parameters for root system access
-                
-                for _, row in df.iterrows():
-                    param_name = row['parameter_name']
-                    param_value = row['value']
-                    category = row.get('category', 'nitrogen_balance')
-                    
-                    # Convert to appropriate type
-                    try:
-                        if param_value != param_value:  # Check for NaN
-                            param_value = ""
-                        else:
-                            param_value = float(param_value)
-                    except (ValueError, TypeError):
-                        pass  # Keep as string
-                    
-                    # Store in appropriate category
-                    if category == 'nitrogen_balance':
-                        nitrogen_params[param_name] = param_value
-                    elif category == 'nutrient_mobility':
-                        nutrient_mobility_params[param_name] = param_value
-                    elif category == 'nutrient_solution':
-                        nutrient_solution_params[param_name] = param_value
-                    
-                    # Also store all parameters in combined dict for root system access
-                    all_nutrient_params[param_name] = param_value
-                    params_loaded.append(f"{param_name}={param_value}")
-                
-                # Add all nutrient parameters to system_config
-                system_config.nitrogen_parameters = nitrogen_params
-                system_config.nutrient_mobility_parameters = nutrient_mobility_params
-                system_config.nutrient_solution = nutrient_solution_params
-                system_config.nutrient_parameters = all_nutrient_params  # For root system access
-                total_params = len(nitrogen_params) + len(nutrient_mobility_params) + len(nutrient_solution_params)
-                print(f"✓ Nutrient parameters loaded: {total_params} parameters ({len(nitrogen_params)} nitrogen, {len(nutrient_mobility_params)} mobility, {len(nutrient_solution_params)} solution)")
-            except Exception as e:
-                print(f"⚠️  Could not load nutrient parameters: {e}")
-
-        # 10. Load stress parameters
-        stress_file = f'{input_dir}/{file_prefix}_stress_parameters.csv'
-        if Path(stress_file).exists():
-            try:
-                df = pd.read_csv(stress_file)
-                # Store all stress parameters dynamically
-                stress_params = {}
-                for _, row in df.iterrows():
-                    param_name = row['parameter_name']
-                    param_value = row['value']
-                    # Convert to appropriate type
-                    try:
-                        if param_value != param_value:  # Check for NaN
-                            param_value = ""
-                        else:
-                            param_value = float(param_value)
-                    except (ValueError, TypeError):
-                        pass  # Keep as string
-                    stress_params[param_name] = param_value
-                    params_loaded.append(f"{param_name}={param_value}")
-                
-                # Add stress parameters to system_config
-                system_config.stress_parameters = stress_params
-                print(f"✓ Stress parameters loaded: {len(stress_params)} parameters")
-            except Exception as e:
-                print(f"⚠️  Could not load stress parameters: {e}")
-
-        # 11. Load respiration parameters
-        respiration_file = f'{input_dir}/{file_prefix}_respiration_parameters.csv'
-        if Path(respiration_file).exists():
-            try:
-                df = pd.read_csv(respiration_file)
-                # Store all respiration parameters dynamically
-                respiration_params = {}
-                for _, row in df.iterrows():
-                    param_name = row['parameter_name']
-                    param_value = row['value']
-                    # Convert to appropriate type
-                    try:
-                        if param_value != param_value:  # Check for NaN
-                            param_value = ""
-                        else:
-                            param_value = float(param_value)
-                    except (ValueError, TypeError):
-                        pass  # Keep as string
-                    respiration_params[param_name] = param_value
-                    params_loaded.append(f"{param_name}={param_value}")
-                
-                # Add respiration parameters to system_config
-                system_config.respiration_parameters = respiration_params
-                print(f"✓ Respiration parameters loaded: {len(respiration_params)} parameters")
-            except Exception as e:
-                print(f"⚠️  Could not load respiration parameters: {e}")
-
-        # 12. Load phenology parameters (consolidated)
-        phenology_file = f'{input_dir}/{file_prefix}_phenology_parameters_consolidated.csv'
-        if Path(phenology_file).exists():
-            try:
-                df = pd.read_csv(phenology_file)
-                # Store all phenology parameters dynamically with category support
-                phenology_params = {}
-                thermal_requirements = {}
-                
-                for _, row in df.iterrows():
-                    param_name = row['parameter_name']
-                    param_value = row['value']
-                    category = row.get('category', 'development_parameters')
-                    
-                    # Convert to appropriate type
-                    try:
-                        if param_value != param_value:  # Check for NaN
-                            param_value = ""
-                        elif str(param_value).lower() in ['true', 'false']:
-                            param_value = str(param_value).lower() == 'true'
-                        elif str(param_value).replace('.', '').isdigit():
-                            param_value = float(param_value)
-                    except:
-                        pass  # Keep as string
-                    
-                    # Store in appropriate category
-                    if category == 'development_parameters':
-                        phenology_params[param_name] = param_value
-                    elif category == 'thermal_requirements':
-                        thermal_requirements[param_name] = param_value
-                    
-                    params_loaded.append(f"{param_name}={param_value}")
-                
-                # Add all phenology parameters to system_config
-                system_config.phenology_parameters = phenology_params
-                system_config.thermal_requirements = thermal_requirements
-                total_params = len(phenology_params) + len(thermal_requirements)
-                print(f"✓ Phenology parameters loaded: {total_params} parameters ({len(phenology_params)} development, {len(thermal_requirements)} thermal)")
-            except Exception as e:
-                print(f"⚠️  Could not load phenology parameters: {e}")
-
-        # 13. Load senescence parameters
-        senescence_file = f'{input_dir}/{file_prefix}_senescence_parameters.csv'
-        if Path(senescence_file).exists():
-            try:
-                df = pd.read_csv(senescence_file)
-                # Store all senescence parameters dynamically
-                senescence_params = {}
-                for _, row in df.iterrows():
-                    param_name = row['parameter_name']
-                    param_value = row['value']
-                    # Convert to appropriate type
-                    try:
-                        if param_value != param_value:  # Check for NaN
-                            param_value = ""
-                        else:
-                            param_value = float(param_value)
-                    except (ValueError, TypeError):
-                        pass  # Keep as string
-                    senescence_params[param_name] = param_value
-                    params_loaded.append(f"{param_name}={param_value}")
-                
-                # Add senescence parameters to system_config
-                system_config.senescence_parameters = senescence_params
-                print(f"✓ Senescence parameters loaded: {len(senescence_params)} parameters")
-            except Exception as e:
-                print(f"⚠️  Could not load senescence parameters: {e}")
-
-        # 14. Load root parameters (split)
-        root_file = f'{input_dir}/{file_prefix}_root_parameters.csv'
-        if Path(root_file).exists():
-            try:
-                df = pd.read_csv(root_file)
-                # Store all root parameters dynamically
-                root_params = {}
-                for _, row in df.iterrows():
-                    param_name = row['parameter_name']
-                    param_value = row['value']
-                    # Convert to appropriate type
-                    try:
-                        if param_value != param_value:  # Check for NaN
-                            param_value = ""
-                        else:
-                            param_value = float(param_value)
-                    except (ValueError, TypeError):
-                        pass  # Keep as string
-                    root_params[param_name] = param_value
-                    params_loaded.append(f"{param_name}={param_value}")
-                
-                # Add root parameters to system_config
-                system_config.root_parameters = root_params
-                print(f"✓ Root parameters loaded: {len(root_params)} parameters")
-            except Exception as e:
-                print(f"⚠️  Could not load root parameters: {e}")
-
-        # 15. Load root zone temperature parameters (split)
-        root_zone_temp_file = f'{input_dir}/{file_prefix}_root_zone_temperature_parameters.csv'
-        if Path(root_zone_temp_file).exists():
-            try:
-                df = pd.read_csv(root_zone_temp_file)
-                # Store all root zone temperature parameters dynamically
-                root_zone_temp_params = {}
-                for _, row in df.iterrows():
-                    param_name = row['parameter_name']
-                    param_value = row['value']
-                    # Convert to appropriate type
-                    try:
-                        if param_value != param_value:  # Check for NaN
-                            param_value = ""
-                        else:
-                            param_value = float(param_value)
-                    except (ValueError, TypeError):
-                        pass  # Keep as string
-                    root_zone_temp_params[param_name] = param_value
-                    params_loaded.append(f"{param_name}={param_value}")
-                
-                # Add root zone temperature parameters to system_config
-                system_config.root_zone_temperature_parameters = root_zone_temp_params
-                print(f"✓ Root zone temperature parameters loaded: {len(root_zone_temp_params)} parameters")
-            except Exception as e:
-                print(f"⚠️  Could not load root zone temperature parameters: {e}")
-
-        # 16. Load system parameters
-        system_params_file = f'{input_dir}/{file_prefix}_system_parameters.csv'
-        if Path(system_params_file).exists():
-            try:
-                df = pd.read_csv(system_params_file)
-                # Store all system parameters dynamically
-                system_params = {}
-                for _, row in df.iterrows():
-                    param_name = row['parameter_name']
-                    param_value = row['value']
-                    # Convert to appropriate type
-                    try:
-                        if param_value != param_value:  # Check for NaN
-                            param_value = ""
-                        else:
-                            param_value = float(param_value)
-                    except (ValueError, TypeError):
-                        pass  # Keep as string
-                    system_params[param_name] = param_value
-                    params_loaded.append(f"{param_name}={param_value}")
-                
-                # Add system parameters to system_config
-                system_config.system_parameters = system_params
-                print(f"✓ System parameters loaded: {len(system_params)} parameters")
-            except Exception as e:
-                print(f"⚠️  Could not load system parameters: {e}")
-
-        # 17. Load water parameters
-        water_params_file = f'{input_dir}/{file_prefix}_water_parameters.csv'
-        if Path(water_params_file).exists():
-            try:
-                df = pd.read_csv(water_params_file)
-                # Store all water parameters dynamically
-                water_params = {}
-                for _, row in df.iterrows():
-                    param_name = row['parameter_name']
-                    param_value = row['value']
-                    # Convert to appropriate type
-                    try:
-                        if param_value != param_value:  # Check for NaN
-                            continue
-                        water_params[param_name] = float(param_value)
-                        params_loaded.append(f"{param_name}={float(param_value)}")
-                    except (ValueError, TypeError):
-                        try:
-                            water_params[param_name] = str(param_value)
-                            params_loaded.append(f"{param_name}={param_value}")
-                        except Exception:
-                            continue
-                
-                # Add water parameters to system_config
-                system_config.water_parameters = water_params
-                print(f"✓ Water parameters loaded: {len(water_params)} parameters")
-            except Exception as e:
-                print(f"⚠️  Could not load water parameters: {e}")
-
-
-
-        # 18. Load model constants
-        model_constants_file = f'{input_dir}/{file_prefix}_model_constants.csv'
-        if Path(model_constants_file).exists():
-            try:
-                df = pd.read_csv(model_constants_file)
-                # Store all model constants dynamically
-                model_constants = {}
-                for _, row in df.iterrows():
-                    constant_name = row['constant_name']
-                    constant_value = row['value']
-                    # Convert to appropriate type
-                    try:
-                        if constant_value != constant_value:  # Check for NaN
-                            continue
-                        model_constants[constant_name] = float(constant_value)
-                        params_loaded.append(f"{constant_name}={float(constant_value)}")
-                    except (ValueError, TypeError):
-                        try:
-                            model_constants[constant_name] = str(constant_value)
-                            params_loaded.append(f"{constant_name}={constant_value}")
-                        except Exception:
-                            continue
-                
-                # Add model constants to system_config
-                system_config.model_constants = model_constants
-                print(f"✓ Model constants loaded: {len(model_constants)} parameters")
-            except Exception as e:
-                print(f"⚠️  Could not load model constants: {e}")
-
-        # 19. Load system settings
-        system_settings_file = f'{input_dir}/{file_prefix}_system_settings.csv'
-        if Path(system_settings_file).exists():
-            try:
-                df = pd.read_csv(system_settings_file)
-                # Store all system settings dynamically
-                system_settings = {}
-                for _, row in df.iterrows():
-                    setting_name = row['setting_name']
-                    setting_value = row['value']
-                    # Convert to appropriate type
-                    try:
-                        if pd.isna(setting_value):  # Check for NaN
-                            continue
-                        # Try to convert to float first
-                        try:
-                            system_settings[setting_name] = float(setting_value)
-                            params_loaded.append(f"{setting_name}={float(setting_value)}")
-                        except (ValueError, TypeError):
-                            # Keep as string if not numeric
-                            system_settings[setting_name] = str(setting_value)
-                            params_loaded.append(f"{setting_name}={setting_value}")
-                    except Exception:
-                        continue
-                
-                # Add system settings to system_config
-                system_config.system_settings = system_settings
-                print(f"✓ System settings loaded: {len(system_settings)} parameters")
-            except Exception as e:
-                print(f"⚠️  Could not load system settings: {e}")
-
-        # 20. Load experiment settings
-        experiment_settings_file = f'{input_dir}/{file_prefix}_experiment_settings.csv'
-        if Path(experiment_settings_file).exists():
-            try:
-                df = pd.read_csv(experiment_settings_file)
-                # Store all experiment settings dynamically
-                experiment_settings = {}
-                for _, row in df.iterrows():
-                    setting_name = row['setting_name']
-                    setting_value = row['value']
-                    # Convert to appropriate type
-                    try:
-                        if pd.isna(setting_value):  # Check for NaN
-                            continue
-                        # Handle boolean values
-                        if isinstance(setting_value, str) and setting_value.lower() in ['true', 'false']:
-                            experiment_settings[setting_name] = setting_value.lower() == 'true'
-                            params_loaded.append(f"{setting_name}={setting_value}")
-                        else:
-                            # Try to convert to float first
-                            try:
-                                experiment_settings[setting_name] = float(setting_value)
-                                params_loaded.append(f"{setting_name}={float(setting_value)}")
-                            except (ValueError, TypeError):
-                                # Keep as string if not numeric
-                                experiment_settings[setting_name] = str(setting_value)
-                                params_loaded.append(f"{setting_name}={setting_value}")
-                    except Exception:
-                        continue
-                
-                # Add experiment settings to system_config
-                system_config.experiment_settings = experiment_settings
-                print(f"✓ Experiment settings loaded: {len(experiment_settings)} parameters")
-            except Exception as e:
-                print(f"⚠️  Could not load experiment settings: {e}")
-
-        # 21. Load leaf development parameters
-        leaf_development_file = f'{input_dir}/{file_prefix}_leaf_development_parameters.csv'
-        if Path(leaf_development_file).exists():
-            try:
-                df = pd.read_csv(leaf_development_file)
-                # Store all leaf development parameters dynamically
-                leaf_development_params = {}
-                for _, row in df.iterrows():
-                    param_name = row['parameter_name']
-                    param_value = row['value']
-                    # Convert to appropriate type
-                    try:
-                        if param_value != param_value:  # Check for NaN
-                            continue
-                        leaf_development_params[param_name] = float(param_value)
-                        params_loaded.append(f"{param_name}={float(param_value)}")
-                    except (ValueError, TypeError):
-                        leaf_development_params[param_name] = str(param_value)
-                        params_loaded.append(f"{param_name}={param_value}")
-                
-                # Add leaf development parameters to system_config
-                system_config.leaf_development_parameters = leaf_development_params
-                print(f"✓ Leaf development parameters loaded: {len(leaf_development_params)} parameters")
-            except Exception as e:
-                print(f"⚠️  Could not load leaf development parameters: {e}")
-
-        if params_loaded:
-            print(f"📊 Successfully loaded {len(params_loaded)} parameters from CSV files")
-        else:
-            print("❌ NO parameters loaded from CSV - check file paths and contents")
+            print(f"❌ Error loading master parameters file: {e}")
+            return
             
     except Exception as e:
         print(f"❌ CSV loading failed: {e}")

@@ -194,12 +194,11 @@ class PhotosynthesisModel:
         rd = self._arrhenius_temp_response(self.params.rd_25, self.params.ear, temp_c)
         
         # Load LAI thresholds from CSV configuration
-        enzyme_saturation_lai = 5.0  # Default
-        light_penetration_lai = 6.0  # Default
+        enzyme_saturation_lai = config_dict.get('enzyme_saturation_lai')
+        light_penetration_lai = config_dict.get('light_penetration_lai')
         
-        if config_dict:
-            enzyme_saturation_lai = config_dict.get('enzyme_saturation_lai', 5.0)
-            light_penetration_lai = config_dict.get('light_penetration_lai', 6.0)
+        if enzyme_saturation_lai is None or light_penetration_lai is None:
+            raise ValueError("❌ LAI thresholds must be provided in CSV configuration - no hardcoded defaults allowed")
         
         # Real-world enzyme saturation at high LAI
         # RuBisCO and electron transport capacity don't scale infinitely with leaf area
@@ -279,26 +278,36 @@ class PhotosynthesisModel:
 
 
 def create_lettuce_photosynthesis_model(system_config=None) -> PhotosynthesisModel:
-    """Create photosynthesis model with lettuce-specific parameters from CSV config.
+    """Create photosynthesis model with lettuce-specific parameters from CSV config only.
     
     Args:
         system_config: System configuration object containing CSV-loaded parameters
         
     Returns:
         PhotosynthesisModel configured with CSV parameters
+        
+    Raises:
+        ValueError: If CSV parameters are missing or invalid
     """
-    try:
-        # Get photosynthesis parameters from CSV data loaded in system_config
-        photosynthesis_params = getattr(system_config, 'photosynthesis_parameters', {})
+    if system_config is None:
+        raise ValueError("❌ system_config is required - no hardcoded defaults allowed")
         
-        # Create parameters from CSV config
-        parameters = PhotosynthesisParameters.from_config(photosynthesis_params)
-        return PhotosynthesisModel(parameters)
-        
-    except Exception as e:
-        print(f"Warning: Could not load CSV photosynthesis parameters: {e}")
-        print("Using default photosynthesis parameters")
-        return PhotosynthesisModel()
+    # Get photosynthesis parameters from CSV data loaded in system_config
+    photosynthesis_params = getattr(system_config, 'photosynthesis_parameters', {})
+    
+    if not photosynthesis_params:
+        raise ValueError("❌ photosynthesis_parameters missing from CSV - no fallback defaults allowed")
+    
+    # Validate required CSV parameters
+    required_params = ['kc', 'ko', 'gamma_star', 'jmax_25', 'vcmax_25', 'theta', 'alpha', 'rd_25', 'eaj', 'eav', 'ear', 'phi_psii', 'r', 'ci_fraction', 'o2_mmol_mol']
+    missing_params = [p for p in required_params if p not in photosynthesis_params]
+    if missing_params:
+        available_params = list(photosynthesis_params.keys())
+        raise ValueError(f"❌ Missing required photosynthesis parameters in CSV: {missing_params}. Available: {available_params}")
+    
+    # Create parameters from CSV config only
+    parameters = PhotosynthesisParameters.from_config(photosynthesis_params)
+    return PhotosynthesisModel(parameters)
 
 
 

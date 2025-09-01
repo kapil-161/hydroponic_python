@@ -46,6 +46,7 @@ class EnvironmentalSetpoints:
     # Photoperiod settings
     light_hours: float      # hours per day
     light_intensity: float # μmol/m²/s PPFD
+    co2_enrichment_start_hour: float  # hour to start CO2 enrichment
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'EnvironmentalSetpoints':
@@ -62,7 +63,8 @@ class EnvironmentalSetpoints:
             ambient_co2=config_dict['ambient_co2'],
             co2_tolerance=config_dict['co2_tolerance'],
             light_hours=config_dict['light_hours'],
-            light_intensity=config_dict['light_intensity_control']
+            light_intensity=config_dict['light_intensity_control'],
+            co2_enrichment_start_hour=config_dict['co2_enrichment_start_hour']
         )
 
 
@@ -553,7 +555,10 @@ class EnvironmentalControlSystem:
             Dict with control actions and environmental adjustments
         """
         # Determine light status and photoperiod time
-        light_start_hour = 6.0  # Default 6 AM
+        # Use CO2 enrichment start hour as light start hour
+        light_start_hour = getattr(self.setpoints, 'co2_enrichment_start_hour', None)
+        if light_start_hour is None:
+            raise ValueError("❌ CO2 enrichment start hour must be provided in CSV configuration - no hardcoded defaults allowed")
         light_end_hour = light_start_hour + self.setpoints.light_hours
         
         # Handle day rollover for photoperiod
@@ -804,8 +809,14 @@ def create_lettuce_environmental_control_system(system_config=None) -> Environme
         # Get environmental control parameters from CSV data loaded in system_config
         if system_config:
             env_setpoints = getattr(system_config, 'environmental_control_parameters', {})
-            if env_setpoints:
-                setpoints = EnvironmentalSetpoints.from_config(env_setpoints)
+            env_params = getattr(system_config, 'environment_parameters', {})
+            
+            # Combine environmental control and environment parameters
+            combined_params = env_setpoints.copy()
+            combined_params.update(env_params)
+            
+            if combined_params:
+                setpoints = EnvironmentalSetpoints.from_config(combined_params)
                 
             env_equipment = getattr(system_config, 'control_equipment_parameters', {})
             if env_equipment:

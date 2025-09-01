@@ -90,7 +90,9 @@ class NutrientConcentrationModel:
         """Calculate EC from individual nutrient concentrations using EC factors."""
         total_ec = 0.0
         for nutrient_id, concentration in nutrient_concentrations.items():
-            ec_factor = self.ec_factors.get(nutrient_id, 0.001)  # Default factor
+            ec_factor = self.ec_factors.get(nutrient_id)
+            if ec_factor is None:
+                raise ValueError(f"❌ EC factor for {nutrient_id} must be provided in CSV configuration - no hardcoded defaults allowed")
             total_ec += concentration * ec_factor
         return total_ec
     

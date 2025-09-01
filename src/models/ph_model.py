@@ -146,7 +146,8 @@ class HydroponicPHModel:
         if co2_molar > 1e-10:  # Avoid division by zero
             ph = pka_corrected + math.log10(hco3_molar / co2_molar)
         else:
-            ph = pka_corrected + 2.0  # Default if no CO2
+            # pH calculation requires CO2 concentration - no hardcoded defaults allowed
+            raise ValueError("❌ CO2 concentration must be provided for pH calculation - no hardcoded defaults allowed")
             
         return max(4.0, min(9.0, ph))  # Physically reasonable limits
     

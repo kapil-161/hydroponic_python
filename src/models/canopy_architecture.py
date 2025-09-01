@@ -198,7 +198,7 @@ class CanopyArchitectureModel:
             # 45-degree leaves
             x = 1.33
         else:
-            x = 1.0  # Default to spherical
+            raise ValueError("❌ Leaf angle distribution parameter must be provided in CSV configuration - no hardcoded defaults allowed")
         
         # Calculate extinction coefficient for direct beam
         if abs(math.cos(zenith_rad)) > 0.001:

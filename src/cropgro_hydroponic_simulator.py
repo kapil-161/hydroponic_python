@@ -186,13 +186,13 @@ class CROPGROHydroponicSimulator:
         
         # 1. GENETIC PARAMETERS SYSTEM
         logger.info("Loading genetic parameters system...")
-        self.genetic_db, self.ge_model, self.breeding_assistant = create_lettuce_genetic_system()
+        self.genetic_db, self.ge_model, self.breeding_assistant = create_lettuce_genetic_system(system_config)
         self.current_cultivar = cultivar_id
         self.cultivar_profile = self.genetic_db.get_cultivar(cultivar_id)
         
         if not self.cultivar_profile:
-            logger.warning(f"Cultivar {cultivar_id} not found, using default")
-            self.current_cultivar = 'HYDRO_001'
+            logger.warning(f"Cultivar {cultivar_id} not found, using default CSV cultivar")
+            self.current_cultivar = 'DEFAULT_CSV_CULTIVAR'
             self.cultivar_profile = self.genetic_db.get_cultivar(self.current_cultivar)
         
         # Apply dynamic genetic parameters from CSV if available
@@ -235,8 +235,8 @@ class CROPGROHydroponicSimulator:
         
         if nitrogen_params:
             from .models.nitrogen_balance import PlantNitrogenBalanceModel, NitrogenBalanceParameters
-            # Create dynamic nitrogen balance parameters
-            nb_params = NitrogenBalanceParameters()
+            # Create dynamic nitrogen balance parameters from CSV data
+            nb_params = NitrogenBalanceParameters.from_config(nitrogen_params)
             
             # Map CSV parameters to model parameters - these affect key nitrogen processes
             if 'uptake_efficiency' in nitrogen_params:

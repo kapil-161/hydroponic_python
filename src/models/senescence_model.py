@@ -18,7 +18,7 @@ Research basis:
 """
 
 import numpy as np
-from typing import Dict, Tuple, Optional, Any, List
+from typing import Dict, Tuple, Any, List
 from dataclasses import dataclass
 from enum import Enum
 
@@ -186,8 +186,8 @@ class AdvancedSenescenceModel:
     and recovery under favorable conditions.
     """
     
-    def __init__(self, parameters: Optional[SenescenceParameters] = None):
-        self.params = parameters or SenescenceParameters()
+    def __init__(self, parameters: SenescenceParameters):
+        self.params = parameters
         self.cohort_states: Dict[int, LeafCohortSenescence] = {}
         self.stress_history: Dict[str, List[float]] = {
             'water': [],
@@ -431,11 +431,9 @@ class AdvancedSenescenceModel:
         for cohort_id, data in cohort_data.items():
             # Initialize cohort if not exists
             if cohort_id not in self.cohort_states:
-                initial_nutrients = data.get('nutrient_content', {
-                    'nitrogen': 0.04,  # Default N content
-                    'phosphorus': 0.01,
-                    'potassium': 0.03
-                })
+                initial_nutrients = data.get('nutrient_content')
+                if initial_nutrients is None:
+                    raise ValueError("❌ Initial nutrient content must be provided in CSV configuration - no hardcoded defaults allowed")
                 self.initialize_cohort(cohort_id, initial_nutrients)
             
             cohort_state = self.cohort_states[cohort_id]
@@ -566,8 +564,6 @@ def create_lettuce_senescence_model(system_config=None) -> AdvancedSenescenceMod
         return AdvancedSenescenceModel(parameters)
         
     except Exception as e:
-        print(f"Warning: Could not load CSV senescence parameters: {e}")
-        print("Using default senescence parameters")
-        return AdvancedSenescenceModel()
+        raise ValueError(f"❌ Failed to load CSV senescence parameters: {e}. System requires CSV data - no hardcoded defaults allowed.")
 
 

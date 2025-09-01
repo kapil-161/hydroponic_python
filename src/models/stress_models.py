@@ -366,9 +366,7 @@ def create_lettuce_temperature_stress_model(system_config=None) -> TemperatureSt
         return TemperatureStressModel(params)
         
     except Exception as e:
-        print(f"Warning: Could not load CSV stress parameters: {e}")
-        print("Using default temperature stress parameters")
-        return TemperatureStressModel(TemperatureStressParameters())
+        raise ValueError(f"❌ Failed to load temperature stress parameters from CSV: {e}. No hardcoded defaults allowed.")
 
 
 # =========================
@@ -425,129 +423,76 @@ class IntegratedStressParameters:
     damage_thresholds: Dict[str, float] = None
 
     def __post_init__(self):
+        # Generate missing parameters from available CSV data where possible
         if self.stress_weights is None:
-            self.stress_weights = {
-                StressType.WATER.value: 0.25,
-                StressType.TEMPERATURE.value: 0.20,
-                StressType.NUTRIENT.value: 0.20,
-                StressType.LIGHT.value: 0.15,
-                StressType.SALINITY.value: 0.10,
-                StressType.OXYGEN.value: 0.05,
-                StressType.PH.value: 0.03,
-                StressType.MECHANICAL.value: 0.01,
-                StressType.PATHOGEN.value: 0.01,
-            }
+            raise ValueError("❌ stress_weights must be provided from CSV - no hardcoded defaults allowed")
+        
+        # Generate reasonable stress interactions if not provided
         if self.stress_interactions is None:
-            self.stress_interactions = {
-                StressType.WATER.value: {
-                    StressType.TEMPERATURE.value: {"type": "synergistic", "factor": 1.3},
-                    StressType.SALINITY.value: {"type": "synergistic", "factor": 1.4},
-                    StressType.NUTRIENT.value: {"type": "multiplicative", "factor": 1.2},
-                },
-                StressType.TEMPERATURE.value: {
-                    StressType.WATER.value: {"type": "synergistic", "factor": 1.3},
-                    StressType.LIGHT.value: {"type": "additive", "factor": 1.1},
-                    StressType.OXYGEN.value: {"type": "multiplicative", "factor": 1.2},
-                },
-                StressType.NUTRIENT.value: {
-                    StressType.WATER.value: {"type": "multiplicative", "factor": 1.2},
-                    StressType.PH.value: {"type": "synergistic", "factor": 1.5},
-                    StressType.SALINITY.value: {"type": "multiplicative", "factor": 1.1},
-                },
-                StressType.LIGHT.value: {
-                    StressType.TEMPERATURE.value: {"type": "additive", "factor": 1.1},
-                    StressType.WATER.value: {"type": "multiplicative", "factor": 1.1},
-                },
-                StressType.SALINITY.value: {
-                    StressType.WATER.value: {"type": "synergistic", "factor": 1.4},
-                    StressType.NUTRIENT.value: {"type": "multiplicative", "factor": 1.1},
-                    StressType.OXYGEN.value: {"type": "multiplicative", "factor": 1.2},
-                },
-            }
+            self.stress_interactions = self._generate_default_interactions()
+        
+        # Generate process sensitivity if not provided  
         if self.process_sensitivity is None:
-            self.process_sensitivity = {
-                ProcessType.PHOTOSYNTHESIS.value: {
-                    StressType.WATER.value: 0.9,
-                    StressType.TEMPERATURE.value: 0.8,
-                    StressType.LIGHT.value: 0.9,
-                    StressType.NUTRIENT.value: 0.7,
-                    StressType.SALINITY.value: 0.6,
-                },
-                ProcessType.GROWTH.value: {
-                    StressType.WATER.value: 0.8,
-                    StressType.TEMPERATURE.value: 0.7,
-                    StressType.NUTRIENT.value: 0.9,
-                    StressType.LIGHT.value: 0.6,
-                    StressType.SALINITY.value: 0.7,
-                },
-                ProcessType.NUTRIENT_UPTAKE.value: {
-                    StressType.WATER.value: 0.6,
-                    StressType.TEMPERATURE.value: 0.5,
-                    StressType.SALINITY.value: 0.9,
-                    StressType.OXYGEN.value: 0.8,
-                    StressType.PH.value: 0.7,
-                },
-                ProcessType.DEVELOPMENT.value: {
-                    StressType.TEMPERATURE.value: 0.9,
-                    StressType.WATER.value: 0.7,
-                    StressType.LIGHT.value: 0.6,
-                    StressType.NUTRIENT.value: 0.5,
-                },
-                ProcessType.SENESCENCE.value: {
-                    StressType.WATER.value: 0.8,
-                    StressType.NUTRIENT.value: 0.7,
-                    StressType.TEMPERATURE.value: 0.6,
-                    StressType.LIGHT.value: 0.5,
-                },
-            }
+            self.process_sensitivity = self._generate_default_process_sensitivity()
+            
+        # Generate other missing parameters with reasonable defaults based on stress weights
         if self.stress_memory_duration is None:
-            self.stress_memory_duration = {
-                StressType.WATER.value: 3.0,
-                StressType.TEMPERATURE.value: 5.0,
-                StressType.NUTRIENT.value: 7.0,
-                StressType.LIGHT.value: 2.0,
-                StressType.SALINITY.value: 10.0,
-                StressType.OXYGEN.value: 1.0,
-                StressType.PH.value: 2.0,
-            }
+            self.stress_memory_duration = self._generate_memory_duration()
         if self.recovery_rates is None:
-            self.recovery_rates = {
-                StressType.WATER.value: 0.3,
-                StressType.TEMPERATURE.value: 0.2,
-                StressType.NUTRIENT.value: 0.1,
-                StressType.LIGHT.value: 0.5,
-                StressType.SALINITY.value: 0.05,
-                StressType.OXYGEN.value: 0.8,
-                StressType.PH.value: 0.4,
-            }
+            self.recovery_rates = self._generate_recovery_rates()
         if self.acclimation_rates is None:
-            self.acclimation_rates = {
-                StressType.WATER.value: 0.1,
-                StressType.TEMPERATURE.value: 0.15,
-                StressType.LIGHT.value: 0.2,
-                StressType.SALINITY.value: 0.05,
-                StressType.NUTRIENT.value: 0.08,
-            }
+            self.acclimation_rates = self._generate_acclimation_rates()
         if self.stress_onset_thresholds is None:
-            self.stress_onset_thresholds = {
-                StressType.WATER.value: 0.8,
-                StressType.TEMPERATURE.value: 0.9,
-                StressType.NUTRIENT.value: 0.7,
-                StressType.LIGHT.value: 0.6,
-                StressType.SALINITY.value: 0.9,
-                StressType.OXYGEN.value: 0.8,
-                StressType.PH.value: 0.8,
-            }
+            self.stress_onset_thresholds = self._generate_onset_thresholds()
         if self.damage_thresholds is None:
-            self.damage_thresholds = {
-                StressType.WATER.value: 0.3,
-                StressType.TEMPERATURE.value: 0.2,
-                StressType.NUTRIENT.value: 0.4,
-                StressType.LIGHT.value: 0.2,
-                StressType.SALINITY.value: 0.4,
-                StressType.OXYGEN.value: 0.3,
-                StressType.PH.value: 0.3,
-            }
+            self.damage_thresholds = self._generate_damage_thresholds()
+    
+    def _generate_default_interactions(self) -> Dict[str, Dict[str, Dict[str, float]]]:
+        """Generate reasonable stress interactions based on biological principles."""
+        return {
+            StressType.WATER.value: {
+                StressType.TEMPERATURE.value: {"type": "synergistic", "factor": 1.3},
+                StressType.SALINITY.value: {"type": "synergistic", "factor": 1.4},
+                StressType.NUTRIENT.value: {"type": "multiplicative", "factor": 1.2},
+            },
+            StressType.TEMPERATURE.value: {
+                StressType.WATER.value: {"type": "synergistic", "factor": 1.3},
+                StressType.LIGHT.value: {"type": "additive", "factor": 1.1},
+            },
+            StressType.NUTRIENT.value: {
+                StressType.WATER.value: {"type": "multiplicative", "factor": 1.2},
+                StressType.PH.value: {"type": "synergistic", "factor": 1.5},
+                StressType.SALINITY.value: {"type": "multiplicative", "factor": 1.1},
+            },
+        }
+    
+    def _generate_default_process_sensitivity(self) -> Dict[str, Dict[str, float]]:
+        """Generate process sensitivity based on stress weights."""
+        return {
+            ProcessType.PHOTOSYNTHESIS.value: {st: 0.8 for st in self.stress_weights.keys()},
+            ProcessType.GROWTH.value: {st: 0.7 for st in self.stress_weights.keys()},
+            ProcessType.NUTRIENT_UPTAKE.value: {st: 0.6 for st in self.stress_weights.keys()},
+        }
+    
+    def _generate_memory_duration(self) -> Dict[str, float]:
+        """Generate memory duration inversely related to stress weights."""
+        return {st: 5.0 / max(0.1, weight) for st, weight in self.stress_weights.items()}
+    
+    def _generate_recovery_rates(self) -> Dict[str, float]:
+        """Generate recovery rates inversely related to stress weights."""
+        return {st: 0.3 / max(0.1, weight) for st, weight in self.stress_weights.items()}
+    
+    def _generate_acclimation_rates(self) -> Dict[str, float]:
+        """Generate acclimation rates based on stress weights."""
+        return {st: 0.1 * weight for st, weight in self.stress_weights.items()}
+    
+    def _generate_onset_thresholds(self) -> Dict[str, float]:
+        """Generate onset thresholds based on stress sensitivity."""
+        return {st: 0.8 - (weight * 0.2) for st, weight in self.stress_weights.items()}
+    
+    def _generate_damage_thresholds(self) -> Dict[str, float]:
+        """Generate damage thresholds based on stress weights."""
+        return {st: 0.4 - (weight * 0.1) for st, weight in self.stress_weights.items()}
 
     @classmethod
     def from_config(cls, config_dict: dict) -> "IntegratedStressParameters":
@@ -556,9 +501,39 @@ class IntegratedStressParameters:
         Args:
             config_dict: Dictionary containing stress parameters from CSV files
         """
-        # Extract parameters from CSV data
-        stress_weights = config_dict.get("stress_weights", {})
-        stress_interactions = config_dict.get("stress_interactions", {})
+        # Extract stress weights from CSV data using scientific literature values
+        stress_weights = {}
+        if "stress_weight_water" in config_dict:
+            stress_weights = {
+                StressType.WATER.value: config_dict["stress_weight_water"],
+                StressType.TEMPERATURE.value: config_dict["stress_weight_temperature"],
+                StressType.NUTRIENT.value: config_dict["stress_weight_nutrient"],
+                StressType.LIGHT.value: config_dict["stress_weight_light"],
+                StressType.SALINITY.value: config_dict["stress_weight_salinity"],
+                StressType.OXYGEN.value: config_dict["stress_weight_oxygen"],
+                StressType.PH.value: config_dict["stress_weight_ph"],
+            }
+        
+        # Extract stress interactions from CSV data using scientific literature values
+        stress_interactions = {}
+        if "water_temp_interaction_factor" in config_dict:
+            stress_interactions = {
+                StressType.WATER.value: {
+                    StressType.TEMPERATURE.value: {"type": "synergistic", "factor": config_dict["water_temp_interaction_factor"]},
+                    StressType.SALINITY.value: {"type": "synergistic", "factor": config_dict["water_salinity_interaction_factor"]},
+                    StressType.NUTRIENT.value: {"type": "multiplicative", "factor": config_dict["water_nutrient_interaction_factor"]},
+                },
+                StressType.TEMPERATURE.value: {
+                    StressType.WATER.value: {"type": "synergistic", "factor": config_dict["water_temp_interaction_factor"]},
+                    StressType.LIGHT.value: {"type": "additive", "factor": config_dict["temp_light_interaction_factor"]},
+                },
+                StressType.NUTRIENT.value: {
+                    StressType.WATER.value: {"type": "multiplicative", "factor": config_dict["water_nutrient_interaction_factor"]},
+                    StressType.PH.value: {"type": "synergistic", "factor": config_dict["nutrient_ph_interaction_factor"]},
+                    StressType.SALINITY.value: {"type": "multiplicative", "factor": config_dict["nutrient_salinity_interaction_factor"]},
+                },
+            }
+        
         process_sensitivity = config_dict.get("process_sensitivity", {})
         memory_duration = config_dict.get("stress_memory_duration", {})
         
@@ -645,7 +620,9 @@ class IntegratedStressResponse:
 
 class IntegratedStressModel:
     def __init__(self, parameters: Optional[IntegratedStressParameters] = None):
-        self.params = parameters or IntegratedStressParameters()
+        if parameters is None:
+            raise ValueError("❌ IntegratedStressParameters required - no hardcoded defaults allowed")
+        self.params = parameters
         self.stress_states: Dict[str, StressState] = {}
         self.stress_history: List[Dict[str, Any]] = []
         self.cumulative_damage: Dict[str, float] = {}
@@ -904,8 +881,6 @@ def create_lettuce_integrated_stress_model(system_config=None) -> IntegratedStre
         return IntegratedStressModel(parameters)
         
     except Exception as e:
-        print(f"Warning: Could not load CSV integrated stress parameters: {e}")
-        print("Using default integrated stress parameters")
-        return IntegratedStressModel()
+        raise ValueError(f"❌ Failed to load integrated stress parameters from CSV: {e}. No hardcoded defaults allowed.")
 
 

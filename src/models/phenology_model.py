@@ -457,19 +457,17 @@ class ComprehensivePhenologyModel:
         if transition_key in self.params.thermal_requirements:
             return self.params.thermal_requirements[transition_key]
         
-        # Default requirements from CSV thermal_requirements
-        defaults = {
-            "vegetative": self.params.thermal_requirements["vegetative_default"],
-            "head_formation": self.params.thermal_requirements["head_formation_default"],
-            "reproductive": self.params.thermal_requirements["reproductive_default"]
-        }
+        # Get requirements from CSV thermal_requirements - no hardcoded defaults allowed
+        defaults = self.params.thermal_requirements.get("transition_defaults")
+        if defaults is None:
+            raise ValueError("❌ Transition defaults must be provided in CSV thermal requirements - no hardcoded defaults allowed")
         
         if next_stage.value.startswith('V') or next_stage == LettuceGrowthStage.EMERGENCE:
-            return defaults["vegetative"]
+            return defaults.get("vegetative")
         elif next_stage in [LettuceGrowthStage.HEAD_INITIATION, LettuceGrowthStage.HEAD_DEVELOPMENT]:
-            return defaults["head_formation"]
+            return defaults.get("head_formation")
         else:
-            return defaults["reproductive"]
+            return defaults.get("reproductive")
     
     def daily_update(self, temperature: float, daylength: float,
                     water_stress: float = 1.0, temperature_stress: float = 1.0) -> PhenologyResponse:

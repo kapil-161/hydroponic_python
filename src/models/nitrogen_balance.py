@@ -74,103 +74,22 @@ class NitrogenBalanceParameters:
     root_zone_exploration: float = 0.8       # Fraction of nutrient zone accessed
     
     def __post_init__(self):
+        # Initialize with basic structures if not provided
+        # This allows the system to work with existing CSV structure
         if self.uptake_kinetics is None:
-            # Default Michaelis-Menten kinetics for each N form
-            self.uptake_kinetics = {
-                NitrogenForm.NITRATE.value: {
-                    "vmax": 0.8,     # Maximum uptake rate (g N/g root/day)
-                    "km": 20.0,      # Half-saturation constant (mg N/L)
-                    "min_conc": 5.0, # Minimum effective concentration
-                    "inhibition_ki": 100.0  # Competitive inhibition constant
-                },
-                NitrogenForm.AMMONIUM.value: {
-                    "vmax": 1.2,
-                    "km": 8.0,
-                    "min_conc": 2.0,
-                    "inhibition_ki": 50.0
-                },
-                NitrogenForm.AMINO_ACIDS.value: {
-                    "vmax": 0.3,
-                    "km": 5.0,
-                    "min_conc": 1.0,
-                    "inhibition_ki": 25.0
-                },
-                NitrogenForm.UREA.value: {
-                    "vmax": 0.6,
-                    "km": 15.0,
-                    "min_conc": 3.0,
-                    "inhibition_ki": 75.0
-                }
-            }
+            self.uptake_kinetics = {}
         
         if self.allocation_coefficients is None:
-            # Allocation to different plant organs by growth stage
-            self.allocation_coefficients = {
-                "vegetative": {
-                    "leaves": 0.60,      # High leaf allocation during vegetative growth
-                    "stems": 0.20,
-                    "roots": 0.20
-                },
-                "reproductive": {
-                    "leaves": 0.40,
-                    "stems": 0.15,
-                    "roots": 0.15,
-                    "reproductive": 0.30  # High allocation to reproductive organs
-                },
-                "senescence": {
-                    "leaves": 0.20,
-                    "stems": 0.10,
-                    "roots": 0.30,
-                    "reproductive": 0.40
-                }
-            }
+            self.allocation_coefficients = {}
         
         if self.critical_n_concentrations is None:
-            # Critical N concentrations for different organs (g N/g dry mass)
-            self.critical_n_concentrations = {
-                "leaves": {
-                    "minimum": 0.025,    # Below this = severe deficiency
-                    "critical": 0.040,   # Critical concentration
-                    "optimal": 0.055,    # Optimal concentration
-                    "maximum": 0.070     # Above this = luxury consumption
-                },
-                "stems": {
-                    "minimum": 0.008,
-                    "critical": 0.015,
-                    "optimal": 0.025,
-                    "maximum": 0.035
-                },
-                "roots": {
-                    "minimum": 0.012,
-                    "critical": 0.020,
-                    "optimal": 0.030,
-                    "maximum": 0.045
-                },
-                "reproductive": {
-                    "minimum": 0.015,
-                    "critical": 0.025,
-                    "optimal": 0.040,
-                    "maximum": 0.055
-                }
-            }
+            self.critical_n_concentrations = {}
         
         if self.remobilization_rates is None:
-            # Daily remobilization rates from different pools (fraction/day)
-            self.remobilization_rates = {
-                NitrogenPool.STORAGE.value: 0.10,    # Storage N readily available
-                NitrogenPool.METABOLIC.value: 0.05,  # Metabolic N less available
-                NitrogenPool.STRUCTURAL.value: 0.01, # Structural N minimally available
-                NitrogenPool.TRANSPORT.value: 0.20   # Transport pool highly mobile
-            }
+            self.remobilization_rates = {}
         
         if self.remobilization_efficiency is None:
-            # Efficiency of N remobilization from different organs
-            self.remobilization_efficiency = {
-                "leaves": 0.75,       # High efficiency from leaves
-                "stems": 0.45,        # Moderate from stems
-                "roots": 0.35,        # Lower from roots
-                "reproductive": 0.10  # Minimal from reproductive organs
-            }
+            self.remobilization_efficiency = {}
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'NitrogenBalanceParameters':
@@ -218,14 +137,11 @@ class OrganNitrogenState:
         if self.dry_mass > 0:
             self.nitrogen_concentration = self.total_nitrogen / self.dry_mass
         
-        # Distribute total N among pools if not specified
+        # Initialize pools if not specified - will be calculated dynamically
         if (self.structural_n + self.metabolic_n + 
             self.storage_n + self.transport_n) == 0.0:
-            # Default distribution
-            self.structural_n = self.total_nitrogen * 0.4   # 40% structural
-            self.metabolic_n = self.total_nitrogen * 0.35   # 35% metabolic
-            self.storage_n = self.total_nitrogen * 0.20     # 20% storage
-            self.transport_n = self.total_nitrogen * 0.05   # 5% transport
+            # Leave pools at 0.0 - they will be calculated during simulation
+            pass
 
 
 @dataclass
@@ -480,12 +396,16 @@ class PlantNitrogenBalanceModel:
                 # Calculate weighted allocation
                 total_weighted_demand = 0.0
                 for organ_name, demand in nitrogen_demand.items():
-                    priority = priorities.get(organ_name, 0.25)  # Default priority
+                    priority = priorities.get(organ_name)
+                    if priority is None:
+                        raise ValueError(f"❌ Nitrogen allocation priority for {organ_name} must be provided in CSV configuration - no hardcoded defaults allowed")
                     total_weighted_demand += demand * priority
                 
                 for organ_name, demand in nitrogen_demand.items():
                     if total_weighted_demand > 0:
-                        priority = priorities.get(organ_name, 0.25)
+                        priority = priorities.get(organ_name)
+                        if priority is None:
+                            raise ValueError(f"❌ Nitrogen allocation priority for {organ_name} must be provided in CSV configuration - no hardcoded defaults allowed")
                         weighted_fraction = (demand * priority) / total_weighted_demand
                         allocated_n = available_nitrogen * weighted_fraction
                         allocated_by_organ[organ_name] = allocated_n

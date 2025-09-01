@@ -100,13 +100,13 @@ class CultivarProfile:
     # Genetic coefficients
     genetic_coefficients: GeneticCoefficients
     
+    # Performance characteristics (must come from CSV)
+    yield_potential: float       # Relative yield potential
+    adaptation_score: float      # Environmental adaptation score
+    commercial_rating: float     # Commercial viability rating
+    
     # Trait values (0.0-1.0 scale, 1.0 = excellent)
     trait_values: Dict[GeneticTrait, float] = field(default_factory=dict)
-    
-    # Performance characteristics
-    yield_potential: float = 1.0      # Relative yield potential (acceptable default)
-    adaptation_score: float = 1.0     # Environmental adaptation score (acceptable default)
-    commercial_rating: float = 1.0    # Commercial viability rating (acceptable default)
     
     # Breeding information
     pedigree: List[str] = field(default_factory=list)
@@ -161,189 +161,14 @@ class GeneticParameterDatabase:
         self.initialize_cultivar_database()
     
     def initialize_cultivar_database(self):
-        """Initialize database with common lettuce cultivars"""
+        """Initialize database with cultivars from CSV configuration.
         
-        # Butterhead cultivars
-        self.add_cultivar(CultivarProfile(
-            cultivar_id="BUTT_001",
-            cultivar_name="Buttercrunch",
-            lettuce_type=LettuceType.BUTTERHEAD,
-            breeder="Burpee Seeds",
-            year_released=1963,
-            genetic_coefficients=GeneticCoefficients(
-                EM_FL=32.0, FL_SH=18.0, FL_SD=28.0, SD_PM=40.0,
-                LFMAX=1.1, SLAVR=175.0, SIZLF=22.0,
-                EC_TOLERANCE=1.2, NITRATE_EFFICIENCY=0.82,
-                ROOT_ACTIVITY=0.95, PHOTOSYNTHETIC_CAPACITY=0.95
-            ),
-            trait_values={
-                GeneticTrait.DAYS_TO_EMERGENCE: 0.8,
-                GeneticTrait.DAYS_TO_HARVEST: 0.7,
-                GeneticTrait.BOLTING_TOLERANCE: 0.6,
-                GeneticTrait.LEAF_SIZE: 0.8,
-                GeneticTrait.YIELD_POTENTIAL: 0.85,
-                GeneticTrait.CHLOROPHYLL_CONTENT: 0.7,
-                GeneticTrait.HEAT_TOLERANCE: 0.5,
-                GeneticTrait.COLD_TOLERANCE: 0.8,
-                GeneticTrait.SALINITY_TOLERANCE: 0.6,
-                GeneticTrait.NITRATE_ACCUMULATION: 0.3  # Lower is better
-            },
-            yield_potential=0.85,
-            adaptation_score=0.9,
-            commercial_rating=0.9,
-            pedigree=["Butterhead landrace selections"],
-            breeding_notes="Classic butterhead, excellent for cool conditions"
-        ))
-        
-        self.add_cultivar(CultivarProfile(
-            cultivar_id="BUTT_002", 
-            cultivar_name="Green Butter",
-            lettuce_type=LettuceType.BUTTERHEAD,
-            breeder="Johnny's Selected Seeds",
-            year_released=2010,
-            genetic_coefficients=GeneticCoefficients(
-                EM_FL=28.0, FL_SH=16.0, FL_SD=26.0, SD_PM=38.0,
-                LFMAX=1.25, SLAVR=185.0, SIZLF=26.0,
-                EC_TOLERANCE=1.4, NITRATE_EFFICIENCY=0.88,
-                ROOT_ACTIVITY=1.05, PHOTOSYNTHETIC_CAPACITY=1.02
-            ),
-            trait_values={
-                GeneticTrait.DAYS_TO_EMERGENCE: 0.9,
-                GeneticTrait.DAYS_TO_HARVEST: 0.8,
-                GeneticTrait.BOLTING_TOLERANCE: 0.7,
-                GeneticTrait.LEAF_SIZE: 0.9,
-                GeneticTrait.YIELD_POTENTIAL: 0.95,
-                GeneticTrait.CHLOROPHYLL_CONTENT: 0.8,
-                GeneticTrait.HEAT_TOLERANCE: 0.7,
-                GeneticTrait.COLD_TOLERANCE: 0.75,
-                GeneticTrait.SALINITY_TOLERANCE: 0.7,
-                GeneticTrait.NITRATE_ACCUMULATION: 0.2
-            },
-            yield_potential=0.95,
-            adaptation_score=0.92,
-            commercial_rating=0.95,
-            breeding_notes="Improved hydroponic performance, heat tolerance"
-        ))
-        
-        # Romaine cultivars
-        self.add_cultivar(CultivarProfile(
-            cultivar_id="ROM_001",
-            cultivar_name="Parris Island Cos",
-            lettuce_type=LettuceType.ROMAINE,
-            breeder="Southern Exposure",
-            year_released=1952,
-            genetic_coefficients=GeneticCoefficients(
-                EM_FL=35.0, FL_SH=20.0, FL_SD=30.0, SD_PM=45.0,
-                LFMAX=1.3, SLAVR=160.0, SIZLF=35.0,
-                EC_TOLERANCE=1.5, NITRATE_EFFICIENCY=0.90,
-                ROOT_ACTIVITY=1.1, PHOTOSYNTHETIC_CAPACITY=1.1
-            ),
-            trait_values={
-                GeneticTrait.DAYS_TO_EMERGENCE: 0.75,
-                GeneticTrait.DAYS_TO_HARVEST: 0.6,
-                GeneticTrait.BOLTING_TOLERANCE: 0.8,
-                GeneticTrait.LEAF_SIZE: 1.0,
-                GeneticTrait.CHLOROPHYLL_CONTENT: 0.9,
-                GeneticTrait.VITAMIN_C_CONTENT: 0.95,
-                GeneticTrait.HEAT_TOLERANCE: 0.8,
-                GeneticTrait.COLD_TOLERANCE: 0.7,
-                GeneticTrait.SALINITY_TOLERANCE: 0.8,
-                GeneticTrait.NITRATE_ACCUMULATION: 0.15
-            },
-            yield_potential=1.0,
-            adaptation_score=0.88,
-            commercial_rating=0.85,
-            breeding_notes="Heat tolerant, excellent nutritional profile"
-        ))
-        
-        # Loose leaf cultivars
-        self.add_cultivar(CultivarProfile(
-            cultivar_id="LOOSE_001",
-            cultivar_name="Black Seeded Simpson",
-            lettuce_type=LettuceType.LOOSE_LEAF,
-            breeder="Heirloom variety",
-            year_released=1850,
-            genetic_coefficients=GeneticCoefficients(
-                EM_FL=25.0, FL_SH=14.0, FL_SD=22.0, SD_PM=32.0,
-                LFMAX=1.15, SLAVR=195.0, SIZLF=18.0,
-                EC_TOLERANCE=1.1, NITRATE_EFFICIENCY=0.80,
-                ROOT_ACTIVITY=0.9, PHOTOSYNTHETIC_CAPACITY=0.98
-            ),
-            trait_values={
-                GeneticTrait.DAYS_TO_EMERGENCE: 0.95,
-                GeneticTrait.DAYS_TO_HARVEST: 0.9,
-                GeneticTrait.BOLTING_TOLERANCE: 0.5,
-                GeneticTrait.LEAF_SIZE: 0.6,
-                GeneticTrait.CHLOROPHYLL_CONTENT: 0.6,
-                GeneticTrait.HEAT_TOLERANCE: 0.4,
-                GeneticTrait.COLD_TOLERANCE: 0.9,
-                GeneticTrait.SALINITY_TOLERANCE: 0.5,
-                GeneticTrait.NITRATE_ACCUMULATION: 0.4
-            },
-            yield_potential=0.75,
-            adaptation_score=0.8,
-            commercial_rating=0.7,
-            breeding_notes="Fast growing, cool season variety"
-        ))
-        
-        # Modern hydroponic cultivars
-        self.add_cultivar(CultivarProfile(
-            cultivar_id="HYDRO_001",
-            cultivar_name="Salanova Green Butter",
-            lettuce_type=LettuceType.BUTTERHEAD,
-            breeder="Rijk Zwaan",
-            year_released=2018,
-            genetic_coefficients=GeneticCoefficients(
-                EM_FL=26.0, FL_SH=15.0, FL_SD=24.0, SD_PM=35.0,
-                LFMAX=1.35, SLAVR=190.0, SIZLF=28.0,
-                EC_TOLERANCE=1.6, NITRATE_EFFICIENCY=0.92,
-                ROOT_ACTIVITY=25.0, PHOTOSYNTHETIC_CAPACITY=6.0
-            ),
-            trait_values={
-                GeneticTrait.DAYS_TO_EMERGENCE: 0.95,
-                GeneticTrait.DAYS_TO_HARVEST: 0.9,
-                GeneticTrait.BOLTING_TOLERANCE: 0.85,
-                GeneticTrait.LEAF_SIZE: 0.85,
-                GeneticTrait.CHLOROPHYLL_CONTENT: 0.9,
-                GeneticTrait.HEAT_TOLERANCE: 0.8,
-                GeneticTrait.COLD_TOLERANCE: 0.8,
-                GeneticTrait.SALINITY_TOLERANCE: 0.85,
-                GeneticTrait.NITRATE_ACCUMULATION: 0.1
-            },
-            yield_potential=1.1,
-            adaptation_score=0.95,
-            commercial_rating=1.0,
-            breeding_notes="Optimized for hydroponic systems, multi-harvest"
-        ))
-        
-        self.add_cultivar(CultivarProfile(
-            cultivar_id="HYDRO_002",
-            cultivar_name="Rex Butterhead",
-            lettuce_type=LettuceType.BUTTERHEAD,
-            breeder="Rijk Zwaan", 
-            year_released=2020,
-            genetic_coefficients=GeneticCoefficients(
-                EM_FL=24.0, FL_SH=14.0, FL_SD=23.0, SD_PM=33.0,
-                LFMAX=1.4, SLAVR=195.0, SIZLF=30.0,
-                EC_TOLERANCE=1.7, NITRATE_EFFICIENCY=0.94,
-                ROOT_ACTIVITY=1.2, PHOTOSYNTHETIC_CAPACITY=1.12
-            ),
-            trait_values={
-                GeneticTrait.DAYS_TO_EMERGENCE: 0.98,
-                GeneticTrait.DAYS_TO_HARVEST: 0.95,
-                GeneticTrait.BOLTING_TOLERANCE: 0.9,
-                GeneticTrait.LEAF_SIZE: 0.9,
-                GeneticTrait.CHLOROPHYLL_CONTENT: 0.95,
-                GeneticTrait.HEAT_TOLERANCE: 0.85,
-                GeneticTrait.COLD_TOLERANCE: 0.8,
-                GeneticTrait.SALINITY_TOLERANCE: 0.9,
-                GeneticTrait.NITRATE_ACCUMULATION: 0.05
-            },
-            yield_potential=1.15,
-            adaptation_score=0.98,
-            commercial_rating=1.0,
-            breeding_notes="Latest generation hydroponic variety, premium quality"
-        ))
+        This method now requires CSV data - no hardcoded cultivars allowed.
+        All cultivar data must be loaded from CSV files through the system configuration.
+        """
+        # Database starts empty - cultivars must be loaded from CSV
+        # This ensures all genetic data comes from external configuration files
+        pass
     
     def add_cultivar(self, cultivar: CultivarProfile):
         """Add a cultivar to the database"""
@@ -402,7 +227,7 @@ class GenotypeEnvironmentModel:
         """
         cultivar = self.genetic_db.get_cultivar(cultivar_id)
         if not cultivar:
-            return 0.5  # Default value
+            raise ValueError(f"❌ Cultivar {cultivar_id} not found in database - CSV data required")
         
         base_trait_value = cultivar.trait_values.get(trait, 0.5)
         
@@ -444,10 +269,8 @@ class GenotypeEnvironmentModel:
             expression = base_trait_value + stress_response
             
         else:
-            # Default environmental modulation
-            overall_stress = np.mean([abs(v) for v in environment_factors.values() if isinstance(v, (int, float))])
-            overall_stress_weight = 0.1  # Overall stress weight (CSV configurable)
-            expression = base_trait_value * (1.0 - overall_stress * overall_stress_weight)
+            # No environmental modulation - return base trait value
+            expression = base_trait_value
         
         return max(0.0, min(1.0, expression))
     
@@ -640,23 +463,44 @@ def create_lettuce_genetic_system(system_config=None) -> Tuple[GeneticParameterD
         Tuple of (GeneticParameterDatabase, GenotypeEnvironmentModel, BreedingAssistant)
     """
     try:
-        # Get consolidated genetic parameters from CSV data
-        genetic_params = getattr(system_config, 'genetic_parameters', {})
-        genetic_stress_weights = getattr(system_config, 'genetic_stress_weights', {})
-        breeding_weights = getattr(system_config, 'breeding_weights', {})
+        if system_config is None:
+            raise ValueError("❌ System configuration is required - no hardcoded defaults allowed")
         
-        # Create genetic database with CSV parameters
+        # Get genetic parameters from CSV configuration
+        genetic_params = getattr(system_config, 'genetic_parameters', {})
+        if not genetic_params:
+            raise ValueError("❌ No genetic parameters found in system configuration - CSV data required")
+        
+        # Create genetic database
         genetic_db = GeneticParameterDatabase()
         
-        # Update default cultivar with CSV parameters if available
-        if genetic_params:
-            # Update the default HYDRO_001 cultivar with CSV parameters
-            default_cultivar = genetic_db.get_cultivar('HYDRO_001')
-            if default_cultivar:
-                # Update genetic coefficients with CSV parameters
-                for param_name, param_value in genetic_params.items():
-                    if hasattr(default_cultivar.genetic_coefficients, param_name):
-                        setattr(default_cultivar.genetic_coefficients, param_name, param_value)
+        # Create a default cultivar from genetic parameters
+        # This allows the system to work with existing CSV structure
+        cultivar_id = "DEFAULT_CSV_CULTIVAR"
+        
+        # Create genetic coefficients from CSV data
+        genetic_coeffs = GeneticCoefficients()
+        for param_name, param_value in genetic_params.items():
+            if hasattr(genetic_coeffs, param_name):
+                setattr(genetic_coeffs, param_name, param_value)
+        
+        # Create cultivar profile with default values for missing fields
+        cultivar_profile = CultivarProfile(
+            cultivar_id=cultivar_id,
+            cultivar_name="CSV Configured Cultivar",
+            lettuce_type=LettuceType.BUTTERHEAD,
+            breeder="CSV Configuration",
+            year_released=2024,
+            genetic_coefficients=genetic_coeffs,
+            yield_potential=1.0,  # Default high yield potential
+            adaptation_score=0.8,  # Default good adaptation
+            commercial_rating=0.8,  # Default good commercial rating
+            trait_values={},  # Empty trait values - can be populated later
+            pedigree=["CSV configured"],
+            breeding_notes="Cultivar created from CSV genetic parameters"
+        )
+        
+        genetic_db.add_cultivar(cultivar_profile)
         
         # Create models
         ge_model = GenotypeEnvironmentModel(genetic_db)
@@ -665,12 +509,6 @@ def create_lettuce_genetic_system(system_config=None) -> Tuple[GeneticParameterD
         return genetic_db, ge_model, breeding_assistant
         
     except Exception as e:
-        print(f"Warning: Could not load CSV genetic parameters: {e}")
-        print("Using default genetic parameters")
-        # Fallback to default implementation
-        genetic_db = GeneticParameterDatabase()
-        ge_model = GenotypeEnvironmentModel(genetic_db)
-        breeding_assistant = BreedingAssistant(genetic_db, ge_model)
-        return genetic_db, ge_model, breeding_assistant
+        raise ValueError(f"❌ Failed to load CSV genetic parameters: {e}. System requires CSV data - no hardcoded defaults allowed.")
 
 

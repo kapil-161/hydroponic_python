@@ -1,4 +1,0 @@
-parameter_name,value,unit,description
-reservoir_topup_fraction,0.5,fraction,Fraction of reservoir volume to refill when needed
-simulation_duration_days,45,days,Total simulation duration in days
-default_ph,6.2,pH,Default pH value for nutrient solution
