@@ -689,46 +689,36 @@ class DefaultConfigurations:
     
     @staticmethod
     def get_nft_lettuce_system() -> HydroSystemConfig:
-        """Get default NFT lettuce system configuration."""
+        """Create empty system config - CSV data will be loaded separately."""
         return HydroSystemConfig(
-            system_id="HYD1",
-            crop_id="LETT",
-            location_id="USGA",
-            tank_volume=500.0,
-            flow_rate=50.0,
-            system_type="NFT",
-            system_area=1.0,
-            n_plants=12,  # Realistic butterhead lettuce density: 12 plants/m²
-            description="Nutrient Film Technique - Lettuce production"
+            system_id="",
+            crop_id="",
+            location_id="",
+            tank_volume=0.0,
+            flow_rate=0.0,
+            system_type="",
+            system_area=0.0,
+            n_plants=0,
+            description=""
         )
     
     @staticmethod
     def get_lettuce_parameters() -> CropParameters:
-        """Get default lettuce crop parameters."""
+        """Create empty crop parameters - CSV data will be loaded separately."""
         return CropParameters(
-            crop_id="LETT",
-            crop_name="Lettuce",
-            kcb=0.90,
-            phi=0.85,
-            crop_height=0.30,
-            root_zone_depth=0.15,
-            laid=2.0
+            crop_id="",
+            crop_name="",
+            kcb=0.0,
+            phi=0.0,
+            crop_height=0.0,
+            root_zone_depth=0.0,
+            laid=0.0
         )
     
     @staticmethod
     def get_default_nutrients():
-        """Get default nutrient parameters."""
-        from ..models.nutrient_models import NutrientParams
-        
-        nutrients = [
-            NutrientParams("N-NO3", "Nitrogen-Nitrate", "NO3-", 200.0, 250.0, 180.0, 1.0, True, 150.0, 300.0, charge=-1, molar_mass=14.01),
-            NutrientParams("P-PO4", "Phosphorus-Phosphate", "PO4-3", 50.0, 60.0, 45.0, 1.2, True, 30.0, 80.0, charge=-1, molar_mass=30.97),
-            NutrientParams("K", "Potassium", "K+", 300.0, 350.0, 280.0, 1.1, True, 250.0, 400.0, charge=1, molar_mass=39.10),
-            NutrientParams("Ca", "Calcium", "Ca+2", 150.0, 180.0, 120.0, 1.5, True, 100.0, 200.0, charge=2, molar_mass=40.08),
-            NutrientParams("Mg", "Magnesium", "Mg+2", 50.0, 60.0, 40.0, 1.3, True, 30.0, 70.0, charge=2, molar_mass=24.31),
-        ]
-        
-        return {nutrient.nutrient_id: nutrient for nutrient in nutrients}
+        """Return empty dict - nutrient parameters will be loaded from CSV only."""
+        return {}
 
 
 def calculate_dynamic_dry_matter_content(result, plant_part: str) -> float:
