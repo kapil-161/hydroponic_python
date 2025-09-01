@@ -78,6 +78,104 @@ class PhotosynthesisModel:
         temp_k = float(temp_c) + 273.15
         return rate_25 * np.exp(ea * (temp_k - 298.15) / (298.15 * self.params.r * temp_k))
 
+    def calculate_hourly_assimilation(self, par_umol_m2_s: float, co2_ppm: float, temp_c: float, 
+                                     lai: float, hour: int, ec_factor: float = 1.0, 
+                                     config_dict: Optional[Dict[str, Any]] = None) -> float:
+        """Calculate hourly carbon assimilation (g C/m2 ground area/hour).
+        
+        DSSAT-style hourly photosynthesis calculation for internal integration.
+        
+        Args:
+            par_umol_m2_s: Photosynthetic active radiation (μmol/m²/s)
+            co2_ppm: CO2 concentration (ppm)
+            temp_c: Temperature (°C)
+            lai: Leaf area index
+            hour: Hour of day (0-23) for light-dependent calculations
+            ec_factor: EC stress factor (0-1)
+            config_dict: Additional configuration parameters
+            
+        Returns:
+            Hourly carbon assimilation (g C/m²/hour)
+        """
+        # No photosynthesis during night hours or with zero PAR
+        if par_umol_m2_s <= 0.1:
+            return 0.0
+            
+        return self._calculate_instantaneous_assimilation(
+            par_umol_m2_s, co2_ppm, temp_c, lai, ec_factor, config_dict
+        )
+    
+    def _calculate_instantaneous_assimilation(self, par_umol_m2_s: float, co2_ppm: float, 
+                                            temp_c: float, lai: float, ec_factor: float = 1.0, 
+                                            config_dict: Optional[Dict[str, Any]] = None) -> float:
+        """Calculate instantaneous photosynthesis rate (g C/m²/hour).
+        
+        Core Farquhar model calculation extracted for hourly integration.
+        """
+        # Convert CO2 ppm to umol/mol and apply stomatal limitation
+        ci = co2_ppm * self.params.ci_fraction
+
+        # Temperature-adjusted rates
+        vcmax_base = self._arrhenius_temp_response(self.params.vcmax_25, self.params.eav, temp_c)
+        jmax_base = self._arrhenius_temp_response(self.params.jmax_25, self.params.eaj, temp_c)
+        rd = self._arrhenius_temp_response(self.params.rd_25, self.params.ear, temp_c)
+        
+        # Load LAI thresholds from CSV configuration
+        enzyme_saturation_lai = 5.0
+        light_penetration_lai = 6.0
+        
+        if config_dict:
+            enzyme_saturation_lai = config_dict.get('enzyme_saturation_lai', 5.0)
+            light_penetration_lai = config_dict.get('light_penetration_lai', 6.0)
+        
+        # Enzyme saturation at high LAI
+        if lai > enzyme_saturation_lai:
+            enzyme_saturation_factor = 1.0 - 0.1 * (lai - enzyme_saturation_lai)
+            enzyme_saturation_factor = max(0.3, enzyme_saturation_factor)
+            vcmax = vcmax_base * enzyme_saturation_factor
+            jmax = jmax_base * enzyme_saturation_factor
+        else:
+            vcmax = vcmax_base
+            jmax = jmax_base
+
+        # Rubisco-limited rate (Ac)
+        o2_umol_mol = self.params.o2_mmol_mol * 1000.0
+        ko_umol_mol = self.params.ko * 1000.0
+        ac = vcmax * (ci - self.params.gamma_star) / (ci + self.params.kc * (1 + o2_umol_mol / ko_umol_mol))
+
+        # Light-limited rate (Aj)
+        i2 = self.params.alpha * par_umol_m2_s
+        j = (i2 + jmax - np.sqrt((i2 + jmax)**2 - 4 * self.params.theta * i2 * jmax)) / (2 * self.params.theta)
+        aj = j * (ci - self.params.gamma_star) / (4 * (ci + 2 * self.params.gamma_star))
+
+        # Net photosynthesis rate (μmol CO2/m²/s)
+        net_photosynthesis_rate = max(0.0, min(ac, aj) - rd)
+        
+        # Convert to hourly g C/m² (3600 seconds/hour, 1.201e-5 g C/μmol CO2)
+        hourly_g_c_per_m2 = net_photosynthesis_rate * 3600.0 * 1.201e-5
+        
+        # Handle light penetration constraints
+        if lai > light_penetration_lai:
+            light_penetration_factor = light_penetration_lai / lai
+            effective_par = par_umol_m2_s * light_penetration_factor
+            
+            # Recalculate with reduced light
+            i2 = self.params.alpha * effective_par
+            j = (i2 + jmax - np.sqrt((i2 + jmax)**2 - 4 * self.params.theta * i2 * jmax)) / (2 * self.params.theta)
+            aj_shaded = j * (ci - self.params.gamma_star) / (4 * (ci + 2 * self.params.gamma_star))
+            
+            net_rate_shaded = max(0.0, min(ac, aj_shaded) - rd)
+            hourly_g_c_per_m2 = net_rate_shaded * 3600.0 * 1.201e-5
+            
+            effective_lai = light_penetration_lai + (lai - light_penetration_lai) * 0.2
+        else:
+            effective_lai = lai
+        
+        # Scale by effective LAI and apply stress factors
+        total_hourly_assimilation = hourly_g_c_per_m2 * effective_lai * ec_factor
+        
+        return max(0.0, total_hourly_assimilation)
+
     def calculate_daily_assimilation(self, par_umol_m2_s: float, co2_ppm: float, temp_c: float, lai: float, photoperiod_hours: float = 16.0, ec_factor: float = 1.0, config_dict: Optional[Dict[str, Any]] = None) -> float:
         """Calculate daily carbon assimilation (g C/m2 ground area/day).
 

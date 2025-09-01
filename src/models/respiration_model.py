@@ -253,20 +253,25 @@ class EnhancedRespirationModel:
                                                 biomass_pool.tissue_type)
         
         # Tissue-specific factor
-        tissue_factor = self.params.tissue_factors.get(
-            biomass_pool.tissue_type.value, 1.0
-        )
+        tissue_type = biomass_pool.tissue_type
+        if hasattr(tissue_type, 'value'):
+            tissue_key = tissue_type.value
+        else:
+            tissue_key = str(tissue_type)
+        
+        tissue_factor = self.params.tissue_factors.get(tissue_key, 1.0)
         
         # Real-world maintenance penalties for excessive biomass
         # Large plants have disproportionately high maintenance costs
         size_penalty_factor = 1.0
-        if biomass_pool.dry_mass > 50.0:  # Above normal lettuce size
-            excess_mass = biomass_pool.dry_mass - 50.0
+        dry_weight = getattr(biomass_pool, 'dry_mass', getattr(biomass_pool, 'dry_weight', 1.0))
+        if dry_weight > 50.0:  # Above normal lettuce size
+            excess_mass = dry_weight - 50.0
             # Exponential penalty for maintaining excessive biomass
             size_penalty_factor = 1.0 + 0.02 * excess_mass  # 2% increase per gram above 50g
         
         # Combined maintenance respiration with realistic size penalties
-        maintenance_respiration = (base_rate * biomass_pool.dry_mass * 
+        maintenance_respiration = (base_rate * dry_weight * 
                                  temp_factor * age_factor * n_factor * tissue_factor * size_penalty_factor)
         
         factor_breakdown = {
@@ -392,11 +397,11 @@ class EnhancedRespirationModel:
             maint_resp, factors = self.calculate_maintenance_respiration(pool, temperature)
             total_maintenance += maint_resp
             
-            tissue_name = pool.tissue_type.value
+            tissue_name = pool.tissue_type.value if hasattr(pool.tissue_type, 'value') else str(pool.tissue_type)
             tissue_breakdown[tissue_name] = maint_resp
             
             # Weight factors by biomass for averaging
-            weight = pool.dry_mass
+            weight = getattr(pool, 'dry_mass', getattr(pool, 'dry_weight', 1.0))
             total_biomass += weight
             
             for factor_name, factor_value in factors.items():
@@ -423,6 +428,130 @@ class EnhancedRespirationModel:
             age_factor=combined_factors['age_factor'],
             nitrogen_factor=combined_factors['nitrogen_factor']
         )
+    
+    def hourly_update(self, biomass_pools: List['BiomassPool'], temperature: float, 
+                     hour: int, dt_hours: float = 1.0, new_growth: float = 0.0) -> Dict[str, float]:
+        """
+        Hourly respiration update for DSSAT-style integration.
+        
+        Respiration responds rapidly to temperature changes and varies throughout the day.
+        Temperature can fluctuate significantly hourly, affecting respiration immediately.
+        
+        Args:
+            biomass_pools: Current plant biomass pools
+            temperature: Current temperature (°C)
+            hour: Hour of day (0-23)
+            dt_hours: Time step in hours
+            new_growth: New growth in this timestep (g dry weight)
+            
+        Returns:
+            Dict with hourly respiration rates and factors
+        """
+        # Calculate hourly respiration components
+        components = self.calculate_total_respiration(
+            biomass_pools, temperature, new_growth
+        )
+        
+        # Scale from daily to hourly rates
+        hourly_maintenance = components.maintenance_respiration / 24.0 * dt_hours
+        hourly_growth = components.growth_respiration / 24.0 * dt_hours
+        hourly_total = components.total_respiration / 24.0 * dt_hours
+        
+        # Apply diurnal variation to respiration
+        diurnal_factor = self._calculate_diurnal_respiration_factor(hour)
+        
+        # Apply day/night differences
+        is_day = 6 <= hour <= 18  # Simplified day/night cycle
+        day_night_factor = 1.1 if is_day else 0.9  # Higher respiration during day
+        
+        # Combined hourly adjustment
+        hourly_adjustment = diurnal_factor * day_night_factor
+        
+        # Calculate temperature-dependent adjustments  
+        temp_stress_factor = self._calculate_temperature_stress_factor(temperature)
+        
+        # Final hourly respiration rates
+        adjusted_maintenance = hourly_maintenance * hourly_adjustment * temp_stress_factor
+        adjusted_growth = hourly_growth * hourly_adjustment
+        adjusted_total = adjusted_maintenance + adjusted_growth
+        
+        # Calculate carbon cost (CO2 release)
+        # Respiration releases CO2: C6H12O6 + 6O2 → 6CO2 + 6H2O
+        # 1 g C respired → 3.67 g CO2 released
+        co2_release_rate = adjusted_total * 3.67  # g CO2/hour
+        
+        # Calculate respiratory quotient (RQ) - varies by substrate
+        respiratory_quotient = self._calculate_respiratory_quotient(hour)
+        oxygen_consumption_rate = co2_release_rate / respiratory_quotient  # g O2/hour
+        
+        return {
+            'maintenance_respiration_g_C_per_hour': adjusted_maintenance,
+            'growth_respiration_g_C_per_hour': adjusted_growth,
+            'total_respiration_g_C_per_hour': adjusted_total,
+            'co2_release_rate_g_per_hour': co2_release_rate,
+            'oxygen_consumption_g_per_hour': oxygen_consumption_rate,
+            'respiratory_quotient': respiratory_quotient,
+            'temperature_factor': components.temperature_factor,
+            'diurnal_factor': diurnal_factor,
+            'day_night_factor': day_night_factor,
+            'temp_stress_factor': temp_stress_factor,
+            'tissue_breakdown': {k: v / 24.0 * dt_hours for k, v in components.tissue_breakdown.items()}
+        }
+    
+    def _calculate_diurnal_respiration_factor(self, hour: int) -> float:
+        """
+        Calculate diurnal variation in respiration rates.
+        
+        Respiration typically follows a sinusoidal pattern with peaks in early morning
+        and late afternoon, related to circadian rhythms.
+        """
+        # Circadian rhythm effect (peak at ~4 AM and ~4 PM)
+        circadian_component1 = 0.1 * np.sin(2 * np.pi * (hour - 4) / 24)  # 4 AM peak
+        circadian_component2 = 0.05 * np.sin(2 * np.pi * (hour - 16) / 24)  # 4 PM peak
+        
+        # Base respiration varies from 0.9 to 1.1 throughout day
+        diurnal_factor = 1.0 + circadian_component1 + circadian_component2
+        
+        return max(0.8, min(1.2, diurnal_factor))
+    
+    def _calculate_temperature_stress_factor(self, temperature: float) -> float:
+        """
+        Calculate additional temperature stress effects on respiration.
+        
+        Beyond the Q10 response, extreme temperatures can cause additional stress.
+        """
+        optimal_temp = 22.0  # °C optimal temperature for lettuce
+        temp_deviation = abs(temperature - optimal_temp)
+        
+        if temp_deviation <= 3.0:
+            return 1.0  # No additional stress
+        elif temp_deviation <= 8.0:
+            # Moderate stress increases respiration
+            return 1.0 + 0.05 * (temp_deviation - 3.0)
+        else:
+            # Severe stress dramatically increases respiration
+            return 1.25 + 0.1 * (temp_deviation - 8.0)
+    
+    def _calculate_respiratory_quotient(self, hour: int) -> float:
+        """
+        Calculate respiratory quotient (CO2 produced / O2 consumed).
+        
+        RQ varies with substrate being respired:
+        - Carbohydrates: RQ = 1.0
+        - Lipids: RQ = 0.7  
+        - Proteins: RQ = 0.8
+        
+        During day: more carbohydrate respiration (RQ closer to 1.0)
+        During night: more mixed substrate respiration (RQ ~0.85)
+        """
+        is_day = 6 <= hour <= 18
+        
+        if is_day:
+            # Daytime: more carbohydrate respiration
+            return 0.95
+        else:
+            # Nighttime: more mixed substrate respiration
+            return 0.85
 
 def create_lettuce_respiration_model(system_config=None) -> EnhancedRespirationModel:
     """Create respiration model with lettuce-specific parameters from CSV config.

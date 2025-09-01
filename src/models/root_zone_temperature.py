@@ -213,6 +213,121 @@ class RootZoneTemperatureModel:
             factor = 1.0 - (temperature_excess * self.params.root_metabolism_sensitivity_high)
         
         return np.clip(factor, 0.3, 1.6)
+    
+    def hourly_update(self, environmental_conditions: Dict[str, float], 
+                     hour: int, dt_hours: float = 1.0) -> Dict[str, float]:
+        """
+        Hourly root zone temperature model update.
+        
+        Temperature in hydroponic systems can change rapidly with:
+        - Air temperature fluctuations
+        - Solution heating/cooling systems
+        - Thermal mass effects
+        
+        Args:
+            environmental_conditions: Current conditions including air and solution temps
+            hour: Hour of day (0-23)
+            dt_hours: Time step in hours
+            
+        Returns:
+            Dict with temperature effects and factors
+        """
+        air_temp = environmental_conditions.get('air_temperature', 22.0)
+        solution_temp = environmental_conditions.get('solution_temperature', air_temp)
+        
+        # Calculate thermal dynamics
+        thermal_response = self._calculate_thermal_dynamics(
+            air_temp, solution_temp, hour, dt_hours
+        )
+        
+        # Current effective RZT (solution temperature affects roots directly)
+        current_rzt = thermal_response['effective_rzt']
+        optimal_rzt = self.calculate_optimal_rzt(air_temp)
+        
+        # Calculate all temperature-dependent factors
+        growth_factor = self.calculate_rzt_growth_factor(current_rzt, air_temp)
+        nutrient_factor = self.calculate_nutrient_uptake_factor(current_rzt, air_temp)
+        water_factor = self.calculate_water_uptake_factor(current_rzt, air_temp)
+        photosynthesis_factor = self.calculate_photosynthesis_factor(current_rzt, air_temp)
+        metabolism_factor = self.calculate_root_metabolism_factor(current_rzt, air_temp)
+        
+        return {
+            'current_rzt': current_rzt,
+            'optimal_rzt': optimal_rzt,
+            'rzt_deviation': current_rzt - optimal_rzt,
+            'growth_factor': growth_factor,
+            'nutrient_uptake_factor': nutrient_factor,
+            'water_uptake_factor': water_factor,
+            'photosynthesis_factor': photosynthesis_factor,
+            'root_metabolism_factor': metabolism_factor,
+            'thermal_stress': abs(current_rzt - optimal_rzt) / 5.0,  # Normalized stress
+            **thermal_response
+        }
+    
+    def _calculate_thermal_dynamics(self, air_temp: float, solution_temp: float, 
+                                   hour: int, dt_hours: float) -> Dict[str, float]:
+        """
+        Calculate thermal dynamics in the hydroponic system.
+        
+        Factors affecting root zone temperature:
+        - Solution temperature (direct contact)
+        - Air temperature (convective exchange)  
+        - Thermal mass of system
+        - External ambient conditions
+        """
+        # Time-dependent thermal effects
+        # Root zones have thermal inertia - don't change instantly
+        thermal_mass_factor = 0.2  # How quickly RZT responds to changes
+        
+        # Diurnal temperature variation (outdoor effects)
+        ambient_temp_variation = 2.0 * np.sin(2 * np.pi * (hour - 6) / 24)  # Peak at 18:00
+        
+        # Heat sources/sinks
+        heat_sources = {
+            'solution_heating': 0.0,  # Would be controlled by system
+            'root_respiration': 0.5,  # Small heat generation from roots
+            'pump_heat': 0.3,        # Heat from circulation pumps
+            'ambient_exchange': ambient_temp_variation * 0.1
+        }
+        
+        # Calculate equilibrium temperature
+        # In real systems, this involves heat transfer equations
+        target_rzt = solution_temp + sum(heat_sources.values())
+        
+        # Current state (with thermal inertia)
+        if not hasattr(self, '_previous_rzt'):
+            self._previous_rzt = solution_temp
+        
+        # Exponential approach to target with time constant
+        time_constant = 2.0  # hours (thermal response time)
+        response_rate = 1.0 - np.exp(-dt_hours / time_constant)
+        
+        new_rzt = self._previous_rzt + (target_rzt - self._previous_rzt) * response_rate
+        self._previous_rzt = new_rzt
+        
+        # Heat transfer rate (W/m² - for energy calculations)
+        heat_transfer_rate = abs(new_rzt - air_temp) * 10.0  # Simplified
+        
+        return {
+            'effective_rzt': new_rzt,
+            'target_rzt': target_rzt,
+            'thermal_lag': new_rzt - target_rzt,
+            'heat_transfer_rate': heat_transfer_rate,
+            'heating_required': max(0.0, target_rzt - new_rzt),
+            'cooling_required': max(0.0, new_rzt - target_rzt)
+        }
+
+    def daily_update(self, environmental_conditions: Dict[str, float]) -> Dict[str, float]:
+        """
+        Daily root zone temperature update for backward compatibility.
+        
+        Uses average daily conditions for systems that don't need hourly precision.
+        """
+        air_temp = environmental_conditions.get('air_temperature', 22.0)
+        solution_temp = environmental_conditions.get('solution_temperature', air_temp)
+        
+        # Use noon hour (12) as representative for daily calculation
+        return self.hourly_update(environmental_conditions, hour=12, dt_hours=24.0)
 
 
 def create_lettuce_rzt_model(system_config=None) -> RootZoneTemperatureModel:

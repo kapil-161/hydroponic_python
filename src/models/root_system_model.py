@@ -596,6 +596,7 @@ def create_lettuce_root_architecture_model(system_type: HydroponicSystemType = H
         params = RootArchitectureParameters(
             system_type=system_type,
             container_volume=tank_volume,
+            channel_length=root_params.get('channel_length', 73.0),  # cm (default for DWC)
             root_zone_independent=False,
             primary_root_growth_rate=2.0,
             lateral_root_density=3.5,
@@ -794,6 +795,48 @@ class EnhancedRootUptakeModel:
             base_uptake_rates=base_uptake_rates,
             michaelis_constants=michaelis_constants,
         )
+
+    def hourly_update(self,
+                     environmental_conditions: Dict[str, float],
+                     growth_factors: Dict[str, float],
+                     solution_concentrations: Dict[str, float],
+                     dt_hours: float = 1.0) -> Dict[str, float]:
+        """
+        Hourly root model update for DSSAT-style integration.
+        
+        Args:
+            environmental_conditions: Current environmental conditions
+            growth_factors: Growth limiting factors
+            solution_concentrations: Nutrient concentrations in solution
+            dt_hours: Time step in hours (default 1.0)
+            
+        Returns:
+            Dictionary with hourly uptake rates and root metrics
+        """
+        # Scale daily growth rates to hourly
+        scaled_growth_factors = {k: v for k, v in growth_factors.items()}
+        
+        # Update root architecture only once per day (at hour 0 or when dt > 20)
+        if dt_hours > 20.0 or not hasattr(self, '_last_architecture_update_hour'):
+            architecture_metrics = self.root_architecture.daily_update(
+                environmental_conditions, growth_factors
+            )
+            self._last_architecture_update_hour = 0
+            self._cached_architecture_metrics = architecture_metrics
+        else:
+            # Use cached architecture metrics for hourly uptake calculations
+            architecture_metrics = getattr(self, '_cached_architecture_metrics', {})
+        
+        # Calculate hourly nutrient uptake (this varies with environmental conditions)
+        hourly_uptake_results = self._calculate_hourly_nutrient_uptake(
+            architecture_metrics, environmental_conditions, solution_concentrations, dt_hours
+        )
+        
+        return {
+            **architecture_metrics,
+            **hourly_uptake_results,
+            'system_type': self.system_type.value
+        }
 
     def daily_update(self,
                      environmental_conditions: Dict[str, float],
@@ -1015,7 +1058,69 @@ class EnhancedRootUptakeModel:
                            (1.0 - fine_root_fraction) * old_root_activity)
         
         return max(0.1, weighted_activity)  # Natural root activity without caps
-    
+
+    def _calculate_hourly_nutrient_uptake(self,
+                                        architecture_metrics: Dict[str, float],
+                                        environmental_conditions: Dict[str, float],
+                                        solution_concentrations: Dict[str, float],
+                                        dt_hours: float = 1.0) -> Dict[str, float]:
+        """
+        Calculate hourly nutrient uptake rates using cached architecture.
+        
+        This method focuses on the rapidly-changing uptake kinetics while
+        using slowly-changing root architecture from daily updates.
+        """
+        total_surface_area = architecture_metrics.get('total_root_surface_area', 0.0)
+        avg_activity = architecture_metrics.get('average_root_activity', 0.0)
+
+        temperature = environmental_conditions.get('temperature', 20.0)
+        flow_rate = environmental_conditions.get('flow_rate', 1.5)
+
+        # Temperature and flow effects (change hourly)
+        temp_factor = self.calculate_temperature_factor(temperature)
+        flow_factor = self.calculate_flow_factor(flow_rate)
+
+        hourly_uptake_rates: Dict[str, float] = {}
+        
+        for nutrient, concentration in solution_concentrations.items():
+            if nutrient in self.uptake_params.base_uptake_rates:
+                
+                # Michaelis-Menten kinetics (concentration-dependent)
+                vmax = self.uptake_params.base_uptake_rates[nutrient]
+                km = self.uptake_params.michaelis_constants.get(nutrient, 50.0) if self.uptake_params.michaelis_constants else 50.0
+                
+                michaelis_rate = (vmax * concentration) / (km + concentration)
+                
+                # Environmental effects that change hourly
+                inhibition_factor = self._calculate_nutrient_competition(nutrient, solution_concentrations)
+                ph = environmental_conditions.get('ph', 6.0)
+                ph_effect = self._calculate_ph_effect_on_uptake(nutrient, ph)
+                transport_temp_effect = temp_factor ** 1.25
+                root_age_effect = self._calculate_root_age_effect(architecture_metrics)
+                
+                effective_surface_area = self.calculate_effective_surface_area(architecture_metrics)
+                
+                # Hourly uptake rate (scale by dt_hours for sub-hourly timesteps)
+                hourly_uptake_rate = (
+                    effective_surface_area * michaelis_rate * inhibition_factor * 
+                    ph_effect * transport_temp_effect * flow_factor * avg_activity * 
+                    root_age_effect * dt_hours
+                )
+                
+                hourly_uptake_rates[f'{nutrient}_uptake_rate'] = hourly_uptake_rate
+
+        total_hourly_uptake = sum(hourly_uptake_rates.values())
+        
+        return {
+            **hourly_uptake_rates,
+            'total_nutrient_uptake': total_hourly_uptake,
+            'uptake_per_surface_area': total_hourly_uptake / max(1.0, total_surface_area),
+            'uptake_temperature_factor': temp_factor,
+            'uptake_flow_factor': flow_factor,
+            'effective_root_surface_area': self.calculate_effective_surface_area(architecture_metrics),
+            'total_uptake_g_per_hour': total_hourly_uptake / 1000.0,
+            'nitrogen_uptake_g_per_hour': hourly_uptake_rates.get('NO3_uptake_rate', 0.0) / 1000.0,
+        }
 
     def optimize_environmental_conditions(self,
                                           target_uptake_rates: Dict[str, float],

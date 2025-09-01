@@ -1,0 +1,14 @@
+parameter_name,value,unit,description
+target_vpd,0.7,kPa,Target vapor pressure deficit for optimal growth
+vpd_tolerance,0.3,kPa,VPD tolerance range around target
+min_humidity,60.0,percent,Minimum relative humidity
+max_humidity,80.0,percent,Maximum relative humidity
+day_temp,23.0,celsius,Target daytime temperature
+night_temp,19.0,celsius,Target nighttime temperature
+temp_tolerance,3.0,celsius,Temperature tolerance range
+target_co2,400.0,ppm,Target CO2 concentration
+ambient_co2,350.0,ppm,Ambient CO2 concentration
+co2_tolerance,50.0,ppm,CO2 tolerance range
+light_hours,16.0,hours,Daily light period duration
+light_intensity_control,200.0,umol_per_m2_per_s,Target light intensity for control
+co2_setpoint,400,ppm,Target CO2 concentration for plant growth

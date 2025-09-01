@@ -1,0 +1,35 @@
+parameter_name,value,unit,description
+senescence_rate,0.02,per_day,Daily rate of leaf aging and death
+nitrogen_recovery,0.6,fraction,Nitrogen recovered from senescing leaves
+age_factor,0.8,fraction,Effect of leaf age on senescence rate
+stress_acceleration,1.5,multiplier,How much stress speeds up senescence
+minimum_leaf_life,14.0,days,Minimum lifespan of leaves before senescence
+natural_lifespan_gdd,700.0,gdd,Growing degree days for natural leaf lifespan
+age_senescence_rate,0.008,per_day,Daily senescence rate when leaves are old
+water_stress_threshold,0.3,fraction,Water stress level that triggers senescence
+nitrogen_stress_threshold,0.5,fraction,Nitrogen stress level that triggers senescence
+temperature_stress_threshold,0.3,fraction,Temperature stress level that triggers senescence
+light_stress_threshold,0.2,fraction,Light stress level that triggers senescence
+water_stress_rate,0.03,per_day,Senescence rate under water stress
+nitrogen_stress_rate,0.03,per_day,Senescence rate under nitrogen stress
+temperature_stress_rate,0.03,per_day,Senescence rate under temperature stress
+light_stress_rate,0.03,per_day,Senescence rate under light stress
+early_senescence_threshold,0.1,fraction,Threshold for early senescence stage
+active_senescence_threshold,0.3,fraction,Threshold for active senescence stage
+late_senescence_threshold,0.6,fraction,Threshold for late senescence stage
+death_threshold,0.9,fraction,Threshold for leaf death
+recovery_rate,0.002,per_day,Daily recovery rate under good conditions
+max_recovery,0.2,fraction,Maximum recovery from senescence
+reproductive_priority_factor,1.5,multiplier,Senescence acceleration during reproduction
+lower_canopy_factor,1.3,multiplier,Senescence acceleration for lower canopy leaves
+phosphorus_recovery,0.60,fraction,Phosphorus recovered from senescing leaves
+potassium_recovery,0.80,fraction,Potassium recovered from senescing leaves
+magnesium_recovery,0.30,fraction,Magnesium recovered from senescing leaves
+sulfur_recovery,0.50,fraction,Sulfur recovered from senescing leaves
+calcium_recovery,0.05,fraction,Calcium recovered from senescing leaves
+iron_recovery,0.10,fraction,Iron recovered from senescing leaves
+manganese_recovery,0.15,fraction,Manganese recovered from senescing leaves
+zinc_recovery,0.20,fraction,Zinc recovered from senescing leaves
+copper_recovery,0.15,fraction,Copper recovered from senescing leaves
+boron_recovery,0.05,fraction,Boron recovered from senescing leaves
+molybdenum_recovery,0.25,fraction,Molybdenum recovered from senescing leaves

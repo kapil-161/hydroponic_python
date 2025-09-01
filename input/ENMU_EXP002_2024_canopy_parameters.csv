@@ -1,0 +1,29 @@
+parameter_name,value,unit,description
+number_of_layers,5,count,Number of canopy layers for light calculations
+light_extinction,0.65,coefficient,How much light is absorbed per leaf layer
+diffuse_extinction_coeff,0.68,coefficient,Extinction coefficient for diffuse light
+beam_extinction_coeff,0.62,coefficient,Extinction coefficient for direct beam light
+row_spacing,0.3,meters,Distance between plant rows
+mean_leaf_angle,45.0,degrees,Average angle of leaves from horizontal
+leaf_angle,45.0,degrees,Average angle of leaves from horizontal
+specific_leaf_area,275.0,cm2_per_g,Leaf area per unit leaf weight
+leaf_thickness,0.3,mm,Average thickness of leaves
+max_lai,4.5,m2_per_m2,Maximum leaf area index plants can achieve
+enzyme_saturation_lai,5.0,m2_per_m2,LAI threshold for enzyme saturation effects
+light_penetration_lai,6.0,m2_per_m2,LAI threshold for light penetration limits
+canopy_width,0.3,meters,Width of plant canopy
+canopy_height,0.25,meters,Height of plant canopy
+plant_height,0.25,meters,Maximum plant height
+leaf_area_ratio,0.8,fraction,Ratio of productive leaf area to total leaf area
+light_interception_efficiency,0.95,fraction,Efficiency of light interception by leaves
+extinction_coefficient,0.65,coefficient,Light extinction coefficient
+leaf_angle_distribution,spherical,text,Type of leaf angle distribution
+leaf_angle_variance,20.0,degrees,Variance in leaf angles
+plant_spacing,0.25,meters,Distance between plants in row
+leaf_reflectance,0.10,fraction,Fraction of light reflected by leaves
+leaf_transmittance,0.05,fraction,Fraction of light transmitted through leaves
+leaf_absorptance,0.85,fraction,Fraction of light absorbed by leaves
+self_shading_factor,0.8,fraction,Factor for self-shading within plant
+neighbor_shading_distance,0.5,meters,Distance for neighbor shading effects
+sunlit_fraction_method,campbell,text,Method for calculating sunlit fraction
+clumping_index,0.9,fraction,Leaf clumping index

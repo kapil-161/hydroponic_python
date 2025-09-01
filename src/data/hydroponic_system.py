@@ -218,19 +218,10 @@ class DailyResults:
     vpd_target: float = 0.8
     environmental_cost: float = 0.0
     
-    # Temperature data
-    air_temperature: float = 0.0
-    min_temperature: float = 0.0
-    max_temperature: float = 0.0
-    leaf_temperature: float = 0.0
-    canopy_temperature: float = 0.0
+    # Temperature stress (implemented)
     cold_stress_factor: float = 0.0  # 0 = no cold stress, 1 = severe cold stress
     heat_stress_factor: float = 0.0  # 0 = no heat stress, 1 = severe heat stress
     temperature_stress_factor: float = 0.0  # 0 = no temperature stress, 1 = severe temperature stress
-    
-    # Water dynamics
-    transpiration_rate: float = 0.0
-    total_water_uptake: float = 0.0
     solution_ph: float = 6.0
     
     # Comprehensive pH modeling results
@@ -270,7 +261,11 @@ class SimulationResults:
             das = result.day + self.transplanting_period_days  # Add transplanting period
             dat = result.day  # Days since transplanting (simulation starts from transplant)
             
-            row = {
+            # === ORGANIZED ROW WITH FUNCTIONAL GROUPS ===
+            row = {}
+            
+            # === GROUP 1: EXPERIMENT METADATA ===
+            row.update({
                 'Date': result.date.strftime('%Y-%m-%d'),
                 'Day': result.day,
                 'DAS': das,
@@ -278,96 +273,367 @@ class SimulationResults:
                 'Treatment_ID': self.treatment_id if self.treatment_id else 'DEFAULT',
                 'System_ID': self.system_id,
                 'Crop_ID': self.crop_id,
+                'Location_ID': self.location_id,
+                'System_Type': getattr(self, 'system_type', 'Unknown'),
+                'System_Area_m2': getattr(self, 'system_area', 0.0),
+                'Plant_Count': getattr(self, 'plant_count', 0),
+                'Flow_Rate_L_h': getattr(self, 'flow_rate', 0.0),
+                'System_Description': getattr(self, 'system_description', ''),
+                '': '',  # Separator
+            })
+            
+            # === GROUP 2: ENVIRONMENTAL CONDITIONS ===
+            row.update({
+                'Temp_C': result.temp_avg,
+                'Solar_Rad_MJ': result.solar_radiation,
+                'VPD_kPa': result.vpd,
+                'CO2_umol_mol': result.co2_concentration,
+                'VPD_Actual_kPa': result.vpd_actual,
+                ' ': '',  # Separator
+            })
+            
+            # === GROUP 3: WATER DYNAMICS ===
+            row.update({
                 'ETO_Ref_mm': result.eto_ref,
                 'ETC_Prime_mm': result.etc_prime,
                 'Transpiration_mm': result.transpiration,
                 'Water_Total_L': result.water_uptake_total,
                 'Tank_Volume_L': result.tank_volume,
-                'Temp_C': result.temp_avg,
-                'Solar_Rad_MJ': result.solar_radiation,
-                'VPD_kPa': result.vpd,
                 'WUE_kg_m3': result.water_use_efficiency,
+                '  ': '',  # Separator
+            })
+            
+            # === GROUP 4: SOLUTION CHEMISTRY ===
+            row.update({
                 'pH': result.ph,
+                'EC': result.ec,
                 'pH_Change_Uptake': result.ph_change_from_uptake,
                 'pH_Drift': result.ph_change_from_drift,
                 'Acid_Dosed_mL_L': result.acid_dosed_ml_per_L,
                 'Base_Dosed_mL_L': result.base_dosed_ml_per_L,
                 'Buffer_Capacity': result.buffer_capacity,
-                'EC': result.ec,
+                '   ': '',  # Separator
+            })
+            
+            # === GROUP 5: NUTRIENT CONCENTRATIONS ===
+            row.update({
+                'N-NO3_mg_L': result.nutrient_concentrations.get('N-NO3', 0.0),
+                'P-PO4_mg_L': result.nutrient_concentrations.get('P-PO4', 0.0),
+                'K_mg_L': result.nutrient_concentrations.get('K', 0.0),
+                'Ca_mg_L': result.nutrient_concentrations.get('Ca', 0.0),
+                'Mg_mg_L': result.nutrient_concentrations.get('Mg', 0.0),
+                '    ': '',  # Separator
+            })
+            
+            # === GROUP 6: ROOT ZONE CONDITIONS ===
+            row.update({
                 'RZT_C': result.rzt,
                 'RZT_Growth_Factor': result.rzt_growth_factor,
                 'RZT_Nutrient_Factor': result.rzt_nutrient_factor,
+                'Env_Photo_Factor': result.env_photosynthesis_factor,
+                'Env_Transp_Factor': result.env_transpiration_factor,
+                '     ': '',  # Separator
+            })
+            
+            # === GROUP 7: PLANT DEVELOPMENT ===
+            row.update({
                 'V_Stage': result.v_stage,
                 'Leaf_Number': result.leaf_number,
                 'Leaf_Area_m2': result.leaf_area_m2,
                 'Avg_Leaf_Area_cm2': result.average_leaf_area_cm2,
-                'CO2_umol_mol': result.co2_concentration,
-                'VPD_Actual_kPa': result.vpd_actual,
-                'Env_Photo_Factor': result.env_photosynthesis_factor,
-                'Env_Transp_Factor': result.env_transpiration_factor
-            }
+                '      ': '',  # Separator
+            })
             
-            # Add nutrient concentrations
-            for nutrient, conc in result.nutrient_concentrations.items():
-                row[f'{nutrient}_mg_L'] = conc
-
-            # Add dynamic crop variables if they exist
-            if hasattr(result, 'lai'):
-                row['LAI'] = result.lai
-            if hasattr(result, 'height'):
-                row['Height_m'] = result.height
-            if hasattr(result, 'canopy_height_cm'):
-                row['Plant_Height_cm'] = result.canopy_height_cm
-            if hasattr(result, 'kcb_dynamic'):
-                row['Kcb_dynamic'] = result.kcb_dynamic
+            # === GROUP 8: GROWTH & BIOMASS ===
+            biomass_group = {}
             if hasattr(result, 'growth_stage'):
-                row['Growth_Stage'] = result.growth_stage
+                biomass_group['Growth_Stage'] = result.growth_stage
             if hasattr(result, 'total_biomass'):
-                row['Total_Biomass_g'] = result.total_biomass
-            if hasattr(result, 'fresh_weight'):
-                row['Fresh_Weight_g'] = result.fresh_weight
+                biomass_group['Total_Biomass_g'] = result.total_biomass
+            if hasattr(result, 'lai'):
+                biomass_group['LAI'] = result.lai
+            if hasattr(result, 'canopy_height_cm'):
+                biomass_group['Plant_Height_cm'] = result.canopy_height_cm
+            if hasattr(result, 'daily_growth_rate'):
+                biomass_group['Daily_Growth_Rate_g_day'] = result.daily_growth_rate
+            biomass_group['       '] = ''  # Separator
+            row.update(biomass_group)
             
-            # Add stress factors (0=no stress, 1=full stress)
+            # === GROUP 9: STRESS FACTORS ===
+            stress_group = {}
             if hasattr(result, 'integrated_stress_factor'):
-                row['Integrated_Stress'] = result.integrated_stress_factor
+                stress_group['Integrated_Stress'] = result.integrated_stress_factor
             if hasattr(result, 'temperature_stress_level'):
-                row['Temperature_Stress'] = result.temperature_stress_level
+                stress_group['Temperature_Stress'] = result.temperature_stress_level
             if hasattr(result, 'water_stress'):
-                row['Water_Stress'] = result.water_stress
+                stress_group['Water_Stress'] = result.water_stress
             if hasattr(result, 'nutrient_stress'):
-                row['Nutrient_Stress'] = result.nutrient_stress
+                stress_group['Nutrient_Stress'] = result.nutrient_stress
             if hasattr(result, 'nitrogen_stress_factor'):
-                row['Nitrogen_Stress'] = result.nitrogen_stress_factor
+                stress_group['Nitrogen_Stress'] = result.nitrogen_stress_factor
             if hasattr(result, 'salinity_stress'):
-                row['Salinity_Stress'] = result.salinity_stress
+                stress_group['Salinity_Stress'] = result.salinity_stress
+            stress_group['        '] = ''  # Separator
+            row.update(stress_group)
             
-            # Add root architecture metrics
-            if hasattr(result, 'fine_root_length'):
-                row['Fine_Root_Length_cm'] = result.fine_root_length
-            if hasattr(result, 'coarse_root_length'):
-                row['Coarse_Root_Length_cm'] = result.coarse_root_length
-            if hasattr(result, 'root_length_density'):
-                row['Root_Length_Density_cm_cm3'] = result.root_length_density
-            
-            # Add individual biomass components (dry and fresh weights)
+            # === GROUP 10: BIOMASS COMPONENTS ===
+            biomass_detail_group = {}
             if hasattr(result, 'leaf_biomass'):
-                row['Shoot_Dry_Weight_g'] = getattr(result, 'leaf_biomass', 0.0) + getattr(result, 'stem_biomass', 0.0)
-                row['Leaf_Dry_Weight_g'] = result.leaf_biomass
-                row['Stem_Dry_Weight_g'] = getattr(result, 'stem_biomass', 0.0)
+                biomass_detail_group['Shoot_Dry_Weight_g'] = getattr(result, 'leaf_biomass', 0.0) + getattr(result, 'stem_biomass', 0.0)
+                biomass_detail_group['Leaf_Dry_Weight_g'] = result.leaf_biomass
+                biomass_detail_group['Stem_Dry_Weight_g'] = getattr(result, 'stem_biomass', 0.0)
                 # Calculate fresh weight using dynamic dry matter content
-                # Dry matter content varies with development, environment, and plant part
                 shoot_dry_matter = calculate_dynamic_dry_matter_content(result, 'shoot')
                 leaf_dry_matter = calculate_dynamic_dry_matter_content(result, 'leaf')
                 stem_dry_matter = calculate_dynamic_dry_matter_content(result, 'stem')
-                
-                row['Shoot_Fresh_Weight_g'] = row['Shoot_Dry_Weight_g'] / shoot_dry_matter
-                row['Leaf_Fresh_Weight_g'] = result.leaf_biomass / leaf_dry_matter
-                row['Stem_Fresh_Weight_g'] = getattr(result, 'stem_biomass', 0.0) / stem_dry_matter
+                biomass_detail_group['Shoot_Fresh_Weight_g'] = biomass_detail_group['Shoot_Dry_Weight_g'] / shoot_dry_matter
+                biomass_detail_group['Leaf_Fresh_Weight_g'] = result.leaf_biomass / leaf_dry_matter
+                biomass_detail_group['Stem_Fresh_Weight_g'] = getattr(result, 'stem_biomass', 0.0) / stem_dry_matter
             if hasattr(result, 'root_biomass'):
-                row['Root_Dry_Weight_g'] = result.root_biomass
-                # Dynamic root dry matter content
+                biomass_detail_group['Root_Dry_Weight_g'] = result.root_biomass
                 root_dry_matter = calculate_dynamic_dry_matter_content(result, 'root')
-                row['Root_Fresh_Weight_g'] = result.root_biomass / root_dry_matter
+                biomass_detail_group['Root_Fresh_Weight_g'] = result.root_biomass / root_dry_matter
+            if hasattr(result, 'leaf_growth_rate'):
+                biomass_detail_group['Leaf_Growth_Rate_g_day'] = result.leaf_growth_rate
+            if hasattr(result, 'stem_growth_rate'):
+                biomass_detail_group['Stem_Growth_Rate_g_day'] = result.stem_growth_rate
+            if hasattr(result, 'root_growth_rate'):
+                biomass_detail_group['Root_Growth_Rate_g_day'] = result.root_growth_rate
+            biomass_detail_group['         '] = ''  # Separator
+            row.update(biomass_detail_group)
+            
+            # === GROUP 11: ROOT ARCHITECTURE ===
+            root_group = {}
+            if hasattr(result, 'fine_root_length'):
+                root_group['Fine_Root_Length_cm'] = result.fine_root_length
+            if hasattr(result, 'coarse_root_length'):
+                root_group['Coarse_Root_Length_cm'] = result.coarse_root_length
+            if hasattr(result, 'root_length_density'):
+                root_group['Root_Length_Density_cm_cm3'] = result.root_length_density
+            if hasattr(result, 'root_surface_area'):
+                root_group['Root_Surface_Area_cm2'] = result.root_surface_area
+            if hasattr(result, 'root_volume'):
+                root_group['Root_Volume_cm3'] = result.root_volume
+            root_group['          '] = ''  # Separator
+            row.update(root_group)
+
+            # === GROUP 12: PHOTOSYNTHESIS ===
+            photo_group = {}
+            if hasattr(result, 'vcmax_25'):
+                photo_group['Vcmax_25_umol_m2_s'] = result.vcmax_25
+            if hasattr(result, 'jmax_25'):
+                row['Jmax_25_umol_m2_s'] = result.jmax_25
+            if hasattr(result, 'quantum_efficiency'):
+                row['Quantum_Efficiency'] = result.quantum_efficiency
+            if hasattr(result, 'rubisco_limited'):
+                row['Rubisco_Limited_umol_m2_s'] = result.rubisco_limited
+            if hasattr(result, 'light_limited'):
+                row['Light_Limited_umol_m2_s'] = result.light_limited
+            if hasattr(result, 'co2_compensation'):
+                row['CO2_Compensation_umol_mol'] = result.co2_compensation
+            if hasattr(result, 'intercellular_co2'):
+                row['Intercellular_CO2_umol_mol'] = result.intercellular_co2
+            if hasattr(result, 'photosynthesis_rate'):
+                row['Photosynthesis_Rate'] = result.photosynthesis_rate
+            if hasattr(result, 'net_assimilation'):
+                row['Net_Assimilation'] = result.net_assimilation
+
+            # === RESPIRATION DETAIL ===
+            if hasattr(result, 'maintenance_respiration'):
+                row['Maintenance_Respiration'] = result.maintenance_respiration
+            if hasattr(result, 'growth_respiration'):
+                row['Growth_Respiration'] = result.growth_respiration
+            if hasattr(result, 'respiration_rate'):
+                row['Respiration_Rate'] = result.respiration_rate
+            if hasattr(result, 'maintenance_resp_leaves'):
+                row['Maint_Resp_Leaves'] = result.maintenance_resp_leaves
+            if hasattr(result, 'maintenance_resp_stems'):
+                row['Maint_Resp_Stems'] = result.maintenance_resp_stems
+            if hasattr(result, 'maintenance_resp_roots'):
+                row['Maint_Resp_Roots'] = result.maintenance_resp_roots
+            if hasattr(result, 'growth_resp_leaves'):
+                row['Growth_Resp_Leaves'] = result.growth_resp_leaves
+            if hasattr(result, 'growth_resp_stems'):
+                row['Growth_Resp_Stems'] = result.growth_resp_stems
+            if hasattr(result, 'growth_resp_roots'):
+                row['Growth_Resp_Roots'] = result.growth_resp_roots
+            if hasattr(result, 'temperature_acclimation'):
+                row['Temperature_Acclimation'] = result.temperature_acclimation
+            if hasattr(result, 'age_factor'):
+                row['Age_Factor'] = result.age_factor
+
+            # === CANOPY DETAIL ===
+            if hasattr(result, 'light_interception'):
+                row['Light_Interception'] = result.light_interception
+            if hasattr(result, 'sunlit_lai'):
+                row['Sunlit_LAI'] = result.sunlit_lai
+            if hasattr(result, 'shaded_lai'):
+                row['Shaded_LAI'] = result.shaded_lai
+            if hasattr(result, 'total_absorbed_ppfd'):
+                row['Total_Absorbed_PPFD_umol_m2_s'] = result.total_absorbed_ppfd
+            if hasattr(result, 'canopy_photosynthesis'):
+                row['Canopy_Photosynthesis_umol_m2_s'] = result.canopy_photosynthesis
+            if hasattr(result, 'canopy_layers'):
+                row['Canopy_Layers'] = result.canopy_layers
+            if hasattr(result, 'ppfd_top'):
+                row['PPFD_Top_umol_m2_s'] = result.ppfd_top
+            if hasattr(result, 'ppfd_bottom'):
+                row['PPFD_Bottom_umol_m2_s'] = result.ppfd_bottom
+            if hasattr(result, 'light_extinction'):
+                row['Light_Extinction_Coeff'] = result.light_extinction
+
+            # === NITROGEN DYNAMICS ===
+            if hasattr(result, 'n_pool_structural'):
+                row['N_Pool_Structural_g'] = result.n_pool_structural
+            if hasattr(result, 'n_pool_metabolic'):
+                row['N_Pool_Metabolic_g'] = result.n_pool_metabolic
+            if hasattr(result, 'n_pool_storage'):
+                row['N_Pool_Storage_g'] = result.n_pool_storage
+            if hasattr(result, 'n_pool_transport'):
+                row['N_Pool_Transport_g'] = result.n_pool_transport
+            if hasattr(result, 'n_remobilization'):
+                row['N_Remobilization_g'] = result.n_remobilization
+            if hasattr(result, 'n_critical_conc'):
+                row['N_Critical_Conc'] = result.n_critical_conc
+            if hasattr(result, 'nitrogen_uptake_mg'):
+                row['Nitrogen_Uptake_mg'] = result.nitrogen_uptake_mg
+            if hasattr(result, 'nitrogen_demand_mg'):
+                row['Nitrogen_Demand_mg'] = result.nitrogen_demand_mg
+            if hasattr(result, 'leaf_nitrogen_conc'):
+                row['Leaf_Nitrogen_Conc'] = result.leaf_nitrogen_conc
+            if hasattr(result, 'root_nitrogen_conc'):
+                row['Root_Nitrogen_Conc'] = result.root_nitrogen_conc
+            if hasattr(result, 'nitrogen_remobilization'):
+                row['Nitrogen_Remobilization'] = result.nitrogen_remobilization
+
+            # === GROWTH RATES ===
+            if hasattr(result, 'daily_growth_rate'):
+                row['Daily_Growth_Rate_g_day'] = result.daily_growth_rate
+            if hasattr(result, 'leaf_growth_rate'):
+                row['Leaf_Growth_Rate_g_day'] = result.leaf_growth_rate
+            if hasattr(result, 'stem_growth_rate'):
+                row['Stem_Growth_Rate_g_day'] = result.stem_growth_rate
+            if hasattr(result, 'root_growth_rate'):
+                row['Root_Growth_Rate_g_day'] = result.root_growth_rate
+
+            # === PHENOLOGY DETAIL ===
+            if hasattr(result, 'accumulated_gdd'):
+                row['Accumulated_GDD'] = result.accumulated_gdd
+            if hasattr(result, 'thermal_time_daily'):
+                row['Thermal_Time_Daily'] = result.thermal_time_daily
+            if hasattr(result, 'development_rate'):
+                row['Development_Rate'] = result.development_rate
+            if hasattr(result, 'is_vegetative'):
+                row['Is_Vegetative'] = result.is_vegetative
+            if hasattr(result, 'is_reproductive'):
+                row['Is_Reproductive'] = result.is_reproductive
+
+            # === ROOT ARCHITECTURE DETAIL ===
+            if hasattr(result, 'root_surface_area'):
+                row['Root_Surface_Area_cm2'] = result.root_surface_area
+            if hasattr(result, 'root_volume'):
+                row['Root_Volume_cm3'] = result.root_volume
+            if hasattr(result, 'root_cohorts'):
+                row['Root_Cohorts'] = result.root_cohorts
+            if hasattr(result, 'root_activity_young'):
+                row['Root_Activity_Young'] = result.root_activity_young
+            if hasattr(result, 'root_activity_old'):
+                row['Root_Activity_Old'] = result.root_activity_old
+            if hasattr(result, 'root_surface_active'):
+                row['Root_Surface_Active_cm2'] = result.root_surface_active
+            if hasattr(result, 'root_turnover_rate'):
+                row['Root_Turnover_Rate'] = result.root_turnover_rate
+
+            # === GENETIC PARAMETERS ===
+            if hasattr(result, 'cultivar_adaptation_index'):
+                row['Cultivar_Adaptation_Index'] = result.cultivar_adaptation_index
+            if hasattr(result, 'cultivar_yield_potential'):
+                row['Cultivar_Yield_Potential'] = result.cultivar_yield_potential
+            if hasattr(result, 'genetic_photosynthesis_capacity'):
+                row['Genetic_Photosynthesis_Capacity'] = result.genetic_photosynthesis_capacity
+            if hasattr(result, 'genetic_ec_tolerance'):
+                row['Genetic_EC_Tolerance'] = result.genetic_ec_tolerance
+            if hasattr(result, 'genetic_nitrate_efficiency'):
+                row['Genetic_Nitrate_Efficiency'] = result.genetic_nitrate_efficiency
+
+            # === NUTRIENT REMOBILIZATION ===
+            if hasattr(result, 'phosphorus_uptake_mg'):
+                row['Phosphorus_Uptake_mg'] = result.phosphorus_uptake_mg
+            if hasattr(result, 'phosphorus_remobilization'):
+                row['Phosphorus_Remobilization'] = result.phosphorus_remobilization
+            if hasattr(result, 'potassium_remobilization'):
+                row['Potassium_Remobilization'] = result.potassium_remobilization
+
+            # === SENESCENCE ===
+            if hasattr(result, 'senescence_rate'):
+                row['Senescence_Rate'] = result.senescence_rate
+            if hasattr(result, 'leaf_senescence_rate'):
+                row['Leaf_Senescence_Rate'] = result.leaf_senescence_rate
+
+            # === DETAILED STRESS FACTORS ===
+            if hasattr(result, 'temperature_stress_photosynthesis'):
+                row['Temperature_Stress_Photosynthesis'] = result.temperature_stress_photosynthesis
+            if hasattr(result, 'temperature_stress_growth'):
+                row['Temperature_Stress_Growth'] = result.temperature_stress_growth
+            if hasattr(result, 'cold_stress_factor'):
+                row['Cold_Stress_Factor'] = result.cold_stress_factor
+            if hasattr(result, 'heat_stress_factor'):
+                row['Heat_Stress_Factor'] = result.heat_stress_factor
+            if hasattr(result, 'temperature_stress_factor'):
+                row['Temperature_Stress_Factor'] = result.temperature_stress_factor
+
+            # === ENVIRONMENTAL CONTROL ===
+            if hasattr(result, 'controlled_temperature'):
+                row['Controlled_Temperature_C'] = result.controlled_temperature
+            if hasattr(result, 'controlled_humidity'):
+                row['Controlled_Humidity_pct'] = result.controlled_humidity
+            if hasattr(result, 'controlled_co2'):
+                row['Controlled_CO2_umol_mol'] = result.controlled_co2
+            if hasattr(result, 'vpd_target'):
+                row['VPD_Target_kPa'] = result.vpd_target
+            if hasattr(result, 'environmental_cost'):
+                row['Environmental_Cost'] = result.environmental_cost
+
+            # === TEMPERATURE DETAIL ===
+            if hasattr(result, 'air_temperature'):
+                row['Air_Temperature_C'] = result.air_temperature
+            if hasattr(result, 'min_temperature'):
+                row['Min_Temperature_C'] = result.min_temperature
+            if hasattr(result, 'max_temperature'):
+                row['Max_Temperature_C'] = result.max_temperature
+            if hasattr(result, 'leaf_temperature'):
+                row['Leaf_Temperature_C'] = result.leaf_temperature
+            if hasattr(result, 'canopy_temperature'):
+                row['Canopy_Temperature_C'] = result.canopy_temperature
+
+            # === WATER DYNAMICS ===
+            if hasattr(result, 'transpiration_rate'):
+                row['Transpiration_Rate'] = result.transpiration_rate
+            if hasattr(result, 'total_water_uptake'):
+                row['Total_Water_Uptake'] = result.total_water_uptake
+            if hasattr(result, 'solution_ph'):
+                row['Solution_pH'] = result.solution_ph
+
+            # === COMPREHENSIVE pH MODELING ===
+            if hasattr(result, 'phosphate_h2po4_mg_L'):
+                row['Phosphate_H2PO4_mg_L'] = result.phosphate_h2po4_mg_L
+            if hasattr(result, 'phosphate_hpo4_mg_L'):
+                row['Phosphate_HPO4_mg_L'] = result.phosphate_hpo4_mg_L
+            if hasattr(result, 'nutrient_precipitation_mg_L'):
+                row['Nutrient_Precipitation_mg_L'] = result.nutrient_precipitation_mg_L
+            if hasattr(result, 'solution_ec'):
+                row['Solution_EC_dS_m'] = result.solution_ec
+
+            # === STRESS INTERACTIONS ===
+            if hasattr(result, 'stress_interactions'):
+                for stress_type, interaction_value in result.stress_interactions.items():
+                    row[f'Stress_Interaction_{stress_type}'] = interaction_value
+            if hasattr(result, 'acclimation_levels'):
+                for stress_type, acclimation_value in result.acclimation_levels.items():
+                    row[f'Acclimation_{stress_type}'] = acclimation_value
+            if hasattr(result, 'cumulative_damage'):
+                for stress_type, damage_value in result.cumulative_damage.items():
+                    row[f'Cumulative_Damage_{stress_type}'] = damage_value
 
             # Round floats with field-specific precision to preserve signal
             precision_overrides = {

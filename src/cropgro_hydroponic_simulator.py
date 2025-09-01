@@ -25,6 +25,7 @@ import logging
 
 # Import utilities
 from .utils.temperature_utils import calculate_vpd, calculate_ph_effect, calculate_q10_temperature_factor, calculate_thermal_time
+from .utils.hourly_weather import create_hourly_weather_interpolator
 
 # Import all CROPGRO models
 from .models.genetic_parameters import (
@@ -538,6 +539,9 @@ class CROPGROHydroponicSimulator:
         # Simulation tracking
         self.simulation_day = 0
         self.accumulated_gdd = 0.0
+        
+        # Initialize hourly weather interpolator for DSSAT-style integration
+        self.hourly_weather_interpolator = create_hourly_weather_interpolator()
         # Cumulative trackers for system-level metrics
         self.cumulative_water_L = 0.0
         
@@ -768,6 +772,13 @@ class CROPGROHydroponicSimulator:
         
         # Pass transplanting period to results for dynamic DAS calculation
         results.transplanting_period_days = self.transplanting_period_days
+        
+        # Add system configuration to results for CSV output
+        results.system_type = input_data.system_config.system_type
+        results.system_area = input_data.system_config.system_area
+        results.plant_count = input_data.system_config.n_plants
+        results.flow_rate = getattr(input_data.system_config, 'flow_rate', 0.0)
+        results.system_description = getattr(input_data.system_config, 'description', '')
         
         # Add metadata as custom attributes
         results.metadata = {
@@ -1248,19 +1259,26 @@ class CROPGROHydroponicSimulator:
             self.current_cultivar, stress_factors
         )
         
-        # === STEP 4: PHOTOSYNTHESIS ===
-        # Calculate carbon assimilation based on environment and stress
-        # Get canopy parameters for LAI thresholds
-        canopy_params = getattr(self.system_config, 'canopy_parameters', {})
-        
-        detailed_photosynthesis = self.photosynthesis_model.calculate_daily_assimilation(
-            par_umol_m2_s=env_conditions['light_environment'].ppfd_above_canopy,
-            co2_ppm=env_conditions['actual_co2'],
-            temp_c=env_conditions['actual_temperature'],
-            lai=self.current_lai,
-            photoperiod_hours=daylength,
-            config_dict=canopy_params
+        # === STEP 4: DSSAT-STYLE HOURLY INTEGRATION ===
+        # Run internal hourly loop for key processes (photosynthesis, nutrient uptake)
+        daily_integrated_results = self._run_hourly_integration(
+            day=day,
+            daily_weather_data={
+                'temp_avg': temperature,
+                'temp_min': temperature - 3.0,  # Simple approximation
+                'temp_max': temperature + 3.0,  # Simple approximation
+                'rel_humidity': humidity,
+                'solar_radiation': solar_radiation
+            },
+            env_conditions=env_conditions,
+            stress_factors=stress_factors,
+            nutrient_concentrations=nutrient_concentrations,
+            daylength=daylength
         )
+        
+        # Extract hourly-integrated results
+        detailed_photosynthesis = daily_integrated_results['total_daily_photosynthesis']
+        hourly_diagnostics = daily_integrated_results['hourly_diagnostics']
         
         
         # Apply stress effects to photosynthesis (use overall stress factor from centralized calculation)
@@ -1569,6 +1587,7 @@ class CROPGROHydroponicSimulator:
             temp_avg=env_conditions['actual_temperature'],
             solar_radiation=solar_radiation,
             vpd=vpd_calculated,  # Pre-calculated
+            
             # WUE (daily): growth per unit transpiration (g/L ≡ kg/m³) - reuse transpiration
             # Fix: Use realistic minimum transpiration and cap maximum WUE
             water_use_efficiency=min(500.0, max(0.1, 
@@ -2551,3 +2570,185 @@ class CROPGROHydroponicSimulator:
                 management_performed = True
         
         return management_performed
+    
+    def _run_hourly_integration(self, day: int, daily_weather_data: Dict[str, float], 
+                               env_conditions: Dict[str, float], stress_factors: Dict[str, float],
+                               nutrient_concentrations: Dict[str, float], daylength: float) -> Dict[str, Any]:
+        """
+        DSSAT-style internal hourly integration loop.
+        
+        Integrates photosynthesis and nutrient uptake hourly while maintaining
+        daily timestep for other processes.
+        """
+        from .data.hydroponic_system import WeatherData
+        
+        # Create daily weather object for interpolation
+        daily_weather = WeatherData(
+            date=f"2024-01-{day:02d}",
+            temp_avg=daily_weather_data['temp_avg'],
+            temp_min=daily_weather_data['temp_min'],
+            temp_max=daily_weather_data['temp_max'],
+            rel_humidity=daily_weather_data['rel_humidity'],
+            solar_radiation=daily_weather_data['solar_radiation'],
+            wind_speed=daily_weather_data.get('wind_speed', 2.0),  # Default 2.0 m/s
+            rainfall=daily_weather_data.get('rainfall', 0.0)       # Default 0.0 mm
+        )
+        
+        # Interpolate to hourly weather
+        hourly_weather_list = self.hourly_weather_interpolator.interpolate_daily_to_hourly(
+            daily_weather, day_of_year=day, latitude=40.0  # Default latitude
+        )
+        
+        # Initialize accumulators
+        total_daily_photosynthesis = 0.0
+        total_daily_uptake = {}
+        hourly_diagnostics = []
+        
+        # Get canopy parameters for photosynthesis
+        canopy_params = getattr(self.system_config, 'canopy_parameters', {})
+        
+        # Initialize accumulators for new hourly models
+        total_daily_respiration = 0.0
+        daily_environmental_control = {'energy_cost': 0.0, 'temperature': 0.0, 'humidity': 0.0, 'co2': 0.0}
+        daily_rzt_effects = {'average_rzt': 0.0, 'thermal_stress': 0.0}
+        
+        # Hourly integration loop
+        for hour in range(24):
+            hourly_weather = hourly_weather_list[hour]
+            
+            # === HOURLY PHOTOSYNTHESIS ===
+            if hourly_weather.par > 0.1:  # Only during light hours
+                hourly_photosynthesis = self.photosynthesis_model.calculate_hourly_assimilation(
+                    par_umol_m2_s=hourly_weather.par,
+                    co2_ppm=hourly_weather.co2,
+                    temp_c=hourly_weather.temperature,
+                    lai=self.current_lai,
+                    hour=hour,
+                    ec_factor=stress_factors.get('salinity_factor', 1.0),
+                    config_dict=canopy_params
+                )
+                total_daily_photosynthesis += hourly_photosynthesis
+            else:
+                hourly_photosynthesis = 0.0
+            
+            # === HOURLY NUTRIENT UPTAKE ===
+            if hasattr(self, 'root_model') and hasattr(self.root_model, 'hourly_update'):
+                # Update environmental conditions with hourly values
+                hourly_env_conditions = {
+                    'temperature': hourly_weather.temperature,
+                    'humidity': hourly_weather.humidity,
+                    'flow_rate': env_conditions.get('flow_rate', 1.5),
+                    'oxygen_level': env_conditions.get('oxygen_level', 8.0),
+                    'ph': env_conditions.get('ph', 6.0),
+                    'nutrient_concentrations': nutrient_concentrations
+                }
+                
+                # Scale growth factors for hourly timestep
+                hourly_growth_factors = {
+                    'nitrogen_stress': stress_factors.get('nitrogen_factor', 1.0),
+                    'water_stress': stress_factors.get('water_factor', 1.0),
+                    'temperature_stress': stress_factors.get('temperature_factor', 1.0)
+                }
+                
+                # Calculate hourly nutrient uptake
+                hourly_root_response = self.root_model.hourly_update(
+                    hourly_env_conditions, hourly_growth_factors, nutrient_concentrations, dt_hours=1.0
+                )
+                
+                # Accumulate daily totals
+                for nutrient, rate in hourly_root_response.items():
+                    if nutrient.endswith('_uptake_rate'):
+                        if nutrient not in total_daily_uptake:
+                            total_daily_uptake[nutrient] = 0.0
+                        total_daily_uptake[nutrient] += rate
+            
+            # === HOURLY ENVIRONMENTAL CONTROL ===
+            if hasattr(self, 'environmental_control') and hasattr(self.environmental_control, 'hourly_update'):
+                hourly_control_conditions = {
+                    'temperature': hourly_weather.temperature,
+                    'humidity': hourly_weather.humidity,
+                    'co2': hourly_weather.co2
+                }
+                
+                env_control_response = self.environmental_control.hourly_update(
+                    hourly_control_conditions, hour, dt_hours=1.0
+                )
+                
+                # Accumulate environmental control effects
+                daily_environmental_control['energy_cost'] += env_control_response.get('hourly_cost_usd', 0.0)
+                daily_environmental_control['temperature'] += env_control_response.get('temperature', hourly_weather.temperature)
+                daily_environmental_control['humidity'] += env_control_response.get('humidity', hourly_weather.humidity)
+                daily_environmental_control['co2'] += env_control_response.get('co2', hourly_weather.co2)
+            
+            # === HOURLY ROOT ZONE TEMPERATURE ===
+            if hasattr(self, 'root_zone_temp_model') and hasattr(self.root_zone_temp_model, 'hourly_update'):
+                rzt_conditions = {
+                    'air_temperature': hourly_weather.temperature,
+                    'solution_temperature': hourly_weather.temperature  # Simplified assumption
+                }
+                
+                rzt_response = self.root_zone_temp_model.hourly_update(
+                    rzt_conditions, hour, dt_hours=1.0
+                )
+                
+                # Accumulate RZT effects
+                daily_rzt_effects['average_rzt'] += rzt_response.get('current_rzt', hourly_weather.temperature)
+                daily_rzt_effects['thermal_stress'] += rzt_response.get('thermal_stress', 0.0)
+            
+            # === HOURLY RESPIRATION ===
+            if hasattr(self, 'respiration_model') and hasattr(self.respiration_model, 'hourly_update'):
+                # Get current biomass pools for respiration calculation
+                biomass_pools = [
+                    type('BiomassPool', (), {
+                        'tissue_type': 'leaves', 
+                        'dry_weight': getattr(self, 'leaf_biomass', 0.7),
+                        'age_days': day,
+                        'nitrogen_content': 0.045
+                    }),
+                    type('BiomassPool', (), {
+                        'tissue_type': 'stems', 
+                        'dry_weight': getattr(self, 'stem_biomass', 0.1),
+                        'age_days': day,
+                        'nitrogen_content': 0.020
+                    }),
+                    type('BiomassPool', (), {
+                        'tissue_type': 'roots', 
+                        'dry_weight': getattr(self, 'root_biomass', 0.2),
+                        'age_days': day,
+                        'nitrogen_content': 0.028
+                    })
+                ]
+                
+                resp_response = self.respiration_model.hourly_update(
+                    biomass_pools, hourly_weather.temperature, hour, dt_hours=1.0, new_growth=0.0
+                )
+                
+                # Accumulate daily respiration
+                total_daily_respiration += resp_response.get('total_respiration_g_C_per_hour', 0.0)
+            
+            # Store hourly diagnostics
+            hourly_diagnostics.append({
+                'hour': hour,
+                'temperature': hourly_weather.temperature,
+                'par': hourly_weather.par,
+                'photosynthesis': hourly_photosynthesis,
+                'vpd': hourly_weather.vpd
+            })
+        
+        # Calculate daily averages for environmental control and RZT
+        if daily_environmental_control['temperature'] > 0:
+            for key in ['temperature', 'humidity', 'co2']:
+                daily_environmental_control[key] /= 24.0
+        
+        if daily_rzt_effects['average_rzt'] > 0:
+            daily_rzt_effects['average_rzt'] /= 24.0
+            daily_rzt_effects['thermal_stress'] /= 24.0
+        
+        return {
+            'total_daily_photosynthesis': total_daily_photosynthesis,
+            'total_daily_uptake': total_daily_uptake,
+            'total_daily_respiration': total_daily_respiration,
+            'daily_environmental_control': daily_environmental_control,
+            'daily_rzt_effects': daily_rzt_effects,
+            'hourly_diagnostics': hourly_diagnostics
+        }

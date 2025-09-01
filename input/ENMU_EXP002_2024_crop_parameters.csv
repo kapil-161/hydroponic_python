@@ -1,0 +1,8 @@
+parameter_name,value,unit,description
+crop_name,Lettuce,,Name of the crop being grown
+cultivar_id,HYDRO_001,,Specific variety identifier for the crop
+crop_coefficient,0.90,,Water use efficiency factor (0.6-1.2 typical range)
+plant_density,0.85,,How densely plants are spaced (0.7-1.0 range)
+maximum_height,0.30,meters,Expected maximum height of mature plants
+root_depth,0.15,meters,Expected depth of root system in growing medium
+leaf_area_index,2.0,,Ratio of leaf surface area to ground area

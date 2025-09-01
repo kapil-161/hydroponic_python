@@ -536,6 +536,158 @@ class EnvironmentalControlSystem:
             'action': 'no_control'
         }
     
+    def hourly_update(self, current_conditions: Dict[str, float], hour: int, 
+                     dt_hours: float = 1.0, strategy: ControlStrategy = ControlStrategy.PID) -> Dict[str, Any]:
+        """
+        Hourly environmental control update for DSSAT-style integration.
+        
+        Real HVAC systems respond within minutes/hours, not daily.
+        
+        Args:
+            current_conditions: Current environmental conditions
+            hour: Hour of day (0-23)  
+            dt_hours: Time step in hours
+            strategy: Control strategy
+            
+        Returns:
+            Dict with control actions and environmental adjustments
+        """
+        # Determine light status and photoperiod time
+        light_start_hour = 6.0  # Default 6 AM
+        light_end_hour = light_start_hour + self.setpoints.light_hours
+        
+        # Handle day rollover for photoperiod
+        if light_end_hour > 24.0:
+            light_on = (hour >= light_start_hour) or (hour < (light_end_hour - 24.0))
+        else:
+            light_on = (light_start_hour <= hour < light_end_hour)
+            
+        photoperiod_time = self.calculate_photoperiod_time(float(hour), light_start_hour)
+        
+        # Current conditions
+        temp = current_conditions.get('temperature', 22.0)
+        humidity = current_conditions.get('humidity', 65.0)
+        co2 = current_conditions.get('co2', 400.0)
+        
+        # Target conditions (day/night dependent)
+        if light_on:
+            target_temp = self.setpoints.day_temp
+        else:
+            target_temp = self.setpoints.night_temp
+            
+        # Calculate VPD and target humidity
+        current_vpd = calculate_vpd(temp, humidity)
+        target_humidity = self._calculate_target_humidity_from_vpd(temp, self.setpoints.target_vpd)
+        
+        # Control actions
+        humidity_action = self.calculate_humidity_control_action(
+            humidity, target_humidity, strategy
+        )
+        
+        co2_action = self.calculate_co2_control_action(
+            co2, self.setpoints.target_co2, light_on, strategy, 
+            photoperiod_time if photoperiod_time >= 0 else 0.0
+        )
+        
+        # Environmental adjustments (what actually happens)
+        # Scale by dt_hours for sub-hourly timesteps
+        temp_adjustment = self._calculate_temperature_adjustment(temp, target_temp, dt_hours)
+        humidity_adjustment = self._apply_humidity_control(humidity, humidity_action, dt_hours)
+        co2_adjustment = self._apply_co2_control(co2, co2_action, dt_hours)
+        
+        # Calculate total energy consumption
+        total_energy = (humidity_action.get('energy_consumption_kWh', 0.0) + 
+                       co2_action.get('energy_consumption_kWh', 0.0)) * dt_hours
+        
+        return {
+            'temperature': temp + temp_adjustment,
+            'humidity': humidity + humidity_adjustment,  
+            'co2': co2 + co2_adjustment,
+            'vpd': calculate_vpd(temp + temp_adjustment, humidity + humidity_adjustment),
+            'light_on': light_on,
+            'photoperiod_time': photoperiod_time,
+            'control_actions': {
+                'humidity': humidity_action,
+                'co2': co2_action
+            },
+            'energy_consumption_kWh': total_energy,
+            'hourly_cost_usd': total_energy * self.equipment.electricity_cost
+        }
+    
+    def _calculate_temperature_adjustment(self, current_temp: float, target_temp: float, dt_hours: float) -> float:
+        """Calculate temperature adjustment from heating/cooling systems."""
+        temp_error = target_temp - current_temp
+        
+        # Simple thermal response (would be more complex in real system)
+        max_temp_change_per_hour = 2.0  # °C/hour maximum HVAC capacity
+        
+        # Proportional response with rate limiting
+        temp_change = np.sign(temp_error) * min(abs(temp_error), max_temp_change_per_hour * dt_hours)
+        
+        # Environmental heat gains/losses (passive)
+        ambient_temp = 20.0  # External temperature
+        thermal_mass_factor = 0.1  # Building thermal inertia
+        passive_change = (ambient_temp - current_temp) * thermal_mass_factor * dt_hours
+        
+        return temp_change + passive_change
+    
+    def _apply_humidity_control(self, current_humidity: float, action: Dict[str, float], dt_hours: float) -> float:
+        """Apply humidity control actions to calculate actual humidity change."""
+        if action['action'] == 'humidify':
+            # Humidifier effectiveness
+            max_humidity_increase = action['humidifier_power'] * self.equipment.humidifier_efficiency * dt_hours
+            return min(max_humidity_increase, 100.0 - current_humidity)
+        elif action['action'] == 'dehumidify':
+            # Dehumidifier effectiveness  
+            max_humidity_decrease = action['dehumidifier_power'] * self.equipment.dehumidifier_efficiency * dt_hours
+            return -min(max_humidity_decrease, current_humidity - 10.0)  # Don't go below 10% RH
+        else:
+            # Natural humidity drift
+            return 0.0
+    
+    def _apply_co2_control(self, current_co2: float, action: Dict[str, float], dt_hours: float) -> float:
+        """Apply CO2 control actions to calculate actual CO2 change."""
+        injection_rate = action.get('co2_injection_rate', 0.0)  # μmol/mol/min
+        ventilation_increase = action.get('ventilation_increase', 0.0)
+        
+        # CO2 injection effect
+        co2_increase = injection_rate * 60.0 * dt_hours  # Convert min to hours
+        
+        # Natural CO2 losses (ventilation, plant uptake)
+        base_loss_rate = 50.0  # μmol/mol/hour baseline ventilation loss
+        enhanced_loss_rate = base_loss_rate * (1.0 + ventilation_increase)
+        co2_decrease = enhanced_loss_rate * dt_hours
+        
+        # Net change with bounds
+        net_change = co2_increase - co2_decrease
+        new_co2 = current_co2 + net_change
+        
+        # Clamp to realistic bounds (300-2000 μmol/mol)
+        return max(300.0, min(2000.0, new_co2)) - current_co2
+    
+    def _calculate_target_humidity_from_vpd(self, temperature: float, target_vpd: float) -> float:
+        """
+        Calculate target humidity from temperature and desired VPD.
+        
+        Args:
+            temperature: Air temperature (°C)
+            target_vpd: Target vapor pressure deficit (kPa)
+            
+        Returns:
+            Target relative humidity (%)
+        """
+        # Saturated vapor pressure using Magnus equation
+        es = 0.6108 * math.exp(17.27 * temperature / (temperature + 237.3))
+        
+        # Target actual vapor pressure
+        ea_target = es - target_vpd
+        
+        # Target relative humidity
+        target_rh = (ea_target / es) * 100.0
+        
+        # Constrain to reasonable bounds
+        return max(30.0, min(90.0, target_rh))
+
     def calculate_comprehensive_control(self, current_conditions: Dict[str, float],
                                       light_schedule: Dict[str, bool],
                                       strategy: ControlStrategy = ControlStrategy.PID) -> Dict[str, any]:

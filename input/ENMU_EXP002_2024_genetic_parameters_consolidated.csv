@@ -1,0 +1,31 @@
+parameter_name,value,unit,description,category
+EM,0.85,coefficient,Emergence coefficient,genetic_coefficients
+P1,120.0,days,Photoperiod sensitivity,genetic_coefficients
+P3,0.52,days,Phyllochron interval,genetic_coefficients
+P5,850.0,days,Grain filling duration,genetic_coefficients
+G1,7.5,factor,Scattering factor for leaf number,genetic_coefficients
+G2,0.0025,factor,Scattering factor for leaf size,genetic_coefficients
+G3,1.2,factor,Scattering factor for leaf weight,genetic_coefficients
+PHINT,95.0,days,Interval between leaf tip appearances,genetic_coefficients
+SLAVR,300.0,cm2_g,Specific leaf area of leaves,genetic_coefficients
+SIZLF,200.0,cm2,Maximum leaf size,genetic_coefficients
+XFRT,1.0,fraction,Maximum fraction of daily growth partitioned to reproductive growth,genetic_coefficients
+WTLF,1.0,g,Maximum weight of a leaf,genetic_coefficients
+SFDUR,25.0,days,Seed filling duration for pod cohort,genetic_coefficients
+SDPDV,1.8,count,Average seed per pod under standard conditions,genetic_coefficients
+PODUR,10.0,days,Time required for cultivar to reach final pod load under optimal conditions,genetic_coefficients
+THRSH,78.0,percent,Threshing percentage,genetic_coefficients
+SDPRO,0.42,fraction,Fraction protein in seeds,genetic_coefficients
+SDLIP,0.18,fraction,Fraction oil in seeds,genetic_coefficients
+heat_stress_weight,0.3,multiplier,Impact factor for heat stress on genetic traits,stress_weights
+cold_stress_weight,0.25,multiplier,Impact factor for cold stress on genetic traits,stress_weights
+salinity_stress_weight,0.2,multiplier,Impact factor for salinity stress on genetic traits,stress_weights
+light_stress_weight,0.15,multiplier,Impact factor for light stress on genetic traits,stress_weights
+nutrient_stress_weight,0.25,multiplier,Impact factor for nutrient stress on genetic traits,stress_weights
+adaptation_score_weight,0.6,fraction,Weight of adaptation score in breeding selection,breeding_weights
+yield_potential_weight,0.25,fraction,Weight of yield potential in breeding selection,breeding_weights
+commercial_rating_weight,0.15,fraction,Weight of commercial rating in breeding selection,breeding_weights
+temperature_stress_weight,0.5,multiplier,Impact factor for temperature stress on traits,stress_weights
+nitrogen_excess_weight,0.3,multiplier,Impact factor for nitrogen excess on traits,stress_weights
+stress_response_weight,0.2,multiplier,Impact factor for general stress response,stress_weights
+overall_stress_weight,0.1,multiplier,Default overall stress impact weight,stress_weights

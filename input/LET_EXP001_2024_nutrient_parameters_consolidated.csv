@@ -1,6 +1,6 @@
 parameter_name,value,unit,description,category
-uptake_efficiency,0.85,fraction,Efficiency of nitrogen uptake from solution,nitrogen_balance
-nitrogen_uptake_efficiency,0.8,fraction,Minimal nitrogen uptake efficiency for calculations,nitrogen_balance
+uptake_efficiency,0.12,fraction,Efficiency of nitrogen uptake from solution,nitrogen_balance
+nitrogen_uptake_efficiency,0.12,fraction,Minimal nitrogen uptake efficiency for calculations,nitrogen_balance
 translocation_rate,0.4,fraction,Rate of nitrogen movement between plant parts,nitrogen_balance
 protein_synthesis,0.6,fraction,Portion of nitrogen used for protein synthesis,nitrogen_balance
 chlorophyll_ratio,0.02,fraction,Fraction of leaf nitrogen in chlorophyll,nitrogen_balance
@@ -30,7 +30,7 @@ ec_factor_mg,0.022,mS_per_cm_per_mg_per_L,Electrical conductivity contribution o
 ec_factor_s_so4,0.016,mS_per_cm_per_mg_per_L,Electrical conductivity contribution of sulfate-sulfur,ec_factors
 ec_factor_fe,0.004,mS_per_cm_per_mg_per_L,Electrical conductivity contribution of iron,ec_factors
 ph_target_min,5.8,pH_units,Minimum target pH for hydroponic solution,ph_management
-ph_target_max,6.2,pH_units,Maximum target pH for hydroponic solution,ph_management
+ph_target_max,6.0,pH_units,Maximum target pH for hydroponic solution,ph_management
 ph_buffer_capacity,2.5,meq_per_L,Buffer capacity of nutrient solution,ph_management
 ph_drift_rate,0.02,pH_per_day,Natural pH drift rate without buffering,ph_management
 nitrate_acidification_factor,0.0015,pH_per_mg_N,pH decrease per mg N uptake from nitrate,ph_management
@@ -45,23 +45,40 @@ xylem_transport_capacity,0.15,fraction,Capacity of xylem to transport nutrients,
 phloem_transport_capacity,0.08,fraction,Capacity of phloem to transport nutrients,nutrient_mobility
 temperature_q10,2.0,factor,Q10 temperature factor for nutrient transport,nutrient_mobility
 transpiration_coupling,0.8,fraction,Coupling between transpiration and nutrient uptake,nutrient_mobility
-N-NO3_initial_ppm,250,ppm,Initial concentration of Nitrogen-Nitrate,nutrient_solution
-N-NO3_optimal_ppm,350,ppm,Optimal concentration of Nitrogen-Nitrate,nutrient_solution
-N-NO3_minimum_ppm,150,ppm,Minimum concentration of Nitrogen-Nitrate,nutrient_solution
-N-NO3_max_ppm,400,ppm,Maximum concentration of Nitrogen-Nitrate,nutrient_solution
-P-PO4_initial_ppm,60,ppm,Initial concentration of Phosphorus-Phosphate,nutrient_solution
-P-PO4_optimal_ppm,60,ppm,Optimal concentration of Phosphorus-Phosphate,nutrient_solution
-P-PO4_minimum_ppm,30,ppm,Minimum concentration of Phosphorus-Phosphate,nutrient_solution
-P-PO4_max_ppm,80,ppm,Maximum concentration of Phosphorus-Phosphate,nutrient_solution
-K_initial_ppm,350,ppm,Initial concentration of Potassium,nutrient_solution
-K_optimal_ppm,350,ppm,Optimal concentration of Potassium,nutrient_solution
-K_minimum_ppm,250,ppm,Minimum concentration of Potassium,nutrient_solution
-K_max_ppm,400,ppm,Maximum concentration of Potassium,nutrient_solution
-Ca_initial_ppm,180,ppm,Initial concentration of Calcium,nutrient_solution
-Ca_optimal_ppm,180,ppm,Optimal concentration of Calcium,nutrient_solution
-Ca_minimum_ppm,100,ppm,Minimum concentration of Calcium,nutrient_solution
-Ca_max_ppm,200,ppm,Maximum concentration of Calcium,nutrient_solution
-Mg_initial_ppm,60,ppm,Initial concentration of Magnesium,nutrient_solution
-Mg_optimal_ppm,60,ppm,Optimal concentration of Magnesium,nutrient_solution
-Mg_minimum_ppm,30,ppm,Minimum concentration of Magnesium,nutrient_solution
-Mg_max_ppm,70,ppm,Maximum concentration of Magnesium,nutrient_solution
+N-NO3_initial_ppm,110,ppm,Initial concentration of Nitrogen-Nitrate,nutrient_solution
+N-NO3_optimal_ppm,130,ppm,Optimal concentration of Nitrogen-Nitrate,nutrient_solution
+N-NO3_minimum_ppm,100,ppm,Minimum concentration of Nitrogen-Nitrate,nutrient_solution
+N-NO3_max_ppm,150,ppm,Maximum concentration of Nitrogen-Nitrate,nutrient_solution
+P-PO4_initial_ppm,30,ppm,Initial concentration of Phosphorus-Phosphate,nutrient_solution
+P-PO4_optimal_ppm,51,ppm,Optimal concentration of Phosphorus-Phosphate,nutrient_solution
+P-PO4_minimum_ppm,25,ppm,Minimum concentration of Phosphorus-Phosphate,nutrient_solution
+P-PO4_max_ppm,60,ppm,Maximum concentration of Phosphorus-Phosphate,nutrient_solution
+K_initial_ppm,190,ppm,Initial concentration of Potassium,nutrient_solution
+K_optimal_ppm,260,ppm,Optimal concentration of Potassium,nutrient_solution
+K_minimum_ppm,150,ppm,Minimum concentration of Potassium,nutrient_solution
+K_max_ppm,300,ppm,Maximum concentration of Potassium,nutrient_solution
+Ca_initial_ppm,98,ppm,Initial concentration of Calcium,nutrient_solution
+Ca_optimal_ppm,100,ppm,Optimal concentration of Calcium,nutrient_solution
+Ca_minimum_ppm,80,ppm,Minimum concentration of Calcium,nutrient_solution
+Ca_max_ppm,120,ppm,Maximum concentration of Calcium,nutrient_solution
+Mg_initial_ppm,34,ppm,Initial concentration of Magnesium,nutrient_solution
+Mg_optimal_ppm,70,ppm,Optimal concentration of Magnesium,nutrient_solution
+Mg_minimum_ppm,25,ppm,Minimum concentration of Magnesium,nutrient_solution
+Mg_max_ppm,75,ppm,Maximum concentration of Magnesium,nutrient_solution
+n_uptake_efficiency,0.12,fraction,Nitrogen uptake efficiency (10-14%),nutrient_dynamics
+p_uptake_efficiency,0.17,fraction,Phosphorus uptake efficiency (12-21%),nutrient_dynamics
+k_uptake_efficiency,0.25,fraction,Potassium uptake efficiency (19-31%),nutrient_dynamics
+ca_uptake_efficiency,0.05,fraction,Calcium uptake efficiency (4-6%),nutrient_dynamics
+mg_uptake_efficiency,0.035,fraction,Magnesium uptake efficiency (3-4%),nutrient_dynamics
+fe_uptake_efficiency,0.03,fraction,Iron uptake efficiency (2-4%),nutrient_dynamics
+mn_uptake_efficiency,0.13,fraction,Manganese uptake efficiency (9-16%),nutrient_dynamics
+n_environmental_loss_rate,0.335,fraction,Nitrogen environmental loss rate (27-40%),nutrient_dynamics
+p_environmental_loss_rate,0.23,fraction,Phosphorus environmental loss rate (11-35%),nutrient_dynamics
+k_environmental_loss_rate,0.21,fraction,Potassium environmental loss rate (16-27%),nutrient_dynamics
+ca_environmental_loss_rate,0.17,fraction,Calcium environmental loss rate (14-19%),nutrient_dynamics
+mg_environmental_loss_rate,0.46,fraction,Magnesium environmental loss rate (29-62%),nutrient_dynamics
+fe_environmental_loss_rate,0.61,fraction,Iron environmental loss rate (55-67%),nutrient_dynamics
+mn_environmental_loss_rate,0.25,fraction,Manganese environmental loss rate (14-35%),nutrient_dynamics
+ca_accumulation_rate,0.63,fraction,Calcium accumulation rate (53-73% increase),nutrient_dynamics
+k_depletion_rate,0.72,fraction,Potassium depletion rate (60-82% decrease),nutrient_dynamics
+mn_depletion_rate,0.69,fraction,Manganese depletion rate (55-82% decrease),nutrient_dynamics

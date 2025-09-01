@@ -1,0 +1,11 @@
+parameter_name,value,unit,description
+reservoir_topup_fraction,0.1,fraction,Small refill fraction for floating system
+simulation_duration_days,30,days,Total simulation duration (30 days for ENMU study)
+default_ph,6.0,pH,Default pH value for nutrient solution
+channel_length,73.0,cm,Container length for floating system (73 cm from ENMU study)
+channel_width,40.0,cm,Container width (40 cm from ENMU study)
+channel_depth,31.0,cm,Container depth (31 cm from ENMU study)
+solution_depth,25.0,cm,Nutrient solution depth in container
+container_volume,20.0,liters,Total container volume (20L from ENMU study)
+plant_density,0.41,plants_per_m2,Plant density in floating system (12 plants per 0.292 m²)
+aeration_rate,continuous,,Continuous air stone aeration
