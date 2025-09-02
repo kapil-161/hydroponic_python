@@ -351,6 +351,12 @@ def create_lettuce_leaf_development_model(system_config=None) -> LeafDevelopment
     try:
         # Get leaf development parameters from CSV data loaded in system_config
         leaf_params = getattr(system_config, 'leaf_development_parameters', {})
+        canopy_params = getattr(system_config, 'canopy_parameters', {})
+        
+        # Get specific_leaf_area from canopy parameters since they share the same value
+        if 'specific_leaf_area' not in leaf_params and 'specific_leaf_area' in canopy_params:
+            leaf_params = leaf_params.copy()
+            leaf_params['specific_leaf_area'] = canopy_params['specific_leaf_area']
         
         # Create parameters from CSV config
         parameters = LeafParameters.from_config(leaf_params)

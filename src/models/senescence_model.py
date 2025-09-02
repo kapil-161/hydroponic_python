@@ -548,12 +548,19 @@ def create_lettuce_senescence_model(system_config=None) -> AdvancedSenescenceMod
         # Get senescence parameters from CSV data loaded in system_config
         senescence_params = getattr(system_config, 'senescence_parameters', {})
         nitrogen_params = getattr(system_config, 'nitrogen_parameters', {})
+        leaf_params = getattr(system_config, 'leaf_development_parameters', {})
         
         # Combine parameters from different CSV files
         config = {}
         
         # Add senescence parameters
         config.update(senescence_params)
+        
+        # Get stress thresholds from leaf development since they share the same values
+        if 'water_stress_threshold' not in config and 'water_stress_threshold' in leaf_params:
+            config['water_stress_threshold'] = leaf_params['water_stress_threshold']
+        if 'nitrogen_stress_threshold' not in config and 'nitrogen_stress_threshold' in leaf_params:
+            config['nitrogen_stress_threshold'] = leaf_params['nitrogen_stress_threshold']
         
         # Add nitrogen parameters that affect senescence
         if 'senescence_rate' in nitrogen_params:

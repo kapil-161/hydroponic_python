@@ -341,7 +341,18 @@ def create_lettuce_rzt_model(system_config=None) -> RootZoneTemperatureModel:
     """
     try:
         # Get root zone temperature parameters from CSV data loaded in system_config
-        rzt_params = getattr(system_config, 'root_zone_temperature_parameters', {})
+        rzt_params = getattr(system_config, 'root_zone_temperature_parameters', {}).copy()
+        
+        # Map renamed parameters to expected parameter names
+        param_mapping = {
+            'rzt_water_uptake_sensitivity_low': 'water_uptake_sensitivity_low',
+            'rzt_water_uptake_sensitivity_high': 'water_uptake_sensitivity_high'
+        }
+        
+        # Apply parameter name mapping
+        for csv_name, model_name in param_mapping.items():
+            if csv_name in rzt_params:
+                rzt_params[model_name] = rzt_params[csv_name]
         
         # Create parameters from CSV config
         parameters = RZTParameters.from_config(rzt_params)

@@ -751,7 +751,18 @@ def create_lettuce_nutrient_mobility_model(system_config=None) -> NutrientMobili
     """
     try:
         # Get nutrient mobility parameters from CSV data loaded in system_config
-        nutrient_mobility_params = getattr(system_config, 'nutrient_mobility_parameters', {})
+        nutrient_mobility_params = getattr(system_config, 'nutrient_mobility_parameters', {}).copy()
+        
+        # Map renamed parameters to expected parameter names
+        param_mapping = {
+            'nutrient_mobility_temperature_q10': 'temperature_q10',
+            'nutrient_mobility_base_temperature': 'base_temperature'
+        }
+        
+        # Apply parameter name mapping
+        for csv_name, model_name in param_mapping.items():
+            if csv_name in nutrient_mobility_params:
+                nutrient_mobility_params[model_name] = nutrient_mobility_params[csv_name]
         
         # Create parameters from CSV config
         parameters = NutrientMobilityParameters.from_config(nutrient_mobility_params)

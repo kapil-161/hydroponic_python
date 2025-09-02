@@ -1,0 +1,593 @@
+parameter_name,value,unit,description,category,reference,priority
+# === MASTER PARAMETER FILE - SINGLE SOURCE OF TRUTH ===
+# This file contains ALL parameters with NO duplicates
+# Priority: 1=highest, 2=medium, 3=lowest (for conflict resolution)
+
+# === THERMAL REQUIREMENTS (PHENOLOGY DEVELOPMENT) ===
+GE_to_VE,80.0,gdd,Growing degree days from germination to emergence,thermal_requirements,"Tei et al. 1996",1
+VE_to_V1,45.0,gdd,Growing degree days from emergence to first leaf,thermal_requirements,"Tei et al. 1996",1
+V1_to_V2,35.0,gdd,Growing degree days from first to second leaf,thermal_requirements,"Tei et al. 1996",1
+V2_to_V3,35.0,gdd,Growing degree days from second to third leaf,thermal_requirements,"Tei et al. 1996",1
+V3_to_V4,35.0,gdd,Growing degree days from third to fourth leaf,thermal_requirements,"Tei et al. 1996",1
+V4_to_V5,35.0,gdd,Growing degree days from fourth to fifth leaf,thermal_requirements,"Tei et al. 1996",1
+V5_to_V6,35.0,gdd,Growing degree days from fifth to sixth leaf,thermal_requirements,"Tei et al. 1996",1
+V6_to_V7,35.0,gdd,Growing degree days from sixth to seventh leaf,thermal_requirements,"Tei et al. 1996",1
+V7_to_V8,35.0,gdd,Growing degree days from seventh to eighth leaf,thermal_requirements,"Tei et al. 1996",1
+V8_to_V9,35.0,gdd,Growing degree days from eighth to ninth leaf,thermal_requirements,"Tei et al. 1996",1
+V9_to_V10,35.0,gdd,Growing degree days from ninth to tenth leaf,thermal_requirements,"Tei et al. 1996",1
+V10_to_V11+,40.0,gdd,Growing degree days from tenth leaf to mature vegetative,thermal_requirements,"Tei et al. 1996",1
+V11+_to_HI,120.0,gdd,Growing degree days from mature vegetative to head initiation,thermal_requirements,"Tei et al. 1996",1
+HI_to_HD,180.0,gdd,Growing degree days from head initiation to head development,thermal_requirements,"Tei et al. 1996",1
+HD_to_HM,200.0,gdd,Growing degree days from head development to harvest maturity,thermal_requirements,"Tei et al. 1996",1
+HM_to_PM,100.0,gdd,Growing degree days from harvest to physiological maturity,thermal_requirements,"Tei et al. 1996",1
+vegetative_default,35.0,gdd,Default thermal time for vegetative stage transitions,thermal_requirements,"Tei et al. 1996",1
+head_formation_default,150.0,gdd,Default thermal time for head formation stage transitions,thermal_requirements,"Tei et al. 1996",1
+reproductive_default,200.0,gdd,Default thermal time for reproductive stage transitions,thermal_requirements,"Tei et al. 1996",1
+transition_defaults,"{'vegetative': 35.0, 'head_formation': 150.0, 'reproductive': 200.0}",dict,Default thermal time requirements for stage transitions,thermal_requirements,"Tei et al. 1996",1
+
+# === GENETIC PARAMETERS (GENETIC SYSTEM) ===
+EM_FL,28.5,days,Time from emergence to first flower (lettuce-specific),genetic_parameters,"Boote et al. 2018",1
+FL_SH,16.0,days,Time from first flower to first seed head,genetic_parameters,"DSSAT CROPGRO v4.8",1
+FL_SD,24.0,days,Time from first flower to first seed,genetic_parameters,"DSSAT CROPGRO v4.8",1
+SD_PM,35.0,days,Time from first seed to physiological maturity,genetic_parameters,"DSSAT CROPGRO v4.8",1
+FL_LF,22.0,days,Time from first flower to end of leaf expansion,genetic_parameters,"Tei et al. 1996",1
+LFMAX,1.25,mg_CO2_per_m2_per_s,Maximum leaf photosynthesis rate for lettuce,genetic_parameters,"Seginer et al. 1991",1
+SLAVR,180.0,cm2_per_g,Specific leaf area under standard conditions,genetic_parameters,"Tei et al. 1996",1
+SIZLF,25.0,cm2,Maximum size of full lettuce leaf,genetic_parameters,"Tei et al. 1996",1
+XFRT,0.0,fraction,Maximum fraction partitioned to reproductive growth (lettuce is vegetative),genetic_parameters,"DSSAT CROPGRO v4.8",1
+SFDUR,0.0,days,Seed filling duration (not applicable for leaf lettuce),genetic_parameters,"DSSAT CROPGRO v4.8",1
+SDPDV,0.0,count,Seeds per pod (not applicable for leaf lettuce),genetic_parameters,"DSSAT CROPGRO v4.8",1
+PODUR,0.0,days,Pod duration (not applicable for leaf lettuce),genetic_parameters,"DSSAT CROPGRO v4.8",1
+WTPSD,0.0,g,Weight per seed (not applicable for leaf lettuce),genetic_parameters,"DSSAT CROPGRO v4.8",1
+THRSH,0.0,fraction,Threshing percentage (not applicable for leaf lettuce),genetic_parameters,"DSSAT CROPGRO v4.8",1
+SDPRO,0.0,fraction,Protein fraction in seeds (not applicable for leaf lettuce),genetic_parameters,"DSSAT CROPGRO v4.8",1
+SDLIP,0.0,fraction,Oil fraction in seeds (not applicable for leaf lettuce),genetic_parameters,"DSSAT CROPGRO v4.8",1
+EC_TOLERANCE,1.8,dS_per_m,Maximum EC tolerance for lettuce,genetic_parameters,"Sonneveld & Voogt 2009",1
+ROOT_ACTIVITY,1.0,factor,Root activity coefficient for lettuce,genetic_parameters,"Sonneveld & Voogt 2009",1
+PHOTOSYNTHETIC_CAPACITY,1.0,factor,Relative photosynthetic capacity,genetic_parameters,"Seginer et al. 1991",1
+NITRATE_EFFICIENCY,0.85,fraction,Nitrogen use efficiency factor,genetic_parameters,"Sonneveld & Voogt 2009",1
+
+# === GENETIC COEFFICIENTS (DSSAT CROPGRO) ===
+EM_FL,28.5,days,Time from emergence to first flower (lettuce-specific),genetic_coefficients,"Boote et al. 2018",1
+FL_SH,16.0,days,Time from first flower to first seed head,genetic_coefficients,"DSSAT CROPGRO v4.8",1
+FL_SD,24.0,days,Time from first flower to first seed,genetic_coefficients,"DSSAT CROPGRO v4.8",1
+SD_PM,35.0,days,Time from first seed to physiological maturity,genetic_coefficients,"DSSAT CROPGRO v4.8",1
+FL_LF,22.0,days,Time from first flower to end of leaf expansion,genetic_coefficients,"DSSAT CROPGRO v4.8",1
+LFMAX,1.25,mg_CO2_per_m2_per_s,Maximum leaf photosynthesis rate for lettuce,genetic_coefficients,"Seginer et al. 1991",1
+SLAVR,180.0,cm2_per_g,Specific leaf area under standard conditions,genetic_coefficients,"Tei et al. 1996",1
+SIZLF,25.0,cm2,Maximum size of full lettuce leaf,genetic_coefficients,"Tei et al. 1996",1
+XFRT,0.0,fraction,Maximum fraction partitioned to reproductive growth (lettuce is vegetative),genetic_coefficients,"DSSAT CROPGRO v4.8",1
+SFDUR,0.0,days,Seed filling duration (not applicable for leaf lettuce),genetic_coefficients,"DSSAT CROPGRO v4.8",1
+SDPDV,0.0,count,Seeds per pod (not applicable for leaf lettuce),genetic_coefficients,"DSSAT CROPGRO v4.8",1
+PODUR,0.0,days,Pod duration (not applicable for leaf lettuce),genetic_coefficients,"DSSAT CROPGRO v4.8",1
+WTPSD,0.0,g,Weight per seed (not applicable for leaf lettuce),genetic_coefficients,"DSSAT CROPGRO v4.8",1
+THRSH,0.0,fraction,Threshing percentage (not applicable for leaf lettuce),genetic_coefficients,"DSSAT CROPGRO v4.8",1
+SDPRO,0.0,fraction,Protein fraction in seeds (not applicable for leaf lettuce),genetic_coefficients,"DSSAT CROPGRO v4.8",1
+SDLIP,0.0,fraction,Oil fraction in seeds (not applicable for leaf lettuce),genetic_coefficients,"DSSAT CROPGRO v4.8",1
+EC_TOLERANCE,1.8,dS_per_m,Maximum EC tolerance for lettuce,genetic_coefficients,"Sonneveld & Voogt 2009",1
+ROOT_ACTIVITY,1.0,factor,Root activity coefficient for lettuce,genetic_coefficients,"Sonneveld & Voogt 2009",1
+PHOTOSYNTHETIC_CAPACITY,1.0,factor,Relative photosynthetic capacity,genetic_coefficients,"Seginer et al. 1991",1
+NITRATE_EFFICIENCY,0.85,fraction,Nitrogen use efficiency factor,genetic_coefficients,"Sonneveld & Voogt 2009",1
+
+# === PHOTOSYNTHESIS PARAMETERS (FARQUHAR MODEL) ===
+vcmax_25,75.0,umol_per_m2_per_s,Maximum carboxylation rate at 25°C for lettuce,photosynthesis,"Bernacchi et al. 2001",1
+jmax_25,125.0,umol_per_m2_per_s,Maximum electron transport rate at 25°C,photosynthesis,"Bernacchi et al. 2001",1
+rd_25,1.2,umol_per_m2_per_s,Dark respiration rate at 25°C,photosynthesis,"Bernacchi et al. 2001",1
+eav,65330.0,J_per_mol,Activation energy for Vcmax,photosynthesis,"Bernacchi et al. 2001",1
+eaj,37000.0,J_per_mol,Activation energy for Jmax,photosynthesis,"Bernacchi et al. 2001",1
+ear,37000.0,J_per_mol,Activation energy for Rd,photosynthesis,"Bernacchi et al. 2001",1
+kc,404.9,umol_per_mol,Michaelis-Menten constant for CO2,photosynthesis,"Bernacchi et al. 2001",1
+ko,278.4,mmol_per_mol,Michaelis-Menten constant for O2,photosynthesis,"Bernacchi et al. 2001",1
+gamma_star,42.75,umol_per_mol,CO2 compensation point,photosynthesis,"Bernacchi et al. 2001",1
+alpha,0.24,mol_per_mol,Quantum efficiency for C3 plants,photosynthesis,"Long et al. 1993",1
+theta,0.7,fraction,Curvature factor of light response,photosynthesis,"Long et al. 1993",1
+phi_psii,0.85,mol_per_mol,Quantum yield of PSII,photosynthesis,"Long et al. 1993",1
+light_saturation,1200.0,umol_per_m2_per_s,Light saturation point for lettuce,photosynthesis,"Seginer et al. 1991",1
+co2_compensation,50.0,ppm,CO2 compensation point,photosynthesis,"Long et al. 1993",1
+light_use_efficiency,3.2,g_per_MJ,Light use efficiency for lettuce (calibrated),photosynthesis,"Seginer et al. 1991",1
+quantum_efficiency,0.045,mol_per_mol,Efficiency of light absorption by chlorophyll (calibrated),photosynthesis,"Long et al. 1993",1
+max_carboxylation,120.0,umol_per_m2_per_s,Maximum rate of CO2 fixation (calibrated),photosynthesis,"Bernacchi et al. 2001",1
+enzyme_saturation_lai,3.5,unitless,LAI threshold for enzyme saturation (calibrated),photosynthesis,"Seginer et al. 1991",1
+light_penetration_lai,4.0,unitless,LAI threshold for light penetration (calibrated),photosynthesis,"Seginer et al. 1991",1
+r,8.314,J_per_mol_per_K,Gas constant,photosynthesis,"Farquhar et al. 1980",1
+ci_fraction,0.7,fraction,Intercellular CO2 fraction,photosynthesis,"Farquhar et al. 1980",1
+o2_mmol_mol,210.0,mmol_per_mol,Atmospheric O2 concentration,photosynthesis,"Farquhar et al. 1980",1
+
+# === ENVIRONMENTAL PARAMETERS (SINGLE SOURCE) ===
+optimal_temperature,22.0,celsius,Optimal temperature for lettuce growth,environment,"Seginer et al. 1991",1
+optimal_temperature_max,28.0,celsius,Maximum temperature before stress,environment,"Seginer et al. 1991",1
+optimal_temperature_min,15.0,celsius,Minimum temperature before stress,environment,"Seginer et al. 1991",1
+optimal_light_intensity,18.0,MJ_per_m2_per_day,Optimal daily light integral,environment,"Seginer et al. 1991",1
+min_ec,1.0,dS_per_m,Minimum EC for lettuce,environment,"Sonneveld & Voogt 2009",1
+max_ec,2.5,dS_per_m,Maximum safe EC for lettuce,environment,"Sonneveld & Voogt 2009",1
+optimal_ec,1.8,dS_per_m,Optimal EC for lettuce,environment,"Sonneveld & Voogt 2009",1
+optimal_vpd_min,0.5,kPa,Minimum optimal VPD,environment,"Seginer et al. 1991",1
+optimal_vpd_max,1.2,kPa,Maximum optimal VPD,environment,"Seginer et al. 1991",1
+min_humidity,60.0,percent,Minimum relative humidity,environment,"Seginer et al. 1991",1
+max_humidity,85.0,percent,Maximum relative humidity,environment,"Seginer et al. 1991",1
+co2_enrichment_start_hour,6.0,hours,Hour to start CO2 enrichment,environment,"Seginer et al. 1991",1
+co2_enrichment_duration,8.0,hours,Duration of CO2 enrichment,environment,"Seginer et al. 1991",1
+co2_morning_target,800.0,ppm,Morning CO2 target,environment,"Seginer et al. 1991",1
+co2_afternoon_target,600.0,ppm,Afternoon CO2 target,environment,"Seginer et al. 1991",1
+target_vpd,0.7,kPa,Target vapor pressure deficit,environment,"Seginer et al. 1991",1
+vpd_tolerance,0.3,kPa,VPD tolerance range,environment,"Seginer et al. 1991",1
+day_temp,23.0,celsius,Target daytime temperature,environment,"Seginer et al. 1991",1
+night_temp,19.0,celsius,Target nighttime temperature,environment,"Seginer et al. 1991",1
+temp_tolerance,3.0,celsius,Temperature tolerance range,environment,"Seginer et al. 1991",1
+target_co2,400.0,ppm,Target CO2 concentration,environment,"Seginer et al. 1991",1
+ambient_co2,350.0,ppm,Ambient CO2 concentration,environment,"Seginer et al. 1991",1
+co2_tolerance,50.0,ppm,CO2 tolerance range,environment,"Seginer et al. 1991",1
+light_hours,16.0,hours,Photoperiod hours,environment,"Seginer et al. 1991",1
+light_intensity_control,300.0,umol_per_m2_per_s,Light intensity for control,environment,"Seginer et al. 1991",1
+
+# === PHENOLOGY PARAMETERS (SINGLE SOURCE) ===
+base_temperature,4.0,celsius,Base temperature for lettuce development,phenology,"Tei et al. 1996",1
+maximum_temperature,35.0,celsius,Maximum temperature for development,phenology,"Tei et al. 1996",1
+photoperiod_sensitivity,0.05,days_per_hour,Photoperiod sensitivity,phenology,"Tei et al. 1996",1
+thermal_time_scale,0.9,fraction,Thermal time scaling factor,phenology,"Tei et al. 1996",1
+vernalization_temperature,5.0,celsius,Optimal vernalization temperature,phenology,"Tei et al. 1996",1
+vernalization_days,0.0,days,Days of cold required (lettuce is day-neutral),phenology,"Tei et al. 1996",1
+stress_acceleration_factor,1.3,fraction,Stress acceleration factor,phenology,"Tei et al. 1996",1
+drought_threshold,0.6,fraction,Water stress threshold,phenology,"Tei et al. 1996",1
+heat_threshold,28.0,celsius,Heat stress threshold,phenology,"Tei et al. 1996",1
+critical_photoperiod,12.0,hours,Critical photoperiod for development,phenology,"Tei et al. 1996",1
+photoperiod_slope,0.1,days_per_hour,Photoperiod response slope,phenology,"Tei et al. 1996",1
+photoperiod_sensitive,false,boolean,Whether cultivar is photoperiod sensitive,phenology,"Tei et al. 1996",1
+vernalization_required,false,boolean,Whether vernalization is required,phenology,"Tei et al. 1996",1
+
+# === NITROGEN PARAMETERS (NITROGEN METABOLISM) ===
+nitrogen_uptake_efficiency,0.15,fraction,Nitrogen uptake efficiency from solution,nitrogen_parameters,"Sonneveld & Voogt 2009",1
+uptake_efficiency,0.15,fraction,Nitrogen uptake efficiency from solution,nitrogen_parameters,"Sonneveld & Voogt 2009",1
+translocation_rate,0.35,fraction,Rate of nitrogen translocation,nitrogen_parameters,"Marschner 2012",1
+protein_synthesis,0.65,fraction,Portion of nitrogen used for protein synthesis,nitrogen_parameters,"Marschner 2012",1
+chlorophyll_ratio,0.025,fraction,Fraction of leaf nitrogen in chlorophyll,nitrogen_parameters,"Evans 1989",1
+senescence_rate,0.70,fraction,Nitrogen recovery during senescence,nitrogen_parameters,"Himelblau & Amasino 2001",1
+nitrate_reduction_rate,0.8,per_hour,Rate of nitrate reduction,nitrogen_parameters,"Marschner 2012",1
+ammonium_assimilation_rate,1.2,per_hour,Rate of ammonium assimilation,nitrogen_parameters,"Marschner 2012",1
+amino_acid_uptake_rate,0.4,per_hour,Rate of amino acid uptake,nitrogen_parameters,"Marschner 2012",1
+photosynthetic_n_use_efficiency,40.0,g_DM_per_g_N,Photosynthetic nitrogen use efficiency,nitrogen_parameters,"Evans 1989",1
+growth_n_use_efficiency,30.0,g_DM_per_g_N,Growth nitrogen use efficiency,nitrogen_parameters,"Sonneveld & Voogt 2009",1
+n_stress_threshold,0.75,fraction,Nitrogen stress threshold,nitrogen_parameters,"Sonneveld & Voogt 2009",1
+luxury_uptake_threshold,1.2,fraction,Luxury nitrogen uptake threshold,nitrogen_parameters,"Sonneveld & Voogt 2009",1
+specific_root_activity,0.08,mg_N_per_cm_per_day,Specific root activity,nitrogen_parameters,"Sonneveld & Voogt 2009",1
+root_zone_exploration,0.85,fraction,Root zone exploration efficiency,nitrogen_parameters,"Sonneveld & Voogt 2009",1
+
+# === NITROGEN METABOLISM PARAMETERS ===
+uptake_efficiency,0.15,fraction,Nitrogen uptake efficiency from solution,nitrogen_balance,"Sonneveld & Voogt 2009",1
+nitrogen_uptake_efficiency,0.15,fraction,Minimal nitrogen uptake efficiency,nitrogen_balance,"Sonneveld & Voogt 2009",1
+translocation_rate,0.35,fraction,Rate of nitrogen translocation,nitrogen_balance,"Marschner 2012",1
+protein_synthesis,0.65,fraction,Portion of nitrogen used for protein synthesis,nitrogen_balance,"Marschner 2012",1
+chlorophyll_ratio,0.025,fraction,Fraction of leaf nitrogen in chlorophyll,nitrogen_balance,"Evans 1989",1
+senescence_rate,0.70,fraction,Nitrogen recovery during senescence,nitrogen_balance,"Himelblau & Amasino 2001",1
+nitrate_reduction_rate,0.8,per_hour,Rate of nitrate reduction,nitrogen_balance,"Marschner 2012",1
+ammonium_assimilation_rate,1.2,per_hour,Rate of ammonium assimilation,nitrogen_balance,"Marschner 2012",1
+amino_acid_uptake_rate,0.4,per_hour,Rate of amino acid uptake,nitrogen_balance,"Marschner 2012",1
+photosynthetic_n_use_efficiency,40.0,g_DM_per_g_N,Photosynthetic nitrogen use efficiency,nitrogen_balance,"Evans 1989",1
+growth_n_use_efficiency,30.0,g_DM_per_g_N,Growth nitrogen use efficiency,nitrogen_balance,"Evans 1989",1
+n_stress_threshold,0.75,fraction,Nitrogen stress threshold,nitrogen_balance,"Sonneveld & Voogt 2009",1
+luxury_uptake_threshold,1.2,fraction,Luxury nitrogen uptake threshold,nitrogen_balance,"Sonneveld & Voogt 2009",1
+specific_root_activity,0.08,mg_N_per_cm_per_day,Specific root activity,nitrogen_balance,"Sonneveld & Voogt 2009",1
+root_zone_exploration,0.85,fraction,Root zone exploration efficiency,nitrogen_balance,"Sonneveld & Voogt 2009",1
+
+# === TEMPERATURE STRESS PARAMETERS (TEMPERATURE STRESS MODEL) ===
+heat_threshold_mild,25.0,celsius,Mild heat stress threshold,stress_parameters,"Seginer et al. 1991",1
+heat_threshold_moderate,28.0,celsius,Moderate heat stress threshold,stress_parameters,"Seginer et al. 1991",1
+heat_threshold_severe,32.0,celsius,Severe heat stress threshold,stress_parameters,"Seginer et al. 1991",1
+cold_threshold_mild,18.0,celsius,Mild cold stress threshold,stress_parameters,"Seginer et al. 1991",1
+cold_threshold_moderate,15.0,celsius,Moderate cold stress threshold,stress_parameters,"Seginer et al. 1991",1
+cold_threshold_severe,12.0,celsius,Severe cold stress threshold,stress_parameters,"Seginer et al. 1991",1
+frost_threshold,0.0,celsius,Frost threshold,stress_parameters,"Seginer et al. 1991",1
+heat_lethal_temperature,40.0,celsius,Heat lethal temperature,stress_parameters,"Seginer et al. 1991",1
+cold_lethal_temperature,5.0,celsius,Cold lethal temperature,stress_parameters,"Seginer et al. 1991",1
+acclimation_rate,0.05,per_day,Acclimation rate,stress_parameters,"Seginer et al. 1991",1
+acclimation_decay_rate,0.02,per_day,Acclimation decay rate,stress_parameters,"Seginer et al. 1991",1
+memory_effect_strength,0.4,fraction,Memory effect strength,stress_parameters,"Seginer et al. 1991",1
+temperature_q10,2.0,unitless,Q10 temperature factor,stress_parameters,"Seginer et al. 1991",1
+photosynthesis_heat_sensitivity,0.8,fraction,Photosynthesis heat sensitivity,stress_parameters,"Seginer et al. 1991",1
+photosynthesis_cold_sensitivity,0.7,fraction,Photosynthesis cold sensitivity,stress_parameters,"Seginer et al. 1991",1
+respiration_heat_sensitivity,0.6,fraction,Respiration heat sensitivity,stress_parameters,"Seginer et al. 1991",1
+respiration_cold_sensitivity,0.5,fraction,Respiration cold sensitivity,stress_parameters,"Seginer et al. 1991",1
+growth_heat_sensitivity,0.9,fraction,Growth heat sensitivity,stress_parameters,"Seginer et al. 1991",1
+growth_cold_sensitivity,0.8,fraction,Growth cold sensitivity,stress_parameters,"Seginer et al. 1991",1
+development_heat_sensitivity,0.7,fraction,Development heat sensitivity,stress_parameters,"Seginer et al. 1991",1
+development_cold_sensitivity,0.6,fraction,Development cold sensitivity,stress_parameters,"Seginer et al. 1991",1
+max_acclimation_days,14,days,Maximum acclimation days,stress_parameters,"Seginer et al. 1991",1
+acclimation_memory_days,7,days,Acclimation memory duration,stress_parameters,"Seginer et al. 1991",1
+stress_memory_days,21,days,Stress memory duration,stress_parameters,"Seginer et al. 1991",1
+recovery_memory_days,14,days,Recovery memory duration,stress_parameters,"Seginer et al. 1991",1
+heat_damage_threshold,35.0,celsius,Heat damage threshold,stress_parameters,"Seginer et al. 1991",1
+cold_damage_threshold,8.0,celsius,Cold damage threshold,stress_parameters,"Seginer et al. 1991",1
+heat_recovery_threshold,28.0,celsius,Heat recovery threshold,stress_parameters,"Seginer et al. 1991",1
+cold_recovery_threshold,16.0,celsius,Cold recovery threshold,stress_parameters,"Seginer et al. 1991",1
+heat_damage_rate,0.1,per_day,Heat damage rate,stress_parameters,"Seginer et al. 1991",1
+cold_damage_rate,0.08,per_day,Cold damage rate,stress_parameters,"Seginer et al. 1991",1
+heat_recovery_rate,0.15,per_day,Heat recovery rate,stress_parameters,"Seginer et al. 1991",1
+cold_recovery_rate,0.12,per_day,Cold recovery rate,stress_parameters,"Seginer et al. 1991",1
+frost_damage_rate,0.15,per_day,Frost damage rate,stress_parameters,"Seginer et al. 1991",1
+frost_recovery_rate,0.08,per_day,Frost recovery rate,stress_parameters,"Seginer et al. 1991",1
+frost_recovery_threshold,4.0,celsius,Frost recovery threshold,stress_parameters,"Seginer et al. 1991",1
+recovery_rate_heat,0.15,per_day,Heat recovery rate,stress_parameters,"Seginer et al. 1991",1
+recovery_rate_cold,0.12,per_day,Cold recovery rate,stress_parameters,"Seginer et al. 1991",1
+recovery_rate_frost,0.08,per_day,Frost recovery rate,stress_parameters,"Seginer et al. 1991",1
+damage_rate_heat,0.1,per_day,Heat damage rate,stress_parameters,"Seginer et al. 1991",1
+damage_rate_cold,0.08,per_day,Cold damage rate,stress_parameters,"Seginer et al. 1991",1
+damage_rate_frost,0.15,per_day,Frost damage rate,stress_parameters,"Seginer et al. 1991",1
+stress_memory_duration,21,days,Stress memory duration,stress_parameters,"Seginer et al. 1991",1
+acclimation_memory_duration,7,days,Acclimation memory duration,stress_parameters,"Seginer et al. 1991",1
+recovery_memory_duration,14,days,Recovery memory duration,stress_parameters,"Seginer et al. 1991",1
+cumulative_stress_threshold,0.8,fraction,Cumulative stress threshold,stress_parameters,"Seginer et al. 1991",1
+stress_interaction_factor,1.2,fraction,Stress interaction factor,stress_parameters,"Seginer et al. 1991",1
+
+# === SENESCENCE PARAMETERS (SENESCENCE MODEL) ===
+phosphorus_recovery,0.65,fraction,Phosphorus recovery efficiency,senescence_parameters,"Himelblau & Amasino 2001",1
+nitrogen_recovery,0.75,fraction,Nitrogen recovery efficiency,senescence_parameters,"Himelblau & Amasino 2001",1
+potassium_recovery,0.80,fraction,Potassium recovery efficiency,senescence_parameters,"Himelblau & Amasino 2001",1
+calcium_recovery,0.30,fraction,Calcium recovery efficiency,senescence_parameters,"Himelblau & Amasino 2001",1
+magnesium_recovery,0.60,fraction,Magnesium recovery efficiency,senescence_parameters,"Himelblau & Amasino 2001",1
+sulfur_recovery,0.70,fraction,Sulfur recovery efficiency,senescence_parameters,"Himelblau & Amasino 2001",1
+iron_recovery,0.40,fraction,Iron recovery efficiency,senescence_parameters,"Himelblau & Amasino 2001",1
+manganese_recovery,0.35,fraction,Manganese recovery efficiency,senescence_parameters,"Himelblau & Amasino 2001",1
+zinc_recovery,0.50,fraction,Zinc recovery efficiency,senescence_parameters,"Himelblau & Amasino 2001",1
+copper_recovery,0.45,fraction,Copper recovery efficiency,senescence_parameters,"Himelblau & Amasino 2001",1
+boron_recovery,0.25,fraction,Boron recovery efficiency,senescence_parameters,"Himelblau & Amasino 2001",1
+molybdenum_recovery,0.85,fraction,Molybdenum recovery efficiency,senescence_parameters,"Himelblau & Amasino 2001",1
+natural_lifespan_gdd,800.0,gdd,Natural leaf lifespan in GDD,senescence_parameters,"Gregersen et al. 2013",1
+age_senescence_rate,0.02,per_day,Age-based senescence rate,senescence_parameters,"Gregersen et al. 2013",1
+water_stress_threshold,0.6,fraction,Water stress senescence threshold,senescence_parameters,"Gregersen et al. 2013",1
+nitrogen_stress_threshold,0.7,fraction,Nitrogen stress senescence threshold,senescence_parameters,"Gregersen et al. 2013",1
+temperature_stress_threshold,0.8,fraction,Temperature stress senescence threshold,senescence_parameters,"Gregersen et al. 2013",1
+light_stress_threshold,0.5,fraction,Light stress senescence threshold,senescence_parameters,"Gregersen et al. 2013",1
+water_stress_rate,0.05,per_day,Water stress senescence rate,senescence_parameters,"Gregersen et al. 2013",1
+nitrogen_stress_rate,0.08,per_day,Nitrogen stress senescence rate,senescence_parameters,"Gregersen et al. 2013",1
+temperature_stress_rate,0.06,per_day,Temperature stress senescence rate,senescence_parameters,"Gregersen et al. 2013",1
+light_stress_rate,0.04,per_day,Light stress senescence rate,senescence_parameters,"Gregersen et al. 2013",1
+early_senescence_threshold,0.2,fraction,Early senescence threshold,senescence_parameters,"Gregersen et al. 2013",1
+active_senescence_threshold,0.5,fraction,Active senescence threshold,senescence_parameters,"Gregersen et al. 2013",1
+late_senescence_threshold,0.8,fraction,Late senescence threshold,senescence_parameters,"Gregersen et al. 2013",1
+death_threshold,1.0,fraction,Death threshold,senescence_parameters,"Gregersen et al. 2013",1
+recovery_rate,0.03,per_day,Senescence recovery rate,senescence_parameters,"Gregersen et al. 2013",1
+max_recovery,0.3,fraction,Maximum recovery from senescence,senescence_parameters,"Gregersen et al. 2013",1
+reproductive_priority_factor,1.2,fraction,Reproductive priority factor,senescence_parameters,"Gregersen et al. 2013",1
+lower_canopy_factor,1.5,fraction,Lower canopy senescence factor,senescence_parameters,"Gregersen et al. 2013",1
+
+# === ROOT SYSTEM PARAMETERS ===
+primary_root_growth_rate,2.0,cm_per_day,Primary root growth rate,root_system,"Sonneveld & Voogt 2009",1
+lateral_root_density,3.0,roots_per_cm,Lateral root density,root_system,"Sonneveld & Voogt 2009",1
+branching_angle_mean,45.0,degrees,Mean branching angle,root_system,"Sonneveld & Voogt 2009",1
+branching_angle_std,10.0,degrees,Standard deviation of branching angle,root_system,"Sonneveld & Voogt 2009",1
+fine_root_fraction,0.65,fraction,Fraction of fine roots,root_system,"Sonneveld & Voogt 2009",1
+medium_root_fraction,0.25,fraction,Fraction of medium roots,root_system,"Sonneveld & Voogt 2009",1
+coarse_root_fraction,0.10,fraction,Fraction of coarse roots,root_system,"Sonneveld & Voogt 2009",1
+fine_diameter_mean,0.1,mm,Mean fine root diameter,root_system,"Sonneveld & Voogt 2009",1
+fine_diameter_std,0.02,mm,Standard deviation of fine root diameter,root_system,"Sonneveld & Voogt 2009",1
+medium_diameter_mean,0.4,mm,Mean medium root diameter,root_system,"Sonneveld & Voogt 2009",1
+medium_diameter_std,0.1,mm,Standard deviation of medium root diameter,root_system,"Sonneveld & Voogt 2009",1
+coarse_diameter_mean,1.0,mm,Mean coarse root diameter,root_system,"Sonneveld & Voogt 2009",1
+coarse_diameter_std,0.2,mm,Standard deviation of coarse root diameter,root_system,"Sonneveld & Voogt 2009",1
+fine_turnover_rate,0.02,per_day,Fine root turnover rate,root_system,"Sonneveld & Voogt 2009",1
+medium_turnover_rate,0.01,per_day,Medium root turnover rate,root_system,"Sonneveld & Voogt 2009",1
+coarse_turnover_rate,0.005,per_day,Coarse root turnover rate,root_system,"Sonneveld & Voogt 2009",1
+fine_root_half_life_days,35.0,days,Fine root half-life,root_system,"Sonneveld & Voogt 2009",1
+medium_root_half_life_days,70.0,days,Medium root half-life,root_system,"Sonneveld & Voogt 2009",1
+coarse_root_half_life_days,140.0,days,Coarse root half-life,root_system,"Sonneveld & Voogt 2009",1
+
+# === STRESS PARAMETERS (STRESS RESPONSE THRESHOLDS) ===
+optimal_vpd_min,0.5,kPa,Minimum optimal vapor pressure deficit,stress_parameters,"Seginer et al. 1991",1
+optimal_vpd_max,1.2,kPa,Maximum optimal vapor pressure deficit,stress_parameters,"Seginer et al. 1991",1
+optimal_ec,1.8,dS_per_m,Optimal electrical conductivity for growth,stress_parameters,"Sonneveld & Voogt 2009",1
+optimal_ec_min,1.0,dS_per_m,Minimum optimal electrical conductivity for growth,stress_parameters,"Sonneveld & Voogt 2009",1
+optimal_ec_max,2.5,dS_per_m,Maximum optimal electrical conductivity for growth,stress_parameters,"Sonneveld & Voogt 2009",1
+vpd_stress_high_factor,0.25,fraction,Growth reduction when vapor pressure deficit is too high,stress_parameters,"Seginer et al. 1991",1
+vpd_stress_low_factor,0.15,fraction,Growth reduction when vapor pressure deficit is too low,stress_parameters,"Seginer et al. 1991",1
+ec_stress_high_factor,0.2,fraction,Growth reduction when electrical conductivity is too high,stress_parameters,"Sonneveld & Voogt 2009",1
+ec_stress_low_threshold,0.8,dS_per_m,EC threshold below which stress occurs,stress_parameters,"Sonneveld & Voogt 2009",1
+ec_stress_low_factor,0.1,fraction,Growth reduction when electrical conductivity is too low,stress_parameters,"Sonneveld & Voogt 2009",1
+temp_stress_threshold,5.0,celsius,Temperature deviation before stress occurs,stress_parameters,"Seginer et al. 1991",1
+temp_stress_factor,0.1,fraction,Temperature stress factor,stress_parameters,"Seginer et al. 1991",1
+heat_stress_threshold,28.0,celsius,Heat stress threshold,stress_parameters,"Seginer et al. 1991",1
+cold_stress_threshold,15.0,celsius,Cold stress threshold,stress_parameters,"Seginer et al. 1991",1
+water_stress_factor,0.2,fraction,Water stress factor,stress_parameters,"Seginer et al. 1991",1
+
+# === STRESS RESPONSE PARAMETERS ===
+photosynthesis_heat_sensitivity,0.8,fraction,Photosynthesis heat sensitivity,stress_response,"Seginer et al. 1991",1
+photosynthesis_cold_sensitivity,0.7,fraction,Photosynthesis cold sensitivity,stress_response,"Seginer et al. 1991",1
+respiration_heat_sensitivity,0.6,fraction,Respiration heat sensitivity,stress_response,"Seginer et al. 1991",1
+respiration_cold_sensitivity,0.5,fraction,Respiration cold sensitivity,stress_response,"Seginer et al. 1991",1
+growth_heat_sensitivity,0.9,fraction,Growth heat sensitivity,stress_response,"Seginer et al. 1991",1
+growth_cold_sensitivity,0.8,fraction,Growth cold sensitivity,stress_response,"Seginer et al. 1991",1
+development_heat_sensitivity,0.7,fraction,Development heat sensitivity,stress_response,"Seginer et al. 1991",1
+development_cold_sensitivity,0.6,fraction,Development cold sensitivity,stress_response,"Seginer et al. 1991",1
+acclimation_rate,0.05,per_day,Acclimation rate,stress_response,"Seginer et al. 1991",1
+acclimation_decay_rate,0.02,per_day,Acclimation decay rate,stress_response,"Seginer et al. 1991",1
+heat_damage_threshold,0.8,fraction,Heat damage threshold,stress_response,"Seginer et al. 1991",1
+cold_damage_threshold,0.7,fraction,Cold damage threshold,stress_response,"Seginer et al. 1991",1
+frost_damage_rate,0.3,per_day,Frost damage rate,stress_response,"Seginer et al. 1991",1
+recovery_rate_heat,0.1,per_day,Heat recovery rate,stress_response,"Seginer et al. 1991",1
+recovery_rate_cold,0.08,per_day,Cold recovery rate,stress_response,"Seginer et al. 1991",1
+memory_effect_strength,0.4,fraction,Memory effect strength,stress_response,"Seginer et al. 1991",1
+temperature_q10,2.0,unitless,Q10 temperature factor,stress_response,"Seginer et al. 1991",1
+heat_lethal_temperature,40.0,celsius,Heat lethal temperature,stress_response,"Seginer et al. 1991",1
+frost_threshold,0.0,celsius,Frost threshold,stress_response,"Seginer et al. 1991",1
+
+# === CANOPY PARAMETERS (CANOPY STRUCTURE) ===
+number_of_layers,5,unitless,Number of canopy layers,canopy_parameters,"Campbell & Norman 1998",1
+row_spacing,0.3,meters,Row spacing,canopy_parameters,"Sonneveld & Voogt 2009",1
+plant_spacing,0.3,meters,Plant spacing,canopy_parameters,"Sonneveld & Voogt 2009",1
+plant_height,30.0,cm,Plant height,canopy_parameters,"Tei et al. 1996",1
+canopy_width,0.3,meters,Canopy width,canopy_parameters,"Tei et al. 1996",1
+self_shading_factor,0.8,fraction,Self-shading factor,canopy_parameters,"Campbell & Norman 1998",1
+neighbor_shading_distance,0.6,meters,Neighbor shading distance,canopy_parameters,"Campbell & Norman 1998",1
+specific_leaf_area,180.0,cm2_per_g,Specific leaf area,canopy_parameters,"Tei et al. 1996",1
+max_lai,4.0,unitless,Maximum leaf area index,canopy_parameters,"Tei et al. 1996",1
+leaf_angle_distribution,spherical,unitless,Leaf angle distribution,canopy_parameters,"Campbell & Norman 1998",1
+extinction_coefficient,0.7,unitless,Light extinction coefficient,canopy_parameters,"Campbell & Norman 1998",1
+clumping_factor,0.9,unitless,Leaf clumping factor,canopy_parameters,"Campbell & Norman 1998",1
+leaf_scattering,0.15,unitless,Leaf scattering coefficient,canopy_parameters,"Campbell & Norman 1998",1
+leaf_reflectance,0.1,unitless,Leaf reflectance,canopy_parameters,"Campbell & Norman 1998",1
+leaf_transmittance,0.05,unitless,Leaf transmittance,canopy_parameters,"Campbell & Norman 1998",1
+max_individual_leaf_area,0.008,m2,Maximum individual leaf area,canopy_parameters,"Tei et al. 1996",1
+leaf_area_expansion_rate,0.2,per_day,Leaf area expansion rate,canopy_parameters,"Tei et al. 1996",1
+temperature_stress_sensitivity,0.8,fraction,Temperature stress sensitivity,canopy_parameters,"Tei et al. 1996",1
+leaf_thickness,0.2,mm,Leaf thickness,canopy_parameters,"Tei et al. 1996",1
+leaf_absorptance,0.85,unitless,Leaf absorptance,canopy_parameters,"Campbell & Norman 1998",1
+mean_leaf_angle,45.0,degrees,Mean leaf angle,canopy_parameters,"Campbell & Norman 1998",1
+leaf_angle_variance,15.0,degrees,Leaf angle variance,canopy_parameters,"Campbell & Norman 1998",1
+beam_extinction_coeff,0.7,unitless,Beam extinction coefficient,canopy_parameters,"Campbell & Norman 1998",1
+diffuse_extinction_coeff,0.5,unitless,Diffuse extinction coefficient,canopy_parameters,"Campbell & Norman 1998",1
+clumping_index,0.9,unitless,Clumping index,canopy_parameters,"Campbell & Norman 1998",1
+sunlit_fraction_method,spherical,unitless,Method for calculating sunlit fraction,canopy_parameters,"Campbell & Norman 1998",1
+
+# === CANOPY ARCHITECTURE PARAMETERS ===
+leaf_angle_distribution,spherical,unitless,Leaf angle distribution,canopy_architecture,"Campbell & Norman 1998",1
+extinction_coefficient,0.7,unitless,Light extinction coefficient,canopy_architecture,"Campbell & Norman 1998",1
+clumping_factor,0.9,unitless,Leaf clumping factor,canopy_architecture,"Campbell & Norman 1998",1
+leaf_scattering,0.15,unitless,Leaf scattering coefficient,canopy_architecture,"Campbell & Norman 1998",1
+leaf_reflectance,0.1,unitless,Leaf reflectance,canopy_architecture,"Campbell & Norman 1998",1
+leaf_transmittance,0.05,unitless,Leaf transmittance,canopy_architecture,"Campbell & Norman 1998",1
+max_individual_leaf_area,0.008,m2,Maximum individual leaf area,canopy_architecture,"Tei et al. 1996",1
+leaf_area_expansion_rate,0.2,per_day,Leaf area expansion rate,canopy_architecture,"Tei et al. 1996",1
+temperature_stress_sensitivity,0.8,fraction,Temperature stress sensitivity,canopy_architecture,"Tei et al. 1996",1
+specific_leaf_area,180.0,cm2_per_g,Specific leaf area,canopy_architecture,"Tei et al. 1996",1
+leaf_thickness,0.2,mm,Leaf thickness,canopy_architecture,"Tei et al. 1996",1
+leaf_absorptance,0.85,unitless,Leaf absorptance,canopy_architecture,"Campbell & Norman 1998",1
+mean_leaf_angle,45.0,degrees,Mean leaf angle,canopy_architecture,"Campbell & Norman 1998",1
+leaf_angle_variance,15.0,degrees,Leaf angle variance,canopy_architecture,"Campbell & Norman 1998",1
+beam_extinction_coeff,0.7,unitless,Beam extinction coefficient,canopy_architecture,"Campbell & Norman 1998",1
+diffuse_extinction_coeff,0.5,unitless,Diffuse extinction coefficient,canopy_architecture,"Campbell & Norman 1998",1
+clumping_index,0.9,unitless,Clumping index,canopy_architecture,"Campbell & Norman 1998",1
+sunlit_fraction_method,spherical,unitless,Method for calculating sunlit fraction,canopy_architecture,"Campbell & Norman 1998",1
+
+# === MODEL CONSTANTS (SIMULATION PARAMETERS) ===
+carbon_to_biomass_ratio,0.45,fraction,Carbon to biomass conversion ratio (calibrated),model_constants,"Amthor 2000",1
+growth_respiration_fraction,0.25,fraction,Fraction of assimilates used for growth respiration,model_constants,"Amthor 2000",1
+vegetative_leaf_allocation,0.6,fraction,Biomass allocation to leaves during vegetative growth,model_constants,"Tei et al. 1996",1
+vegetative_stem_allocation,0.25,fraction,Biomass allocation to stems during vegetative growth,model_constants,"Tei et al. 1996",1
+vegetative_root_allocation,0.15,fraction,Biomass allocation to roots during vegetative growth,model_constants,"Tei et al. 1996",1
+reproductive_leaf_allocation,0.4,fraction,Biomass allocation to leaves during reproductive growth,model_constants,"Tei et al. 1996",1
+reproductive_stem_allocation,0.45,fraction,Biomass allocation to stems during reproductive growth,model_constants,"Tei et al. 1996",1
+reproductive_root_allocation,0.15,fraction,Biomass allocation to roots during reproductive growth,model_constants,"Tei et al. 1996",1
+maintenance_respiration_coefficient,0.008,per_day,Maintenance respiration coefficient (calibrated),model_constants,"Amthor 2000",1
+growth_respiration_coefficient,0.20,fraction,Growth respiration coefficient (calibrated),model_constants,"Amthor 2000",1
+q10_factor,1.8,unitless,Q10 temperature factor for respiration (calibrated),model_constants,"Amthor 2000",1
+base_temperature_respiration,22.0,celsius,Base temperature for respiration calculations (calibrated),model_constants,"Amthor 2000",1
+leaf_respiration_fraction,0.5,fraction,Fraction of respiration from leaves (calibrated),model_constants,"Amthor 2000",1
+stem_respiration_fraction,0.2,fraction,Fraction of respiration from stems,model_constants,"Amthor 2000",1
+root_respiration_fraction,0.3,fraction,Fraction of respiration from roots (calibrated),model_constants,"Amthor 2000",1
+growth_efficiency,0.75,fraction,Growth efficiency factor,model_constants,"Amthor 2000",1
+maintenance_coefficient,0.015,per_day,Maintenance coefficient,model_constants,"Amthor 2000",1
+maintenance_base_rate,0.01,per_day,Maintenance base rate,model_constants,"Amthor 2000",1
+biosynthetic_cost,1.44,g_glucose_per_g_biomass,Biosynthetic cost for biomass production,model_constants,"Amthor 2000",1
+carbohydrate_fraction,0.3,fraction,Carbohydrate fraction in biomass,model_constants,"Amthor 2000",1
+lipid_fraction,0.05,fraction,Lipid fraction in biomass,model_constants,"Amthor 2000",1
+protein_fraction,0.2,fraction,Protein fraction in biomass,model_constants,"Amthor 2000",1
+lignin_fraction,0.1,fraction,Lignin fraction in biomass,model_constants,"Amthor 2000",1
+organic_acid_fraction,0.1,fraction,Organic acid fraction in biomass,model_constants,"Amthor 2000",1
+
+# === RESPIRATION PARAMETERS (RESPIRATION MODEL) ===
+tissue_factor_leaves,0.4,fraction,Respiration factor for leaves,respiration_parameters,"Amthor 2000",1
+tissue_factor_stems,0.2,fraction,Respiration factor for stems,respiration_parameters,"Amthor 2000",1
+tissue_factor_roots,0.4,fraction,Respiration factor for roots,respiration_parameters,"Amthor 2000",1
+tissue_factor_reproductive,0.0,fraction,Respiration factor for reproductive tissue (lettuce is vegetative),respiration_parameters,"Amthor 2000",1
+maintenance_base_rate,0.008,per_day,Maintenance respiration base rate (calibrated),respiration_parameters,"Amthor 2000",1
+reference_temperature,22.0,celsius,Reference temperature for respiration (calibrated),respiration_parameters,"Amthor 2000",1
+q10_factor,1.8,unitless,Q10 temperature factor (calibrated),respiration_parameters,"Amthor 2000",1
+growth_efficiency,0.80,fraction,Growth efficiency factor (calibrated),respiration_parameters,"Amthor 2000",1
+biosynthetic_cost,1.25,g_glucose_per_g_biomass,Biosynthetic cost for biomass production (calibrated),respiration_parameters,"Amthor 2000",1
+age_effect_coefficient,0.015,per_day,Age effect coefficient (calibrated),respiration_parameters,"Amthor 2000",1
+max_age_effect,0.25,fraction,Maximum age effect (calibrated),respiration_parameters,"Amthor 2000",1
+acclimation_rate,0.03,per_day,Acclimation rate (calibrated),respiration_parameters,"Amthor 2000",1
+acclimation_memory,5.0,days,Acclimation memory duration (calibrated),respiration_parameters,"Amthor 2000",1
+n_effect_slope,0.08,fraction,Nitrogen effect slope (calibrated),respiration_parameters,"Amthor 2000",1
+reference_leaf_n,0.04,fraction,Reference leaf nitrogen content,respiration_parameters,"Amthor 2000",1
+
+# === RESPIRATION PARAMETERS ===
+
+# === EXPERIMENT SETTINGS ===
+sowing_date,2025-08-15,date,Date when seeds were sown,experiment_settings,"Research Protocol",1
+transplanting_date,2025-08-31,date,Date when seedlings were transplanted (16 days after sowing),experiment_settings,"Research Protocol",1
+experiment_duration,60,days,Total duration of the experiment,experiment_settings,"Research Protocol",1
+harvest_date,2025-10-15,date,Planned harvest date,experiment_settings,"Research Protocol",1
+cultivar_name,Butterhead_Lettuce,unitless,Name of the lettuce cultivar,experiment_settings,"Research Protocol",1
+treatment_id,LET_EXP001_2024,unitless,Unique identifier for this experiment,experiment_settings,"Research Protocol",1
+replication_number,1,unitless,Replication number for this treatment,experiment_settings,"Research Protocol",1
+
+# === ENVIRONMENTAL CONTROL PARAMETERS (PH MANAGEMENT) ===
+ph_target_min,5.8,pH_units,Minimum target pH for hydroponic solution,environmental_control_parameters,"Sonneveld & Voogt 2009",1
+ph_target_max,6.2,pH_units,Maximum target pH for hydroponic solution,environmental_control_parameters,"Sonneveld & Voogt 2009",1
+ph_buffer_capacity,2.5,meq_per_L,Buffer capacity of nutrient solution,environmental_control_parameters,"Sonneveld & Voogt 2009",1
+ph_drift_rate,0.02,pH_per_day,Natural pH drift rate without buffering,environmental_control_parameters,"Sonneveld & Voogt 2009",1
+nitrate_acidification_factor,0.001,pH_change_per_mg_N,pH change per mg N uptake,environmental_control_parameters,"Sonneveld & Voogt 2009",1
+ammonium_alkalinization_factor,0.002,pH_change_per_mg_N,pH change per mg N uptake,environmental_control_parameters,"Sonneveld & Voogt 2009",1
+carbonate_buffer_pka,6.35,unitless,Carbonate buffer pKa,environmental_control_parameters,"Stumm & Morgan 1996",1
+phosphate_buffer_pka1,2.15,unitless,Phosphate buffer pKa1,environmental_control_parameters,"Stumm & Morgan 1996",1
+phosphate_buffer_pka2,7.20,unitless,Phosphate buffer pKa2,environmental_control_parameters,"Stumm & Morgan 1996",1
+phosphate_buffer_pka3,12.33,unitless,Phosphate buffer pKa3,environmental_control_parameters,"Stumm & Morgan 1996",1
+ph_adjustment_rate,0.1,pH_units_per_hour,pH adjustment rate,environmental_control_parameters,"Sonneveld & Voogt 2009",1
+ph_deadband,0.1,pH_units,pH control deadband,environmental_control_parameters,"Sonneveld & Voogt 2009",1
+
+# === NUTRIENT UPTAKE PARAMETERS ===
+no3_uptake_vmax,0.03,mg_per_cm2_per_day,Maximum NO3 uptake rate per root surface area,nutrient_parameters,"Clarkson & Hanson 1980",1
+no3_uptake_km,0.5,mg_per_L,Michaelis-Menten constant for NO3 uptake,nutrient_parameters,"Clarkson & Hanson 1980",1
+nh4_uptake_vmax,0.045,mg_per_cm2_per_day,Maximum NH4 uptake rate per root surface area,nutrient_parameters,"Clarkson & Hanson 1980",1
+nh4_uptake_km,0.3,mg_per_L,Michaelis-Menten constant for NH4 uptake,nutrient_parameters,"Clarkson & Hanson 1980",1
+po4_uptake_vmax,0.008,mg_per_cm2_per_day,Maximum PO4 uptake rate per root surface area,nutrient_parameters,"Clarkson & Hanson 1980",1
+po4_uptake_km,0.1,mg_per_L,Michaelis-Menten constant for PO4 uptake,nutrient_parameters,"Clarkson & Hanson 1980",1
+k_uptake_vmax,0.025,mg_per_cm2_per_day,Maximum K uptake rate per root surface area,nutrient_parameters,"Clarkson & Hanson 1980",1
+k_uptake_km,0.4,mg_per_L,Michaelis-Menten constant for K uptake,nutrient_parameters,"Clarkson & Hanson 1980",1
+ca_uptake_vmax,0.018,mg_per_cm2_per_day,Maximum Ca uptake rate per root surface area,nutrient_parameters,"Clarkson & Hanson 1980",1
+ca_uptake_km,0.8,mg_per_L,Michaelis-Menten constant for Ca uptake,nutrient_parameters,"Clarkson & Hanson 1980",1
+mg_uptake_vmax,0.012,mg_per_cm2_per_day,Maximum Mg uptake rate per root surface area,nutrient_parameters,"Shaul 2002",1
+mg_uptake_km,0.6,mg_per_L,Michaelis-Menten constant for Mg uptake,nutrient_parameters,"Shaul 2002",1
+so4_uptake_vmax,0.015,mg_per_cm2_per_day,Maximum SO4 uptake rate per root surface area,nutrient_parameters,"Hawkesford 2000",1
+so4_uptake_km,0.7,mg_per_L,Michaelis-Menten constant for SO4 uptake,nutrient_parameters,"Hawkesford 2000",1
+ec_factor_n_no3,0.62,dS_per_m_per_mg_per_L,EC factor for NO3-N,nutrient_parameters,"Sonneveld & Voogt 2009",1
+ec_factor_n_nh4,0.74,dS_per_m_per_mg_per_L,EC factor for NH4-N,nutrient_parameters,"Sonneveld & Voogt 2009",1
+ec_factor_p_po4,0.51,dS_per_m_per_mg_per_L,EC factor for PO4-P,nutrient_parameters,"Sonneveld & Voogt 2009",1
+ec_factor_k,0.69,dS_per_m_per_mg_per_L,EC factor for K,nutrient_parameters,"Sonneveld & Voogt 2009",1
+ec_factor_ca,0.60,dS_per_m_per_mg_per_L,EC factor for Ca,nutrient_parameters,"Sonneveld & Voogt 2009",1
+ec_factor_mg,0.61,dS_per_m_per_mg_per_L,EC factor for Mg,nutrient_parameters,"Sonneveld & Voogt 2009",1
+ec_factor_s_so4,0.52,dS_per_m_per_mg_per_L,EC factor for SO4-S,nutrient_parameters,"Sonneveld & Voogt 2009",1
+ec_factor_fe,0.45,dS_per_m_per_mg_per_L,EC factor for Fe,nutrient_parameters,"Sonneveld & Voogt 2009",1
+ec_factor_mn,0.48,dS_per_m_per_mg_per_L,EC factor for Mn,nutrient_parameters,"Sonneveld & Voogt 2009",1
+ec_factor_zn,0.50,dS_per_m_per_mg_per_L,EC factor for Zn,nutrient_parameters,"Sonneveld & Voogt 2009",1
+ec_factor_cu,0.47,dS_per_m_per_mg_per_L,EC factor for Cu,nutrient_parameters,"Sonneveld & Voogt 2009",1
+ec_factor_b,0.43,dS_per_m_per_mg_per_L,EC factor for B,nutrient_parameters,"Sonneveld & Voogt 2009",1
+ec_factor_mo,0.55,dS_per_m_per_mg_per_L,EC factor for Mo,nutrient_parameters,"Sonneveld & Voogt 2009",1
+ph_target_min,5.8,pH_units,Minimum target pH for hydroponic solution,nutrient_parameters,"Sonneveld & Voogt 2009",1
+ph_target_max,6.2,pH_units,Maximum target pH for hydroponic solution,nutrient_parameters,"Sonneveld & Voogt 2009",1
+ph_buffer_capacity,2.5,meq_per_L,Buffer capacity of nutrient solution,nutrient_parameters,"Sonneveld & Voogt 2009",1
+ph_drift_rate,0.02,pH_per_day,Natural pH drift rate without buffering,nutrient_parameters,"Sonneveld & Voogt 2009",1
+nitrate_acidification_factor,0.001,pH_change_per_mg_N,pH change per mg N uptake,nutrient_parameters,"Sonneveld & Voogt 2009",1
+ammonium_alkalinization_factor,0.002,pH_change_per_mg_N,pH change per mg N uptake,nutrient_parameters,"Sonneveld & Voogt 2009",1
+carbonate_buffer_pka,6.35,unitless,Carbonate buffer pKa,nutrient_parameters,"Stumm & Morgan 1996",1
+phosphate_buffer_pka1,2.15,unitless,Phosphate buffer pKa1,nutrient_parameters,"Stumm & Morgan 1996",1
+phosphate_buffer_pka2,7.20,unitless,Phosphate buffer pKa2,nutrient_parameters,"Stumm & Morgan 1996",1
+phosphate_buffer_pka3,12.33,unitless,Phosphate buffer pKa3,nutrient_parameters,"Stumm & Morgan 1996",1
+ph_adjustment_rate,0.1,pH_units_per_hour,pH adjustment rate,nutrient_parameters,"Sonneveld & Voogt 2009",1
+ph_deadband,0.1,pH_units,pH control deadband,nutrient_parameters,"Sonneveld & Voogt 2009",1
+
+# === NUTRIENT MOBILITY PARAMETERS ===
+nitrogen_mobility,high,unitless,Nitrogen mobility class,nutrient_mobility,"Marschner 2012",1
+phosphorus_mobility,medium,unitless,Phosphorus mobility class,nutrient_mobility,"Marschner 2012",1
+potassium_mobility,high,unitless,Potassium mobility class,nutrient_mobility,"Marschner 2012",1
+calcium_mobility,low,unitless,Calcium mobility class,nutrient_mobility,"Marschner 2012",1
+magnesium_mobility,medium,unitless,Magnesium mobility class,nutrient_mobility,"Marschner 2012",1
+sulfur_mobility,medium,unitless,Sulfur mobility class,nutrient_mobility,"Marschner 2012",1
+iron_mobility,low,unitless,Iron mobility class,nutrient_mobility,"Marschner 2012",1
+manganese_mobility,low,unitless,Manganese mobility class,nutrient_mobility,"Marschner 2012",1
+zinc_mobility,medium,unitless,Zinc mobility class,nutrient_mobility,"Marschner 2012",1
+copper_mobility,low,unitless,Copper mobility class,nutrient_mobility,"Marschner 2012",1
+boron_mobility,low,unitless,Boron mobility class,nutrient_mobility,"Marschner 2012",1
+molybdenum_mobility,high,unitless,Molybdenum mobility class,nutrient_mobility,"Marschner 2012",1
+xylem_transport_capacity,1.0,fraction,Xylem transport capacity,nutrient_mobility,"Marschner 2012",1
+transpiration_coupling,0.8,fraction,Transpiration coupling factor,nutrient_mobility,"Marschner 2012",1
+phloem_transport_capacity,0.8,fraction,Phloem transport capacity,nutrient_mobility,"Marschner 2012",1
+root_conductivity,0.5,fraction,Root conductivity factor,nutrient_mobility,"Marschner 2012",1
+temperature_q10,2.0,unitless,Q10 temperature factor,nutrient_mobility,"Marschner 2012",1
+base_temperature,25.0,celsius,Base temperature for nutrient mobility,nutrient_mobility,"Marschner 2012",1
+activation_energy,50000.0,J_per_mol,Activation energy for nutrient transport,nutrient_mobility,"Marschner 2012",1
+
+# === NUTRIENT RECOVERY PARAMETERS ===
+nitrogen_recovery,0.75,fraction,Nitrogen recovery efficiency,nutrient_recovery,"Himelblau & Amasino 2001",1
+phosphorus_recovery,0.65,fraction,Phosphorus recovery efficiency,nutrient_recovery,"Himelblau & Amasino 2001",1
+potassium_recovery,0.80,fraction,Potassium recovery efficiency,nutrient_recovery,"Himelblau & Amasino 2001",1
+calcium_recovery,0.30,fraction,Calcium recovery efficiency,nutrient_recovery,"Himelblau & Amasino 2001",1
+magnesium_recovery,0.60,fraction,Magnesium recovery efficiency,nutrient_recovery,"Himelblau & Amasino 2001",1
+sulfur_recovery,0.70,fraction,Sulfur recovery efficiency,nutrient_recovery,"Himelblau & Amasino 2001",1
+iron_recovery,0.40,fraction,Iron recovery efficiency,nutrient_recovery,"Himelblau & Amasino 2001",1
+manganese_recovery,0.35,fraction,Manganese recovery efficiency,nutrient_recovery,"Himelblau & Amasino 2001",1
+zinc_recovery,0.50,fraction,Zinc recovery efficiency,nutrient_recovery,"Himelblau & Amasino 2001",1
+copper_recovery,0.45,fraction,Copper recovery efficiency,nutrient_recovery,"Himelblau & Amasino 2001",1
+boron_recovery,0.25,fraction,Boron recovery efficiency,nutrient_recovery,"Himelblau & Amasino 2001",1
+molybdenum_recovery,0.85,fraction,Molybdenum recovery efficiency,nutrient_recovery,"Himelblau & Amasino 2001",1
+
+# === SYSTEM PARAMETERS ===
+system_type,NFT,unitless,Type of hydroponic system,system,"Sonneveld & Voogt 2009",1
+tank_volume,500.0,liters,Total volume of nutrient solution tank,system,"Sonneveld & Voogt 2009",1
+flow_rate,50.0,liters_per_hour,Rate of solution circulation,system,"Sonneveld & Voogt 2009",1
+system_area,1.0,square_meters,Growing area of the system,system,"Sonneveld & Voogt 2009",1
+number_of_plants,12,plants,Number of plants in the system,system,"Sonneveld & Voogt 2009",1
+plant_density,12.0,plants_per_m2,Plant density,system,"Sonneveld & Voogt 2009",1
+plant_spacing,0.3,meters,Plant spacing,system,"Sonneveld & Voogt 2009",1
+row_spacing,0.3,meters,Row spacing,system,"Sonneveld & Voogt 2009",1
+channel_length,10.0,meters,Channel length for NFT,system,"Sonneveld & Voogt 2009",1
+channel_width,10.0,cm,Channel width,system,"Sonneveld & Voogt 2009",1
+channel_depth,5.0,cm,Channel depth,system,"Sonneveld & Voogt 2009",1
+container_volume,5.0,liters,Container volume per plant,system,"Sonneveld & Voogt 2009",1
+solution_change_days,7,days,Solution change frequency,system,"Sonneveld & Voogt 2009",1
+reservoir_topup_fraction,0.1,fraction,Reservoir top-up fraction,system,"Sonneveld & Voogt 2009",1
+default_ph,6.0,pH_units,Default pH for nutrient solution,system,"Sonneveld & Voogt 2009",1
+default_ec,1.8,dS_per_m,Default electrical conductivity,system,"Sonneveld & Voogt 2009",1
+default_temperature,22.0,celsius,Default temperature,system,"Sonneveld & Voogt 2009",1
+default_humidity,60.0,percent,Default relative humidity,system,"Sonneveld & Voogt 2009",1
+default_co2,400.0,ppm,Default CO2 concentration,system,"Sonneveld & Voogt 2009",1
+
+# === WATER PARAMETERS ===
+crop_coefficient,0.8,unitless,Crop coefficient for water use,water,"Seginer et al. 1991",1
+water_use_efficiency,0.1,unitless,Water use efficiency,water,"Seginer et al. 1991",1
+transpiration_coupling,0.8,fraction,Transpiration coupling factor,water,"Seginer et al. 1991",1
+water_stress_factor,0.5,fraction,Water stress factor,water,"Seginer et al. 1991",1
+water_uptake_sensitivity_low,0.3,fraction,Water uptake sensitivity (low),water,"Seginer et al. 1991",1
+water_uptake_sensitivity_high,0.8,fraction,Water uptake sensitivity (high),water,"Seginer et al. 1991",1
+water_temp_interaction_factor,0.1,fraction,Water-temperature interaction,water,"Seginer et al. 1991",1
+water_nutrient_interaction_factor,0.2,fraction,Water-nutrient interaction,water,"Seginer et al. 1991",1
+water_salinity_interaction_factor,0.3,fraction,Water-salinity interaction,water,"Seginer et al. 1991",1
+lai_water_demand_factor,0.5,fraction,LAI water demand factor,water,"Seginer et al. 1991",1
+
+# === ROOT ZONE TEMPERATURE PARAMETERS ===
+optimal_root_temperature,22.0,celsius,Optimal root zone temperature,root_zone_temperature,"Sonneveld & Voogt 2009",1
+optimal_rzt_offset,2.0,celsius,Optimal RZT offset from air temperature,root_zone_temperature,"Sonneveld & Voogt 2009",1
+min_effective_rzt,15.0,celsius,Minimum effective RZT,root_zone_temperature,"Sonneveld & Voogt 2009",1
+max_effective_rzt,30.0,celsius,Maximum effective RZT,root_zone_temperature,"Sonneveld & Voogt 2009",1
+root_temp_tolerance,5.0,celsius,Root temperature tolerance,root_zone_temperature,"Sonneveld & Voogt 2009",1
+root_metabolism_sensitivity_low,0.3,fraction,Root metabolism sensitivity (low),root_zone_temperature,"Sonneveld & Voogt 2009",1
+root_metabolism_sensitivity_high,0.8,fraction,Root metabolism sensitivity (high),root_zone_temperature,"Sonneveld & Voogt 2009",1
+root_conductivity,0.5,fraction,Root conductivity factor,root_zone_temperature,"Sonneveld & Voogt 2009",1
+xylem_transport_capacity,1.0,fraction,Xylem transport capacity,root_zone_temperature,"Sonneveld & Voogt 2009",1
+phloem_transport_capacity,0.8,fraction,Phloem transport capacity,root_zone_temperature,"Sonneveld & Voogt 2009",1
+linear_growth_slope,0.05,per_celsius,Linear growth slope,root_zone_temperature,"Sonneveld & Voogt 2009",1
+rapid_decline_slope,0.15,per_celsius,Rapid decline slope,root_zone_temperature,"Sonneveld & Voogt 2009",1
+base_growth_factor,0.8,fraction,Base growth factor,root_zone_temperature,"Sonneveld & Voogt 2009",1
+nutrient_uptake_sensitivity_low,0.6,fraction,Low nutrient uptake sensitivity,root_zone_temperature,"Sonneveld & Voogt 2009",1
+nutrient_uptake_sensitivity_high,0.9,fraction,High nutrient uptake sensitivity,root_zone_temperature,"Sonneveld & Voogt 2009",1
+water_uptake_sensitivity_low,0.7,fraction,Low water uptake sensitivity,root_zone_temperature,"Sonneveld & Voogt 2009",1
+water_uptake_sensitivity_high,0.95,fraction,High water uptake sensitivity,root_zone_temperature,"Sonneveld & Voogt 2009",1
+photosynthesis_sensitivity_low,0.5,fraction,Low photosynthesis sensitivity,root_zone_temperature,"Sonneveld & Voogt 2009",1
+photosynthesis_sensitivity_high,0.85,fraction,High photosynthesis sensitivity,root_zone_temperature,"Sonneveld & Voogt 2009",1
+
+# === LEAF DEVELOPMENT PARAMETERS ===
+min_temp,4.0,celsius,Base temperature for development,leaf_development,"Tei et al. 1996",1
+opt_temp_min,18.0,celsius,Lower optimum temperature,leaf_development,"Tei et al. 1996",1
+opt_temp_max,24.0,celsius,Upper optimum temperature,leaf_development,"Tei et al. 1996",1
+max_temp,35.0,celsius,Maximum temperature for development,leaf_development,"Tei et al. 1996",1
+max_individual_leaf_area,0.008,m2,Maximum individual leaf area,leaf_development,"Tei et al. 1996",1
+leaf_area_expansion_rate,0.2,per_day,Leaf area expansion rate,leaf_development,"Tei et al. 1996",1
+specific_leaf_area,180.0,cm2_per_g,Specific leaf area,leaf_development,"Tei et al. 1996",1
+water_stress_threshold,0.6,fraction,Water stress threshold,leaf_development,"Tei et al. 1996",1
+nitrogen_stress_threshold,0.7,fraction,Nitrogen stress threshold,leaf_development,"Sonneveld & Voogt 2009",1
+temperature_stress_sensitivity,0.8,fraction,Temperature stress sensitivity,leaf_development,"Tei et al. 1996",1
+leaf_appearance_rate,0.5,leaves_per_day,Leaf appearance rate,leaf_development,"Tei et al. 1996",1
+initial_leaf_number,2,leaves,Initial leaf number,leaf_development,"Tei et al. 1996",1
+max_leaf_number,25,leaves,Maximum leaf number,leaf_development,"Tei et al. 1996",1
+leaf_area_ratio,0.8,fraction,Leaf area ratio,leaf_development,"Tei et al. 1996",1
+leaf_area_index,0.0,unitless,Initial leaf area index,leaf_development,"Tei et al. 1996",1
+max_lai,4.0,unitless,Maximum leaf area index,leaf_development,"Tei et al. 1996",1
+minimum_leaf_life,7,days,Minimum leaf life,leaf_development,"Tei et al. 1996",1
+base_phyllochron,50.0,degree_days,Base phyllochron,leaf_development,"Tei et al. 1996",1
+leaf_angle,45.0,degrees,Leaf angle,leaf_development,"Tei et al. 1996",1
+canopy_height,0.0,cm,Initial canopy height,leaf_development,"Tei et al. 1996",1
+maximum_height,30.0,cm,Maximum canopy height,leaf_development,"Tei et al. 1996",1
+canopy_width,0.0,cm,Initial canopy width,leaf_development,"Tei et al. 1996",1
+
+# === CROP PARAMETERS (CROP GROWTH) ===
+plant_density,12.0,plants_per_m2,Plant density,crop_parameters,"Sonneveld & Voogt 2009",1
+crop_coefficient,0.8,unitless,Crop coefficient for water use,crop_parameters,"Seginer et al. 1991",1
+water_use_efficiency,0.1,unitless,Water use efficiency,crop_parameters,"Seginer et al. 1991",1
+transpiration_coupling,0.8,fraction,Transpiration coupling factor,crop_parameters,"Seginer et al. 1991",1
+water_stress_factor,0.5,fraction,Water stress factor,crop_parameters,"Seginer et al. 1991",1
+water_uptake_sensitivity_low,0.3,fraction,Water uptake sensitivity (low),crop_parameters,"Seginer et al. 1991",1
+water_uptake_sensitivity_high,0.8,fraction,Water uptake sensitivity (high),crop_parameters,"Seginer et al. 1991",1
+water_temp_interaction_factor,0.1,fraction,Water-temperature interaction,crop_parameters,"Seginer et al. 1991",1
+water_nutrient_interaction_factor,0.2,fraction,Water-nutrient interaction,crop_parameters,"Seginer et al. 1991",1
+water_salinity_interaction_factor,0.3,fraction,Water-salinity interaction,crop_parameters,"Seginer et al. 1991",1
+lai_water_demand_factor,0.5,fraction,LAI water demand factor,crop_parameters,"Seginer et al. 1991",1

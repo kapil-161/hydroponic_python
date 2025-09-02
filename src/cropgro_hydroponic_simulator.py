@@ -594,7 +594,12 @@ class CROPGROHydroponicSimulator:
         self.system_area = max(0.1, input_data.system_config.system_area)
         # Use dynamic plant density from crop parameters CSV
         crop_params = getattr(input_data.system_config, 'crop_parameters', {})
-        density_multiplier = crop_params['plant_density']  # Must come from CSV
+        # Get plant density from system parameters (primary source) or crop parameters (fallback)
+        system_params = getattr(input_data.system_config, 'system_parameters', {})
+        if 'plant_density' in system_params:
+            density_multiplier = system_params['plant_density']
+        else:
+            density_multiplier = crop_params['plant_density']  # Fallback to crop parameters
         base_density = max(0.1, self.plant_count / self.system_area)
         self.plant_density = base_density * density_multiplier
         # Get system parameters from CSV data loaded in system_config

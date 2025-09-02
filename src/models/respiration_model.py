@@ -572,7 +572,20 @@ def create_lettuce_respiration_model(system_config=None) -> EnhancedRespirationM
     """
     try:
         # Get respiration parameters from CSV data loaded in system_config
-        respiration_params = getattr(system_config, 'respiration_parameters', {})
+        respiration_params = getattr(system_config, 'respiration_parameters', {}).copy()
+        
+        # Map renamed parameters to expected parameter names
+        param_mapping = {
+            'respiration_acclimation_rate': 'acclimation_rate',
+            'respiration_maintenance_base_rate': 'maintenance_base_rate',
+            'respiration_growth_efficiency': 'growth_efficiency',
+            'respiration_biosynthetic_cost': 'biosynthetic_cost'
+        }
+        
+        # Apply parameter name mapping
+        for csv_name, model_name in param_mapping.items():
+            if csv_name in respiration_params:
+                respiration_params[model_name] = respiration_params[csv_name]
         
         # Create parameters from CSV config
         parameters = RespirationParameters.from_config(respiration_params)

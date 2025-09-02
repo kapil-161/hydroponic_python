@@ -69,7 +69,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
         
         # Load all parameters from single master file
         try:
-            df = pd.read_csv(master_file)
+            df = pd.read_csv(master_file, comment='#')
             params_loaded = []
             
             # Group parameters by category
