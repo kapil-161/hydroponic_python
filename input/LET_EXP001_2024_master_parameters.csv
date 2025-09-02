@@ -509,6 +509,18 @@ respiration_acclimation_rate,0.03,per_day,Respiration acclimation rate (calibrat
 respiration_maintenance_base_rate,0.015,per_day,Maintenance respiration base rate (calibrated),respiration_parameters,Amthor 2000,1.0
 respiration_growth_efficiency,0.80,fraction,Growth efficiency factor for respiration (calibrated),respiration_parameters,Amthor 2000,1.0
 respiration_biosynthetic_cost,1.25,g_glucose_per_g_biomass,Biosynthetic cost for respiration (calibrated),respiration_parameters,Amthor 2000,1.0
+# Biosynthetic costs for different biomass components,,,,,,
+protein_respiration_cost,1.89,g_glucose_per_g_protein,Biosynthetic cost for protein synthesis,respiration_parameters,Penning de Vries et al. 1974,1.0
+carbohydrate_respiration_cost,1.27,g_glucose_per_g_carb,Biosynthetic cost for carbohydrate synthesis,respiration_parameters,Penning de Vries et al. 1974,1.0
+lipid_respiration_cost,2.41,g_glucose_per_g_lipid,Biosynthetic cost for lipid synthesis,respiration_parameters,Penning de Vries et al. 1974,1.0
+organic_acid_respiration_cost,0.91,g_glucose_per_g_acid,Biosynthetic cost for organic acid synthesis,respiration_parameters,Penning de Vries et al. 1974,1.0
+lignin_respiration_cost,2.07,g_glucose_per_g_lignin,Biosynthetic cost for lignin synthesis,respiration_parameters,Penning de Vries et al. 1974,1.0
+# Temperature acclimation bounds,,,,,,
+min_acclimation_temperature,10.0,celsius,Minimum temperature for respiration acclimation,respiration_parameters,Amthor 2000,1.0
+max_acclimation_temperature,35.0,celsius,Maximum temperature for respiration acclimation,respiration_parameters,Amthor 2000,1.0
+# Diurnal variation limits,,,,,,
+min_diurnal_factor,0.5,unitless,Minimum diurnal respiration factor,respiration_parameters,Amthor 2000,1.0
+max_diurnal_factor,1.5,unitless,Maximum diurnal respiration factor,respiration_parameters,Amthor 2000,1.0
 # Additional respiration parameters for advanced modeling,,,,,,
 max_temperature_threshold,40.0,celsius,Maximum temperature before protein denaturation,respiration_parameters,Amthor 2000,1.0
 temperature_decay_factor,0.1,unitless,Decay factor for high temperature respiration,respiration_parameters,Amthor 2000,1.0
