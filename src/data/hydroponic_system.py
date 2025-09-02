@@ -288,7 +288,6 @@ class SimulationResults:
                 'Solar_Rad_MJ': result.solar_radiation,
                 'VPD_kPa': result.vpd,
                 'CO2_umol_mol': result.co2_concentration,
-                'VPD_Actual_kPa': result.vpd_actual,
                 ' ': '',  # Separator
             })
             
@@ -583,12 +582,10 @@ class SimulationResults:
                 row['Temperature_Stress_Factor'] = result.temperature_stress_factor
 
             # === ENVIRONMENTAL CONTROL ===
-            if hasattr(result, 'controlled_temperature'):
-                row['Controlled_Temperature_C'] = result.controlled_temperature
+            # Controlled_Temperature_C removed - using main Temp_C column instead
             if hasattr(result, 'controlled_humidity'):
                 row['Controlled_Humidity_pct'] = result.controlled_humidity
-            if hasattr(result, 'controlled_co2'):
-                row['Controlled_CO2_umol_mol'] = result.controlled_co2
+            # Controlled_CO2_umol_mol removed - using main CO2_umol_mol column instead
             if hasattr(result, 'vpd_target'):
                 row['VPD_Target_kPa'] = result.vpd_target
             if hasattr(result, 'environmental_cost'):
@@ -611,8 +608,7 @@ class SimulationResults:
                 row['Transpiration_Rate'] = result.transpiration_rate
             if hasattr(result, 'total_water_uptake'):
                 row['Total_Water_Uptake'] = result.total_water_uptake
-            if hasattr(result, 'solution_ph'):
-                row['Solution_pH'] = result.solution_ph
+            # Solution_pH removed - using main pH column instead
 
             # === COMPREHENSIVE pH MODELING ===
             if hasattr(result, 'phosphate_h2po4_mg_L'):
@@ -621,8 +617,7 @@ class SimulationResults:
                 row['Phosphate_HPO4_mg_L'] = result.phosphate_hpo4_mg_L
             if hasattr(result, 'nutrient_precipitation_mg_L'):
                 row['Nutrient_Precipitation_mg_L'] = result.nutrient_precipitation_mg_L
-            if hasattr(result, 'solution_ec'):
-                row['Solution_EC_dS_m'] = result.solution_ec
+            # Solution_EC_dS_m removed - using main EC column instead
 
             # === STRESS INTERACTIONS ===
             if hasattr(result, 'stress_interactions'):

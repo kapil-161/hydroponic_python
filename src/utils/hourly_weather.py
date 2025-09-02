@@ -255,6 +255,7 @@ class HourlyWeatherInterpolator:
     def _calculate_vpd(self, temperature: float, humidity: float) -> float:
         """
         Calculate vapor pressure deficit from temperature and humidity.
+        Uses centralized utility function to avoid duplication.
         
         Args:
             temperature: Air temperature (°C)
@@ -263,16 +264,8 @@ class HourlyWeatherInterpolator:
         Returns:
             VPD in kPa
         """
-        # Saturated vapor pressure (Magnus equation)
-        es = 0.6108 * math.exp(17.27 * temperature / (temperature + 237.3))
-        
-        # Actual vapor pressure
-        ea = es * (humidity / 100.0)
-        
-        # Vapor pressure deficit
-        vpd = es - ea
-        
-        return max(0.0, vpd)
+        from ..utils.temperature_utils import calculate_vpd
+        return calculate_vpd(temperature, humidity)
 
 
 def create_hourly_weather_interpolator() -> HourlyWeatherInterpolator:

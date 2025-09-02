@@ -947,9 +947,17 @@ class EnhancedRootUptakeModel:
         return effective_area
 
     def calculate_temperature_factor(self, temperature: float) -> float:
-        temp_diff = temperature - self.uptake_params.optimal_temperature
-        factor = self.uptake_params.q10_factor ** (temp_diff / 10.0)
-        return max(0.1, min(4.0, factor))
+        """Calculate temperature factor using centralized Q10 utility."""
+        from ..utils.temperature_utils import calculate_q10_temperature_factor
+        
+        factor = calculate_q10_temperature_factor(
+            temperature=temperature,
+            reference_temp=self.uptake_params.optimal_temperature,
+            q10_factor=self.uptake_params.q10_factor,
+            min_factor=0.1,
+            max_factor=4.0
+        )
+        return factor
 
     def calculate_flow_factor(self, flow_rate: float) -> float:
         optimal_flow = self.uptake_params.optimal_flow_rate

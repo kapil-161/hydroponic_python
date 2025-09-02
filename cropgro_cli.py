@@ -14,7 +14,7 @@ from typing import Any, Dict
 # Import CROPGRO system
 from src.cropgro_hydroponic_simulator import CROPGROHydroponicSimulator
 from src.data.hydroponic_system import DefaultConfigurations, HydroInputData, WeatherData
-from src.utils.weather_generator import WeatherGenerator
+# WeatherGenerator removed - weather data must come from CSV files
 
 
 def to_serializable(value: Any) -> Any:
@@ -208,49 +208,51 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 setattr(system_config, config_attr, system_settings[csv_param])
                 print(f"✓ Updated {config_attr} = {system_settings[csv_param]} from CSV")
 
-    # 22. Load weather data
+    # 22. Load weather data - REQUIRED CSV FILE
     weather_data_file = f'{input_dir}/{file_prefix}_weather.csv'
     weather_list = []
-    if Path(weather_data_file).exists():
-        try:
-            df = pd.read_csv(weather_data_file)
-            print(f"✓ Weather data loaded: {len(df)} days")
-            
-            # Convert weather data to WeatherData objects
-            for _, row in df.iterrows():
-                weather_day = WeatherData(
-                    date=row['date'],
-                    temp_avg=row['temp_avg'],
-                    temp_min=row['temp_min'],
-                    temp_max=row['temp_max'],
-                    solar_radiation=row['solar_radiation'],
-                    rel_humidity=row['rel_humidity'],
-                    wind_speed=row['wind_speed'],
-                    rainfall=row['rainfall']
-                )
-                weather_list.append(weather_day)
-                
-            # Store weather data in system_config for access
-            system_config.weather_data = weather_list
-            params_loaded.append(f"weather_days={len(weather_list)}")
-            
-        except Exception as e:
-            print(f"⚠️  Could not load weather data: {e}")
-            # Fallback to generated weather data
-            generator = WeatherGenerator()
-            start_date = datetime.now()
-            weather_list = generator.generate_weather_series(
-                start_date=start_date,
-                days=days
+    
+    if not Path(weather_data_file).exists():
+        print(f"❌ ERROR: Weather data file not found: {weather_data_file}")
+        print(f"   Expected format: {file_prefix}_weather.csv")
+        print(f"   Required columns: date, temp_avg, temp_min, temp_max, solar_radiation, rel_humidity, wind_speed, rainfall")
+        print(f"   Please create the weather CSV file with daily weather data.")
+        return None, None
+    
+    try:
+        df = pd.read_csv(weather_data_file)
+        print(f"✓ Weather data loaded: {len(df)} days from {weather_data_file}")
+        
+        # Validate required columns
+        required_columns = ['date', 'temp_avg', 'temp_min', 'temp_max', 'solar_radiation', 'rel_humidity', 'wind_speed', 'rainfall']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            print(f"❌ ERROR: Weather CSV missing required columns: {missing_columns}")
+            print(f"   Required columns: {required_columns}")
+            return None, None
+        
+        # Convert weather data to WeatherData objects
+        for _, row in df.iterrows():
+            weather_day = WeatherData(
+                date=row['date'],
+                temp_avg=row['temp_avg'],
+                temp_min=row['temp_min'],
+                temp_max=row['temp_max'],
+                solar_radiation=row['solar_radiation'],
+                rel_humidity=row['rel_humidity'],
+                wind_speed=row['wind_speed'],
+                rainfall=row['rainfall']
             )
-    else:
-        # Generate weather data as fallback
-        generator = WeatherGenerator()
-        start_date = datetime.now()
-        weather_list = generator.generate_weather_series(
-            start_date=start_date,
-            days=days
-        )
+            weather_list.append(weather_day)
+            
+        # Store weather data in system_config for access
+        system_config.weather_data = weather_list
+        params_loaded.append(f"weather_days={len(weather_list)}")
+        
+    except Exception as e:
+        print(f"❌ ERROR: Could not load weather data from {weather_data_file}: {e}")
+        print(f"   Please check the CSV file format and try again.")
+        return None, None
 
     # Create input data
     input_data = HydroInputData(
