@@ -832,7 +832,7 @@ class IntegratedStressModel:
             severity = "critical"
         impacts: Dict[str, float] = {}
         for st, state in self.stress_states.items():
-            impacts[st] = (1.0 - state.acute_stress) * self.params.stress_weights.get(st, None)
+            impacts[st] = state.acute_stress * self.params.stress_weights.get(st, None)
             if self.params.stress_weights.get(st, None) is None:
                 raise ValueError(f"Stress weight for {st} must be provided in CSV configuration")
         dominant = sorted(impacts.keys(), key=lambda x: impacts[x], reverse=True)[:3]

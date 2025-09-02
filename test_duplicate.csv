@@ -1,3 +1,0 @@
-parameter_name,value,unit,description,category,source,priority
-test_param,1.0,unit,Test parameter,test,test,1.0
-test_param,2.0,unit,Duplicate parameter,test,test,1.0
