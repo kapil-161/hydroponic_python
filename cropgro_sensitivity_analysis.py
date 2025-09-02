@@ -228,6 +228,38 @@ def run_single_simulation(days: int, cultivar_id: str, system_type: str, treatme
             
         system_config.weather_data = weather_list
         
+        # VALIDATE: Weather data dates must match experiment dates
+        # Get experiment dates from parameters
+        transplanting_date_str = None
+        
+        # Extract dates from system config experiment settings
+        if hasattr(system_config, 'experiment_settings'):
+            experiment_settings = system_config.experiment_settings
+            transplanting_date_str = experiment_settings.get('transplanting_date')
+        
+        if transplanting_date_str and weather_list:
+            from datetime import datetime
+            try:
+                transplanting_date = datetime.strptime(transplanting_date_str, '%Y-%m-%d')
+                
+                # Get weather data date range
+                weather_dates = []
+                for weather_day in weather_list:
+                    weather_date = datetime.strptime(weather_day.date, '%Y-%m-%d')
+                    weather_dates.append(weather_date)
+                
+                weather_start = min(weather_dates)
+                weather_end = max(weather_dates)
+                
+                # Check if transplanting date falls within weather data range
+                if not (weather_start <= transplanting_date <= weather_end):
+                    raise ValueError(f"Weather data dates don't match experiment schedule! "
+                                   f"Transplanting date: {transplanting_date_str}, "
+                                   f"Weather range: {weather_start.strftime('%Y-%m-%d')} to {weather_end.strftime('%Y-%m-%d')}")
+                    
+            except ValueError as e:
+                raise ValueError(f"Date validation error: {e}")
+        
     except Exception as e:
         raise Exception(f"Could not load weather data from {weather_data_file}: {e}")
 
@@ -592,8 +624,7 @@ def run_sensitivity_analysis(days: int, cultivar_id: str, system_type: str, trea
                 print(f"{param_name:<30} {category:<12} {change:+7.2f}% {reason_str:<30}")
         
         # Save detailed results
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        results_file = f"outputs/sensitivity_analysis_{file_prefix}_{timestamp}.csv"
+        results_file = f"outputs/sensitivity_analysis_{file_prefix}.csv"
         
         Path("outputs").mkdir(exist_ok=True)
         results_df = pd.DataFrame(sensitivity_results)

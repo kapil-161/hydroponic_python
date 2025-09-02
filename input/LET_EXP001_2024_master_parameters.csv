@@ -44,7 +44,6 @@ PHOTOSYNTHETIC_CAPACITY,1.0,factor,Relative photosynthetic capacity,genetic_para
 NITRATE_EFFICIENCY,0.85,fraction,Nitrogen use efficiency factor,genetic_parameters,Sonneveld & Voogt 2009,1.0
 yield_potential,0.85,fraction,Relative yield potential for cultivar evaluation,genetic_parameters,Tei et al. 1996,1.0
 adaptation_score,0.8,fraction,Environmental adaptation score for cultivar evaluation,genetic_parameters,Tei et al. 1996,1.0
-commercial_rating,0.8,fraction,Commercial viability rating for cultivar evaluation,genetic_parameters,Tei et al. 1996,1.0
 heat_stress_weight,0.3,fraction,Heat stress weight for adaptation calculation,genetic_parameters,Tei et al. 1996,1.0
 cold_stress_weight,0.25,fraction,Cold stress weight for adaptation calculation,genetic_parameters,Tei et al. 1996,1.0
 salinity_stress_weight,0.2,fraction,Salinity stress weight for adaptation calculation,genetic_parameters,Tei et al. 1996,1.0
@@ -55,7 +54,6 @@ nitrogen_excess_weight,0.3,fraction,Nitrogen excess weight for trait expression,
 stress_response_weight,0.2,fraction,Stress response weight for root development,genetic_parameters,Tei et al. 1996,1.0
 adaptation_weight,0.6,fraction,Adaptation score weight for cultivar ranking,genetic_parameters,Tei et al. 1996,1.0
 yield_weight,0.25,fraction,Yield potential weight for cultivar ranking,genetic_parameters,Tei et al. 1996,1.0
-commercial_weight,0.15,fraction,Commercial rating weight for cultivar ranking,genetic_parameters,Tei et al. 1996,1.0
 heterosis_factor,1.05,fraction,Heterosis factor for hybrid performance prediction,genetic_parameters,Tei et al. 1996,1.0
 genetic_growth_modifier,1.0,unitless,Genetic growth modifier for height calculations,genetic_parameters,Tei et al. 1996,1.0
 vcmax_25,55.0,umol_per_m2_per_s,Maximum carboxylation rate at 25°C for lettuce,photosynthesis,Bernacchi et al. 2001,1.0
@@ -492,7 +490,7 @@ experiment_duration,60,days,Total duration of the experiment,experiment_settings
 harvest_date,2025-10-15,date,Planned harvest date,experiment_settings,Research Protocol,1.0
 cultivar_name,Butterhead_Lettuce,unitless,Name of the lettuce cultivar,experiment_settings,Research Protocol,1.0
 treatment_id,LET_EXP001_2024,unitless,Unique identifier for this experiment,experiment_settings,Research Protocol,1.0
-replication_number,1,unitless,Replication number for this treatment,experiment_settings,Research Protocol,1.0
+replication_number,R1,unitless,Replication number for this treatment,experiment_settings,Research Protocol,1.0
 humidity_deadband,5.0,percent,Humidity control deadband for basic control strategy,environmental_control_parameters,Seginer et al. 1991,1.0
 max_temperature_change_per_hour,2.0,celsius_per_hour,Maximum temperature change per hour for HVAC systems,environmental_control_parameters,Seginer et al. 1991,1.0
 ambient_temperature,20.0,celsius,External ambient temperature for thermal calculations,environmental_control_parameters,Seginer et al. 1991,1.0
@@ -522,7 +520,6 @@ co2_sensor_accuracy,10.0,umol_per_mol,CO2 sensor precision,control_equipment_par
 co2_mixing_time,15.0,minutes,Time for full CO2 mixing,control_equipment_parameters,Seginer et al. 1991,1.0
 air_exchange_rate,0.5,air_changes_per_hour,Air exchange rate for ventilation,control_equipment_parameters,Seginer et al. 1991,1.0
 circulation_fan_power,50.0,watt,Power consumption for circulation fans,control_equipment_parameters,Seginer et al. 1991,1.0
-electricity_cost,0.12,USD_per_kWh,Electricity cost for energy calculations,control_equipment_parameters,Seginer et al. 1991,1.0
 no3_uptake_vmax,0.03,mg_per_cm2_per_day,Maximum NO3 uptake rate per root surface area,nutrient_parameters,Clarkson & Hanson 1980,1.0
 no3_uptake_km,0.5,mg_per_L,Michaelis-Menten constant for NO3 uptake,nutrient_parameters,Clarkson & Hanson 1980,1.0
 nh4_uptake_vmax,0.045,mg_per_cm2_per_day,Maximum NH4 uptake rate per root surface area,nutrient_parameters,Clarkson & Hanson 1980,1.0
@@ -833,11 +830,9 @@ minimum_leaf_life,7,days,Minimum leaf life,leaf_development,Tei et al. 1996,1.0
 base_phyllochron,50.0,degree_days,Base phyllochron,leaf_development,Tei et al. 1996,1.0
 leaf_angle,45.0,degrees,Leaf angle,leaf_development,Tei et al. 1996,1.0
 canopy_height,0.0,cm,Initial canopy height,leaf_development,Tei et al. 1996,1.0
-  ,,,,,,
 base_crop_coefficient,0.7,unitless,Base crop coefficient for ETo calculations,crop_parameters,Allen et al. 1998,1.0
 maximum_height,0.25,m,Maximum crop height for lettuce,crop_parameters,Tei et al. 1996,1.0
 kc_light_interception_factor,0.4,unitless,Crop coefficient factor for light interception,crop_parameters,Allen et al. 1998,1.0
-# === RENAMED PARAMETERS (NEW CLEAR NAMES) ===,,,,,,
 heat_tolerance,0.3,fraction,Heat tolerance capacity (higher = better heat resistance),genetic_parameters,Tei et al. 1996,1.0
 cold_tolerance,0.25,fraction,Cold tolerance capacity (higher = better cold resistance),genetic_parameters,Tei et al. 1996,1.0
 salinity_tolerance,0.2,fraction,Salinity tolerance capacity (higher = better salt resistance),genetic_parameters,Tei et al. 1996,1.0

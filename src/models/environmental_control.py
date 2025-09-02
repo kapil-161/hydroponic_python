@@ -134,8 +134,6 @@ class ControlEquipment:
     # Ventilation and air circulation
     air_exchange_rate: float = None        # air changes per hour
     
-    # Energy costs ($/kWh)
-    electricity_cost: float = None
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'ControlEquipment':
@@ -144,7 +142,7 @@ class ControlEquipment:
         required_params = [
             'humidifier_capacity', 'dehumidifier_capacity', 'humidifier_efficiency',
             'dehumidifier_efficiency', 'co2_injection_rate', 'co2_sensor_accuracy',
-            'co2_mixing_time', 'air_exchange_rate', 'circulation_fan_power', 'electricity_cost'
+            'co2_mixing_time', 'air_exchange_rate', 'circulation_fan_power'
         ]
         
         missing_params = [p for p in required_params if p not in config_dict]
@@ -160,8 +158,7 @@ class ControlEquipment:
             co2_sensor_accuracy=float(config_dict['co2_sensor_accuracy']),
             co2_mixing_time=float(config_dict['co2_mixing_time']),
             air_exchange_rate=float(config_dict['air_exchange_rate']),
-            circulation_fan_power=float(config_dict['circulation_fan_power']),
-            electricity_cost=float(config_dict['electricity_cost'])
+            circulation_fan_power=float(config_dict['circulation_fan_power'])
         )
 
 
@@ -706,7 +703,7 @@ class EnvironmentalControlSystem:
                 'co2': co2_action
             },
             'energy_consumption_kWh': total_energy,
-            'hourly_cost_usd': total_energy * self.equipment.electricity_cost
+            'hourly_cost_usd': 0.0  # Energy cost removed
         }
     
     def _calculate_temperature_adjustment(self, current_temp: float, target_temp: float, dt_hours: float) -> float:
@@ -846,7 +843,7 @@ class EnvironmentalControlSystem:
                 'humidity': humidity_control,
                 'co2': co2_control,
                 'total_energy_kWh': total_energy,
-                'total_operating_cost': total_energy * self.equipment.electricity_cost + co2_control['co2_cost']
+                'total_operating_cost': co2_control['co2_cost']  # Energy cost removed
             },
             'plant_factors': environmental_factors,
             'recommendations': {

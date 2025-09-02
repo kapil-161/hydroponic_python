@@ -103,7 +103,6 @@ class CultivarProfile:
     # Performance characteristics (must come from CSV)
     yield_potential: float = None       # Relative yield potential
     adaptation_score: float = None      # Environmental adaptation score
-    commercial_rating: float = None     # Commercial viability rating
     
     # Trait values (0.0-1.0 scale, 1.0 = excellent)
     trait_values: Dict[GeneticTrait, float] = field(default_factory=dict)
@@ -188,11 +187,9 @@ class GeneticParameterDatabase:
             adaptation_score = cultivar.calculate_adaptation_index(environment_factors)
             adaptation_weight = environment_factors.get('adaptation_weight', 0.6)  # Adaptation score weight from CSV
             yield_weight = environment_factors.get('yield_weight', 0.25)  # Yield potential weight from CSV
-            commercial_weight = environment_factors.get('commercial_weight', 0.15)  # Commercial rating weight from CSV
             overall_score = (
                 adaptation_score * adaptation_weight
                 + cultivar.yield_potential * yield_weight
-                + cultivar.commercial_rating * commercial_weight
             )
             cultivar_scores.append((cultivar_id, overall_score))
         
@@ -504,7 +501,6 @@ def create_lettuce_genetic_system(system_config=None) -> Tuple[GeneticParameterD
             genetic_coefficients=genetic_coeffs,
             yield_potential=genetic_params.get('yield_potential', None),  # Must be provided in CSV
             adaptation_score=genetic_params.get('adaptation_score', None),  # Must be provided in CSV
-            commercial_rating=genetic_params.get('commercial_rating', None),  # Must be provided in CSV
             trait_values={},  # Empty trait values - can be populated later
             pedigree=["CSV configured"],
             breeding_notes="Cultivar created from CSV genetic parameters"
@@ -515,8 +511,6 @@ def create_lettuce_genetic_system(system_config=None) -> Tuple[GeneticParameterD
             raise ValueError("❌ yield_potential must be provided in CSV genetic parameters - no hardcoded defaults allowed")
         if cultivar_profile.adaptation_score is None:
             raise ValueError("❌ adaptation_score must be provided in CSV genetic parameters - no hardcoded defaults allowed")
-        if cultivar_profile.commercial_rating is None:
-            raise ValueError("❌ commercial_rating must be provided in CSV genetic parameters - no hardcoded defaults allowed")
         
         genetic_db.add_cultivar(cultivar_profile)
         

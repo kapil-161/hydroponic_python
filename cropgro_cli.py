@@ -273,6 +273,48 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
         system_config.weather_data = weather_list
         params_loaded.append(f"weather_days={len(weather_list)}")
         
+        # VALIDATE: Weather data dates must match experiment dates
+        # Get experiment dates from parameters
+        sowing_date_str = None
+        transplanting_date_str = None
+        harvest_date_str = None
+        
+        # Extract dates from system config experiment settings
+        if hasattr(system_config, 'experiment_settings'):
+            experiment_settings = system_config.experiment_settings
+            sowing_date_str = experiment_settings.get('sowing_date')
+            transplanting_date_str = experiment_settings.get('transplanting_date') 
+            harvest_date_str = experiment_settings.get('harvest_date')
+        
+        if transplanting_date_str and weather_list:
+            from datetime import datetime
+            try:
+                transplanting_date = datetime.strptime(transplanting_date_str, '%Y-%m-%d')
+                
+                # Get weather data date range
+                weather_dates = []
+                for weather_day in weather_list:
+                    weather_date = datetime.strptime(weather_day.date, '%Y-%m-%d')
+                    weather_dates.append(weather_date)
+                
+                weather_start = min(weather_dates)
+                weather_end = max(weather_dates)
+                
+                # Check if transplanting date falls within weather data range
+                if not (weather_start <= transplanting_date <= weather_end):
+                    print(f"❌ ERROR: Weather data dates don't match experiment schedule!")
+                    print(f"   📅 Transplanting date: {transplanting_date_str}")
+                    print(f"   🌤️ Weather data range: {weather_start.strftime('%Y-%m-%d')} to {weather_end.strftime('%Y-%m-%d')}")
+                    print(f"   ⚠️ Transplanting date must fall within weather data range")
+                    print(f"   💡 Either update weather data CSV or adjust transplanting_date in parameters CSV")
+                    return None, None
+                else:
+                    print(f"✓ Weather data validation passed: Transplanting date {transplanting_date_str} is within weather range")
+                    
+            except ValueError as e:
+                print(f"❌ ERROR: Invalid date format in experiment settings: {e}")
+                return None, None
+        
     except Exception as e:
         print(f"❌ ERROR: Could not load weather data from {weather_data_file}: {e}")
         print(f"   Please check the CSV file format and try again.")
@@ -389,7 +431,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
     # Show environmental summary
     final_temp = getattr(final_result, 'temp_avg', None)
     final_ec = getattr(final_result, 'ec', None)
-    final_ph = getattr(final_result, 'solution_ph', None)
+    final_ph = getattr(final_result, 'ph', None)
     
     print(f"\n🌡️  FINAL ENVIRONMENTAL STATUS:")
     if final_temp is not None:
@@ -408,7 +450,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
         print(f"  • pH: Data not available")
     
     # Show stress summary
-    final_stress = getattr(final_result, 'integrated_stress', None)
+    final_stress = getattr(final_result, 'integrated_stress_factor', None)
     if final_stress is not None:
         if final_stress < 0.1:
             stress_status = "🟢 None"
