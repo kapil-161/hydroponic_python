@@ -81,6 +81,13 @@ class SenescenceParameters:
     reproductive_priority_factor: float  # Senescence acceleration during reproduction
     lower_canopy_factor: float          # Senescence acceleration for shaded leaves
     
+    # Advanced senescence parameters
+    active_senescence_multiplier: float  # Multiplier for active senescence remobilization
+    normal_senescence_multiplier: float  # Multiplier for normal senescence remobilization
+    stress_history_days: int             # Number of days to keep stress history
+    daily_area_loss_factor: float        # Daily area loss factor during senescence
+    daily_biomass_loss_factor: float     # Daily biomass loss factor during senescence
+    
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'SenescenceParameters':
@@ -140,7 +147,14 @@ class SenescenceParameters:
             
             # Developmental senescence
             reproductive_priority_factor=config_dict['reproductive_priority_factor'],
-            lower_canopy_factor=config_dict['lower_canopy_factor']
+            lower_canopy_factor=config_dict['lower_canopy_factor'],
+            
+            # Advanced senescence parameters
+            active_senescence_multiplier=config_dict['active_senescence_multiplier'],
+            normal_senescence_multiplier=config_dict['normal_senescence_multiplier'],
+            stress_history_days=config_dict['stress_history_days'],
+            daily_area_loss_factor=config_dict['daily_area_loss_factor'],
+            daily_biomass_loss_factor=config_dict['daily_biomass_loss_factor']
         )
 
 
@@ -374,13 +388,15 @@ class AdvancedSenescenceModel:
             for nutrient, available in cohort_state.remobilizable_nutrients.items():
                 if available > 0:
                     # Remobilization rate depends on senescence rate and efficiency
-                    efficiency = self.params.remobilization_efficiency.get(nutrient, 0.0)
+                    efficiency = self.params.remobilization_efficiency.get(nutrient, None)
+                    if efficiency is None:
+                        raise ValueError(f"❌ Remobilization efficiency for {nutrient} must be provided in CSV configuration - no hardcoded defaults allowed")
                     
                     # More aggressive remobilization during active senescence
                     if cohort_state.senescence_stage == SenescenceStage.ACTIVE_SENESCENCE:
-                        remob_rate = daily_senescence_rate * 2.0
+                        remob_rate = daily_senescence_rate * self.params.active_senescence_multiplier
                     else:
-                        remob_rate = daily_senescence_rate
+                        remob_rate = daily_senescence_rate * self.params.normal_senescence_multiplier
                     
                     daily_remobilization = available * remob_rate * efficiency
                     remobilized[nutrient] = daily_remobilization
@@ -408,17 +424,22 @@ class AdvancedSenescenceModel:
         for stress_type, level in environmental_stress.items():
             if stress_type in self.stress_history:
                 self.stress_history[stress_type].append(level)
-                # Keep only recent history (7 days)
-                if len(self.stress_history[stress_type]) > 7:
-                    self.stress_history[stress_type] = self.stress_history[stress_type][-7:]
+                # Keep only recent history (configurable from CSV)
+                if len(self.stress_history[stress_type]) > self.params.stress_history_days:
+                    self.stress_history[stress_type] = self.stress_history[stress_type][-self.params.stress_history_days:]
         
         # Calculate stress senescence rates
         stress_rates = self.calculate_stress_senescence(
-            environmental_stress.get('water', 1.0),
-            environmental_stress.get('nitrogen', 1.0),
-            environmental_stress.get('temperature', 1.0),
-            environmental_stress.get('light', 1.0)
+            environmental_stress.get('water', None),
+            environmental_stress.get('nitrogen', None),
+            environmental_stress.get('temperature', None),
+            environmental_stress.get('light', None)
         )
+        
+        # Validate that all required stress values are provided
+        for stress_type in ['water', 'nitrogen', 'temperature', 'light']:
+            if environmental_stress.get(stress_type) is None:
+                raise ValueError(f"❌ {stress_type.capitalize()} stress level must be provided in environmental conditions - no hardcoded defaults allowed")
         
         # Process each cohort
         total_senescence = 0.0
@@ -439,14 +460,26 @@ class AdvancedSenescenceModel:
             cohort_state = self.cohort_states[cohort_id]
             
             # Update age
-            cohort_state.age_gdd = data.get('age_gdd', 0.0)
+            age_gdd = data.get('age_gdd', None)
+            if age_gdd is None:
+                raise ValueError(f"❌ Age GDD for cohort {cohort_id} must be provided in cohort data - no hardcoded defaults allowed")
+            cohort_state.age_gdd = age_gdd
             
             # Calculate different senescence components
             age_senescence = self.calculate_age_senescence(cohort_state)
             
+            # Get developmental state
+            is_reproductive = developmental_state.get('is_reproductive', None)
+            if is_reproductive is None:
+                raise ValueError("❌ Reproductive state must be provided in developmental state - no hardcoded defaults allowed")
+            
+            canopy_position = data.get('canopy_position', None)
+            if canopy_position is None:
+                raise ValueError(f"❌ Canopy position for cohort {cohort_id} must be provided in cohort data - no hardcoded defaults allowed")
+            
             dev_senescence = self.calculate_developmental_senescence(
-                developmental_state.get('is_reproductive', False),
-                data.get('canopy_position', 0.5)
+                is_reproductive,
+                canopy_position
             )
             
             # Combine stress senescence rates
@@ -487,15 +520,22 @@ class AdvancedSenescenceModel:
             remobilized = self.calculate_nutrient_remobilization(cohort_state, total_daily_rate)
             
             # Accumulate totals
-            cohort_area = data.get('area', 0.0)
-            cohort_biomass = data.get('biomass', 0.0)
+            cohort_area = data.get('area', None)
+            if cohort_area is None:
+                raise ValueError(f"❌ Area for cohort {cohort_id} must be provided in cohort data - no hardcoded defaults allowed")
+            
+            cohort_biomass = data.get('biomass', None)
+            if cohort_biomass is None:
+                raise ValueError(f"❌ Biomass for cohort {cohort_id} must be provided in cohort data - no hardcoded defaults allowed")
             
             total_senescence += total_daily_rate
-            total_senesced_area += cohort_area * cohort_state.senescence_damage * 0.1  # 10% of damaged area lost per day
-            total_senesced_biomass += cohort_biomass * cohort_state.senescence_damage * 0.1
+            total_senesced_area += cohort_area * cohort_state.senescence_damage * self.params.daily_area_loss_factor
+            total_senesced_biomass += cohort_biomass * cohort_state.senescence_damage * self.params.daily_biomass_loss_factor
             
             for nutrient, amount in remobilized.items():
-                total_remobilized[nutrient] = total_remobilized.get(nutrient, 0.0) + amount
+                if nutrient not in total_remobilized:
+                    total_remobilized[nutrient] = 0.0
+                total_remobilized[nutrient] += amount
             
             active_senescence_types.extend(cohort_state.active_senescence_types)
             stage_counts[cohort_state.senescence_stage] += 1
@@ -514,7 +554,9 @@ class AdvancedSenescenceModel:
         
         # Store remobilized nutrients in pool
         for nutrient, amount in total_remobilized.items():
-            self.remobilization_pool[nutrient] = self.remobilization_pool.get(nutrient, 0.0) + amount
+            if nutrient not in self.remobilization_pool:
+                self.remobilization_pool[nutrient] = 0.0
+            self.remobilization_pool[nutrient] += amount
         
         return SenescenceResponse(
             cohort_responses=self.cohort_states.copy(),

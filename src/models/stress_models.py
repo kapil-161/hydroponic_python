@@ -40,25 +40,25 @@ class TemperatureStressParameters:
     heat_lethal_temperature: float = None
     cold_threshold_mild: float = None
     cold_threshold_severe: float = None
-    frost_threshold: float = -1.0  # Keep only frost as it's rarely used
-    photosynthesis_heat_sensitivity: float = 0.85
-    photosynthesis_cold_sensitivity: float = 0.75
-    respiration_heat_sensitivity: float = 0.60
-    respiration_cold_sensitivity: float = 0.70
-    growth_heat_sensitivity: float = 0.90
-    growth_cold_sensitivity: float = 0.80
-    development_heat_sensitivity: float = 0.70
-    development_cold_sensitivity: float = 0.65
-    acclimation_rate: float = 0.05
-    max_acclimation_days: int = 14
-    acclimation_decay_rate: float = 0.02
-    heat_damage_threshold: float = 0.7
-    cold_damage_threshold: float = 0.6
-    frost_damage_rate: float = 0.2
-    recovery_rate_heat: float = 0.08
-    recovery_rate_cold: float = 0.05
-    stress_memory_duration: int = 7
-    memory_effect_strength: float = 0.3
+    frost_threshold: float = None  # Must be provided in CSV configuration
+    photosynthesis_heat_sensitivity: float = None  # Must be provided in CSV configuration
+    photosynthesis_cold_sensitivity: float = None  # Must be provided in CSV configuration
+    respiration_heat_sensitivity: float = None  # Must be provided in CSV configuration
+    respiration_cold_sensitivity: float = None  # Must be provided in CSV configuration
+    growth_heat_sensitivity: float = None  # Must be provided in CSV configuration
+    growth_cold_sensitivity: float = None  # Must be provided in CSV configuration
+    development_heat_sensitivity: float = None  # Must be provided in CSV configuration
+    development_cold_sensitivity: float = None  # Must be provided in CSV configuration
+    acclimation_rate: float = None  # Must be provided in CSV configuration
+    max_acclimation_days: int = None  # Must be provided in CSV configuration
+    acclimation_decay_rate: float = None  # Must be provided in CSV configuration
+    heat_damage_threshold: float = None  # Must be provided in CSV configuration
+    cold_damage_threshold: float = None  # Must be provided in CSV configuration
+    frost_damage_rate: float = None  # Must be provided in CSV configuration
+    recovery_rate_heat: float = None  # Must be provided in CSV configuration
+    recovery_rate_cold: float = None  # Must be provided in CSV configuration
+    stress_memory_duration: int = None  # Must be provided in CSV configuration
+    memory_effect_strength: float = None  # Must be provided in CSV configuration
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> "TemperatureStressParameters":
@@ -106,8 +106,8 @@ class TemperatureStressParameters:
 
 @dataclass
 class TemperatureAcclimation:
-    heat_acclimation: float = 0.0
-    cold_acclimation: float = 0.0
+    heat_acclimation: float = None  # Must be provided in CSV configuration
+    cold_acclimation: float = None  # Must be provided in CSV configuration
     acclimation_history: List[float] = None
 
     def __post_init__(self):
@@ -117,19 +117,19 @@ class TemperatureAcclimation:
 
 @dataclass
 class TemperatureDamage:
-    heat_damage: float = 0.0
-    cold_damage: float = 0.0
-    frost_damage: float = 0.0
-    damage_recovery_rate: float = 0.0
+    heat_damage: float = None  # Must be provided in CSV configuration
+    cold_damage: float = None  # Must be provided in CSV configuration
+    frost_damage: float = None  # Must be provided in CSV configuration
+    damage_recovery_rate: float = None  # Must be provided in CSV configuration
 
 
 @dataclass
 class ProcessStressFactors:
-    photosynthesis: float = 1.0
-    respiration: float = 1.0
-    growth: float = 1.0
-    development: float = 1.0
-    overall: float = 1.0
+    photosynthesis: float = None  # Must be provided in CSV configuration
+    respiration: float = None  # Must be provided in CSV configuration
+    growth: float = None  # Must be provided in CSV configuration
+    development: float = None  # Must be provided in CSV configuration
+    overall: float = None  # Must be provided in CSV configuration
 
 
 @dataclass
@@ -147,8 +147,19 @@ class TemperatureStressResponse:
 class TemperatureStressModel:
     def __init__(self, params: TemperatureStressParameters):
         self.params = params
-        self.acclimation = TemperatureAcclimation()
-        self.damage = TemperatureDamage()
+        # Initialize acclimation with valid starting values (0.0 = no acclimation)
+        self.acclimation = TemperatureAcclimation(
+            heat_acclimation=0.0,  # Start with no heat acclimation
+            cold_acclimation=0.0,  # Start with no cold acclimation
+            acclimation_history=[]
+        )
+        # Initialize damage with valid starting values (0.0 = no damage)
+        self.damage = TemperatureDamage(
+            heat_damage=0.0,      # Start with no heat damage
+            cold_damage=0.0,      # Start with no cold damage
+            frost_damage=0.0,     # Start with no frost damage
+            damage_recovery_rate=0.0  # Start with no recovery rate
+        )
         self.stress_history: List[Tuple[float, float]] = []
         self.current_stress_duration = 0.0
         self.last_temperature: Optional[float] = None
@@ -249,6 +260,13 @@ class TemperatureStressModel:
 
     def calculate_process_stress_factors(self, stress_level: float, stress_type: TemperatureStressType) -> ProcessStressFactors:
         f = ProcessStressFactors()
+        
+        # Initialize all fields with default values (no stress = 1.0)
+        f.photosynthesis = 1.0
+        f.respiration = 1.0
+        f.growth = 1.0
+        f.development = 1.0
+        
         if stress_type == TemperatureStressType.HEAT:
             f.photosynthesis = max(0.0, 1.0 - stress_level * self.params.photosynthesis_heat_sensitivity)
             f.respiration = max(0.0, 1.0 - stress_level * self.params.respiration_heat_sensitivity)
@@ -259,6 +277,8 @@ class TemperatureStressModel:
             f.respiration = max(0.0, 1.0 - stress_level * self.params.respiration_cold_sensitivity)
             f.growth = max(0.0, 1.0 - stress_level * self.params.growth_cold_sensitivity)
             f.development = max(0.0, 1.0 - stress_level * self.params.development_cold_sensitivity)
+        
+        # Calculate overall factor (weighted average)
         f.overall = (
             f.photosynthesis * 0.35 + f.growth * 0.35 + f.development * 0.20 + f.respiration * 0.10
         )
@@ -554,16 +574,9 @@ class IntegratedStressParameters:
         onset_thresholds = config_dict.get("stress_onset_thresholds", {})
         damage_thresholds = config_dict.get("damage_thresholds", {})
         
-        # If no specific stress weights from CSV, use genetic stress weights if available
-        if not stress_weights and "genetic_stress_weights" in config_dict:
-            genetic_weights = config_dict["genetic_stress_weights"]
-            stress_weights = {
-                StressType.TEMPERATURE.value: genetic_weights.get("temperature_stress_weight", 0.5),
-                StressType.WATER.value: genetic_weights.get("water_stress_weight", 0.25),
-                StressType.NUTRIENT.value: genetic_weights.get("nutrient_stress_weight", 0.25),
-                StressType.LIGHT.value: genetic_weights.get("light_stress_weight", 0.15),
-                StressType.SALINITY.value: genetic_weights.get("salinity_stress_weight", 0.2),
-            }
+        # Stress weights must be provided in CSV configuration
+        if not stress_weights:
+            raise ValueError("Stress weights must be provided in CSV configuration")
         
         return cls(
             stress_weights=stress_weights or None,
@@ -581,11 +594,11 @@ class IntegratedStressParameters:
 class StressState:
     stress_type: str
     current_level: float
-    acute_stress: float = 0.0
-    chronic_stress: float = 0.0
-    acclimation_level: float = 0.0
-    damage_level: float = 0.0
-    recovery_progress: float = 0.0
+    acute_stress: float = None  # Must be provided in CSV configuration
+    chronic_stress: float = None  # Must be provided in CSV configuration
+    acclimation_level: float = None  # Must be provided in CSV configuration
+    damage_level: float = None  # Must be provided in CSV configuration
+    recovery_progress: float = None  # Must be provided in CSV configuration
     days_under_stress: int = 0
     stress_history: List[float] = None
 
@@ -627,7 +640,18 @@ class IntegratedStressModel:
         self.stress_history: List[Dict[str, Any]] = []
         self.cumulative_damage: Dict[str, float] = {}
         for st in self.params.stress_weights.keys():
-            self.stress_states[st] = StressState(stress_type=st, current_level=1.0)
+            # Initialize stress state with valid starting values
+            self.stress_states[st] = StressState(
+                stress_type=st,
+                current_level=1.0,  # Start with no stress
+                acute_stress=0.0,   # Start with no acute stress
+                chronic_stress=0.0, # Start with no chronic stress
+                acclimation_level=0.0, # Start with no acclimation
+                damage_level=0.0,   # Start with no damage
+                recovery_progress=0.0, # Start with no recovery
+                days_under_stress=0,
+                stress_history=[]
+            )
             self.cumulative_damage[st] = 0.0
 
     def calculate_acute_stress(self, stress_type: str, current_level: float) -> float:
@@ -722,7 +746,9 @@ class IntegratedStressModel:
         sensitivities = self.params.process_sensitivity.get(process_type, {})
         active: Dict[str, float] = {}
         for st, state in stress_states.items():
-            sensitivity = sensitivities.get(st, 0.5)
+            sensitivity = sensitivities.get(st, None)
+        if sensitivity is None:
+            raise ValueError(f"Process sensitivity for {st} must be provided in CSV configuration")
             acute = state.acute_stress
             chronic = state.chronic_stress
             combined = min(acute, chronic * 0.8 + acute * 0.2)
@@ -762,10 +788,14 @@ class IntegratedStressModel:
                 state = self.stress_states[st_type]
                 state.current_level = level
                 state.stress_history.append(level)
-                memory = self.params.stress_memory_duration.get(st_type, 5.0)
+                memory = self.params.stress_memory_duration.get(st_type, None)
+                if memory is None:
+                    raise ValueError(f"Stress memory duration for {st_type} must be provided in CSV configuration")
                 if len(state.stress_history) > memory:
                     state.stress_history = state.stress_history[-int(memory) :]
-                threshold = self.params.stress_onset_thresholds.get(st_type, 0.8)
+                threshold = self.params.stress_onset_thresholds.get(st_type, None)
+                if threshold is None:
+                    raise ValueError(f"Stress onset threshold for {st_type} must be provided in CSV configuration")
                 if level < threshold:
                     state.days_under_stress += 1
                 else:
@@ -774,7 +804,9 @@ class IntegratedStressModel:
                 state.chronic_stress = self.calculate_chronic_stress(state)
                 state.acclimation_level = self.calculate_acclimation_effect(state)
                 state.recovery_progress = self.calculate_recovery_effect(state)
-                damage_threshold = self.params.damage_thresholds.get(st_type, 0.3)
+                damage_threshold = self.params.damage_thresholds.get(st_type, None)
+                if damage_threshold is None:
+                    raise ValueError(f"Damage threshold for {st_type} must be provided in CSV configuration")
                 if level < damage_threshold:
                     rate = (damage_threshold - level) / damage_threshold * 0.01
                     self.cumulative_damage[st_type] += rate
@@ -800,7 +832,9 @@ class IntegratedStressModel:
             severity = "critical"
         impacts: Dict[str, float] = {}
         for st, state in self.stress_states.items():
-            impacts[st] = (1.0 - state.acute_stress) * self.params.stress_weights.get(st, 0.1)
+            impacts[st] = (1.0 - state.acute_stress) * self.params.stress_weights.get(st, None)
+            if self.params.stress_weights.get(st, None) is None:
+                raise ValueError(f"Stress weight for {st} must be provided in CSV configuration")
         dominant = sorted(impacts.keys(), key=lambda x: impacts[x], reverse=True)[:3]
         interactions_active: List[str] = []
         for resp in process_responses.values():

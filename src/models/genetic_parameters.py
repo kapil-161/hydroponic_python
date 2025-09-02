@@ -101,9 +101,9 @@ class CultivarProfile:
     genetic_coefficients: GeneticCoefficients
     
     # Performance characteristics (must come from CSV)
-    yield_potential: float       # Relative yield potential
-    adaptation_score: float      # Environmental adaptation score
-    commercial_rating: float     # Commercial viability rating
+    yield_potential: float = None       # Relative yield potential
+    adaptation_score: float = None      # Environmental adaptation score
+    commercial_rating: float = None     # Commercial viability rating
     
     # Trait values (0.0-1.0 scale, 1.0 = excellent)
     trait_values: Dict[GeneticTrait, float] = field(default_factory=dict)
@@ -125,27 +125,27 @@ class CultivarProfile:
         cold_tolerance = self.trait_values.get(GeneticTrait.COLD_TOLERANCE, 0.5)
         
         if temp_stress > 0:  # Heat stress
-            weight = 0.3  # Heat stress weight (CSV configurable)
+            weight = environment_factors.get('heat_stress_weight', 0.3)  # Heat stress weight from CSV
             stress_adjustments += temp_stress * (1.0 - heat_tolerance) * weight
         else:  # Cold stress
-            weight = 0.25  # Cold stress weight (CSV configurable)
+            weight = environment_factors.get('cold_stress_weight', 0.25)  # Cold stress weight from CSV
             stress_adjustments += abs(temp_stress) * (1.0 - cold_tolerance) * weight
         
         # Salinity stress
         salinity_stress = environment_factors.get('salinity_stress', 0.0)
         salinity_tolerance = self.trait_values.get(GeneticTrait.SALINITY_TOLERANCE, 0.5)
-        weight = 0.2  # Salinity stress weight (CSV configurable)
+        weight = environment_factors.get('salinity_stress_weight', 0.2)  # Salinity stress weight from CSV
         stress_adjustments += salinity_stress * (1.0 - salinity_tolerance) * weight
         
         # Light stress
         light_stress = environment_factors.get('light_stress', 0.0)
-        weight = 0.15  # Light stress weight (CSV configurable)
+        weight = environment_factors.get('light_stress_weight', 0.15)  # Light stress weight from CSV
         stress_adjustments += light_stress * weight
         
         # Nutrient stress
         nutrient_stress = environment_factors.get('nutrient_stress', 0.0)
         nitrate_efficiency = self.genetic_coefficients.NITRATE_EFFICIENCY
-        weight = 0.25  # Nutrient stress weight (CSV configurable)
+        weight = environment_factors.get('nutrient_stress_weight', 0.25)  # Nutrient stress weight from CSV
         stress_adjustments += nutrient_stress * (1.0 - nitrate_efficiency) * weight
         
         # Calculate final adaptation index
@@ -186,9 +186,9 @@ class GeneticParameterDatabase:
         
         for cultivar_id, cultivar in self.cultivars.items():
             adaptation_score = cultivar.calculate_adaptation_index(environment_factors)
-            adaptation_weight = 0.6  # Adaptation score weight (CSV configurable)
-            yield_weight = 0.25  # Yield potential weight (CSV configurable)
-            commercial_weight = 0.15  # Commercial rating weight (CSV configurable)
+            adaptation_weight = environment_factors.get('adaptation_weight', 0.6)  # Adaptation score weight from CSV
+            yield_weight = environment_factors.get('yield_weight', 0.25)  # Yield potential weight from CSV
+            commercial_weight = environment_factors.get('commercial_weight', 0.15)  # Commercial rating weight from CSV
             overall_score = (
                 adaptation_score * adaptation_weight
                 + cultivar.yield_potential * yield_weight
@@ -235,7 +235,7 @@ class GenotypeEnvironmentModel:
         if trait == GeneticTrait.HEAT_TOLERANCE:
             temp_stress = environment_factors.get('temperature_stress', 0.0)
             if temp_stress > 0:  # Heat stress present
-                weight = 0.5  # Temperature stress weight (CSV configurable)
+                weight = environment_factors.get('temperature_stress_weight', 0.5)  # Temperature stress weight from CSV
                 expression = base_trait_value * (1.0 - temp_stress * weight)
             else:
                 expression = base_trait_value
@@ -243,7 +243,7 @@ class GenotypeEnvironmentModel:
         elif trait == GeneticTrait.COLD_TOLERANCE:
             temp_stress = environment_factors.get('temperature_stress', 0.0)
             if temp_stress < 0:  # Cold stress present
-                weight = 0.5  # Temperature stress weight (CSV configurable)
+                weight = environment_factors.get('temperature_stress_weight', 0.5)  # Temperature stress weight from CSV
                 expression = base_trait_value * (1.0 + temp_stress * weight)  # temp_stress is negative
             else:
                 expression = base_trait_value
@@ -257,14 +257,14 @@ class GenotypeEnvironmentModel:
         elif trait == GeneticTrait.NITRATE_ACCUMULATION:
             nitrogen_excess = environment_factors.get('nitrogen_excess', 0.0)
             # Higher nitrogen leads to more nitrate accumulation
-            nitrogen_weight = 0.3  # Nitrogen excess weight (CSV configurable)
+            nitrogen_weight = environment_factors.get('nitrogen_excess_weight', 0.3)  # Nitrogen excess weight from CSV
             expression = base_trait_value + nitrogen_excess * nitrogen_weight
             
         elif trait == GeneticTrait.ROOT_DEVELOPMENT:
             water_stress = environment_factors.get('water_stress', 0.0)
             nutrient_stress = environment_factors.get('nutrient_stress', 0.0)
             # Root development increases under stress
-            stress_weight = 0.2  # Stress response weight (CSV configurable)
+            stress_weight = environment_factors.get('stress_response_weight', 0.2)  # Stress response weight from CSV
             stress_response = max(water_stress, nutrient_stress) * stress_weight
             expression = base_trait_value + stress_response
             
@@ -291,27 +291,37 @@ class GenotypeEnvironmentModel:
                 cultivar_id, environment_factors, trait
             )
         
-        # Aggregate performance metrics
+        # Aggregate performance metrics (weights from CSV)
+        yield_weights = environment_factors.get('yield_index_weights', {
+            'leaf_size': 0.3, 'chlorophyll': 0.2, 'nitrate_avoidance': 0.2, 
+            'root_development': 0.15, 'yield_potential': 0.15
+        })
         performance_metrics['yield_index'] = (
-            trait_expressions[GeneticTrait.LEAF_SIZE] * 0.3 +
-            trait_expressions[GeneticTrait.CHLOROPHYLL_CONTENT] * 0.2 +
-            (1.0 - trait_expressions[GeneticTrait.NITRATE_ACCUMULATION]) * 0.2 +
-            trait_expressions[GeneticTrait.ROOT_DEVELOPMENT] * 0.15 +
-            cultivar.yield_potential * 0.15
+            trait_expressions[GeneticTrait.LEAF_SIZE] * yield_weights.get('leaf_size', 0.3) +
+            trait_expressions[GeneticTrait.CHLOROPHYLL_CONTENT] * yield_weights.get('chlorophyll', 0.2) +
+            (1.0 - trait_expressions[GeneticTrait.NITRATE_ACCUMULATION]) * yield_weights.get('nitrate_avoidance', 0.2) +
+            trait_expressions[GeneticTrait.ROOT_DEVELOPMENT] * yield_weights.get('root_development', 0.15) +
+            cultivar.yield_potential * yield_weights.get('yield_potential', 0.15)
         )
         
+        quality_weights = environment_factors.get('quality_index_weights', {
+            'vitamin_c': 0.3, 'carotenoid': 0.25, 'nitrate_avoidance': 0.25, 'chlorophyll': 0.2
+        })
         performance_metrics['quality_index'] = (
-            trait_expressions[GeneticTrait.VITAMIN_C_CONTENT] * 0.3 +
-            trait_expressions[GeneticTrait.CAROTENOID_CONTENT] * 0.25 +
-            (1.0 - trait_expressions[GeneticTrait.NITRATE_ACCUMULATION]) * 0.25 +
-            trait_expressions[GeneticTrait.CHLOROPHYLL_CONTENT] * 0.2
+            trait_expressions[GeneticTrait.VITAMIN_C_CONTENT] * quality_weights.get('vitamin_c', 0.3) +
+            trait_expressions[GeneticTrait.CAROTENOID_CONTENT] * quality_weights.get('carotenoid', 0.25) +
+            (1.0 - trait_expressions[GeneticTrait.NITRATE_ACCUMULATION]) * quality_weights.get('nitrate_avoidance', 0.25) +
+            trait_expressions[GeneticTrait.CHLOROPHYLL_CONTENT] * quality_weights.get('chlorophyll', 0.2)
         )
         
+        stress_weights = environment_factors.get('stress_tolerance_weights', {
+            'heat': 0.3, 'cold': 0.25, 'salinity': 0.25, 'disease': 0.2
+        })
         performance_metrics['stress_tolerance'] = (
-            trait_expressions[GeneticTrait.HEAT_TOLERANCE] * 0.3 +
-            trait_expressions[GeneticTrait.COLD_TOLERANCE] * 0.25 +
-            trait_expressions[GeneticTrait.SALINITY_TOLERANCE] * 0.25 +
-            trait_expressions[GeneticTrait.DISEASE_RESISTANCE] * 0.2
+            trait_expressions[GeneticTrait.HEAT_TOLERANCE] * stress_weights.get('heat', 0.3) +
+            trait_expressions[GeneticTrait.COLD_TOLERANCE] * stress_weights.get('cold', 0.25) +
+            trait_expressions[GeneticTrait.SALINITY_TOLERANCE] * stress_weights.get('salinity', 0.25) +
+            trait_expressions[GeneticTrait.DISEASE_RESISTANCE] * stress_weights.get('disease', 0.2)
         )
         
         performance_metrics['time_to_harvest'] = (
@@ -407,7 +417,7 @@ class BreedingAssistant:
             p2_value = parent2.trait_values.get(trait, 0.5)
             
             # Mid-parent value with some heterosis
-            heterosis_factor = 1.05  # 5% heterosis
+            heterosis_factor = environment_factors.get('heterosis_factor', 1.05)  # Heterosis factor from CSV
             hybrid_traits[trait] = (p1_value + p2_value) / 2.0 * heterosis_factor
         
         # Estimate genetic coefficients (mid-parent values)
@@ -484,7 +494,7 @@ def create_lettuce_genetic_system(system_config=None) -> Tuple[GeneticParameterD
             if hasattr(genetic_coeffs, param_name):
                 setattr(genetic_coeffs, param_name, param_value)
         
-        # Create cultivar profile with default values for missing fields
+        # Create cultivar profile with required parameters from CSV
         cultivar_profile = CultivarProfile(
             cultivar_id=cultivar_id,
             cultivar_name="CSV Configured Cultivar",
@@ -492,13 +502,21 @@ def create_lettuce_genetic_system(system_config=None) -> Tuple[GeneticParameterD
             breeder="CSV Configuration",
             year_released=2024,
             genetic_coefficients=genetic_coeffs,
-            yield_potential=1.0,  # Default high yield potential
-            adaptation_score=0.8,  # Default good adaptation
-            commercial_rating=0.8,  # Default good commercial rating
+            yield_potential=genetic_params.get('yield_potential', None),  # Must be provided in CSV
+            adaptation_score=genetic_params.get('adaptation_score', None),  # Must be provided in CSV
+            commercial_rating=genetic_params.get('commercial_rating', None),  # Must be provided in CSV
             trait_values={},  # Empty trait values - can be populated later
             pedigree=["CSV configured"],
             breeding_notes="Cultivar created from CSV genetic parameters"
         )
+        
+        # Validate required performance parameters
+        if cultivar_profile.yield_potential is None:
+            raise ValueError("❌ yield_potential must be provided in CSV genetic parameters - no hardcoded defaults allowed")
+        if cultivar_profile.adaptation_score is None:
+            raise ValueError("❌ adaptation_score must be provided in CSV genetic parameters - no hardcoded defaults allowed")
+        if cultivar_profile.commercial_rating is None:
+            raise ValueError("❌ commercial_rating must be provided in CSV genetic parameters - no hardcoded defaults allowed")
         
         genetic_db.add_cultivar(cultivar_profile)
         

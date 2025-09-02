@@ -63,58 +63,156 @@ class NitrogenBalanceParameters:
     
     # Nitrogen use efficiency
     photosynthetic_n_use_efficiency: float = None
-    growth_n_use_efficiency: float = 25.0
+    growth_n_use_efficiency: float = None
     
     # Stress thresholds
-    n_stress_threshold: float = 0.7          # N stress threshold
-    luxury_uptake_threshold: float = 1.3     # Luxury consumption threshold
+    n_stress_threshold: float = None          # N stress threshold
+    luxury_uptake_threshold: float = None     # Luxury consumption threshold
     
     # Root characteristics
-    specific_root_activity: float = 0.05     # g N uptake/g root/day
-    root_zone_exploration: float = 0.8       # Fraction of nutrient zone accessed
+    specific_root_activity: float = None     # g N uptake/g root/day
+    root_zone_exploration: float = None       # Fraction of nutrient zone accessed
     
     def __post_init__(self):
-        # Initialize with basic structures if not provided
-        # This allows the system to work with existing CSV structure
+        # Validate that all required parameters are provided
         if self.uptake_kinetics is None:
-            self.uptake_kinetics = {}
+            raise ValueError("❌ uptake_kinetics must be provided in CSV configuration - no hardcoded defaults allowed")
         
         if self.allocation_coefficients is None:
-            self.allocation_coefficients = {}
+            raise ValueError("❌ allocation_coefficients must be provided in CSV configuration - no hardcoded defaults allowed")
         
         if self.critical_n_concentrations is None:
-            self.critical_n_concentrations = {}
+            raise ValueError("❌ critical_n_concentrations must be provided in CSV configuration - no hardcoded defaults allowed")
         
         if self.remobilization_rates is None:
-            self.remobilization_rates = {}
+            raise ValueError("❌ remobilization_rates must be provided in CSV configuration - no hardcoded defaults allowed")
         
         if self.remobilization_efficiency is None:
-            self.remobilization_efficiency = {}
+            raise ValueError("❌ remobilization_efficiency must be provided in CSV configuration - no hardcoded defaults allowed")
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'NitrogenBalanceParameters':
         """Create NitrogenBalanceParameters from CSV configuration data."""
-        uptake_kinetics = config_dict.get('uptake_kinetics', {})
-        allocation_coeffs = config_dict.get('allocation_coefficients', {})
-        critical_n_concs = config_dict.get('critical_n_concentrations', {})
-        remob_rates = config_dict.get('remobilization_rates', {})
-        remob_efficiency = config_dict.get('remobilization_efficiency', {})
+        # Validate required parameters
+        required_params = [
+            'nitrate_reduction_rate', 'ammonium_assimilation_rate', 'amino_acid_uptake_rate',
+            'photosynthetic_n_use_efficiency', 'growth_n_use_efficiency', 'n_stress_threshold',
+            'luxury_uptake_threshold', 'specific_root_activity', 'root_zone_exploration'
+        ]
+        
+        missing_params = [p for p in required_params if p not in config_dict]
+        if missing_params:
+            raise ValueError(f"❌ Missing required nitrogen balance parameters in CSV: {missing_params}")
+        
+        # Parse nested structures from flat CSV parameters
+        uptake_kinetics = {}
+        allocation_coeffs = {}
+        critical_n_concs = {}
+        remob_rates = {}
+        remob_efficiency = {}
+        
+        # Parse uptake kinetics (if provided as flat parameters)
+        if 'uptake_kinetics' in config_dict:
+            uptake_kinetics = config_dict['uptake_kinetics']
+        else:
+            # Parse flat uptake kinetics parameters
+            for key, value in config_dict.items():
+                if key.startswith('uptake_kinetics_'):
+                    # Extract form and parameter from key (e.g., uptake_kinetics_NO3_vmax)
+                    # The pattern is: uptake_kinetics_[FORM]_[PARAM]
+                    # Split by underscore and take the third part as form, rest as parameter
+                    parts = key.split('_')
+                    if len(parts) >= 4:
+                        form = parts[2]  # NO3, NH4, AA (third part)
+                        param = '_'.join(parts[3:])  # min_conc, inhibition_ki (rest of parts)
+                        if form not in uptake_kinetics:
+                            uptake_kinetics[form] = {}
+                        uptake_kinetics[form][param] = float(value)
+            
+            # Validate that all required uptake kinetics parameters are present
+            required_forms = ['NO3', 'NH4', 'AA']
+            required_params = ['vmax', 'km', 'min_conc', 'inhibition_ki']
+            
+            for form in required_forms:
+                if form not in uptake_kinetics:
+                    raise ValueError(f"❌ Missing uptake kinetics for {form} in CSV configuration")
+                for param in required_params:
+                    if param not in uptake_kinetics[form]:
+                        raise ValueError(f"❌ Missing {param} parameter for {form} uptake kinetics in CSV configuration")
+        
+        # Parse allocation coefficients (if provided as flat parameters)
+        if 'allocation_coefficients' in config_dict:
+            allocation_coeffs = config_dict['allocation_coefficients']
+        else:
+            # Parse flat allocation coefficient parameters
+            for key, value in config_dict.items():
+                if key.startswith('allocation_coefficients_'):
+                    # Extract stage and organ from key (e.g., allocation_coefficients_vegetative_leaves)
+                    parts = key.split('_', 2)
+                    if len(parts) >= 3:
+                        stage = parts[1]
+                        organ = parts[2]
+                        if stage not in allocation_coeffs:
+                            allocation_coeffs[stage] = {}
+                        allocation_coeffs[stage][organ] = float(value)
+        
+        # Parse critical N concentrations (if provided as flat parameters)
+        if 'critical_n_concentrations' in config_dict:
+            critical_n_concs = config_dict['critical_n_concentrations']
+        else:
+            # Parse flat critical N concentration parameters
+            for key, value in config_dict.items():
+                if key.startswith('critical_n_concentrations_'):
+                    # Extract organ and threshold from key (e.g., critical_n_concentrations_leaves_optimal)
+                    parts = key.split('_', 3)
+                    if len(parts) >= 4:
+                        organ = parts[1]
+                        threshold = parts[2]
+                        if organ not in critical_n_concs:
+                            critical_n_concs[organ] = {}
+                        critical_n_concs[organ][threshold] = float(value)
+        
+        # Parse remobilization rates (if provided as flat parameters)
+        if 'remobilization_rates' in config_dict:
+            remob_rates = config_dict['remobilization_rates']
+        else:
+            # Parse flat remobilization rate parameters
+            for key, value in config_dict.items():
+                if key.startswith('remobilization_rates_'):
+                    # Extract pool type from key (e.g., remobilization_rates_structural)
+                    parts = key.split('_', 2)
+                    if len(parts) >= 3:
+                        pool_type = parts[2]
+                        remob_rates[pool_type] = float(value)
+        
+        # Parse remobilization efficiency (if provided as flat parameters)
+        if 'remobilization_efficiency' in config_dict:
+            remob_efficiency = config_dict['remobilization_efficiency']
+        else:
+            # Parse flat remobilization efficiency parameters
+            for key, value in config_dict.items():
+                if key.startswith('remobilization_efficiency_'):
+                    # Extract organ from key (e.g., remobilization_efficiency_leaves)
+                    parts = key.split('_', 2)
+                    if len(parts) >= 3:
+                        organ = parts[2]
+                        remob_efficiency[organ] = float(value)
         
         return cls(
-            uptake_kinetics=uptake_kinetics if uptake_kinetics else None,
-            nitrate_reduction_rate=config_dict['nitrate_reduction_rate'],
-            ammonium_assimilation_rate=config_dict['ammonium_assimilation_rate'],
-            amino_acid_uptake_rate=config_dict['amino_acid_uptake_rate'],
-            allocation_coefficients=allocation_coeffs if allocation_coeffs else None,
-            critical_n_concentrations=critical_n_concs if critical_n_concs else None,
-            remobilization_rates=remob_rates if remob_rates else None,
-            remobilization_efficiency=remob_efficiency if remob_efficiency else None,
-            photosynthetic_n_use_efficiency=config_dict['photosynthetic_n_use_efficiency'],
-            growth_n_use_efficiency=config_dict['growth_n_use_efficiency'],
-            n_stress_threshold=config_dict['n_stress_threshold'],
-            luxury_uptake_threshold=config_dict['luxury_uptake_threshold'],
-            specific_root_activity=config_dict['specific_root_activity'],
-            root_zone_exploration=config_dict['root_zone_exploration']
+            uptake_kinetics=uptake_kinetics,
+            nitrate_reduction_rate=float(config_dict['nitrate_reduction_rate']),
+            ammonium_assimilation_rate=float(config_dict['ammonium_assimilation_rate']),
+            amino_acid_uptake_rate=float(config_dict['amino_acid_uptake_rate']),
+            allocation_coefficients=allocation_coeffs,
+            critical_n_concentrations=critical_n_concs,
+            remobilization_rates=remob_rates,
+            remobilization_efficiency=remob_efficiency,
+            photosynthetic_n_use_efficiency=float(config_dict['photosynthetic_n_use_efficiency']),
+            growth_n_use_efficiency=float(config_dict['growth_n_use_efficiency']),
+            n_stress_threshold=float(config_dict['n_stress_threshold']),
+            luxury_uptake_threshold=float(config_dict['luxury_uptake_threshold']),
+            specific_root_activity=float(config_dict['specific_root_activity']),
+            root_zone_exploration=float(config_dict['root_zone_exploration'])
         )
 
 
@@ -194,7 +292,9 @@ class PlantNitrogenBalanceModel:
     """
     
     def __init__(self, parameters: Optional[NitrogenBalanceParameters] = None):
-        self.params = parameters or NitrogenBalanceParameters()
+        if parameters is None:
+            raise ValueError("❌ NitrogenBalanceParameters required - no hardcoded defaults allowed")
+        self.params = parameters
         self.organ_states: Dict[str, OrganNitrogenState] = {}
         self.nitrogen_history: List[Dict[str, float]] = []
         self.total_cumulative_uptake: float = 0.0
@@ -749,18 +849,21 @@ def create_lettuce_nitrogen_balance_model(system_config=None) -> PlantNitrogenBa
         
     Returns:
         PlantNitrogenBalanceModel configured with CSV parameters
+        
+    Raises:
+        ValueError: If CSV parameters are missing or invalid
     """
-    try:
-        # Get nitrogen balance parameters from CSV data loaded in system_config
-        nitrogen_params = getattr(system_config, 'nitrogen_parameters', {})
-        
-        # Create parameters from CSV config
-        parameters = NitrogenBalanceParameters.from_config(nitrogen_params)
-        return PlantNitrogenBalanceModel(parameters)
-        
-    except Exception as e:
-        print(f"Warning: Could not load CSV nitrogen balance parameters: {e}")
-        print("Using default nitrogen balance parameters")
-        return PlantNitrogenBalanceModel()
+    if system_config is None:
+        raise ValueError("❌ system_config is required - no hardcoded defaults allowed")
+    
+    # Get nitrogen balance parameters from CSV data loaded in system_config
+    nitrogen_params = getattr(system_config, 'nitrogen_parameters', None)
+    
+    if nitrogen_params is None:
+        raise ValueError("❌ nitrogen_parameters missing from CSV - no fallback defaults allowed")
+    
+    # Create parameters from CSV config
+    parameters = NitrogenBalanceParameters.from_config(nitrogen_params)
+    return PlantNitrogenBalanceModel(parameters)
 
 

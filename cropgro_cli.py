@@ -72,6 +72,30 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
             df = pd.read_csv(master_file, comment='#')
             params_loaded = []
             
+            # Check for duplicate parameter names across all categories
+            all_param_names = df['parameter_name'].tolist()
+            duplicate_params = []
+            seen_params = set()
+            
+            for param_name in all_param_names:
+                if param_name in seen_params:
+                    duplicate_params.append(param_name)
+                else:
+                    seen_params.add(param_name)
+            
+            if duplicate_params:
+                print(f"❌ ERROR: Duplicate parameter names found in CSV file:")
+                for dup_param in set(duplicate_params):  # Remove duplicates from error list
+                    dup_rows = df[df['parameter_name'] == dup_param]
+                    print(f"   • '{dup_param}' appears {len(dup_rows)} times:")
+                    for idx, row in dup_rows.iterrows():
+                        category = row.get('category', 'unknown')
+                        value = row.get('value', 'unknown')
+                        print(f"     - Row {idx+2}: category='{category}', value='{value}'")
+                print(f"\n💡 Please remove duplicate entries to avoid parameter loading issues.")
+                print(f"   Duplicate parameters can cause values to be loaded as lists instead of scalars.")
+                return
+            
             # Group parameters by category
             parameter_categories = {}
             for _, row in df.iterrows():
@@ -120,9 +144,9 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
             # Set key system_config values for backward compatibility
             if 'environment' in parameter_categories:
                 env_params = parameter_categories['environment']
-                if 'optimal_temperature' in env_params:
-                    system_config.temperature = env_params['optimal_temperature']
-                    print(f"✓ Temperature loaded: {env_params['optimal_temperature']}°C")
+                if 'environment_optimal_temperature' in env_params:
+                    system_config.temperature = env_params['environment_optimal_temperature']
+                    print(f"✓ Temperature loaded: {env_params['environment_optimal_temperature']}°C")
                 if 'min_humidity' in env_params:
                     system_config.humidity = env_params['min_humidity']
                     print(f"✓ Humidity loaded: {env_params['min_humidity']}%")
@@ -288,10 +312,21 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
     
     final_result = results.daily_results[-1]
     total_days = len(results.daily_results)
-    final_biomass = getattr(final_result, 'total_biomass', 0.0)
+    final_biomass = getattr(final_result, 'total_biomass', None)
     final_stage = getattr(final_result, 'growth_stage', 'Unknown')
-    plant_count = getattr(final_result, 'plant_count', 12)
-    system_area = getattr(final_result, 'system_area_m2', 1.0)
+    
+    # Get system configuration from the simulator's system_config
+    # These values should be available from the CSV parameters
+    plant_count = getattr(simulator.system_config, 'n_plants', None)
+    system_area = getattr(simulator.system_config, 'system_area', None)
+    
+    if final_biomass is None:
+        print("❌ ERROR: Biomass data missing. Cannot generate summary.")
+        return results, file_prefix
+        
+    if plant_count is None or system_area is None:
+        print("❌ ERROR: System configuration missing (plant count or system area). Cannot generate summary.")
+        return results, file_prefix
     
     # Calculate totals
     total_system_biomass = final_biomass * plant_count
@@ -299,16 +334,22 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
     
     # Calculate growth rates
     if total_days > 1:
-        initial_biomass = getattr(results.daily_results[0], 'total_biomass', 0.0)
-        total_growth = final_biomass - initial_biomass
-        avg_daily_growth = total_growth / (total_days - 1)
-        total_system_growth = total_growth * plant_count
-        avg_system_growth = total_system_growth / (total_days - 1)
+        initial_biomass = getattr(results.daily_results[0], 'total_biomass', None)
+        if initial_biomass is not None:
+            total_growth = final_biomass - initial_biomass
+            avg_daily_growth = total_growth / (total_days - 1)
+            total_system_growth = total_growth * plant_count
+            avg_system_growth = total_system_growth / (total_days - 1)
+        else:
+            total_growth = None
+            avg_daily_growth = None
+            total_system_growth = None
+            avg_system_growth = None
     else:
-        total_growth = 0.0
-        avg_daily_growth = 0.0
-        total_system_growth = 0.0
-        avg_system_growth = 0.0
+        total_growth = None
+        avg_daily_growth = None
+        total_system_growth = None
+        avg_system_growth = None
     
     print(f"\n📊 SIMULATION OVERVIEW:")
     print(f"  • Duration: {total_days} days")
@@ -319,60 +360,94 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
     print(f"  {'Metric':<25} {'Per Plant':<15} {'Total System':<15} {'Per m²':<15}")
     print(f"  {'-'*25} {'-'*15} {'-'*15} {'-'*15}")
     print(f"  {'Final Biomass':<25} {final_biomass:<15.2f} g {total_system_biomass:<15.1f} g {system_yield:<15.1f} g/m²")
-    print(f"  {'Total Growth':<25} {total_growth:<15.2f} g {total_system_growth:<15.1f} g {(total_system_growth/system_area):<15.1f} g/m²")
-    print(f"  {'Avg Daily Growth':<25} {avg_daily_growth:<15.3f} g/day {avg_system_growth:<15.2f} g/day {(avg_system_growth/system_area):<15.2f} g/m²/day")
+    
+    if total_growth is not None:
+        print(f"  {'Total Growth':<25} {total_growth:<15.2f} g {total_system_growth:<15.1f} g {(total_system_growth/system_area):<15.1f} g/m²")
+    else:
+        print(f"  {'Total Growth':<25} {'Data Missing':<15} {'Data Missing':<15} {'Data Missing':<15}")
+        
+    if avg_daily_growth is not None:
+        print(f"  {'Avg Daily Growth':<25} {avg_daily_growth:<15.3f} g/day {avg_system_growth:<15.2f} g/day {(avg_system_growth/system_area):<15.2f} g/m²/day")
+    else:
+        print(f"  {'Avg Daily Growth':<25} {'Data Missing':<15} {'Data Missing':<15} {'Data Missing':<15}")
     
     # Show efficiency metrics
-    final_lai = getattr(final_result, 'lai', 0.0)
-    final_leaf_area = getattr(final_result, 'leaf_area_m2', 0.0) * 10000  # cm²
-    total_leaf_area = final_leaf_area * plant_count
+    final_lai = getattr(final_result, 'lai', None)
+    final_leaf_area = getattr(final_result, 'leaf_area_m2', None)
     
-    print(f"\n🌿 FINAL CANOPY STATUS:")
-    print(f"  • Per Plant: {final_leaf_area:.1f} cm² leaf area")
-    print(f"  • Total System: {total_leaf_area:.0f} cm² leaf area")
-    print(f"  • System LAI: {final_lai:.3f}")
+    if final_lai is not None and final_leaf_area is not None:
+        total_leaf_area = final_leaf_area * plant_count
+        
+        print(f"\n🌿 FINAL CANOPY STATUS:")
+        print(f"  • Per Plant: {final_leaf_area*10000:.1f} cm² leaf area")
+        print(f"  • Total System: {total_leaf_area*10000:.0f} cm² leaf area")
+        print(f"  • System LAI: {final_lai:.3f}")
+    else:
+        print(f"\n🌿 FINAL CANOPY STATUS:")
+        print(f"  • Canopy data not available")
     
     # Show environmental summary
-    final_temp = getattr(final_result, 'temp_c', 25.0)
-    final_ec = getattr(final_result, 'ec', 1.5)
-    final_ph = getattr(final_result, 'solution_ph', 6.0)
+    final_temp = getattr(final_result, 'temp_avg', None)
+    final_ec = getattr(final_result, 'ec', None)
+    final_ph = getattr(final_result, 'solution_ph', None)
     
     print(f"\n🌡️  FINAL ENVIRONMENTAL STATUS:")
-    print(f"  • Temperature: {final_temp:.1f}°C")
-    print(f"  • EC: {final_ec:.2f} dS/m")
-    print(f"  • pH: {final_ph:.2f}")
+    if final_temp is not None:
+        print(f"  • Temperature: {final_temp:.1f}°C")
+    else:
+        print(f"  • Temperature: Data not available")
+        
+    if final_ec is not None:
+        print(f"  • EC: {final_ec:.2f} dS/m")
+    else:
+        print(f"  • EC: Data not available")
+        
+    if final_ph is not None:
+        print(f"  • pH: {final_ph:.2f}")
+    else:
+        print(f"  • pH: Data not available")
     
     # Show stress summary
-    final_stress = getattr(final_result, 'integrated_stress', 0.0)
-    if final_stress < 0.1:
-        stress_status = "🟢 None"
-    elif final_stress < 0.3:
-        stress_status = "🟡 Mild"
-    elif final_stress < 0.6:
-        stress_status = "🟠 Moderate"
+    final_stress = getattr(final_result, 'integrated_stress', None)
+    if final_stress is not None:
+        if final_stress < 0.1:
+            stress_status = "🟢 None"
+        elif final_stress < 0.3:
+            stress_status = "🟡 Mild"
+        elif final_stress < 0.6:
+            stress_status = "🟠 Moderate"
+        else:
+            stress_status = "🔴 Severe"
+        
+        print(f"  • Integrated Stress: {final_stress:.3f} {stress_status}")
     else:
-        stress_status = "🔴 Severe"
-    
-    print(f"  • Integrated Stress: {final_stress:.3f} {stress_status}")
+        print(f"  • Integrated Stress: Data not available")
     
     # Show projections if growth is positive
-    if avg_daily_growth > 0:
+    if avg_daily_growth is not None and avg_daily_growth > 0:
         # Estimate days to harvest (assuming ~800 GDD for lettuce)
-        final_gdd = getattr(final_result, 'accumulated_gdd', 0.0)
-        harvest_gdd = 800.0
-        remaining_gdd = max(0, harvest_gdd - final_gdd)
-        
-        # Estimate days based on thermal time
-        avg_thermal_time = getattr(final_result, 'thermal_time_daily', 16.0)
-        days_to_harvest = remaining_gdd / max(0.1, avg_thermal_time) if avg_thermal_time > 0 else 0
-        
-        projected_final_biomass = final_biomass + (avg_daily_growth * days_to_harvest)
-        projected_system_yield = projected_final_biomass * plant_count / system_area
-        
-        print(f"\n🔮 HARVEST PROJECTIONS:")
-        print(f"  • Days to Harvest: {days_to_harvest:.1f} days")
-        print(f"  • Projected Final Biomass: {projected_final_biomass:.1f} g/plant")
-        print(f"  • Projected System Yield: {projected_system_yield:.1f} g/m²")
+        final_gdd = getattr(final_result, 'accumulated_gdd', None)
+        if final_gdd is not None:
+            harvest_gdd = 800.0
+            remaining_gdd = max(0, harvest_gdd - final_gdd)
+            
+            # Estimate days based on thermal time
+            avg_thermal_time = getattr(final_result, 'thermal_time_daily', None)
+            if avg_thermal_time is not None and avg_thermal_time > 0:
+                days_to_harvest = remaining_gdd / avg_thermal_time
+                projected_final_biomass = final_biomass + (avg_daily_growth * days_to_harvest)
+                projected_system_yield = projected_final_biomass * plant_count / system_area
+                
+                print(f"\n🔮 HARVEST PROJECTIONS:")
+                print(f"  • Days to Harvest: {days_to_harvest:.1f} days")
+                print(f"  • Projected Final Biomass: {projected_final_biomass:.1f} g/plant")
+                print(f"  • Projected System Yield: {projected_system_yield:.1f} g/m²")
+            else:
+                print(f"\n🔮 HARVEST PROJECTIONS:")
+                print(f"  • Thermal time data not available for projections")
+        else:
+            print(f"\n🔮 HARVEST PROJECTIONS:")
+            print(f"  • GDD data not available for projections")
     
     print(f"\n{'-'*80}")
     print(f"📋 Note: All biomass values shown are PER PLANT. Multiply by {plant_count} for total system values.")

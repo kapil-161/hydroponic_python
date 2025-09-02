@@ -94,71 +94,86 @@ class PhenologyParameters:
     bolting_maturity_risk_max: float = None
     bolting_risk_threshold: float = None
     
-    photoperiod_slope: float = 0.1         # Sensitivity to photoperiod (model constant)
+    photoperiod_slope: float = None         # Sensitivity to photoperiod (model constant)
     
     # Scaling to calibrate daily thermal time (0-1). Lettuce target ~15-18 GDD/day.
-    thermal_time_scale: float = 0.85
+    thermal_time_scale: float = None
     
     # Vernalization (cold requirement)
-    vernalization_required: bool = False   # Model constant for lettuce
-    vernalization_temperature: float = 5.0 # °C optimal vernalization temp (model constant)
-    vernalization_days: float = 0.0        # Days of cold required (model constant)
+    vernalization_required: bool = None   # Model constant for lettuce
+    vernalization_temperature: float = None # °C optimal vernalization temp (model constant)
+    vernalization_days: float = None        # Days of cold required (model constant)
     
     # Stress effects on development
-    stress_acceleration_factor: float = 1.5 # How much stress speeds development (model constant)
-    drought_threshold: float = 0.5         # Water stress threshold (model constant)
-    heat_threshold: float = 30.0          # °C heat stress threshold (model constant)
+    stress_acceleration_factor: float = None # How much stress speeds development (model constant)
+    drought_threshold: float = None         # Water stress threshold (model constant)
+    heat_threshold: float = None          # °C heat stress threshold (model constant)
     
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'PhenologyParameters':
         """Create PhenologyParameters from CSV configuration data."""
-        def get_param(param_name: str, default_value) -> any:
-            return config_dict.get(param_name, default_value)
+        # Validate required parameters
+        required_params = [
+            'base_temperature', 'phenology_optimal_temperature_min', 'phenology_optimal_temperature_max', 'maximum_temperature',
+            'photoperiod_sensitive', 'critical_photoperiod', 'photoperiod_slope',
+            'bolting_photoperiod_threshold', 'bolting_temperature_threshold', 'head_formation_node_requirement',
+            'environmental_buffer_days', 'bolting_photoperiod_divisor', 'bolting_photoperiod_risk_max',
+            'bolting_temperature_divisor', 'bolting_temperature_risk_max', 'environmental_history_days',
+            'bolting_sustained_stress_risk', 'bolting_maturity_risk_factor', 'bolting_maturity_risk_max',
+            'bolting_risk_threshold', 'thermal_time_scale', 'vernalization_required', 'vernalization_temperature',
+            'vernalization_days', 'stress_acceleration_factor', 'drought_threshold', 'heat_threshold'
+        ]
+        
+        missing_params = [p for p in required_params if p not in config_dict]
+        if missing_params:
+            raise ValueError(f"❌ Missing required phenology parameters in CSV: {missing_params}")
         
         # Handle thermal requirements from CSV data
-        thermal_requirements = config_dict.get('thermal_requirements', {})
+        thermal_requirements = config_dict.get('thermal_requirements')
+        if thermal_requirements is None:
+            raise ValueError("❌ thermal_requirements must be provided in CSV configuration - no hardcoded defaults allowed")
         
         return cls(
             # Temperature parameters
-            base_temperature=get_param('base_temperature', 4.0),
-            optimal_temperature_min=get_param('optimal_temperature_min', 18.0),
-            optimal_temperature_max=get_param('optimal_temperature_max', 24.0),
-            maximum_temperature=get_param('maximum_temperature', 35.0),
+            base_temperature=float(config_dict['base_temperature']),
+            optimal_temperature_min=float(config_dict['phenology_optimal_temperature_min']),
+            optimal_temperature_max=float(config_dict['phenology_optimal_temperature_max']),
+            maximum_temperature=float(config_dict['maximum_temperature']),
             
-            # Thermal requirements (loaded from CSV or defaults)
+            # Thermal requirements (loaded from CSV)
             thermal_requirements=thermal_requirements,
             
             # Photoperiod parameters
-            photoperiod_sensitive=get_param('photoperiod_sensitive', True),
-            critical_photoperiod=get_param('critical_photoperiod', 12.0),
-            photoperiod_slope=get_param('photoperiod_slope', 0.1),
+            photoperiod_sensitive=bool(config_dict['photoperiod_sensitive']),
+            critical_photoperiod=float(config_dict['critical_photoperiod']),
+            photoperiod_slope=float(config_dict['photoperiod_slope']),
             
             # Bolting parameters
-            bolting_photoperiod_threshold=get_param('bolting_photoperiod_threshold', 14.0),
-            bolting_temperature_threshold=get_param('bolting_temperature_threshold', 25.0),
-            head_formation_node_requirement=get_param('head_formation_node_requirement', 8),
+            bolting_photoperiod_threshold=float(config_dict['bolting_photoperiod_threshold']),
+            bolting_temperature_threshold=float(config_dict['bolting_temperature_threshold']),
+            head_formation_node_requirement=int(config_dict['head_formation_node_requirement']),
             
             # Additional bolting risk parameters
-            environmental_buffer_days=get_param('environmental_buffer_days', 5),
-            bolting_photoperiod_divisor=get_param('bolting_photoperiod_divisor', 2.0),
-            bolting_photoperiod_risk_max=get_param('bolting_photoperiod_risk_max', 0.3),
-            bolting_temperature_divisor=get_param('bolting_temperature_divisor', 5.0),
-            bolting_temperature_risk_max=get_param('bolting_temperature_risk_max', 0.4),
-            environmental_history_days=get_param('environmental_history_days', 7),
-            bolting_sustained_stress_risk=get_param('bolting_sustained_stress_risk', 0.2),
-            bolting_maturity_risk_factor=get_param('bolting_maturity_risk_factor', 0.02),
-            bolting_maturity_risk_max=get_param('bolting_maturity_risk_max', 0.3),
-            bolting_risk_threshold=get_param('bolting_risk_threshold', 0.7),
+            environmental_buffer_days=int(config_dict['environmental_buffer_days']),
+            bolting_photoperiod_divisor=float(config_dict['bolting_photoperiod_divisor']),
+            bolting_photoperiod_risk_max=float(config_dict['bolting_photoperiod_risk_max']),
+            bolting_temperature_divisor=float(config_dict['bolting_temperature_divisor']),
+            bolting_temperature_risk_max=float(config_dict['bolting_temperature_risk_max']),
+            environmental_history_days=int(config_dict['environmental_history_days']),
+            bolting_sustained_stress_risk=float(config_dict['bolting_sustained_stress_risk']),
+            bolting_maturity_risk_factor=float(config_dict['bolting_maturity_risk_factor']),
+            bolting_maturity_risk_max=float(config_dict['bolting_maturity_risk_max']),
+            bolting_risk_threshold=float(config_dict['bolting_risk_threshold']),
             
             # Model constants
-            thermal_time_scale=get_param('thermal_time_scale', 0.85),
-            vernalization_required=get_param('vernalization_required', False),
-            vernalization_temperature=get_param('vernalization_temperature', 5.0),
-            vernalization_days=get_param('vernalization_days', 0.0),
-            stress_acceleration_factor=get_param('stress_acceleration_factor', 1.5),
-            drought_threshold=get_param('drought_threshold', 0.5),
-            heat_threshold=get_param('heat_threshold', 30.0)
+            thermal_time_scale=float(config_dict['thermal_time_scale']),
+            vernalization_required=bool(config_dict['vernalization_required']),
+            vernalization_temperature=float(config_dict['vernalization_temperature']),
+            vernalization_days=float(config_dict['vernalization_days']),
+            stress_acceleration_factor=float(config_dict['stress_acceleration_factor']),
+            drought_threshold=float(config_dict['drought_threshold']),
+            heat_threshold=float(config_dict['heat_threshold'])
         )
 
 
@@ -200,7 +215,9 @@ class ComprehensivePhenologyModel:
     
     def __init__(self, parameters: Optional[PhenologyParameters] = None, 
                  initial_stage: LettuceGrowthStage = LettuceGrowthStage.GERMINATION):
-        self.params = parameters or PhenologyParameters()
+        if parameters is None:
+            raise ValueError("❌ PhenologyParameters required - no hardcoded defaults allowed")
+        self.params = parameters
         
         # Set initial stage based on starting point (seed vs transplant)
         if initial_stage == LettuceGrowthStage.GERMINATION:
@@ -455,19 +472,20 @@ class ComprehensivePhenologyModel:
         
         # Check if exact transition exists
         if transition_key in self.params.thermal_requirements:
-            return self.params.thermal_requirements[transition_key]
+            return float(self.params.thermal_requirements[transition_key])
         
         # Get requirements from CSV thermal_requirements - no hardcoded defaults allowed
-        defaults = self.params.thermal_requirements.get("transition_defaults")
-        if defaults is None:
-            raise ValueError("❌ Transition defaults must be provided in CSV thermal requirements - no hardcoded defaults allowed")
-        
         if next_stage.value.startswith('V') or next_stage == LettuceGrowthStage.EMERGENCE:
-            return defaults.get("vegetative")
+            default_key = "transition_defaults_vegetative"
         elif next_stage in [LettuceGrowthStage.HEAD_INITIATION, LettuceGrowthStage.HEAD_DEVELOPMENT]:
-            return defaults.get("head_formation")
+            default_key = "transition_defaults_head_formation"
         else:
-            return defaults.get("reproductive")
+            default_key = "transition_defaults_reproductive"
+        
+        if default_key not in self.params.thermal_requirements:
+            raise ValueError(f"❌ {default_key} must be provided in CSV thermal requirements - no hardcoded defaults allowed")
+        
+        return float(self.params.thermal_requirements[default_key])
     
     def daily_update(self, temperature: float, daylength: float,
                     water_stress: float = 1.0, temperature_stress: float = 1.0) -> PhenologyResponse:
@@ -610,23 +628,29 @@ def create_lettuce_phenology_model(system_config=None, initial_stage: LettuceGro
         
     Returns:
         ComprehensivePhenologyModel configured with CSV parameters
+        
+    Raises:
+        ValueError: If CSV parameters are missing or invalid
     """
-    try:
-        # Get consolidated phenology parameters from CSV data loaded in system_config
-        phenology_params = getattr(system_config, 'phenology_parameters', {})
-        thermal_requirements = getattr(system_config, 'thermal_requirements', {})
-        
-        # Combine parameters (now both come from consolidated CSV)
-        combined_params = phenology_params.copy()
-        combined_params['thermal_requirements'] = thermal_requirements
-        
-        # Create parameters from CSV config
-        parameters = PhenologyParameters.from_config(combined_params)
-        return ComprehensivePhenologyModel(parameters, initial_stage)
-        
-    except Exception as e:
-        print(f"Warning: Could not load CSV phenology parameters: {e}")
-        print("Using default phenology parameters")
-        return ComprehensivePhenologyModel(initial_stage=initial_stage)
+    if system_config is None:
+        raise ValueError("❌ system_config is required - no hardcoded defaults allowed")
+    
+    # Get consolidated phenology parameters from CSV data loaded in system_config
+    phenology_params = getattr(system_config, 'phenology_parameters', None)
+    thermal_requirements = getattr(system_config, 'thermal_requirements', None)
+    
+    if phenology_params is None:
+        raise ValueError("❌ phenology_parameters missing from CSV - no fallback defaults allowed")
+    
+    if thermal_requirements is None:
+        raise ValueError("❌ thermal_requirements missing from CSV - no fallback defaults allowed")
+    
+    # Combine parameters (now both come from consolidated CSV)
+    combined_params = phenology_params.copy()
+    combined_params['thermal_requirements'] = thermal_requirements
+    
+    # Create parameters from CSV config
+    parameters = PhenologyParameters.from_config(combined_params)
+    return ComprehensivePhenologyModel(parameters, initial_stage)
 
 

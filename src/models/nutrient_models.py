@@ -51,10 +51,13 @@ class NutrientConcentrationModel:
         self.ec_factors = self._load_ec_factors_from_config(config_dict)
 
         # Load minimum volume fraction
-        if config_dict and "minimum_volume_fraction" in config_dict:
-            self.minimum_volume_fraction = config_dict["minimum_volume_fraction"]
-        else:
-            self.minimum_volume_fraction = 0.1
+        if not config_dict:
+            raise ValueError("❌ Config dictionary required for nutrient model - no CSV parameters loaded")
+        
+        if "minimum_volume_fraction" not in config_dict:
+            raise ValueError("❌ minimum_volume_fraction must be provided in CSV configuration - no hardcoded defaults allowed")
+        
+        self.minimum_volume_fraction = float(config_dict["minimum_volume_fraction"])
     
     def _load_ec_factors_from_config(self, config_dict: Optional[Dict[str, Any]] = None) -> Dict[str, float]:
         """Load EC factors from CSV configuration."""
@@ -71,6 +74,15 @@ class NutrientConcentrationModel:
             if param not in config_dict:
                 raise KeyError(f"Required EC factor parameter '{param}' not found in CSV configuration")
         
+        # Load optional EC factors from CSV - ERROR if missing
+        optional_ec_factors = [
+            'ec_factor_mn', 'ec_factor_zn', 'ec_factor_cu', 'ec_factor_b', 'ec_factor_mo'
+        ]
+        
+        for param in optional_ec_factors:
+            if param not in config_dict:
+                raise KeyError(f"Required EC factor parameter '{param}' not found in CSV configuration")
+        
         return {
             "N-NO3": config_dict['ec_factor_n_no3'],
             "P-PO4": config_dict['ec_factor_p_po4'],
@@ -79,11 +91,11 @@ class NutrientConcentrationModel:
             "Mg": config_dict['ec_factor_mg'],
             "S-SO4": config_dict['ec_factor_s_so4'],
             "Fe": config_dict['ec_factor_fe'],
-            "Mn": config_dict.get('ec_factor_mn', 0.002),  # Optional parameters
-            "Zn": config_dict.get('ec_factor_zn', 0.002),
-            "Cu": config_dict.get('ec_factor_cu', 0.002),
-            "B": config_dict.get('ec_factor_b', 0.0018),
-            "Mo": config_dict.get('ec_factor_mo', 0.002),
+            "Mn": config_dict['ec_factor_mn'],
+            "Zn": config_dict['ec_factor_zn'],
+            "Cu": config_dict['ec_factor_cu'],
+            "B": config_dict['ec_factor_b'],
+            "Mo": config_dict['ec_factor_mo'],
         }
     
     def calculate_ec_from_concentrations(self, nutrient_concentrations: Dict[str, float]) -> float:
@@ -212,182 +224,124 @@ class NutrientMobilityParameters:
     sink_strength_coefficients: Dict[str, Dict[str, float]] = None
 
     def __post_init__(self):
+        # Validate that all required parameters are provided
         if self.mobility_classifications is None:
-            self.mobility_classifications = {
-                "nitrogen": {
-                    "mobility": NutrientMobility.HIGHLY_MOBILE.value,
-                    "transport": TransportMechanism.BIDIRECTIONAL.value,
-                    "remobilization_efficiency": 0.80,
-                    "deficiency_mobility": "high",
-                    "retranslocation_rate": 0.15,
-                },
-                "phosphorus": {
-                    "mobility": NutrientMobility.HIGHLY_MOBILE.value,
-                    "transport": TransportMechanism.BIDIRECTIONAL.value,
-                    "remobilization_efficiency": 0.70,
-                    "deficiency_mobility": "high",
-                    "retranslocation_rate": 0.12,
-                },
-                "potassium": {
-                    "mobility": NutrientMobility.HIGHLY_MOBILE.value,
-                    "transport": TransportMechanism.BIDIRECTIONAL.value,
-                    "remobilization_efficiency": 0.85,
-                    "deficiency_mobility": "very_high",
-                    "retranslocation_rate": 0.20,
-                },
-                "calcium": {
-                    "mobility": NutrientMobility.POORLY_MOBILE.value,
-                    "transport": TransportMechanism.XYLEM_ONLY.value,
-                    "remobilization_efficiency": 0.05,
-                    "deficiency_mobility": "very_low",
-                    "retranslocation_rate": 0.01,
-                },
-                "magnesium": {
-                    "mobility": NutrientMobility.MODERATELY_MOBILE.value,
-                    "transport": TransportMechanism.BIDIRECTIONAL.value,
-                    "remobilization_efficiency": 0.45,
-                    "deficiency_mobility": "moderate",
-                    "retranslocation_rate": 0.08,
-                },
-                "sulfur": {
-                    "mobility": NutrientMobility.MODERATELY_MOBILE.value,
-                    "transport": TransportMechanism.BIDIRECTIONAL.value,
-                    "remobilization_efficiency": 0.60,
-                    "deficiency_mobility": "moderate",
-                    "retranslocation_rate": 0.10,
-                },
-                "iron": {
-                    "mobility": NutrientMobility.POORLY_MOBILE.value,
-                    "transport": TransportMechanism.COMPLEX.value,
-                    "remobilization_efficiency": 0.15,
-                    "deficiency_mobility": "low",
-                    "retranslocation_rate": 0.03,
-                },
-                "manganese": {
-                    "mobility": NutrientMobility.MODERATELY_MOBILE.value,
-                    "transport": TransportMechanism.COMPLEX.value,
-                    "remobilization_efficiency": 0.35,
-                    "deficiency_mobility": "moderate",
-                    "retranslocation_rate": 0.06,
-                },
-                "zinc": {
-                    "mobility": NutrientMobility.MODERATELY_MOBILE.value,
-                    "transport": TransportMechanism.COMPLEX.value,
-                    "remobilization_efficiency": 0.40,
-                    "deficiency_mobility": "moderate",
-                    "retranslocation_rate": 0.07,
-                },
-                "copper": {
-                    "mobility": NutrientMobility.MODERATELY_MOBILE.value,
-                    "transport": TransportMechanism.COMPLEX.value,
-                    "remobilization_efficiency": 0.25,
-                    "deficiency_mobility": "low",
-                    "retranslocation_rate": 0.04,
-                },
-                "boron": {
-                    "mobility": NutrientMobility.POORLY_MOBILE.value,
-                    "transport": TransportMechanism.XYLEM_ONLY.value,
-                    "remobilization_efficiency": 0.08,
-                    "deficiency_mobility": "very_low",
-                    "retranslocation_rate": 0.01,
-                },
-                "molybdenum": {
-                    "mobility": NutrientMobility.MODERATELY_MOBILE.value,
-                    "transport": TransportMechanism.BIDIRECTIONAL.value,
-                    "remobilization_efficiency": 0.50,
-                    "deficiency_mobility": "moderate",
-                    "retranslocation_rate": 0.09,
-                },
-            }
+            raise ValueError("❌ mobility_classifications must be provided in CSV configuration - no hardcoded defaults allowed")
         if self.xylem_transport_rates is None:
-            self.xylem_transport_rates = {
-                "nitrogen": 0.25,
-                "phosphorus": 0.15,
-                "potassium": 0.30,
-                "calcium": 0.20,
-                "magnesium": 0.18,
-                "sulfur": 0.12,
-                "iron": 0.08,
-                "manganese": 0.10,
-                "zinc": 0.10,
-                "copper": 0.08,
-                "boron": 0.15,
-                "molybdenum": 0.12,
-            }
+            raise ValueError("❌ xylem_transport_rates must be provided in CSV configuration - no hardcoded defaults allowed")
         if self.phloem_transport_rates is None:
-            self.phloem_transport_rates = {
-                "nitrogen": 0.20,
-                "phosphorus": 0.18,
-                "potassium": 0.25,
-                "calcium": 0.01,
-                "magnesium": 0.12,
-                "sulfur": 0.15,
-                "iron": 0.05,
-                "manganese": 0.08,
-                "zinc": 0.10,
-                "copper": 0.06,
-                "boron": 0.02,
-                "molybdenum": 0.12,
-            }
+            raise ValueError("❌ phloem_transport_rates must be provided in CSV configuration - no hardcoded defaults allowed")
         if self.buffering_capacities is None:
-            self.buffering_capacities = {
-                "leaves": {"nitrogen": 0.30, "phosphorus": 0.25, "potassium": 0.35},
-                "stems": {"nitrogen": 0.20, "phosphorus": 0.15, "potassium": 0.25},
-                "roots": {"nitrogen": 0.15, "phosphorus": 0.20, "potassium": 0.20},
-            }
+            raise ValueError("❌ buffering_capacities must be provided in CSV configuration - no hardcoded defaults allowed")
         if self.storage_pool_sizes is None:
-            self.storage_pool_sizes = {
-                "leaves": {"nitrogen": 0.40, "phosphorus": 0.30, "potassium": 0.50},
-                "stems": {"nitrogen": 0.60, "phosphorus": 0.50, "potassium": 0.70},
-                "roots": {"nitrogen": 0.35, "phosphorus": 0.40, "potassium": 0.45},
-            }
+            raise ValueError("❌ storage_pool_sizes must be provided in CSV configuration - no hardcoded defaults allowed")
         if self.redistribution_thresholds is None:
-            self.redistribution_thresholds = {
-                "nitrogen": 0.7,
-                "phosphorus": 0.6,
-                "potassium": 0.8,
-                "calcium": 0.4,
-                "magnesium": 0.6,
-                "sulfur": 0.6,
-            }
+            raise ValueError("❌ redistribution_thresholds must be provided in CSV configuration - no hardcoded defaults allowed")
         if self.stress_redistribution_rates is None:
-            self.stress_redistribution_rates = {
-                "nitrogen": 0.30,
-                "phosphorus": 0.25,
-                "potassium": 0.40,
-                "magnesium": 0.20,
-                "sulfur": 0.25,
-            }
+            raise ValueError("❌ stress_redistribution_rates must be provided in CSV configuration - no hardcoded defaults allowed")
         if self.sink_strength_coefficients is None:
-            self.sink_strength_coefficients = {
-                "vegetative": {"leaves": 0.50, "stems": 0.25, "roots": 0.25},
-                "reproductive": {"leaves": 0.30, "stems": 0.20, "roots": 0.15, "reproductive": 0.35},
-                "senescence": {"leaves": 0.10, "stems": 0.30, "roots": 0.25, "reproductive": 0.35},
-            }
+            raise ValueError("❌ sink_strength_coefficients must be provided in CSV configuration - no hardcoded defaults allowed")
+        if self.xylem_transport_capacity is None:
+            raise ValueError("❌ xylem_transport_capacity must be provided in CSV configuration - no hardcoded defaults allowed")
+        if self.phloem_transport_capacity is None:
+            raise ValueError("❌ phloem_transport_capacity must be provided in CSV configuration - no hardcoded defaults allowed")
+        if self.temperature_q10 is None:
+            raise ValueError("❌ temperature_q10 must be provided in CSV configuration - no hardcoded defaults allowed")
+        if self.transpiration_coupling is None:
+            raise ValueError("❌ transpiration_coupling must be provided in CSV configuration - no hardcoded defaults allowed")
 
     @classmethod
     def from_config(cls, config_dict: dict) -> "NutrientMobilityParameters":
-        mobility_class = config_dict.get("mobility_classifications", {})
-        xylem_rates = config_dict.get("xylem_transport_rates", {})
-        phloem_rates = config_dict.get("phloem_transport_rates", {})
-        buffering_cap = config_dict.get("buffering_capacities", {})
-        storage_sizes = config_dict.get("storage_pool_sizes", {})
-        redist_thresh = config_dict.get("redistribution_thresholds", {})
-        stress_redist = config_dict.get("stress_redistribution_rates", {})
-        sink_coeffs = config_dict.get("sink_strength_coefficients", {})
+        # Build nested structures from flat CSV parameters
+        mobility_class = {}
+        xylem_rates = {}
+        phloem_rates = {}
+        buffering_cap = {"leaves": {}, "stems": {}, "roots": {}}
+        storage_sizes = {"leaves": {}, "stems": {}, "roots": {}}
+        redist_thresh = {}
+        stress_redist = {}
+        sink_coeffs = {"vegetative": {}, "reproductive": {}, "senescence": {}}
+        
+        # Parse mobility classifications
+        nutrients = ["nitrogen", "phosphorus", "potassium", "calcium", "magnesium", "sulfur", "iron", "manganese", "zinc", "copper", "boron", "molybdenum"]
+        for nutrient in nutrients:
+            mobility_key = f"mobility_classifications_{nutrient}_mobility"
+            transport_key = f"mobility_classifications_{nutrient}_transport"
+            remob_key = f"mobility_classifications_{nutrient}_remobilization_efficiency"
+            def_key = f"mobility_classifications_{nutrient}_deficiency_mobility"
+            retrans_key = f"mobility_classifications_{nutrient}_retranslocation_rate"
+            
+            if all(key in config_dict for key in [mobility_key, transport_key, remob_key, def_key, retrans_key]):
+                mobility_class[nutrient] = {
+                    "mobility": config_dict[mobility_key],
+                    "transport": config_dict[transport_key],
+                    "remobilization_efficiency": float(config_dict[remob_key]),
+                    "deficiency_mobility": config_dict[def_key],
+                    "retranslocation_rate": float(config_dict[retrans_key]),
+                }
+        
+        # Parse transport rates
+        for nutrient in nutrients:
+            xylem_key = f"xylem_transport_rates_{nutrient}"
+            phloem_key = f"phloem_transport_rates_{nutrient}"
+            if xylem_key in config_dict:
+                xylem_rates[nutrient] = float(config_dict[xylem_key])
+            if phloem_key in config_dict:
+                phloem_rates[nutrient] = float(config_dict[phloem_key])
+        
+        # Parse buffering capacities
+        organs = ["leaves", "stems", "roots"]
+        for organ in organs:
+            for nutrient in ["nitrogen", "phosphorus", "potassium"]:
+                key = f"buffering_capacities_{organ}_{nutrient}"
+                if key in config_dict:
+                    buffering_cap[organ][nutrient] = float(config_dict[key])
+        
+        # Parse storage pool sizes
+        for organ in organs:
+            for nutrient in ["nitrogen", "phosphorus", "potassium"]:
+                key = f"storage_pool_sizes_{organ}_{nutrient}"
+                if key in config_dict:
+                    storage_sizes[organ][nutrient] = float(config_dict[key])
+        
+        # Parse redistribution thresholds
+        for nutrient in ["nitrogen", "phosphorus", "potassium", "calcium", "magnesium", "sulfur"]:
+            key = f"redistribution_thresholds_{nutrient}"
+            if key in config_dict:
+                redist_thresh[nutrient] = float(config_dict[key])
+        
+        # Parse stress redistribution rates
+        for nutrient in ["nitrogen", "phosphorus", "potassium", "magnesium", "sulfur"]:
+            key = f"stress_redistribution_rates_{nutrient}"
+            if key in config_dict:
+                stress_redist[nutrient] = float(config_dict[key])
+        
+        # Parse sink strength coefficients
+        stages = ["vegetative", "reproductive", "senescence"]
+        for stage in stages:
+            for organ in ["leaves", "stems", "roots"]:
+                key = f"sink_strength_coefficients_{stage}_{organ}"
+                if key in config_dict:
+                    sink_coeffs[stage][organ] = float(config_dict[key])
+            # Handle reproductive stage reproductive organ
+            if stage == "reproductive":
+                key = f"sink_strength_coefficients_{stage}_reproductive"
+                if key in config_dict:
+                    sink_coeffs[stage]["reproductive"] = float(config_dict[key])
+        
         return cls(
-            mobility_classifications=mobility_class or None,
-            xylem_transport_rates=xylem_rates or None,
-            phloem_transport_rates=phloem_rates or None,
-            buffering_capacities=buffering_cap or None,
-            storage_pool_sizes=storage_sizes or None,
-            redistribution_thresholds=redist_thresh or None,
-            stress_redistribution_rates=stress_redist or None,
-            sink_strength_coefficients=sink_coeffs or None,
-            xylem_transport_capacity=config_dict.get("xylem_transport_capacity"),
-            phloem_transport_capacity=config_dict.get("phloem_transport_capacity"),
-            temperature_q10=config_dict.get("temperature_q10"),
-            transpiration_coupling=config_dict.get("transpiration_coupling"),
+            mobility_classifications=mobility_class,
+            xylem_transport_rates=xylem_rates,
+            phloem_transport_rates=phloem_rates,
+            buffering_capacities=buffering_cap,
+            storage_pool_sizes=storage_sizes,
+            redistribution_thresholds=redist_thresh,
+            stress_redistribution_rates=stress_redist,
+            sink_strength_coefficients=sink_coeffs,
+            xylem_transport_capacity=float(config_dict["xylem_transport_capacity"]),
+            phloem_transport_capacity=float(config_dict["phloem_transport_capacity"]),
+            temperature_q10=float(config_dict["nutrient_mobility_temperature_q10"]),
+            transpiration_coupling=float(config_dict["transpiration_coupling"]),
         )
 
 
@@ -434,7 +388,9 @@ class NutrientMobilityResponse:
 
 class NutrientMobilityModel:
     def __init__(self, parameters: Optional[NutrientMobilityParameters] = None):
-        self.params = parameters or NutrientMobilityParameters()
+        if parameters is None:
+            raise ValueError("❌ NutrientMobilityParameters required - no hardcoded defaults allowed")
+        self.params = parameters
         self.organ_pools: Dict[str, Dict[str, OrganNutrientPools]] = {}
         self.transport_history: List[Dict[str, Any]] = []
         self.cumulative_redistribution: Dict[str, float] = {}
@@ -748,29 +704,32 @@ def create_lettuce_nutrient_mobility_model(system_config=None) -> NutrientMobili
         
     Returns:
         NutrientMobilityModel configured with CSV parameters
+        
+    Raises:
+        ValueError: If CSV parameters are missing or invalid
     """
-    try:
-        # Get nutrient mobility parameters from CSV data loaded in system_config
-        nutrient_mobility_params = getattr(system_config, 'nutrient_mobility_parameters', {}).copy()
-        
-        # Map renamed parameters to expected parameter names
-        param_mapping = {
-            'nutrient_mobility_temperature_q10': 'temperature_q10',
-            'nutrient_mobility_base_temperature': 'base_temperature'
-        }
-        
-        # Apply parameter name mapping
-        for csv_name, model_name in param_mapping.items():
-            if csv_name in nutrient_mobility_params:
-                nutrient_mobility_params[model_name] = nutrient_mobility_params[csv_name]
-        
-        # Create parameters from CSV config
-        parameters = NutrientMobilityParameters.from_config(nutrient_mobility_params)
-        return NutrientMobilityModel(parameters)
-        
-    except Exception as e:
-        print(f"Warning: Could not load CSV nutrient parameters: {e}")
-        print("Using default nutrient parameters")
-        return NutrientMobilityModel()
+    if system_config is None:
+        raise ValueError("❌ system_config is required - no hardcoded defaults allowed")
+    
+    # Get nutrient mobility parameters from CSV data loaded in system_config
+    nutrient_mobility_params = getattr(system_config, 'nutrient_mobility_parameters', None)
+    
+    if nutrient_mobility_params is None:
+        raise ValueError("❌ nutrient_mobility_parameters missing from CSV - no fallback defaults allowed")
+    
+    # Map renamed parameters to expected parameter names
+    param_mapping = {
+        'nutrient_mobility_temperature_q10': 'temperature_q10',
+        'nutrient_mobility_base_temperature': 'base_temperature'
+    }
+    
+    # Apply parameter name mapping
+    for csv_name, model_name in param_mapping.items():
+        if csv_name in nutrient_mobility_params:
+            nutrient_mobility_params[model_name] = nutrient_mobility_params[csv_name]
+    
+    # Create parameters from CSV config
+    parameters = NutrientMobilityParameters.from_config(nutrient_mobility_params)
+    return NutrientMobilityModel(parameters)
 
 

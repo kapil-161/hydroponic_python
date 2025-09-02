@@ -43,32 +43,48 @@ class LeafParameters:
     specific_leaf_area: float        # cm²/g dry weight
     
     # Individual leaf parameters
-    max_individual_leaf_area: float = 0.006  # m² per mature leaf (60 cm²)
-    leaf_area_expansion_rate: float = 0.15   # Natural cellular expansion rate - no artificial limits
+    max_individual_leaf_area: float = None  # m² per mature leaf (60 cm²)
+    leaf_area_expansion_rate: float = None   # Natural cellular expansion rate - no artificial limits
     
     # Stress response parameters
-    water_stress_threshold: float = 0.5      # Below this, leaf development slows
-    nitrogen_stress_threshold: float = 0.6   # Below this, leaf expansion reduces
-    temperature_stress_sensitivity: float = 0.8  # Response to temp stress
+    water_stress_threshold: float = None      # Below this, leaf development slows
+    nitrogen_stress_threshold: float = None   # Below this, leaf expansion reduces
+    temperature_stress_sensitivity: float = None  # Response to temp stress
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'LeafParameters':
         """Create LeafParameters from CSV configuration data."""
+        # Validate required parameters (excluding specific_leaf_area which comes from canopy_parameters)
+        required_params = [
+            'base_phyllochron', 'min_temp', 'opt_temp_min', 'opt_temp_max', 'max_temp',
+            'max_leaf_number', 'initial_leaf_number', 'leaf_appearance_rate',
+            'max_individual_leaf_area', 'leaf_area_expansion_rate',
+            'water_stress_threshold', 'nitrogen_stress_threshold', 'temperature_stress_sensitivity'
+        ]
+        
+        missing_params = [p for p in required_params if p not in config_dict]
+        if missing_params:
+            raise ValueError(f"❌ Missing required leaf development parameters in CSV: {missing_params}")
+        
+        # specific_leaf_area is provided separately from canopy_parameters
+        if 'specific_leaf_area' not in config_dict:
+            raise ValueError("❌ specific_leaf_area must be provided from canopy_parameters - no hardcoded defaults allowed")
+        
         return cls(
-            base_phyllochron=config_dict['base_phyllochron'],
-            min_temp=config_dict['min_temp'],
-            opt_temp_min=config_dict['opt_temp_min'],
-            opt_temp_max=config_dict['opt_temp_max'],
-            max_temp=config_dict['max_temp'],
-            max_leaf_number=config_dict['max_leaf_number'],
-            initial_leaf_number=config_dict['initial_leaf_number'],
-            leaf_appearance_rate=config_dict['leaf_appearance_rate'],
-            max_individual_leaf_area=config_dict['max_individual_leaf_area'],
-            leaf_area_expansion_rate=config_dict['leaf_area_expansion_rate'],
-            specific_leaf_area=config_dict['specific_leaf_area'],
-            water_stress_threshold=config_dict['water_stress_threshold'],
-            nitrogen_stress_threshold=config_dict['nitrogen_stress_threshold'],
-            temperature_stress_sensitivity=config_dict['temperature_stress_sensitivity']
+            base_phyllochron=float(config_dict['base_phyllochron']),
+            min_temp=float(config_dict['min_temp']),
+            opt_temp_min=float(config_dict['opt_temp_min']),
+            opt_temp_max=float(config_dict['opt_temp_max']),
+            max_temp=float(config_dict['max_temp']),
+            max_leaf_number=float(config_dict['max_leaf_number']),
+            initial_leaf_number=float(config_dict['initial_leaf_number']),
+            leaf_appearance_rate=float(config_dict['leaf_appearance_rate']),
+            max_individual_leaf_area=float(config_dict['max_individual_leaf_area']),
+            leaf_area_expansion_rate=float(config_dict['leaf_area_expansion_rate']),
+            specific_leaf_area=float(config_dict['specific_leaf_area']),
+            water_stress_threshold=float(config_dict['water_stress_threshold']),
+            nitrogen_stress_threshold=float(config_dict['nitrogen_stress_threshold']),
+            temperature_stress_sensitivity=float(config_dict['temperature_stress_sensitivity'])
         )
 
 
@@ -347,23 +363,31 @@ def create_lettuce_leaf_development_model(system_config=None) -> LeafDevelopment
         
     Returns:
         LeafDevelopmentModel configured with CSV parameters
+        
+    Raises:
+        ValueError: If CSV parameters are missing or invalid
     """
-    try:
-        # Get leaf development parameters from CSV data loaded in system_config
-        leaf_params = getattr(system_config, 'leaf_development_parameters', {})
-        canopy_params = getattr(system_config, 'canopy_parameters', {})
-        
-        # Get specific_leaf_area from canopy parameters since they share the same value
-        if 'specific_leaf_area' not in leaf_params and 'specific_leaf_area' in canopy_params:
-            leaf_params = leaf_params.copy()
-            leaf_params['specific_leaf_area'] = canopy_params['specific_leaf_area']
-        
-        # Create parameters from CSV config
-        parameters = LeafParameters.from_config(leaf_params)
-        return LeafDevelopmentModel(parameters)
-        
-    except Exception as e:
-        raise ValueError(f"❌ Failed to load leaf development parameters from CSV: {e}. No hardcoded defaults allowed.")
+    if system_config is None:
+        raise ValueError("❌ system_config is required - no hardcoded defaults allowed")
+    
+    # Get leaf development parameters from CSV data loaded in system_config
+    leaf_params = getattr(system_config, 'leaf_development_parameters', None)
+    canopy_params = getattr(system_config, 'canopy_parameters', None)
+    
+    if leaf_params is None:
+        raise ValueError("❌ leaf_development_parameters missing from CSV - no fallback defaults allowed")
+    
+    if canopy_params is None:
+        raise ValueError("❌ canopy_parameters missing from CSV - no fallback defaults allowed")
+    
+    # Get specific_leaf_area from canopy parameters since they share the same value
+    if 'specific_leaf_area' not in leaf_params and 'specific_leaf_area' in canopy_params:
+        leaf_params = leaf_params.copy()
+        leaf_params['specific_leaf_area'] = canopy_params['specific_leaf_area']
+    
+    # Create parameters from CSV config
+    parameters = LeafParameters.from_config(leaf_params)
+    return LeafDevelopmentModel(parameters)
 
 
 

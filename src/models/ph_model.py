@@ -53,6 +53,13 @@ class PHParameters:
     ph_adjustment_rate: float = None     # pH units/hour
     ph_deadband: float = None           # pH units
     
+    # pH system state parameters
+    current_ph: float = None            # Current pH
+    total_alkalinity: float = None      # Total alkalinity (mEq/L)
+    carbonate_conc: float = None        # Carbonate concentration (mg/L)
+    phosphate_total: float = None       # Total phosphate (mg/L)
+    ionic_strength: float = None        # Ionic strength (M)
+    
     @classmethod
     def from_config(cls, config_dict: dict) -> 'PHParameters':
         """Create PHParameters from CSV configuration data."""
@@ -68,20 +75,25 @@ class PHParameters:
             phosphate_buffer_pka2=config_dict['phosphate_buffer_pka2'],
             phosphate_buffer_pka3=config_dict['phosphate_buffer_pka3'],
             ph_adjustment_rate=config_dict['ph_adjustment_rate'],
-            ph_deadband=config_dict['ph_deadband']
+            ph_deadband=config_dict['ph_deadband'],
+            current_ph=config_dict.get('current_ph'),
+            total_alkalinity=config_dict.get('total_alkalinity'),
+            carbonate_conc=config_dict.get('carbonate_conc'),
+            phosphate_total=config_dict.get('phosphate_total'),
+            ionic_strength=config_dict.get('ionic_strength')
         )
 
 
 @dataclass
 class PHState:
     """Current pH system state."""
-    current_ph: float = 6.0
-    buffer_capacity: float = 2.5        # mEq/L
-    total_alkalinity: float = 2.0       # mEq/L as HCO3-
-    carbonate_conc: float = 50.0        # mg/L as HCO3-
-    phosphate_total: float = 60.0       # mg/L total P
-    ionic_strength: float = 0.02        # M
-    temperature: float = 20.0           # °C
+    current_ph: float = None  # Must be set from CSV
+    buffer_capacity: float = None        # mEq/L - Must be set from CSV
+    total_alkalinity: float = None       # mEq/L as HCO3- - Must be set from CSV
+    carbonate_conc: float = None        # mg/L as HCO3- - Must be set from CSV
+    phosphate_total: float = None       # mg/L total P - Must be set from CSV
+    ionic_strength: float = None        # M - Must be set from CSV
+    temperature: float = None           # °C - Must be set from CSV
     
     # Control system state
     acid_dosing_rate: float = 0.0       # mL/L/hour
@@ -104,8 +116,22 @@ class HydroponicPHModel:
     """
     
     def __init__(self, parameters: Optional[PHParameters] = None):
-        self.params = parameters or PHParameters()
-        self.ph_state = PHState()
+        if not parameters:
+            raise ValueError("pH parameters must be provided from CSV configuration")
+        
+        self.params = parameters
+        
+        # Initialize pH state with CSV values - no hardcoded defaults allowed
+        self.ph_state = PHState(
+            current_ph=parameters.current_ph or parameters.ph_target_min,  # Use current or target minimum
+            buffer_capacity=parameters.ph_buffer_capacity,
+            total_alkalinity=parameters.total_alkalinity,
+            carbonate_conc=parameters.carbonate_conc,
+            phosphate_total=parameters.phosphate_total,
+            ionic_strength=parameters.ionic_strength,
+            temperature=20.0  # Will be updated during simulation
+        )
+        
         self.nutrient_solubility = NutrientSolubility(
             phosphate_solubility={
                 "4.0": 1200.0, "5.0": 800.0, "5.5": 400.0, "6.0": 200.0,
@@ -395,17 +421,19 @@ class HydroponicPHModel:
 def create_lettuce_ph_model(system_config=None) -> HydroponicPHModel:
     """Create pH model with lettuce-specific parameters from CSV config."""
     
+    if not system_config:
+        raise ValueError("System configuration must be provided for pH model")
+    
+    # Get pH parameters from CSV data loaded in system_config
+    nutrient_params = getattr(system_config, 'nutrient_parameters', {})
+    if not nutrient_params:
+        raise ValueError("Nutrient parameters must be provided in CSV configuration for pH model")
+    
+    # Create parameters from CSV config
     try:
-        # Get pH parameters from CSV data loaded in system_config
-        nutrient_params = getattr(system_config, 'nutrient_parameters', {}) if system_config else {}
-        
-        # Create parameters from CSV config
         parameters = PHParameters.from_config(nutrient_params)
         return HydroponicPHModel(parameters)
-        
     except KeyError as e:
-        raise KeyError(f"Required pH parameter '{e.args[0]}' not found in CSV configuration. Add to nutrient_parameters_consolidated.csv")
+        raise KeyError(f"Required pH parameter '{e.args[0]}' not found in CSV configuration. Add to nutrient_parameters section")
     except Exception as e:
-        print(f"Warning: Could not load CSV pH parameters: {e}")
-        print("Using default pH parameters")
-        return HydroponicPHModel()
+        raise ValueError(f"Failed to create pH model from CSV configuration: {e}")

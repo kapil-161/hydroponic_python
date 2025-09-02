@@ -39,6 +39,16 @@ class RZTParameters:
     root_metabolism_sensitivity_low: float  # per °C below optimum
     root_metabolism_sensitivity_high: float  # per °C above optimum
     
+    # Advanced thermal dynamics parameters
+    min_growth_factor: float  # Minimum growth factor below effective temperature
+    thermal_mass_factor: float  # How quickly RZT responds to changes
+    ambient_temp_amplitude: float  # Amplitude of diurnal temperature variation
+    root_respiration_heat: float  # Heat generation from root respiration
+    pump_heat_generation: float  # Heat generation from circulation pumps
+    ambient_exchange_factor: float  # Factor for ambient temperature exchange
+    thermal_response_time: float  # Thermal response time constant (hours)
+    heat_transfer_coefficient: float  # Heat transfer coefficient for calculations
+    
     @classmethod
     def from_config(cls, config_dict: dict) -> 'RZTParameters':
         """Create RZTParameters from configuration dictionary."""
@@ -56,7 +66,15 @@ class RZTParameters:
             photosynthesis_sensitivity_low=config_dict['photosynthesis_sensitivity_low'],
             photosynthesis_sensitivity_high=config_dict['photosynthesis_sensitivity_high'],
             root_metabolism_sensitivity_low=config_dict['root_metabolism_sensitivity_low'],
-            root_metabolism_sensitivity_high=config_dict['root_metabolism_sensitivity_high']
+            root_metabolism_sensitivity_high=config_dict['root_metabolism_sensitivity_high'],
+            min_growth_factor=config_dict['min_growth_factor'],
+            thermal_mass_factor=config_dict['thermal_mass_factor'],
+            ambient_temp_amplitude=config_dict['ambient_temp_amplitude'],
+            root_respiration_heat=config_dict['root_respiration_heat'],
+            pump_heat_generation=config_dict['pump_heat_generation'],
+            ambient_exchange_factor=config_dict['ambient_exchange_factor'],
+            thermal_response_time=config_dict['thermal_response_time'],
+            heat_transfer_coefficient=config_dict['heat_transfer_coefficient']
         )
 
 
@@ -72,7 +90,9 @@ class RootZoneTemperatureModel:
     """
     
     def __init__(self, parameters: Optional[RZTParameters] = None):
-        self.params = parameters or RZTParameters()
+        if parameters is None:
+            raise ValueError("❌ RZTParameters required - no hardcoded defaults allowed")
+        self.params = parameters
     
     def calculate_optimal_rzt(self, air_temperature: float) -> float:
         """
@@ -109,7 +129,7 @@ class RootZoneTemperatureModel:
                 factor = self.params.base_growth_factor + (temperature_diff * self.params.linear_growth_slope)
             else:
                 # Below minimum effective temperature
-                factor = 0.2
+                factor = self.params.min_growth_factor
         else:
             # Rapid decline above optimum
             temperature_excess = current_rzt - optimal_rzt
@@ -232,8 +252,13 @@ class RootZoneTemperatureModel:
         Returns:
             Dict with temperature effects and factors
         """
-        air_temp = environmental_conditions.get('air_temperature', 22.0)
-        solution_temp = environmental_conditions.get('solution_temperature', air_temp)
+        air_temp = environmental_conditions.get('air_temperature', None)
+        if air_temp is None:
+            raise ValueError("❌ Air temperature must be provided in environmental conditions - no hardcoded defaults allowed")
+        
+        solution_temp = environmental_conditions.get('solution_temperature', None)
+        if solution_temp is None:
+            raise ValueError("❌ Solution temperature must be provided in environmental conditions - no hardcoded defaults allowed")
         
         # Calculate thermal dynamics
         thermal_response = self._calculate_thermal_dynamics(
@@ -277,17 +302,17 @@ class RootZoneTemperatureModel:
         """
         # Time-dependent thermal effects
         # Root zones have thermal inertia - don't change instantly
-        thermal_mass_factor = 0.2  # How quickly RZT responds to changes
+        thermal_mass_factor = self.params.thermal_mass_factor  # How quickly RZT responds to changes
         
         # Diurnal temperature variation (outdoor effects)
-        ambient_temp_variation = 2.0 * np.sin(2 * np.pi * (hour - 6) / 24)  # Peak at 18:00
+        ambient_temp_variation = self.params.ambient_temp_amplitude * np.sin(2 * np.pi * (hour - 6) / 24)  # Peak at 18:00
         
         # Heat sources/sinks
         heat_sources = {
             'solution_heating': 0.0,  # Would be controlled by system
-            'root_respiration': 0.5,  # Small heat generation from roots
-            'pump_heat': 0.3,        # Heat from circulation pumps
-            'ambient_exchange': ambient_temp_variation * 0.1
+            'root_respiration': self.params.root_respiration_heat,  # Small heat generation from roots
+            'pump_heat': self.params.pump_heat_generation,        # Heat from circulation pumps
+            'ambient_exchange': ambient_temp_variation * self.params.ambient_exchange_factor
         }
         
         # Calculate equilibrium temperature
@@ -299,14 +324,14 @@ class RootZoneTemperatureModel:
             self._previous_rzt = solution_temp
         
         # Exponential approach to target with time constant
-        time_constant = 2.0  # hours (thermal response time)
+        time_constant = self.params.thermal_response_time  # hours (thermal response time)
         response_rate = 1.0 - np.exp(-dt_hours / time_constant)
         
         new_rzt = self._previous_rzt + (target_rzt - self._previous_rzt) * response_rate
         self._previous_rzt = new_rzt
         
         # Heat transfer rate (W/m² - for energy calculations)
-        heat_transfer_rate = abs(new_rzt - air_temp) * 10.0  # Simplified
+        heat_transfer_rate = abs(new_rzt - air_temp) * self.params.heat_transfer_coefficient  # Simplified
         
         return {
             'effective_rzt': new_rzt,
@@ -323,8 +348,13 @@ class RootZoneTemperatureModel:
         
         Uses average daily conditions for systems that don't need hourly precision.
         """
-        air_temp = environmental_conditions.get('air_temperature', 22.0)
-        solution_temp = environmental_conditions.get('solution_temperature', air_temp)
+        air_temp = environmental_conditions.get('air_temperature', None)
+        if air_temp is None:
+            raise ValueError("❌ Air temperature must be provided in environmental conditions - no hardcoded defaults allowed")
+        
+        solution_temp = environmental_conditions.get('solution_temperature', None)
+        if solution_temp is None:
+            raise ValueError("❌ Solution temperature must be provided in environmental conditions - no hardcoded defaults allowed")
         
         # Use noon hour (12) as representative for daily calculation
         return self.hourly_update(environmental_conditions, hour=12, dt_hours=24.0)
@@ -346,7 +376,15 @@ def create_lettuce_rzt_model(system_config=None) -> RootZoneTemperatureModel:
         # Map renamed parameters to expected parameter names
         param_mapping = {
             'rzt_water_uptake_sensitivity_low': 'water_uptake_sensitivity_low',
-            'rzt_water_uptake_sensitivity_high': 'water_uptake_sensitivity_high'
+            'rzt_water_uptake_sensitivity_high': 'water_uptake_sensitivity_high',
+            'rzt_min_growth_factor': 'min_growth_factor',
+            'rzt_thermal_mass_factor': 'thermal_mass_factor',
+            'rzt_ambient_temp_amplitude': 'ambient_temp_amplitude',
+            'rzt_root_respiration_heat': 'root_respiration_heat',
+            'rzt_pump_heat_generation': 'pump_heat_generation',
+            'rzt_ambient_exchange_factor': 'ambient_exchange_factor',
+            'rzt_thermal_response_time': 'thermal_response_time',
+            'rzt_heat_transfer_coefficient': 'heat_transfer_coefficient'
         }
         
         # Apply parameter name mapping
@@ -359,9 +397,7 @@ def create_lettuce_rzt_model(system_config=None) -> RootZoneTemperatureModel:
         return RootZoneTemperatureModel(parameters)
         
     except Exception as e:
-        print(f"Warning: Could not load CSV root zone temperature parameters: {e}")
-        print("Using default root zone temperature parameters")
-        return RootZoneTemperatureModel()
+        raise ValueError(f"❌ Failed to load CSV root zone temperature parameters: {e}. No hardcoded defaults allowed.")
 
 
 

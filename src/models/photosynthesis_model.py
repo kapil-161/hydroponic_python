@@ -15,6 +15,15 @@ class PhotosynthesisParameters:
     phi_psii: float       # Quantum yield of PSII (mol e-/mol photons)
     r: float            # Gas constant (J/mol/K)
     ci_fraction: float    # Internal CO2 fraction of ambient (stomatal limitation)
+    min_par_threshold: float     # Minimum PAR threshold for photosynthesis
+    enzyme_saturation_lai: float  # LAI threshold for enzyme saturation
+    light_penetration_lai: float  # LAI threshold for light penetration
+    enzyme_saturation_rate: float # Rate of enzyme saturation decline
+    min_enzyme_factor: float     # Minimum enzyme efficiency factor
+    excess_lai_efficiency: float # Efficiency factor for excess LAI
+    umol_to_g_carbon_ratio: float # Conversion ratio from umol CO2 to g C
+    seconds_per_hour: int        # Seconds per hour for time conversions
+    hours_per_day: int           # Hours per day for day length calculations
     
     # Optional parameters (loaded from config if None)
     kc: float = None            # Michaelis-Menten constant for CO2 (umol/mol)
@@ -36,33 +45,44 @@ class PhotosynthesisParameters:
         """Create PhotosynthesisParameters from CSV configuration data."""
         return cls(
             # Michaelis-Menten constants
-            kc=config_dict['kc'],
-            ko=config_dict['ko'],
-            gamma_star=config_dict['gamma_star'],
+            kc=float(config_dict['kc']),
+            ko=float(config_dict['ko']),
+            gamma_star=float(config_dict['gamma_star']),
             
             # Maximum rates at 25C
-            jmax_25=config_dict['jmax_25'],
-            vcmax_25=config_dict['vcmax_25'],
+            jmax_25=float(config_dict['jmax_25']),
+            vcmax_25=float(config_dict['vcmax_25']),
             
             # Light response parameters
-            theta=config_dict['theta'],
-            alpha=config_dict['alpha'],
+            theta=float(config_dict['theta']),
+            alpha=float(config_dict['alpha']),
             
             # Respiration
-            rd_25=config_dict['rd_25'],
+            rd_25=float(config_dict['rd_25']),
             
             # Activation energies
-            eaj=config_dict['eaj'],
-            eav=config_dict['eav'],
-            ear=config_dict['ear'],
+            eaj=float(config_dict['eaj']),
+            eav=float(config_dict['eav']),
+            ear=float(config_dict['ear']),
             
             # Required parameters
-            phi_psii=config_dict['phi_psii'],
-            r=config_dict['r'],
-            ci_fraction=config_dict['ci_fraction'],
+            phi_psii=float(config_dict['phi_psii']),
+            r=float(config_dict['r']),
+            ci_fraction=float(config_dict['ci_fraction']),
             
             # Physical constants
-            o2_mmol_mol=config_dict['o2_mmol_mol']
+            o2_mmol_mol=float(config_dict['o2_mmol_mol']),
+            
+            # Additional parameters for advanced modeling
+            min_par_threshold=float(config_dict['min_par_threshold']),
+            enzyme_saturation_lai=float(config_dict['enzyme_saturation_lai']),
+            light_penetration_lai=float(config_dict['light_penetration_lai']),
+            enzyme_saturation_rate=float(config_dict['enzyme_saturation_rate']),
+            min_enzyme_factor=float(config_dict['min_enzyme_factor']),
+            excess_lai_efficiency=float(config_dict['excess_lai_efficiency']),
+            umol_to_g_carbon_ratio=float(config_dict['umol_to_g_carbon_ratio']),
+            seconds_per_hour=int(config_dict['seconds_per_hour']),
+            hours_per_day=int(config_dict['hours_per_day'])
         )
     
 
@@ -71,7 +91,9 @@ class PhotosynthesisModel:
     """Simplified Farquhar-type model for daily carbon assimilation."""
 
     def __init__(self, parameters: Optional[PhotosynthesisParameters] = None):
-        self.params = parameters or PhotosynthesisParameters()
+        if parameters is None:
+            raise ValueError("❌ PhotosynthesisParameters required - no hardcoded defaults allowed")
+        self.params = parameters
 
     def _arrhenius_temp_response(self, rate_25: float, ea: float, temp_c: float) -> float:
         """Calculate temperature response using Arrhenius equation."""
@@ -79,7 +101,7 @@ class PhotosynthesisModel:
         return rate_25 * np.exp(ea * (temp_k - 298.15) / (298.15 * self.params.r * temp_k))
 
     def calculate_hourly_assimilation(self, par_umol_m2_s: float, co2_ppm: float, temp_c: float, 
-                                     lai: float, hour: int, ec_factor: float = 1.0, 
+                                     lai: float, hour: int, ec_factor: float, 
                                      config_dict: Optional[Dict[str, Any]] = None) -> float:
         """Calculate hourly carbon assimilation (g C/m2 ground area/hour).
         
@@ -98,7 +120,7 @@ class PhotosynthesisModel:
             Hourly carbon assimilation (g C/m²/hour)
         """
         # No photosynthesis during night hours or with zero PAR
-        if par_umol_m2_s <= 0.1:
+        if par_umol_m2_s <= self.params.min_par_threshold:
             return 0.0
             
         return self._calculate_instantaneous_assimilation(
@@ -112,6 +134,8 @@ class PhotosynthesisModel:
         
         Core Farquhar model calculation extracted for hourly integration.
         """
+
+        
         # Convert CO2 ppm to umol/mol and apply stomatal limitation
         ci = co2_ppm * self.params.ci_fraction
 
@@ -120,18 +144,22 @@ class PhotosynthesisModel:
         jmax_base = self._arrhenius_temp_response(self.params.jmax_25, self.params.eaj, temp_c)
         rd = self._arrhenius_temp_response(self.params.rd_25, self.params.ear, temp_c)
         
-        # Load LAI thresholds from CSV configuration
-        enzyme_saturation_lai = 5.0
-        light_penetration_lai = 6.0
+
         
-        if config_dict:
-            enzyme_saturation_lai = config_dict.get('enzyme_saturation_lai', 5.0)
-            light_penetration_lai = config_dict.get('light_penetration_lai', 6.0)
+        # Load LAI thresholds from CSV configuration
+        if config_dict is None:
+            raise ValueError("❌ Configuration dictionary required for LAI thresholds - no hardcoded defaults allowed")
+        
+        enzyme_saturation_lai = config_dict.get('enzyme_saturation_lai')
+        light_penetration_lai = config_dict.get('light_penetration_lai')
+        
+        if enzyme_saturation_lai is None or light_penetration_lai is None:
+            raise ValueError("❌ LAI thresholds must be provided in CSV configuration - no hardcoded defaults allowed")
         
         # Enzyme saturation at high LAI
         if lai > enzyme_saturation_lai:
-            enzyme_saturation_factor = 1.0 - 0.1 * (lai - enzyme_saturation_lai)
-            enzyme_saturation_factor = max(0.3, enzyme_saturation_factor)
+            enzyme_saturation_factor = 1.0 - self.params.enzyme_saturation_rate * (lai - enzyme_saturation_lai)
+            enzyme_saturation_factor = max(self.params.min_enzyme_factor, enzyme_saturation_factor)
             vcmax = vcmax_base * enzyme_saturation_factor
             jmax = jmax_base * enzyme_saturation_factor
         else:
@@ -151,8 +179,10 @@ class PhotosynthesisModel:
         # Net photosynthesis rate (μmol CO2/m²/s)
         net_photosynthesis_rate = max(0.0, min(ac, aj) - rd)
         
-        # Convert to hourly g C/m² (3600 seconds/hour, 1.201e-5 g C/μmol CO2)
-        hourly_g_c_per_m2 = net_photosynthesis_rate * 3600.0 * 1.201e-5
+
+        
+        # Convert to hourly g C/m² (3600 seconds/hour, configurable g C/μmol CO2)
+        hourly_g_c_per_m2 = net_photosynthesis_rate * 3600.0 * self.params.umol_to_g_carbon_ratio
         
         # Handle light penetration constraints
         if lai > light_penetration_lai:
@@ -165,9 +195,9 @@ class PhotosynthesisModel:
             aj_shaded = j * (ci - self.params.gamma_star) / (4 * (ci + 2 * self.params.gamma_star))
             
             net_rate_shaded = max(0.0, min(ac, aj_shaded) - rd)
-            hourly_g_c_per_m2 = net_rate_shaded * 3600.0 * 1.201e-5
+            hourly_g_c_per_m2 = net_rate_shaded * 3600.0 * self.params.umol_to_g_carbon_ratio
             
-            effective_lai = light_penetration_lai + (lai - light_penetration_lai) * 0.2
+            effective_lai = light_penetration_lai + (lai - light_penetration_lai) * self.params.excess_lai_efficiency
         else:
             effective_lai = lai
         
@@ -176,7 +206,7 @@ class PhotosynthesisModel:
         
         return max(0.0, total_hourly_assimilation)
 
-    def calculate_daily_assimilation(self, par_umol_m2_s: float, co2_ppm: float, temp_c: float, lai: float, photoperiod_hours: float = 16.0, ec_factor: float = 1.0, config_dict: Optional[Dict[str, Any]] = None) -> float:
+    def calculate_daily_assimilation(self, par_umol_m2_s: float, co2_ppm: float, temp_c: float, lai: float, photoperiod_hours: float, ec_factor: float, config_dict: Optional[Dict[str, Any]] = None) -> float:
         """Calculate daily carbon assimilation (g C/m2 ground area/day).
 
         This function calculates photosynthesis PER UNIT LEAF AREA first, then scales by 
@@ -204,8 +234,8 @@ class PhotosynthesisModel:
         # RuBisCO and electron transport capacity don't scale infinitely with leaf area
         if lai > enzyme_saturation_lai:
             # Enzyme limitation factor - diminishing returns above threshold
-            enzyme_saturation_factor = 1.0 - 0.1 * (lai - enzyme_saturation_lai)
-            enzyme_saturation_factor = max(0.3, enzyme_saturation_factor)  # Minimum 30% capacity
+            enzyme_saturation_factor = 1.0 - self.params.enzyme_saturation_rate * (lai - enzyme_saturation_lai)
+            enzyme_saturation_factor = max(self.params.min_enzyme_factor, enzyme_saturation_factor)  # Configurable minimum capacity
             vcmax = vcmax_base * enzyme_saturation_factor
             jmax = jmax_base * enzyme_saturation_factor
         else:
@@ -230,18 +260,18 @@ class PhotosynthesisModel:
         net_photosynthesis_rate = max(0.0, min(ac, aj) - rd)
         
         # Integrate net photosynthesis over photoperiod
-        photoperiod_seconds = max(0.0, photoperiod_hours) * 3600.0
+        photoperiod_seconds = max(0.0, photoperiod_hours) * self.params.seconds_per_hour
         net_day_umol = net_photosynthesis_rate * photoperiod_seconds
         
-        # Dark respiration continues during dark period (24 - photoperiod_hours)
-        dark_period_hours = max(0.0, 24.0 - photoperiod_hours)
-        dark_period_seconds = dark_period_hours * 3600.0
+        # Dark respiration continues during dark period (configurable day length - photoperiod_hours)
+        dark_period_hours = max(0.0, self.params.hours_per_day - photoperiod_hours)
+        dark_period_seconds = dark_period_hours * self.params.seconds_per_hour
         dark_respiration_umol = rd * dark_period_seconds
         
         # Total daily net carbon = net photosynthesis - dark period respiration
         net_umol_day = max(0.0, net_day_umol - dark_respiration_umol)
-        # Convert from umol CO2 to g C: 1 umol CO2 ≈ 1.201e-5 g C
-        g_c_m2_day = max(0.0, net_umol_day) * 1.201e-5
+        # Convert from umol CO2 to g C: configurable conversion ratio
+        g_c_m2_day = max(0.0, net_umol_day) * self.params.umol_to_g_carbon_ratio
 
         # Real-world light penetration constraints using CSV parameters
         # Effective LAI decreases with canopy density due to shading
@@ -255,13 +285,13 @@ class PhotosynthesisModel:
             j = (i2 + jmax - np.sqrt((i2 + jmax)**2 - 4 * self.params.theta * i2 * jmax)) / (2 * self.params.theta)
             aj_shaded = j * (ci - self.params.gamma_star) / (4 * (ci + 2 * self.params.gamma_star))
             
-            photoperiod_seconds = max(0.0, photoperiod_hours) * 3600.0
+            photoperiod_seconds = max(0.0, photoperiod_hours) * self.params.seconds_per_hour
             gross_day_umol_shaded = max(0.0, min(ac, aj_shaded)) * photoperiod_seconds
             net_umol_day = gross_day_umol_shaded
-            g_c_m2_day = max(0.0, net_umol_day) * 1.201e-5
+            g_c_m2_day = max(0.0, net_umol_day) * self.params.umol_to_g_carbon_ratio
             
             # Only threshold LAI contributes fully, rest at diminishing returns
-            effective_lai = light_penetration_lai + (lai - light_penetration_lai) * 0.2  # 20% efficiency for excess canopy
+            effective_lai = light_penetration_lai + (lai - light_penetration_lai) * self.params.excess_lai_efficiency  # Configurable efficiency for excess canopy
         else:
             effective_lai = lai
         
@@ -293,10 +323,12 @@ def create_lettuce_photosynthesis_model(system_config=None) -> PhotosynthesisMod
         raise ValueError("❌ system_config is required - no hardcoded defaults allowed")
         
     # Get photosynthesis parameters from CSV data loaded in system_config
-    photosynthesis_params = getattr(system_config, 'photosynthesis_parameters', {})
+    photosynthesis_params = getattr(system_config, 'photosynthesis_parameters', None)
+    if photosynthesis_params is None:
+        photosynthesis_params = getattr(system_config, 'photosynthesis', None)
     
-    if not photosynthesis_params:
-        raise ValueError("❌ photosynthesis_parameters missing from CSV - no fallback defaults allowed")
+    if photosynthesis_params is None:
+        raise ValueError("❌ photosynthesis parameters missing from CSV - no fallback defaults allowed")
     
     # Validate required CSV parameters
     required_params = ['kc', 'ko', 'gamma_star', 'jmax_25', 'vcmax_25', 'theta', 'alpha', 'rd_25', 'eaj', 'eav', 'ear', 'phi_psii', 'r', 'ci_fraction', 'o2_mmol_mol']

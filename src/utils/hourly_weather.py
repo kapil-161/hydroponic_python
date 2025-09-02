@@ -51,7 +51,8 @@ class HourlyWeatherInterpolator:
         }
     
     def interpolate_daily_to_hourly(self, daily_weather: WeatherData, 
-                                   day_of_year: int, latitude: float = 40.0) -> List[HourlyWeather]:
+                                   day_of_year: int, latitude: float = 40.0, 
+                                   system_co2: float = 400.0) -> List[HourlyWeather]:
         """
         Interpolate daily weather to 24 hourly values using DSSAT approach.
         
@@ -88,8 +89,8 @@ class HourlyWeatherInterpolator:
             # Wind speed (simple diurnal variation)
             wind_speed = self._interpolate_wind_speed(hour, getattr(daily_weather, 'wind_speed', 2.0))
             
-            # CO2 (assume constant, could add diurnal variation if needed)
-            co2 = getattr(daily_weather, 'co2', 400.0)
+            # CO2 comes from system configuration
+            co2 = system_co2
             
             hourly_weather = HourlyWeather(
                 hour=hour,

@@ -72,30 +72,67 @@ class CanopyArchitectureParameters:
     sunlit_fraction_method: str              # Method for calculating sunlit fraction
     clumping_index: float                    # Leaf clumping index (0-1)
     
+    # Additional canopy architecture parameters for advanced modeling
+    max_extinction_coefficient: float        # Maximum extinction coefficient for horizontal sun
+    upper_canopy_lai_factor: float           # LAI distribution factor for upper canopy
+    middle_canopy_lai_factor: float          # LAI distribution factor for middle canopy
+    lower_middle_canopy_lai_factor: float    # LAI distribution factor for lower-middle canopy
+    bottom_canopy_lai_factor: float          # LAI distribution factor for bottom canopy
+    shaded_light_fraction: float             # Fraction of diffuse light reaching shaded leaves
+    max_temperature_gradient: float          # Maximum temperature gradient through canopy
+    temperature_gradient_factor: float        # Temperature gradient factor per LAI unit
+    ppfd_to_photosynthesis_factor: float     # PPFD to photosynthesis conversion factor
+    
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'CanopyArchitectureParameters':
         """Create CanopyArchitectureParameters from CSV configuration data."""
+        # Validate required parameters
+        required_params = [
+            'number_of_layers', 'max_lai', 'extinction_coefficient', 'diffuse_extinction_coeff',
+            'beam_extinction_coeff', 'leaf_angle_distribution', 'mean_leaf_angle', 'leaf_angle_variance',
+            'row_spacing', 'plant_spacing', 'plant_height', 'canopy_width', 'leaf_reflectance',
+            'leaf_transmittance', 'leaf_absorptance', 'self_shading_factor', 'neighbor_shading_distance',
+            'sunlit_fraction_method', 'clumping_index', 'max_extinction_coefficient', 'upper_canopy_lai_factor',
+            'middle_canopy_lai_factor', 'lower_middle_canopy_lai_factor', 'bottom_canopy_lai_factor',
+            'shaded_light_fraction', 'max_temperature_gradient', 'temperature_gradient_factor',
+            'ppfd_to_photosynthesis_factor'
+        ]
+        
+        missing_params = [p for p in required_params if p not in config_dict]
+        if missing_params:
+            raise ValueError(f"❌ Missing required canopy architecture parameters in CSV: {missing_params}")
+        
         return cls(
-            number_of_layers=config_dict['number_of_layers'],
-            max_lai=config_dict['max_lai'],
-            extinction_coefficient=config_dict['extinction_coefficient'],
-            diffuse_extinction_coeff=config_dict['diffuse_extinction_coeff'],
-            beam_extinction_coeff=config_dict['beam_extinction_coeff'],
+            number_of_layers=int(config_dict['number_of_layers']),
+            max_lai=float(config_dict['max_lai']),
+            extinction_coefficient=float(config_dict['extinction_coefficient']),
+            diffuse_extinction_coeff=float(config_dict['diffuse_extinction_coeff']),
+            beam_extinction_coeff=float(config_dict['beam_extinction_coeff']),
             leaf_angle_distribution=config_dict['leaf_angle_distribution'],
-            mean_leaf_angle=config_dict['mean_leaf_angle'],
-            leaf_angle_variance=config_dict['leaf_angle_variance'],
-            row_spacing=config_dict['row_spacing'],
-            plant_spacing=config_dict['plant_spacing'],
-            plant_height=config_dict['plant_height'],
-            canopy_width=config_dict['canopy_width'],
-            leaf_reflectance=config_dict['leaf_reflectance'],
-            leaf_transmittance=config_dict['leaf_transmittance'],
-            leaf_absorptance=config_dict['leaf_absorptance'],
-            self_shading_factor=config_dict['self_shading_factor'],
-            neighbor_shading_distance=config_dict['neighbor_shading_distance'],
+            mean_leaf_angle=float(config_dict['mean_leaf_angle']),
+            leaf_angle_variance=float(config_dict['leaf_angle_variance']),
+            row_spacing=float(config_dict['row_spacing']),
+            plant_spacing=float(config_dict['plant_spacing']),
+            plant_height=float(config_dict['plant_height']),
+            canopy_width=float(config_dict['canopy_width']),
+            leaf_reflectance=float(config_dict['leaf_reflectance']),
+            leaf_transmittance=float(config_dict['leaf_transmittance']),
+            leaf_absorptance=float(config_dict['leaf_absorptance']),
+            self_shading_factor=float(config_dict['self_shading_factor']),
+            neighbor_shading_distance=float(config_dict['neighbor_shading_distance']),
             sunlit_fraction_method=config_dict['sunlit_fraction_method'],
-            clumping_index=config_dict['clumping_index'],
+            clumping_index=float(config_dict['clumping_index']),
+            # Additional canopy architecture parameters
+            max_extinction_coefficient=float(config_dict['max_extinction_coefficient']),
+            upper_canopy_lai_factor=float(config_dict['upper_canopy_lai_factor']),
+            middle_canopy_lai_factor=float(config_dict['middle_canopy_lai_factor']),
+            lower_middle_canopy_lai_factor=float(config_dict['lower_middle_canopy_lai_factor']),
+            bottom_canopy_lai_factor=float(config_dict['bottom_canopy_lai_factor']),
+            shaded_light_fraction=float(config_dict['shaded_light_fraction']),
+            max_temperature_gradient=float(config_dict['max_temperature_gradient']),
+            temperature_gradient_factor=float(config_dict['temperature_gradient_factor']),
+            ppfd_to_photosynthesis_factor=float(config_dict['ppfd_to_photosynthesis_factor'])
         )
 
 
@@ -107,13 +144,13 @@ class CanopyLayer:
     height_bottom: float                     # m height of layer bottom
     leaf_area_density: float                 # m²/m³ leaf area density in layer
     cumulative_lai_above: float              # LAI above this layer
-    fraction_sunlit: float = 0.0             # Fraction of leaves in sun
-    fraction_shaded: float = 0.0             # Fraction of leaves in shade
-    ppfd_sunlit: float = 0.0                 # μmol/m²/s PPFD on sunlit leaves
-    ppfd_shaded: float = 0.0                 # μmol/m²/s PPFD on shaded leaves
-    ppfd_average: float = 0.0                # μmol/m²/s average PPFD
-    temperature: float = 25.0                # °C layer temperature
-    co2_concentration: float = 400.0         # ppm CO2 concentration
+    fraction_sunlit: float = None             # Fraction of leaves in sun
+    fraction_shaded: float = None             # Fraction of leaves in shade
+    ppfd_sunlit: float = None                 # μmol/m²/s PPFD on sunlit leaves
+    ppfd_shaded: float = None                 # μmol/m²/s PPFD on shaded leaves
+    ppfd_average: float = None                # μmol/m²/s average PPFD
+    temperature: float = None                # °C layer temperature
+    co2_concentration: float = None         # ppm CO2 concentration
 
 
 @dataclass
@@ -123,7 +160,7 @@ class LightEnvironment:
     direct_beam_fraction: float              # Fraction of direct beam light
     diffuse_fraction: float                  # Fraction of diffuse light
     solar_zenith_angle: float                # degrees solar zenith angle
-    solar_azimuth_angle: float = 180.0       # degrees solar azimuth angle
+    solar_azimuth_angle: float = None       # degrees solar azimuth angle
 
 
 @dataclass
@@ -149,7 +186,10 @@ class CanopyArchitectureModel:
     """
     
     def __init__(self, parameters: Optional[CanopyArchitectureParameters] = None):
-        self.params = parameters or CanopyArchitectureParameters()
+        if parameters is None:
+            raise ValueError("❌ CanopyArchitectureParameters required - no hardcoded defaults allowed")
+        
+        self.params = parameters
         self.canopy_layers: List[CanopyLayer] = []
         self._initialize_canopy_layers()
         
@@ -165,7 +205,14 @@ class CanopyArchitectureModel:
                 height_top=self.params.plant_height - (i * layer_height),
                 height_bottom=self.params.plant_height - ((i + 1) * layer_height),
                 leaf_area_density=0.0,
-                cumulative_lai_above=0.0
+                cumulative_lai_above=0.0,
+                fraction_sunlit=0.0,
+                fraction_shaded=0.0,
+                ppfd_sunlit=0.0,
+                ppfd_shaded=0.0,
+                ppfd_average=0.0,
+                temperature=25.0,  # Default temperature for initialization
+                co2_concentration=400.0  # Default CO2 for initialization
             )
             self.canopy_layers.append(layer)
     
@@ -184,7 +231,7 @@ class CanopyArchitectureModel:
         # Convert to radians
         zenith_rad = math.radians(solar_zenith_angle)
         
-        # Leaf angle distribution factors
+        # Leaf angle distribution factors (must be provided in CSV configuration)
         if leaf_angle_distribution == "spherical":
             # Spherical leaf angle distribution (random)
             x = 1.0  # Factor for spherical distribution
@@ -198,13 +245,13 @@ class CanopyArchitectureModel:
             # 45-degree leaves
             x = 1.33
         else:
-            raise ValueError("❌ Leaf angle distribution parameter must be provided in CSV configuration - no hardcoded defaults allowed")
+            raise ValueError(f"❌ Invalid leaf angle distribution '{leaf_angle_distribution}' - must be one of: spherical, planophile, erectophile, plagiophile")
         
         # Calculate extinction coefficient for direct beam
         if abs(math.cos(zenith_rad)) > 0.001:
             k_beam = x / math.cos(zenith_rad)
         else:
-            k_beam = 10.0  # Large value for horizontal sun
+            k_beam = self.params.max_extinction_coefficient  # Large value for horizontal sun from CSV
         
         # Extinction coefficient for diffuse light (integrated over hemisphere)
         k_diffuse = x * self.params.diffuse_extinction_coeff
@@ -248,18 +295,19 @@ class CanopyArchitectureModel:
             relative_height = (layer.height_top + layer.height_bottom) / (2.0 * canopy_height)
             
             # Beta distribution for lettuce (more leaf area in middle-upper canopy)
+            # Use CSV-configurable distribution factors
             if relative_height > 0.8:
                 # Upper canopy - moderate leaf density
-                layer_lai_fraction = 0.8
+                layer_lai_fraction = self.params.upper_canopy_lai_factor
             elif relative_height > 0.5:
                 # Middle canopy - highest leaf density
-                layer_lai_fraction = 1.2
+                layer_lai_fraction = self.params.middle_canopy_lai_factor
             elif relative_height > 0.2:
                 # Lower-middle canopy - moderate density
-                layer_lai_fraction = 0.9
+                layer_lai_fraction = self.params.lower_middle_canopy_lai_factor
             else:
                 # Bottom canopy - lower density
-                layer_lai_fraction = 0.6
+                layer_lai_fraction = self.params.bottom_canopy_lai_factor
             
             # Normalize to ensure total adds up correctly
             layer_lai = (layer_lai_fraction / n_layers) * total_lai
@@ -319,7 +367,7 @@ class CanopyArchitectureModel:
             
             # PPFD on sunlit and shaded leaves
             layer.ppfd_sunlit = ppfd_beam_layer + ppfd_diffuse_layer
-            layer.ppfd_shaded = ppfd_diffuse_layer * 0.2  # Shaded leaves get scattered light
+            layer.ppfd_shaded = ppfd_diffuse_layer * self.params.shaded_light_fraction  # Shaded leaves get scattered light from CSV
             
             # Average PPFD for the layer
             layer.ppfd_average = (layer.fraction_sunlit * layer.ppfd_sunlit + 
@@ -386,7 +434,8 @@ class CanopyArchitectureModel:
         """
         # Simple temperature gradient model
         # Temperature typically decreases from top to bottom in dense canopy
-        temp_gradient = min(3.0, total_lai * 0.5)  # Max 3°C gradient
+        max_temp_gradient = self.params.max_temperature_gradient  # Max temperature gradient from CSV
+        temp_gradient = min(max_temp_gradient, total_lai * self.params.temperature_gradient_factor)
         
         for i, layer in enumerate(self.canopy_layers):
             # Linear decrease from top to bottom
@@ -447,7 +496,7 @@ class CanopyArchitectureModel:
                            for layer in self.canopy_layers)
         
         # Placeholder for canopy photosynthesis (would integrate with photosynthesis model)
-        canopy_photosynthesis = total_absorbed * 0.05  # Rough conversion factor
+        canopy_photosynthesis = total_absorbed * self.params.ppfd_to_photosynthesis_factor  # Conversion factor from CSV
         
         return CanopyArchitectureResponse(
             canopy_layers=self.canopy_layers.copy(),
@@ -469,18 +518,24 @@ def create_lettuce_canopy_model(system_config=None) -> CanopyArchitectureModel:
         
     Returns:
         CanopyArchitectureModel configured with CSV parameters
+        
+    Raises:
+        ValueError: If CSV parameters are missing or invalid
     """
-    try:
-        # Get canopy parameters from CSV data loaded in system_config
-        canopy_params = getattr(system_config, 'canopy_parameters', {})
-        
-        # Create parameters from CSV config
-        parameters = CanopyArchitectureParameters.from_config(canopy_params)
-        return CanopyArchitectureModel(parameters)
-        
-    except Exception as e:
-        print(f"Warning: Could not load CSV canopy parameters: {e}")
-        print("Using default canopy parameters")
-        return CanopyArchitectureModel()
+    if system_config is None:
+        raise ValueError("❌ system_config is required - no hardcoded defaults allowed")
+    
+    # Get canopy parameters from CSV data loaded in system_config
+    canopy_params = getattr(system_config, 'canopy_parameters', None)
+    
+    if canopy_params is None:
+        raise ValueError("❌ canopy_parameters missing from CSV - no fallback defaults allowed")
+    
+    if not canopy_params:
+        raise ValueError("❌ No canopy parameters found in CSV - no fallback defaults allowed")
+    
+    # Create parameters from CSV config
+    parameters = CanopyArchitectureParameters.from_config(canopy_params)
+    return CanopyArchitectureModel(parameters)
 
 

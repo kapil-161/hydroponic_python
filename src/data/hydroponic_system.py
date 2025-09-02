@@ -45,7 +45,7 @@ class WeatherData:
     solar_radiation: float  # MJ/m²/day
     rel_humidity: float  # %
     wind_speed: float  # m/s
-    rainfall: float = 0.0  # mm
+    rainfall: float = None  # mm
 
 
 @dataclass
@@ -73,63 +73,63 @@ class DailyResults:
     solar_radiation: float  # MJ/m²/day
     vpd: float  # kPa
     water_use_efficiency: float  # kg/m³
-    ph: float = 0.0
-    ec: float = 0.0
-    rzt: float = 0.0  # Root zone temperature (°C)
-    rzt_growth_factor: float = 1.0  # RZT growth effect
-    rzt_nutrient_factor: float = 1.0  # RZT nutrient uptake effect
-    v_stage: float = 0.0  # Vegetative stage (number of leaves)
-    leaf_number: int = 0  # Current number of active leaves
-    leaf_area_m2: float = 0.0  # Total leaf area per plant (m²)
-    average_leaf_area_cm2: float = 0.0  # Average leaf area (cm²)
-    co2_concentration: float = 400.0  # CO2 concentration (μmol/mol) - will be overridden by simulation
-    vpd_actual: float = 0.8  # Actual VPD (kPa) - will be overridden by simulation
-    env_photosynthesis_factor: float = 1.0  # Environmental photosynthesis enhancement
-    env_transpiration_factor: float = 1.0  # Environmental transpiration factor
+    ph: float = None
+    ec: float = None
+    rzt: float = None  # Root zone temperature (°C)
+    rzt_growth_factor: float = None  # RZT growth effect
+    rzt_nutrient_factor: float = None  # RZT nutrient uptake effect
+    v_stage: float = None  # Vegetative stage (number of leaves)
+    leaf_number: int = None  # Current number of active leaves
+    leaf_area_m2: float = None  # Total leaf area per plant (m²)
+    average_leaf_area_cm2: float = None  # Average leaf area (cm²)
+    co2_concentration: float = None  # CO2 concentration (μmol/mol) - will be overridden by simulation
+    vpd_actual: float = None  # Actual VPD (kPa) - will be overridden by simulation
+    env_photosynthesis_factor: float = None  # Environmental photosynthesis enhancement
+    env_transpiration_factor: float = None  # Environmental transpiration factor
     
     # === DETAILED PHOTOSYNTHESIS MODEL RESULTS ===
-    vcmax_25: float = 0.0  # Maximum carboxylation rate at 25°C (μmol/m²/s)
-    jmax_25: float = 0.0   # Maximum electron transport rate at 25°C (μmol/m²/s)
-    quantum_efficiency: float = 0.0  # Quantum efficiency of photosystem II
-    rubisco_limited: float = 0.0  # Rubisco-limited photosynthesis rate
-    light_limited: float = 0.0    # Light-limited photosynthesis rate
-    co2_compensation: float = 0.0  # CO2 compensation point (μmol/mol)
-    intercellular_co2: float = 0.0  # Intercellular CO2 concentration
+    vcmax_25: float = None  # Maximum carboxylation rate at 25°C (μmol/m²/s)
+    jmax_25: float = None   # Maximum electron transport rate at 25°C (μmol/m²/s)
+    quantum_efficiency: float = None  # Quantum efficiency of photosystem II
+    rubisco_limited: float = None  # Rubisco-limited photosynthesis rate
+    light_limited: float = None    # Light-limited photosynthesis rate
+    co2_compensation: float = None  # CO2 compensation point (μmol/mol)
+    intercellular_co2: float = None  # Intercellular CO2 concentration
     
     # === DETAILED RESPIRATION MODEL RESULTS ===
-    maintenance_resp_leaves: float = 0.0  # Leaf maintenance respiration
-    maintenance_resp_stems: float = 0.0   # Stem maintenance respiration  
-    maintenance_resp_roots: float = 0.0   # Root maintenance respiration
-    growth_resp_leaves: float = 0.0       # Leaf growth respiration
-    growth_resp_stems: float = 0.0        # Stem growth respiration
-    growth_resp_roots: float = 0.0        # Root growth respiration
-    temperature_acclimation: float = 1.0   # Temperature acclimation factor
-    age_factor: float = 1.0               # Age effects on respiration
+    maintenance_resp_leaves: float = None  # Leaf maintenance respiration
+    maintenance_resp_stems: float = None   # Stem maintenance respiration  
+    maintenance_resp_roots: float = None   # Root maintenance respiration
+    growth_resp_leaves: float = None       # Leaf growth respiration
+    growth_resp_stems: float = None        # Stem growth respiration
+    growth_resp_roots: float = None        # Root growth respiration
+    temperature_acclimation: float = None   # Temperature acclimation factor
+    age_factor: float = None               # Age effects on respiration
     
     # === DETAILED ROOT ARCHITECTURE RESULTS ===
-    fine_root_length: float = 0.0    # Fine root length (cm)
-    coarse_root_length: float = 0.0  # Coarse root length (cm) 
-    root_cohorts: int = 0            # Number of active root cohorts
-    root_activity_young: float = 0.0 # Activity of young roots
-    root_activity_old: float = 0.0   # Activity of old roots
-    root_surface_active: float = 0.0 # Active root surface area
-    root_turnover_rate: float = 0.0  # Daily root turnover rate
+    fine_root_length: float = None    # Fine root length (cm)
+    coarse_root_length: float = None  # Coarse root length (cm) 
+    root_cohorts: int = None            # Number of active root cohorts
+    root_activity_young: float = None # Activity of young roots
+    root_activity_old: float = None   # Activity of old roots
+    root_surface_active: float = None # Active root surface area
+    root_turnover_rate: float = None  # Daily root turnover rate
     
     # === DETAILED CANOPY ARCHITECTURE RESULTS ===
-    sunlit_lai: float = 0.0          # Sunlit leaf area index
-    shaded_lai: float = 0.0          # Shaded leaf area index
-    canopy_layers: int = 0           # Number of canopy layers
-    ppfd_top: float = 0.0           # PPFD at top of canopy
-    ppfd_bottom: float = 0.0        # PPFD at bottom of canopy
-    light_extinction: float = 0.0    # Light extinction coefficient
+    sunlit_lai: float = None          # Sunlit leaf area index
+    shaded_lai: float = None          # Shaded leaf area index
+    canopy_layers: int = None           # Number of canopy layers
+    ppfd_top: float = None           # PPFD at top of canopy
+    ppfd_bottom: float = None        # PPFD at bottom of canopy
+    light_extinction: float = None    # Light extinction coefficient
     
     # === DETAILED NITROGEN DYNAMICS RESULTS ===
-    n_pool_structural: float = 0.0   # Structural nitrogen pool (g)
-    n_pool_metabolic: float = 0.0    # Metabolic nitrogen pool (g)
-    n_pool_storage: float = 0.0      # Storage nitrogen pool (g)
-    n_pool_transport: float = 0.0    # Transport nitrogen pool (g)
-    n_remobilization: float = 0.0    # Daily N remobilization (g)
-    n_critical_conc: float = 0.0     # Critical nitrogen concentration
+    n_pool_structural: float = None   # Structural nitrogen pool (g)
+    n_pool_metabolic: float = None    # Metabolic nitrogen pool (g)
+    n_pool_storage: float = None      # Storage nitrogen pool (g)
+    n_pool_transport: float = None    # Transport nitrogen pool (g)
+    n_remobilization: float = None    # Daily N remobilization (g)
+    n_critical_conc: float = None     # Critical nitrogen concentration
     
     # === DETAILED STRESS INTEGRATION RESULTS ===
     stress_interactions: Dict[str, float] = field(default_factory=dict)  # Stress interaction effects
@@ -138,102 +138,102 @@ class DailyResults:
     
     # === ADDITIONAL CROPGRO MODEL RESULTS ===
     # Genetic parameters
-    cultivar_adaptation_index: float = 1.0
-    cultivar_yield_potential: float = 1.0
-    genetic_photosynthesis_capacity: float = 1.0
-    genetic_ec_tolerance: float = 1.0
-    genetic_nitrate_efficiency: float = 1.0
+    cultivar_adaptation_index: float = None
+    cultivar_yield_potential: float = None
+    genetic_photosynthesis_capacity: float = None
+    genetic_ec_tolerance: float = None
+    genetic_nitrate_efficiency: float = None
     
     # Phenology
-    accumulated_gdd: float = 0.0
-    development_rate: float = 0.0
-    growth_stage: str = "VE"
-    thermal_time_daily: float = 0.0
-    is_vegetative: bool = True
-    is_reproductive: bool = False
+    accumulated_gdd: float = None
+    development_rate: float = None
+    growth_stage: str = None
+    thermal_time_daily: float = None
+    is_vegetative: bool = None
+    is_reproductive: bool = None
     
     # Growth and biomass
-    total_biomass: float = 0.0
-    leaf_biomass: float = 0.0
-    stem_biomass: float = 0.0
-    root_biomass: float = 0.0
-    daily_growth_rate: float = 0.0
-    leaf_growth_rate: float = 0.0
-    stem_growth_rate: float = 0.0
-    root_growth_rate: float = 0.0
+    total_biomass: float = None
+    leaf_biomass: float = None
+    stem_biomass: float = None
+    root_biomass: float = None
+    daily_growth_rate: float = None
+    leaf_growth_rate: float = None
+    stem_growth_rate: float = None
+    root_growth_rate: float = None
     
     # Canopy architecture
-    lai: float = 0.0
-    canopy_height_cm: float = 0.0
-    light_interception: float = 0.0
-    total_absorbed_ppfd: float = 0.0
-    canopy_photosynthesis: float = 0.0
+    lai: float = None
+    canopy_height_cm: float = None
+    light_interception: float = None
+    total_absorbed_ppfd: float = None
+    canopy_photosynthesis: float = None
     
     # Photosynthesis detailed
-    photosynthesis_rate: float = 0.0
-    net_assimilation: float = 0.0
+    photosynthesis_rate: float = None
+    net_assimilation: float = None
     
     # Respiration detailed
-    maintenance_respiration: float = 0.0
-    growth_respiration: float = 0.0
-    respiration_rate: float = 0.0
+    maintenance_respiration: float = None
+    growth_respiration: float = None
+    respiration_rate: float = None
     
     # Root architecture detailed
-    root_surface_area: float = 0.0
-    root_length_density: float = 0.0
-    root_volume: float = 0.0
+    root_surface_area: float = None
+    root_length_density: float = None
+    root_volume: float = None
     
     # Nitrogen dynamics detailed
-    nitrogen_uptake_mg: float = 0.0
-    nitrogen_demand_mg: float = 0.0
-    nitrogen_stress_factor: float = 0.0
-    leaf_nitrogen_conc: float = 0.0
-    root_nitrogen_conc: float = 0.0
-    nitrogen_remobilization: float = 0.0
+    nitrogen_uptake_mg: float = None
+    nitrogen_demand_mg: float = None
+    nitrogen_stress_factor: float = None
+    leaf_nitrogen_conc: float = None
+    root_nitrogen_conc: float = None
+    nitrogen_remobilization: float = None
     
     # Phosphorus dynamics detailed
-    phosphorus_uptake_mg: float = 0.0
+    phosphorus_uptake_mg: float = None
     
     # Nutrient remobilization
-    phosphorus_remobilization: float = 0.0
-    potassium_remobilization: float = 0.0
+    phosphorus_remobilization: float = None
+    potassium_remobilization: float = None
     
     # Senescence 
-    senescence_rate: float = 0.0
-    leaf_senescence_rate: float = 0.0
+    senescence_rate: float = None
+    leaf_senescence_rate: float = None
     
     # Stress factors (0 = no stress, 1 = full stress)
-    integrated_stress_factor: float = 0.0
-    temperature_stress_level: float = 0.0
-    temperature_stress_photosynthesis: float = 0.0
-    temperature_stress_growth: float = 0.0
-    water_stress: float = 0.0
-    nutrient_stress: float = 0.0
-    salinity_stress: float = 0.0
+    integrated_stress_factor: float = None
+    temperature_stress_level: float = None
+    temperature_stress_photosynthesis: float = None
+    temperature_stress_growth: float = None
+    water_stress: float = None
+    nutrient_stress: float = None
+    salinity_stress: float = None
     
     # Environmental control
-    controlled_temperature: float = 0.0
-    controlled_humidity: float = 0.0
-    controlled_co2: float = 400.0
-    vpd_target: float = 0.8
-    environmental_cost: float = 0.0
+    controlled_temperature: float = None
+    controlled_humidity: float = None
+    controlled_co2: float = None
+    vpd_target: float = None
+    environmental_cost: float = None
     
     # Temperature stress (implemented)
-    cold_stress_factor: float = 0.0  # 0 = no cold stress, 1 = severe cold stress
-    heat_stress_factor: float = 0.0  # 0 = no heat stress, 1 = severe heat stress
-    temperature_stress_factor: float = 0.0  # 0 = no temperature stress, 1 = severe temperature stress
-    solution_ph: float = 6.0
+    cold_stress_factor: float = None  # 0 = no cold stress, 1 = severe cold stress
+    heat_stress_factor: float = None  # 0 = no heat stress, 1 = severe heat stress
+    temperature_stress_factor: float = None  # 0 = no temperature stress, 1 = severe temperature stress
+    solution_ph: float = None
     
     # Comprehensive pH modeling results
-    ph_change_from_uptake: float = 0.0
-    ph_change_from_drift: float = 0.0
-    acid_dosed_ml_per_L: float = 0.0
-    base_dosed_ml_per_L: float = 0.0
-    buffer_capacity: float = 0.0
-    phosphate_h2po4_mg_L: float = 0.0
-    phosphate_hpo4_mg_L: float = 0.0
-    nutrient_precipitation_mg_L: float = 0.0
-    solution_ec: float = 1.5
+    ph_change_from_uptake: float = None
+    ph_change_from_drift: float = None
+    acid_dosed_ml_per_L: float = None
+    base_dosed_ml_per_L: float = None
+    buffer_capacity: float = None
+    phosphate_h2po4_mg_L: float = None
+    phosphate_hpo4_mg_L: float = None
+    nutrient_precipitation_mg_L: float = None
+    solution_ec: float = None
 
 
 @dataclass
@@ -680,7 +680,7 @@ class SimulationResults:
 
 
 class DefaultConfigurations:
-    """Default configurations for common hydroponic systems."""
+    """Default configurations for common hydroponic systems - CSV data required."""
     
     @staticmethod
     def get_nft_lettuce_system() -> HydroSystemConfig:
@@ -716,7 +716,7 @@ class DefaultConfigurations:
         return {}
 
 
-def calculate_dynamic_dry_matter_content(result, plant_part: str) -> float:
+def calculate_dynamic_dry_matter_content(result, plant_part: str, strict_validation: bool = False) -> float:
     """
     Calculate dynamic dry matter content based on plant development, environment, and plant part.
     Dry matter content varies with:
@@ -725,18 +725,46 @@ def calculate_dynamic_dry_matter_content(result, plant_part: str) -> float:
     3. Plant part (leaves, stems, roots have different water contents)
     4. Growth rate (fast growth = higher water content)
     
+    Args:
+        result: Simulation result object
+        plant_part: Plant part ('leaf', 'stem', 'shoot', 'root')
+        strict_validation: If True, raises errors for missing parameters. If False, uses defaults for output.
+    
     Returns fraction (0.0-1.0) of dry matter in fresh weight.
     """
     
     # Get development stage information
-    day = getattr(result, 'day', 1)
-    growth_stage = getattr(result, 'growth_stage', 'V4')
-    total_biomass = getattr(result, 'total_biomass_g', 1.0)
+    day = getattr(result, 'day', None)
+    growth_stage = getattr(result, 'growth_stage', None)
+    total_biomass = getattr(result, 'total_biomass', None)
     
     # Get stress factors if available
-    water_stress = getattr(result, 'water_stress', 0.0)
-    temperature_stress = getattr(result, 'temperature_stress', 0.0)
-    integrated_stress = getattr(result, 'integrated_stress', 0.0)
+    water_stress = getattr(result, 'water_stress', None)
+    temperature_stress = getattr(result, 'temperature_stress_factor', None)
+    integrated_stress = getattr(result, 'integrated_stress_factor', None)
+    
+    # For output purposes, use defaults if parameters are missing
+    if not strict_validation:
+        day = day if day is not None else 1
+        growth_stage = growth_stage if growth_stage is not None else 'V4'
+        total_biomass = total_biomass if total_biomass is not None else 1.0
+        water_stress = water_stress if water_stress is not None else 0.0
+        temperature_stress = temperature_stress if temperature_stress is not None else 0.0
+        integrated_stress = integrated_stress if integrated_stress is not None else 0.0
+    else:
+        # Validate that required parameters are provided
+        if day is None:
+            raise ValueError("❌ 'day' parameter must be provided in CSV configuration - no hardcoded defaults allowed")
+        if growth_stage is None:
+            raise ValueError("❌ 'growth_stage' parameter must be provided in CSV configuration - no hardcoded defaults allowed")
+        if total_biomass is None:
+            raise ValueError("❌ 'total_biomass' parameter must be provided in CSV configuration - no hardcoded defaults allowed")
+        if water_stress is None:
+            raise ValueError("❌ 'water_stress' parameter must be provided in CSV configuration - no hardcoded defaults allowed")
+        if temperature_stress is None:
+            raise ValueError("❌ 'temperature_stress_factor' parameter must be provided in CSV configuration - no hardcoded defaults allowed")
+        if integrated_stress is None:
+            raise ValueError("❌ 'integrated_stress_factor' parameter must be provided in CSV configuration - no hardcoded defaults allowed")
     
     # Base dry matter content by plant part (mature, unstressed conditions)
     base_dry_matter = {

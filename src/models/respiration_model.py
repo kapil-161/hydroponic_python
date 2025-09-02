@@ -58,6 +58,48 @@ class RespirationParameters:
     n_effect_slope: float            # Respiration response to leaf N content
     reference_leaf_n: float          # g N/g biomass reference
     
+    # Temperature stress parameters
+    max_temperature_threshold: float  # Maximum temperature before protein denaturation
+    temperature_decay_factor: float   # Decay factor for high temperature respiration
+    
+    # Size penalty parameters
+    size_penalty_threshold: float     # Biomass threshold for size penalty
+    size_penalty_rate: float          # Rate of size penalty increase
+    
+    # Carbon conversion parameters
+    glucose_to_carbon_ratio: float    # Glucose to carbon conversion ratio
+    
+    # History parameters
+    min_history_threshold: int        # Minimum temperature history for acclimation
+    
+    # Day/night cycle parameters
+    day_start_hour: int               # Start hour of day
+    day_end_hour: int                 # End hour of day
+    day_respiration_factor: float     # Day respiration factor
+    night_respiration_factor: float   # Night respiration factor
+    
+    # CO2 conversion parameters
+    carbon_to_co2_ratio: float       # Carbon to CO2 conversion ratio
+    
+    # Circadian rhythm parameters
+    circadian_amplitude_1: float     # Amplitude of first circadian peak
+    circadian_peak_1: int            # Hour of first circadian peak
+    circadian_amplitude_2: float     # Amplitude of second circadian peak
+    circadian_peak_2: int            # Hour of second circadian peak
+    diurnal_base_factor: float       # Base factor for diurnal variation
+    
+    # Temperature stress parameters
+    optimal_temperature: float        # Optimal temperature for respiration
+    moderate_stress_threshold: float  # Temperature threshold for moderate stress
+    severe_stress_threshold: float    # Temperature threshold for severe stress
+    moderate_stress_factor: float     # Factor for moderate stress
+    severe_stress_base: float         # Base factor for severe stress
+    severe_stress_factor: float       # Factor for severe stress
+    
+    # Respiratory quotient parameters
+    daytime_respiratory_quotient: float  # RQ during daytime
+    nighttime_respiratory_quotient: float  # RQ during nighttime
+    
     @classmethod
     def from_config(cls, config_dict: dict) -> 'RespirationParameters':
         """Create RespirationParameters from CSV configuration data.
@@ -103,7 +145,49 @@ class RespirationParameters:
             
             # Nitrogen effects
             n_effect_slope=get_required_param('n_effect_slope'),
-            reference_leaf_n=get_required_param('reference_leaf_n')
+            reference_leaf_n=get_required_param('reference_leaf_n'),
+            
+            # Temperature stress parameters
+            max_temperature_threshold=get_required_param('max_temperature_threshold'),
+            temperature_decay_factor=get_required_param('temperature_decay_factor'),
+            
+            # Size penalty parameters
+            size_penalty_threshold=get_required_param('size_penalty_threshold'),
+            size_penalty_rate=get_required_param('size_penalty_rate'),
+            
+            # Carbon conversion parameters
+            glucose_to_carbon_ratio=get_required_param('glucose_to_carbon_ratio'),
+            
+            # History parameters
+            min_history_threshold=get_required_param('min_history_threshold'),
+            
+            # Day/night cycle parameters
+            day_start_hour=get_required_param('day_start_hour'),
+            day_end_hour=get_required_param('day_end_hour'),
+            day_respiration_factor=get_required_param('day_respiration_factor'),
+            night_respiration_factor=get_required_param('night_respiration_factor'),
+            
+            # CO2 conversion parameters
+            carbon_to_co2_ratio=get_required_param('carbon_to_co2_ratio'),
+            
+            # Circadian rhythm parameters
+            circadian_amplitude_1=get_required_param('circadian_amplitude_1'),
+            circadian_peak_1=get_required_param('circadian_peak_1'),
+            circadian_amplitude_2=get_required_param('circadian_amplitude_2'),
+            circadian_peak_2=get_required_param('circadian_peak_2'),
+            diurnal_base_factor=get_required_param('diurnal_base_factor'),
+            
+            # Temperature stress parameters
+            optimal_temperature=get_required_param('optimal_temperature'),
+            moderate_stress_threshold=get_required_param('moderate_stress_threshold'),
+            severe_stress_threshold=get_required_param('severe_stress_threshold'),
+            moderate_stress_factor=get_required_param('moderate_stress_factor'),
+            severe_stress_base=get_required_param('severe_stress_base'),
+            severe_stress_factor=get_required_param('severe_stress_factor'),
+            
+            # Respiratory quotient parameters
+            daytime_respiratory_quotient=get_required_param('daytime_respiratory_quotient'),
+            nighttime_respiratory_quotient=get_required_param('nighttime_respiratory_quotient')
         )
     
     def get_required_growth_composition(self, config_dict: dict) -> Dict[str, float]:
@@ -158,8 +242,13 @@ class EnhancedRespirationModel:
     """
     
     def __init__(self, parameters: Optional[RespirationParameters] = None, config_dict: Optional[dict] = None):
-        self.params = parameters or RespirationParameters()
-        self.config_dict = config_dict or {}
+        if parameters is None:
+            raise ValueError("❌ RespirationParameters required - no hardcoded defaults allowed")
+        if config_dict is None:
+            raise ValueError("❌ Configuration dictionary required - no hardcoded defaults allowed")
+        
+        self.params = parameters
+        self.config_dict = config_dict
         self.temperature_history: List[float] = []
         self.acclimated_reference_temp: float = self.params.reference_temperature
         
@@ -189,10 +278,10 @@ class EnhancedRespirationModel:
         
         # Prevent excessive respiration at very high temperatures
         temp = float(temperature)
-        if temp > 40.0:
+        if temp > self.params.max_temperature_threshold:
             # Protein denaturation effects
-            excess_temp = temp - 40.0
-            factor *= np.exp(-0.1 * excess_temp)
+            excess_temp = temp - self.params.max_temperature_threshold
+            factor *= np.exp(-self.params.temperature_decay_factor * excess_temp)
         
         return factor
     
@@ -228,7 +317,9 @@ class EnhancedRespirationModel:
         if tissue_type != TissueType.LEAVES:
             return 1.0  # N effects mainly in leaves
         
-        n_ratio = safe_divide(nitrogen_content, self.params.reference_leaf_n, 1.0)
+        n_ratio = safe_divide(nitrogen_content, self.params.reference_leaf_n, None)
+        if n_ratio is None:
+            raise ValueError("❌ Reference leaf nitrogen content must be provided in CSV configuration - no hardcoded defaults allowed")
         factor = 1.0 + self.params.n_effect_slope * (n_ratio - 1.0)
         
         return max(0.1, factor)  # Natural nitrogen response without caps
@@ -270,11 +361,15 @@ class EnhancedRespirationModel:
         # Real-world maintenance penalties for excessive biomass
         # Large plants have disproportionately high maintenance costs
         size_penalty_factor = 1.0
-        dry_weight = getattr(biomass_pool, 'dry_mass', getattr(biomass_pool, 'dry_weight', 1.0))
-        if dry_weight > 50.0:  # Above normal lettuce size
-            excess_mass = dry_weight - 50.0
+        dry_weight = getattr(biomass_pool, 'dry_mass', None)
+        if dry_weight is None:
+            dry_weight = getattr(biomass_pool, 'dry_weight', None)
+        if dry_weight is None:
+            raise ValueError("❌ Biomass pool must have dry_mass or dry_weight attribute - no hardcoded defaults allowed")
+        if dry_weight > self.params.size_penalty_threshold:  # Above normal lettuce size
+            excess_mass = dry_weight - self.params.size_penalty_threshold
             # Exponential penalty for maintaining excessive biomass
-            size_penalty_factor = 1.0 + 0.02 * excess_mass  # 2% increase per gram above 50g
+            size_penalty_factor = 1.0 + self.params.size_penalty_rate * excess_mass  # Configurable penalty rate
         
         # Combined maintenance respiration with realistic size penalties
         maintenance_respiration = (base_rate * dry_weight * 
@@ -327,7 +422,7 @@ class EnhancedRespirationModel:
                 total_glucose_cost += cost * fraction * new_growth
             
             glucose_respired = total_glucose_cost * (1.0 - self.params.growth_efficiency)
-            carbon_respired = glucose_respired * 0.4
+            carbon_respired = glucose_respired * self.params.glucose_to_carbon_ratio
             
         else:
             # Fallback to simple approach only if no composition data available
@@ -339,7 +434,7 @@ class EnhancedRespirationModel:
             glucose_respired = glucose_required * (1.0 - growth_efficiency)
             
             # Convert glucose to carbon (glucose = C6H12O6, MW = 180, C content = 40%)
-            carbon_respired = glucose_respired * 0.4
+            carbon_respired = glucose_respired * self.params.glucose_to_carbon_ratio
         
         return carbon_respired
     
@@ -359,7 +454,7 @@ class EnhancedRespirationModel:
             self.temperature_history = self.temperature_history[-max_history_days:]
         
         # Calculate running average temperature
-        if len(self.temperature_history) >= 3:  # Need some history
+        if len(self.temperature_history) >= self.params.min_history_threshold:  # Need some history
             recent_avg_temp = np.mean(self.temperature_history)
             
             # Gradual acclimation towards recent average
@@ -469,8 +564,8 @@ class EnhancedRespirationModel:
         diurnal_factor = self._calculate_diurnal_respiration_factor(hour)
         
         # Apply day/night differences
-        is_day = 6 <= hour <= 18  # Simplified day/night cycle
-        day_night_factor = 1.1 if is_day else 0.9  # Higher respiration during day
+        is_day = self.params.day_start_hour <= hour <= self.params.day_end_hour  # Configurable day/night cycle
+        day_night_factor = self.params.day_respiration_factor if is_day else self.params.night_respiration_factor  # Configurable factors
         
         # Combined hourly adjustment
         hourly_adjustment = diurnal_factor * day_night_factor
@@ -485,8 +580,8 @@ class EnhancedRespirationModel:
         
         # Calculate carbon cost (CO2 release)
         # Respiration releases CO2: C6H12O6 + 6O2 → 6CO2 + 6H2O
-        # 1 g C respired → 3.67 g CO2 released
-        co2_release_rate = adjusted_total * 3.67  # g CO2/hour
+        # 1 g C respired → configurable g CO2 released
+        co2_release_rate = adjusted_total * self.params.carbon_to_co2_ratio  # g CO2/hour
         
         # Calculate respiratory quotient (RQ) - varies by substrate
         respiratory_quotient = self._calculate_respiratory_quotient(hour)
@@ -514,11 +609,11 @@ class EnhancedRespirationModel:
         and late afternoon, related to circadian rhythms.
         """
         # Circadian rhythm effect (peak at ~4 AM and ~4 PM)
-        circadian_component1 = 0.1 * np.sin(2 * np.pi * (hour - 4) / 24)  # 4 AM peak
-        circadian_component2 = 0.05 * np.sin(2 * np.pi * (hour - 16) / 24)  # 4 PM peak
+        circadian_component1 = self.params.circadian_amplitude_1 * np.sin(2 * np.pi * (hour - self.params.circadian_peak_1) / 24)  # 4 AM peak
+        circadian_component2 = self.params.circadian_amplitude_2 * np.sin(2 * np.pi * (hour - self.params.circadian_peak_2) / 24)  # 4 PM peak
         
-        # Base respiration varies from 0.9 to 1.1 throughout day
-        diurnal_factor = 1.0 + circadian_component1 + circadian_component2
+        # Base respiration varies from configurable range throughout day
+        diurnal_factor = self.params.diurnal_base_factor + circadian_component1 + circadian_component2
         
         return max(0.8, min(1.2, diurnal_factor))
     
@@ -528,17 +623,17 @@ class EnhancedRespirationModel:
         
         Beyond the Q10 response, extreme temperatures can cause additional stress.
         """
-        optimal_temp = 22.0  # °C optimal temperature for lettuce
+        optimal_temp = self.params.optimal_temperature  # °C optimal temperature for lettuce
         temp_deviation = abs(temperature - optimal_temp)
         
-        if temp_deviation <= 3.0:
+        if temp_deviation <= self.params.moderate_stress_threshold:
             return 1.0  # No additional stress
-        elif temp_deviation <= 8.0:
+        elif temp_deviation <= self.params.severe_stress_threshold:
             # Moderate stress increases respiration
-            return 1.0 + 0.05 * (temp_deviation - 3.0)
+            return 1.0 + self.params.moderate_stress_factor * (temp_deviation - self.params.moderate_stress_threshold)
         else:
             # Severe stress dramatically increases respiration
-            return 1.25 + 0.1 * (temp_deviation - 8.0)
+            return self.params.severe_stress_base + self.params.severe_stress_factor * (temp_deviation - self.params.severe_stress_threshold)
     
     def _calculate_respiratory_quotient(self, hour: int) -> float:
         """
@@ -552,14 +647,14 @@ class EnhancedRespirationModel:
         During day: more carbohydrate respiration (RQ closer to 1.0)
         During night: more mixed substrate respiration (RQ ~0.85)
         """
-        is_day = 6 <= hour <= 18
+        is_day = self.params.day_start_hour <= hour <= self.params.day_end_hour
         
         if is_day:
             # Daytime: more carbohydrate respiration
-            return 0.95
+            return self.params.daytime_respiratory_quotient
         else:
             # Nighttime: more mixed substrate respiration
-            return 0.85
+            return self.params.nighttime_respiratory_quotient
 
 def create_lettuce_respiration_model(system_config=None) -> EnhancedRespirationModel:
     """Create respiration model with lettuce-specific parameters from CSV config.

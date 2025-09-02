@@ -385,7 +385,7 @@ class CROPGROHydroponicSimulator:
                 ec_stress_high_factor=self._get_required_param(stress_parameters, 'ec_stress_high_factor', 'stress_parameters CSV'),
                 ec_stress_low_threshold=self._get_required_param(stress_parameters, 'ec_stress_low_threshold', 'stress_parameters CSV'),
                 ec_stress_low_factor=self._get_required_param(stress_parameters, 'ec_stress_low_factor', 'stress_parameters CSV'),
-                optimal_root_temp=self._get_required_param(environment_parameters, 'optimal_temperature', 'environment_parameters CSV'),
+                optimal_root_temp=self._get_required_param(environment_parameters, 'environment_optimal_temperature', 'environment_parameters CSV'),
                 root_temp_tolerance=self._get_required_param(stress_parameters, 'temp_stress_threshold', 'stress_parameters CSV'),
                 root_temp_stress_factor=self._get_required_param(stress_parameters, 'temp_stress_factor', 'stress_parameters CSV'),
                 optimal_air_temp_max=self._get_required_param(environment_parameters, 'optimal_temperature_max', 'environment_parameters CSV'),
@@ -440,7 +440,17 @@ class CROPGROHydroponicSimulator:
                 'self_shading_factor': 'self_shading_factor',
                 'neighbor_shading_distance': 'neighbor_shading_distance',
                 'sunlit_fraction_method': 'sunlit_fraction_method',
-                'clumping_index': 'clumping_index'
+                'clumping_index': 'clumping_index',
+                # Additional canopy architecture parameters
+                'max_extinction_coefficient': 'max_extinction_coefficient',
+                'upper_canopy_lai_factor': 'upper_canopy_lai_factor',
+                'middle_canopy_lai_factor': 'middle_canopy_lai_factor',
+                'lower_middle_canopy_lai_factor': 'lower_middle_canopy_lai_factor',
+                'bottom_canopy_lai_factor': 'bottom_canopy_lai_factor',
+                'shaded_light_fraction': 'shaded_light_fraction',
+                'max_temperature_gradient': 'max_temperature_gradient',
+                'temperature_gradient_factor': 'temperature_gradient_factor',
+                'ppfd_to_photosynthesis_factor': 'ppfd_to_photosynthesis_factor'
             }
             
             for csv_param, config_param in csv_to_config_mapping.items():
@@ -505,7 +515,9 @@ class CROPGROHydroponicSimulator:
         # Compute placeholder LAI here; will be recalculated with actual density in run_simulation
         transplant_sla = self.leaf_model.params.specific_leaf_area  # cm²/g
         transplant_leaf_area_m2 = (initial_leaf_biomass * transplant_sla) / 10000.0
-        default_system_area = getattr(self, 'system_area', 1.0)  # Default 1 m² if not set yet
+        default_system_area = getattr(self.system_config, 'system_area', None)  # Must be set from CSV
+        if default_system_area is None:
+            raise ValueError("System area must be provided in CSV configuration")
         calculated_lai = transplant_leaf_area_m2 / max(1e-6, default_system_area)
         
         # Use calculated LAI without artificial minimum - let biology determine the starting LAI
@@ -635,7 +647,9 @@ class CROPGROHydroponicSimulator:
         self.plant_density = base_density * density_multiplier
         # Get system parameters from CSV data loaded in system_config
         system_params = getattr(self.system_config, 'system_parameters', {})
-        current_ph = system_params.get('default_ph', 6.0)
+        current_ph = system_params.get('default_ph', None)
+        if current_ph is None:
+            raise ValueError("Default pH must be provided in CSV configuration")
         
         # Update root model with actual tank volume (important for NFT channel calculations)
         system_type_enum = {
@@ -745,7 +759,7 @@ class CROPGROHydroponicSimulator:
                 reason = "EC too low" if ec_too_low else "scheduled interval"
                 print(f"Day {day}: Complete solution change - replacing with fresh nutrient solution")
                 print(f"  Reason: {reason} (EC: {current_ec:.2f} dS/m, threshold: {min_ec_threshold:.2f} dS/m)")
-                print(f"  pH: reset to 6.0")
+                print(f"  pH: reset to {current_ph:.1f}")
 
             # Update pH using comprehensive chemistry model
             # Calculate total nutrient uptake for all plants from daily_result
@@ -786,22 +800,6 @@ class CROPGROHydroponicSimulator:
             daily_result.acid_dosed_ml_per_L = ph_response['acid_dosed_ml_per_L']
             daily_result.base_dosed_ml_per_L = ph_response['base_dosed_ml_per_L']
             daily_result.buffer_capacity = ph_response['buffer_capacity']
-            
-            # Add some realistic pH variation if the model isn't working
-            if abs(ph_response['ph_change_from_uptake']) < 0.001 and abs(ph_response['ph_change_from_drift']) < 0.001:
-                # Simulate realistic pH changes based on nutrient uptake
-                import math
-                total_n_uptake = sum(v for k, v in total_nutrient_uptake.items() if 'N' in k)
-                if total_n_uptake > 0:
-                    # Nitrate uptake tends to increase pH, ammonium uptake decreases it
-                    daily_result.ph_change_from_uptake = min(0.1, total_n_uptake * 0.0001)
-                    daily_result.ph_change_from_drift = math.sin(day * 0.2) * 0.02  # Daily pH drift
-                    
-                    # Add some pH control dosing
-                    if current_ph > 6.2:
-                        daily_result.acid_dosed_ml_per_L = min(0.5, (current_ph - 6.2) * 0.1)
-                    elif current_ph < 5.8:
-                        daily_result.base_dosed_ml_per_L = min(0.5, (5.8 - current_ph) * 0.1)
             
             # Store phosphate speciation data
             phosphate_species = ph_response['phosphate_species']
@@ -950,12 +948,24 @@ class CROPGROHydroponicSimulator:
         # Cache VPD for water model
         self._last_vpd = actual_vpd
         
+        # Get pH from system configuration
+        system_params = getattr(self.system_config, 'system_parameters', {})
+        current_ph = system_params.get('default_ph', None)
+        if current_ph is None:
+            # Try to get from nutrient parameters
+            nutrient_params = getattr(self.system_config, 'nutrient_parameters', {})
+            current_ph = nutrient_params.get('current_ph', None)
+        
+        if current_ph is None:
+            raise ValueError("pH must be provided in CSV configuration (either system_parameters.default_ph or nutrient_parameters.current_ph)")
+        
         return {
             'light_environment': light_environment,
             'actual_temperature': actual_temperature,
             'actual_humidity': actual_humidity,
             'actual_co2': actual_co2,
             'actual_vpd': actual_vpd,
+            'ph': current_ph,
             'env_control_response': env_control_response
         }
     
@@ -1153,7 +1163,9 @@ class CROPGROHydroponicSimulator:
             salinity_factor = 1.0
         
         # 6. pH STRESS
-        ph = plant_state.get('ph', 6.0)
+        ph = plant_state.get('ph', None)
+        if ph is None:
+            raise ValueError("Plant pH must be provided in CSV configuration")
         ph_factor = calculate_ph_effect(ph)
         
         # 7. OXYGEN STRESS (minimal in hydroponics)
@@ -1240,8 +1252,8 @@ class CROPGROHydroponicSimulator:
                                       stage_props: Dict[str, Any]) -> Dict[str, float]:
         """Calculate growth rates driven by carbon assimilation"""
         # Calculate photosynthesis
-        # Get canopy parameters for LAI thresholds
-        canopy_params = getattr(self.system_config, 'canopy_parameters', {})
+        # Get photosynthesis parameters for LAI thresholds
+        photosynthesis_params = getattr(self.system_config, 'photosynthesis', {})
         
         detailed_photosynthesis = self.photosynthesis_model.calculate_daily_assimilation(
             par_umol_m2_s=env_conditions['light_environment'].ppfd_above_canopy,
@@ -1249,7 +1261,8 @@ class CROPGROHydroponicSimulator:
             temp_c=env_conditions['actual_temperature'],
             lai=self.current_lai,
             photoperiod_hours=daylength,
-            config_dict=canopy_params
+            ec_factor=1.0,  # Default EC factor for daily calculation
+            config_dict=photosynthesis_params
         )
         
         # Apply genetic and stress modifiers ONLY ONCE
@@ -1311,7 +1324,7 @@ class CROPGROHydroponicSimulator:
     
     def _simulate_daily_step(self, day: int, temperature: float, humidity: float, 
                            solar_radiation: float, daylength: float, 
-                           nutrient_concentrations: Dict[str, float], ph: float = 6.0,
+                           nutrient_concentrations: Dict[str, float], ph: float = None,
                            previous_tank_volume: float = 0.0,
                            plant_density: float = 1.0) -> DailyResults:
         """
@@ -1611,7 +1624,9 @@ class CROPGROHydroponicSimulator:
             current_sla_cm2_per_g = (total_modeled_leaf_area_m2 * 10000.0) / (leaf_biomass_g_current * self.plant_count)
         else:
             # Use initial SLA for very young plants
-            current_sla_cm2_per_g = getattr(self.leaf_model.params, 'specific_leaf_area', 250.0)
+            current_sla_cm2_per_g = getattr(self.leaf_model.params, 'specific_leaf_area', None)
+        if current_sla_cm2_per_g is None:
+            raise ValueError("Specific leaf area must be provided in CSV configuration")
         
         # DSSAT method: LAI = Total Leaf Area / Ground Area (AREALF approach)
         calculated_lai = total_modeled_leaf_area_m2 / max(1e-6, self.system_area)
@@ -2016,11 +2031,14 @@ class CROPGROHydroponicSimulator:
             root_cohorts_count = sum(len(zone.root_cohorts) for zone in self.root_model.root_architecture.root_zones if hasattr(zone, 'root_cohorts'))
             cropgro_result.root_cohorts = root_cohorts_count
             
-            # Get turnover rate from architecture model parameters
+                        # Get turnover rate from architecture model parameters
             if hasattr(self.root_model.root_architecture, 'params'):
-                cropgro_result.root_turnover_rate = getattr(self.root_model.root_architecture.params, 'fine_turnover_rate', 0.02)
+                root_turnover = getattr(self.root_model.root_architecture.params, 'fine_turnover_rate', None)
+                if root_turnover is None:
+                    raise ValueError("Fine root turnover rate must be provided in CSV configuration")
+                cropgro_result.root_turnover_rate = root_turnover
             else:
-                cropgro_result.root_turnover_rate = 0.02
+                raise ValueError("Root architecture model must have parameters")
         else:
             cropgro_result.root_cohorts = 0
             cropgro_result.root_turnover_rate = 0.02
@@ -2206,7 +2224,9 @@ class CROPGROHydroponicSimulator:
         
         # 2. SOLUTION WATER POTENTIAL
         # Hydroponic solution potential depends on salt concentration (EC)
-        current_ec = getattr(self, '_current_ec', 1.5)  # dS/m
+        current_ec = getattr(self.system_config, 'solution_ec', None)  # Must be set from CSV
+        if current_ec is None:
+            raise ValueError("Solution EC must be provided in CSV configuration")
         # Water potential (MPa) = -0.036 × EC(dS/m) for typical nutrient solutions
         solution_water_potential = -0.036 * current_ec
         
@@ -2538,51 +2558,102 @@ class CROPGROHydroponicSimulator:
         
         # 1. QUICK SUMMARY (Key metrics at a glance)
         output.append(f"\n📊 QUICK SUMMARY:")
-        total_biomass = getattr(daily_result, 'total_biomass', 0.0)
-        daily_growth = getattr(daily_result, 'daily_growth_rate', 0.0)
-        lai = getattr(daily_result, 'lai', 0.0)
-        plant_height = getattr(daily_result, 'plant_height_cm', 0.0)
+        total_biomass = getattr(daily_result, 'total_biomass', None)
+        daily_growth = getattr(daily_result, 'daily_growth_rate', None)
+        lai = getattr(daily_result, 'lai', None)
+        plant_height = getattr(daily_result, 'plant_height_cm', None)
         
-        output.append(f"  🎯 Per Plant: {total_biomass:6.2f} g biomass | {daily_growth:5.3f} g/day growth | {plant_height:5.1f} cm height")
-        output.append(f"  🌿 Canopy: LAI {lai:5.3f} | {getattr(daily_result, 'leaf_number', 0):2d} leaves | {getattr(daily_result, 'leaf_area_m2', 0.0)*10000:5.1f} cm² leaf area")
+        if total_biomass is not None and daily_growth is not None and lai is not None and plant_height is not None:
+            output.append(f"  🎯 Per Plant: {total_biomass:6.2f} g biomass | {daily_growth:5.3f} g/day growth | {plant_height:5.1f} cm height")
+            leaf_number = getattr(daily_result, 'leaf_number', None)
+            leaf_area = getattr(daily_result, 'leaf_area_m2', None)
+            if leaf_number is not None and leaf_area is not None:
+                output.append(f"  🌿 Canopy: LAI {lai:5.3f} | {leaf_number:2d} leaves | {leaf_area*10000:5.1f} cm² leaf area")
+            else:
+                output.append(f"  🌿 Canopy: LAI {lai:5.3f} | Leaf data not available")
+        else:
+            output.append(f"  🎯 Per Plant: Biomass data not available")
         
         # 2. PER-PLANT BIOMASS BREAKDOWN (Individual plant values)
         output.append(f"\n⚖️  PER-PLANT BIOMASS (Individual Plant Values):")
         output.append(f"  {'Component':<15} {'Dry Weight (g)':<15} {'Fresh Weight (g)':<15} {'Growth Rate (g/day)':<20}")
         output.append(f"  {'-'*15} {'-'*15} {'-'*15} {'-'*20}")
-        output.append(f"  {'Total':<15} {total_biomass:<15.2f} {getattr(daily_result, 'shoot_fresh_weight', 0.0):<15.1f} {daily_growth:<20.3f}")
-        output.append(f"  {'Leaves':<15} {getattr(daily_result, 'leaf_dry_weight', 0.0):<15.2f} {getattr(daily_result, 'leaf_fresh_weight', 0.0):<15.1f} {getattr(daily_result, 'leaf_growth_rate', 0.0):<20.3f}")
-        output.append(f"  {'Stems':<15} {getattr(daily_result, 'stem_dry_weight', 0.0):<15.2f} {getattr(daily_result, 'stem_fresh_weight', 0.0):<15.1f} {getattr(daily_result, 'stem_growth_rate', 0.0):<20.3f}")
-        output.append(f"  {'Roots':<15} {getattr(daily_result, 'root_dry_weight', 0.0):<15.2f} {getattr(daily_result, 'root_fresh_weight', 0.0):<15.1f} {getattr(daily_result, 'root_growth_rate', 0.0):<20.3f}")
+        
+        # Get all biomass values without fallbacks
+        shoot_fresh = getattr(daily_result, 'shoot_fresh_weight', None)
+        leaf_dry = getattr(daily_result, 'leaf_dry_weight', None)
+        leaf_fresh = getattr(daily_result, 'leaf_fresh_weight', None)
+        leaf_growth = getattr(daily_result, 'leaf_growth_rate', None)
+        stem_dry = getattr(daily_result, 'stem_dry_weight', None)
+        stem_fresh = getattr(daily_result, 'stem_fresh_weight', None)
+        stem_growth = getattr(daily_result, 'stem_growth_rate', None)
+        root_dry = getattr(daily_result, 'root_dry_weight', None)
+        root_fresh = getattr(daily_result, 'root_fresh_weight', None)
+        root_growth = getattr(daily_result, 'root_growth_rate', None)
+        
+        if total_biomass is not None:
+            output.append(f"  {'Total':<15} {total_biomass:<15.2f} {shoot_fresh if shoot_fresh is not None else 'N/A':<15} {daily_growth if daily_growth is not None else 'N/A':<20}")
+        else:
+            output.append(f"  {'Total':<15} {'N/A':<15} {'N/A':<15} {'N/A':<20}")
+            
+        if leaf_dry is not None:
+            output.append(f"  {'Leaves':<15} {leaf_dry:<15.2f} {leaf_fresh if leaf_fresh is not None else 'N/A':<15} {leaf_growth if leaf_growth is not None else 'N/A':<20}")
+        else:
+            output.append(f"  {'Leaves':<15} {'N/A':<15} {'N/A':<15} {'N/A':<20}")
+            
+        if stem_dry is not None:
+            output.append(f"  {'Stems':<15} {stem_dry:<15.2f} {stem_fresh if stem_fresh is not None else 'N/A':<15} {stem_growth if stem_growth is not None else 'N/A':<20}")
+        else:
+            output.append(f"  {'Stems':<15} {'N/A':<15} {'N/A':<15} {'N/A':<20}")
+            
+        if root_dry is not None:
+            output.append(f"  {'Roots':<15} {root_dry:<15.2f} {root_fresh if root_fresh is not None else 'N/A':<15} {root_growth if root_growth is not None else 'N/A':<20}")
+        else:
+            output.append(f"  {'Roots':<15} {'N/A':<15} {'N/A':<15} {'N/A':<20}")
         
         # 3. PER-SYSTEM TOTALS (System-wide values)
-        plant_count = getattr(daily_result, 'plant_count', 12)
-        system_biomass = total_biomass * plant_count
-        system_area = getattr(daily_result, 'system_area_m2', 1.0)
-        system_yield = system_biomass / system_area
+        plant_count = getattr(daily_result, 'plant_count', None)
+        system_area = getattr(daily_result, 'system_area_m2', None)
         
-        output.append(f"\n🏭 PER-SYSTEM TOTALS (12 Plants × 1.0 m²):")
-        output.append(f"  {'Metric':<25} {'Per Plant':<15} {'Total System':<15} {'Per m²':<15}")
-        output.append(f"  {'-'*25} {'-'*15} {'-'*15} {'-'*15}")
-        output.append(f"  {'Biomass':<25} {total_biomass:<15.2f} g {system_biomass:<15.1f} g {system_yield:<15.1f} g/m²")
-        output.append(f"  {'Daily Growth':<25} {daily_growth:<15.3f} g/day {(daily_growth * plant_count):<15.2f} g/day {(daily_growth * plant_count / system_area):<15.2f} g/m²/day")
-        output.append(f"  {'Leaf Area':<25} {getattr(daily_result, 'leaf_area_m2', 0.0)*10000:<15.1f} cm² {(getattr(daily_result, 'leaf_area_m2', 0.0) * plant_count * 10000):<15.0f} cm² {lai:<15.3f} LAI")
+        if plant_count is not None and system_area is not None and total_biomass is not None:
+            system_biomass = total_biomass * plant_count
+            system_yield = system_biomass / system_area
+            
+            output.append(f"\n🏭 PER-SYSTEM TOTALS ({plant_count} Plants × {system_area} m²):")
+            output.append(f"  {'Metric':<25} {'Per Plant':<15} {'Total System':<15} {'Per m²':<15}")
+            output.append(f"  {'-'*25} {'-'*15} {'-'*15} {'-'*15}")
+            output.append(f"  {'Biomass':<25} {total_biomass:<15.2f} g {system_biomass:<15.1f} g {system_yield:<15.1f} g/m²")
+            
+            if daily_growth is not None:
+                output.append(f"  {'Daily Growth':<25} {daily_growth:<15.3f} g/day {(daily_growth * plant_count):<15.2f} g/day {(daily_growth * plant_count / system_area):<15.2f} g/m²/day")
+            else:
+                output.append(f"  {'Daily Growth':<25} {'N/A':<15} {'N/A':<15} {'N/A':<15}")
+                
+            if leaf_area is not None:
+                output.append(f"  {'Leaf Area':<25} {leaf_area*10000:<15.1f} cm² {(leaf_area * plant_count * 10000):<15.0f} cm² {lai:<15.3f} LAI")
+            else:
+                output.append(f"  {'Leaf Area':<25} {'N/A':<15} {'N/A':<15} {lai if lai is not None else 'N/A':<15}")
+        else:
+            output.append(f"\n🏭 PER-SYSTEM TOTALS: System configuration data not available")
         
         # 4. CARBON BALANCE (Per plant physiology)
         output.append(f"\n🔄 CARBON BALANCE (Per Plant):")
-        net_assimilation = getattr(daily_result, 'net_assimilation', 0.0)
-        photosynthesis = getattr(daily_result, 'photosynthesis_rate', 0.0)
-        respiration = getattr(daily_result, 'respiration_rate', 0.0)
-        maint_resp = getattr(daily_result, 'maintenance_respiration', 0.0)
-        growth_resp = getattr(daily_result, 'growth_respiration', 0.0)
+        net_assimilation = getattr(daily_result, 'net_assimilation', None)
+        photosynthesis = getattr(daily_result, 'photosynthesis_rate', None)
+        respiration = getattr(daily_result, 'respiration_rate', None)
+        maint_resp = getattr(daily_result, 'maintenance_respiration', None)
+        growth_resp = getattr(daily_result, 'growth_respiration', None)
         
-        output.append(f"  {'Process':<20} {'Rate (g/day)':<15} {'Balance':<15}")
-        output.append(f"  {'-'*20} {'-'*15} {'-'*15}")
-        output.append(f"  {'Photosynthesis':<20} {photosynthesis:<15.4f} {'→':<15}")
-        output.append(f"  {'Maintenance Resp.':<20} {maint_resp:<15.4f} {'←':<15}")
-        output.append(f"  {'Growth Resp.':<20} {growth_resp:<15.4f} {'←':<15}")
-        output.append(f"  {'Total Respiration':<20} {respiration:<15.4f} {'←':<15}")
-        output.append(f"  {'NET ASSIMILATION':<20} {net_assimilation:<15.4f} {'=':<15}")
+        if all(v is not None for v in [net_assimilation, photosynthesis, respiration, maint_resp, growth_resp]):
+            output.append(f"  {'Process':<20} {'Rate (g/day)':<15} {'Balance':<15}")
+            output.append(f"  {'-'*20} {'-'*15} {'-'*15}")
+            output.append(f"  {'Photosynthesis':<20} {photosynthesis:<15.4f} {'→':<15}")
+            output.append(f"  {'Maintenance Resp.':<20} {maint_resp:<15.4f} {'←':<15}")
+            output.append(f"  {'Growth Resp.':<20} {growth_resp:<15.4f} {'←':<15}")
+            output.append(f"  {'Total Respiration':<20} {respiration:<15.4f} {'←':<15}")
+            output.append(f"  {'NET ASSIMILATION':<20} {net_assimilation:<15.4f} {'=':<15}")
+        else:
+            output.append(f"  Carbon balance data not available")
         
         # 5. NUTRIENT STATUS (System-wide concentrations)
         output.append(f"\n💧 NUTRIENT SOLUTION STATUS (System-wide):")
@@ -2590,42 +2661,76 @@ class CROPGROHydroponicSimulator:
         output.append(f"  {'-'*10} {'-'*15} {'-'*20} {'-'*15}")
         
         nutrients = [
-            ('N-NO₃', getattr(daily_result, 'n_no3_mg_l', 0.0), getattr(daily_result, 'nitrogen_uptake_mg', 0.0)),
-            ('P-PO₄', getattr(daily_result, 'p_po4_mg_l', 0.0), getattr(daily_result, 'phosphorus_uptake_mg', 0.0)),
-            ('K', getattr(daily_result, 'k_mg_l', 0.0), getattr(daily_result, 'k_uptake_rate', 0.0)),
-            ('Ca', getattr(daily_result, 'ca_mg_l', 0.0), getattr(daily_result, 'ca_uptake_rate', 0.0)),
-            ('Mg', getattr(daily_result, 'mg_mg_l', 0.0), getattr(daily_result, 'mg_uptake_rate', 0.0))
+            ('N-NO₃', getattr(daily_result, 'n_no3_mg_l', None), getattr(daily_result, 'nitrogen_uptake_mg', None)),
+            ('P-PO₄', getattr(daily_result, 'p_po4_mg_l', None), getattr(daily_result, 'phosphorus_uptake_mg', None)),
+            ('K', getattr(daily_result, 'k_mg_l', None), getattr(daily_result, 'k_uptake_rate', None)),
+            ('Ca', getattr(daily_result, 'ca_mg_l', None), getattr(daily_result, 'ca_uptake_rate', None)),
+            ('Mg', getattr(daily_result, 'mg_mg_l', None), getattr(daily_result, 'mg_uptake_rate', None))
         ]
         
         for name, conc, uptake in nutrients:
-            status = "🟢 Optimal" if conc > 50 else "🟡 Low" if conc > 20 else "🔴 Critical"
-            output.append(f"  {name:<10} {conc:<15.1f} mg/L {uptake:<20.2f} {status:<15}")
+            if conc is not None:
+                status = "🟢 Optimal" if conc > 50 else "🟡 Low" if conc > 20 else "🔴 Critical"
+                uptake_str = f"{uptake:.2f}" if uptake is not None else "N/A"
+                output.append(f"  {name:<10} {conc:<15.1f} mg/L {uptake_str:<20} {status:<15}")
+            else:
+                output.append(f"  {name:<10} {'N/A':<15} {'N/A':<20} {'Data Missing':<15}")
         
-        # System parameters
-        output.append(f"  {'EC':<10} {getattr(daily_result, 'ec', 1.5):<15.2f} dS/m {'':<20} {'🟢 Optimal' if getattr(daily_result, 'ec', 1.5) > 1.0 else '🔴 Low':<15}")
-        output.append(f"  {'pH':<10} {getattr(daily_result, 'solution_ph', 6.0):<15.2f} {'':<20} {'🟢 Optimal' if 5.5 <= getattr(daily_result, 'solution_ph', 6.0) <= 6.5 else '🟡 Off-target':<15}")
-        output.append(f"  {'Volume':<10} {getattr(daily_result, 'tank_volume_l', 1000):<15.0f} L {'':<20} {'🟢 Adequate':<15}")
+        # System parameters without fallbacks
+        ec = getattr(daily_result, 'ec', None)
+        ph = getattr(daily_result, 'solution_ph', None)
+        volume = getattr(daily_result, 'tank_volume_l', None)
+        
+        if ec is not None:
+            status = "🟢 Optimal" if ec > 1.0 else "🔴 Low"
+            output.append(f"  {'EC':<10} {ec:<15.2f} dS/m {'':<20} {status:<15}")
+        else:
+            output.append(f"  {'EC':<10} {'N/A':<15} {'':<20} {'Data Missing':<15}")
+            
+        if ph is not None:
+            status = "🟢 Optimal" if 5.5 <= ph <= 6.5 else "🟡 Off-target"
+            output.append(f"  {'pH':<10} {ph:<15.2f} {'':<20} {status:<15}")
+        else:
+            output.append(f"  {'pH':<10} {'N/A':<15} {'':<20} {'Data Missing':<15}")
+            
+        if volume is not None:
+            output.append(f"  {'Volume':<10} {volume:<15.0f} L {'':<20} {'🟢 Adequate':<15}")
+        else:
+            output.append(f"  {'Volume':<10} {'N/A':<15} {'':<20} {'Data Missing':<15}")
         
         # 6. ENVIRONMENTAL CONDITIONS (System-wide)
         output.append(f"\n🌡️  ENVIRONMENTAL CONDITIONS (System-wide):")
         output.append(f"  {'Parameter':<20} {'Value':<15} {'Target':<15} {'Status':<15}")
         output.append(f"  {'-'*20} {'-'*15} {'-'*15} {'-'*15}")
         
-        temp = getattr(daily_result, 'temp_c', 25.0)
-        temp_status = "🟢 Optimal" if 20 <= temp <= 28 else "🟡 Warm" if temp > 28 else "🟡 Cool"
-        output.append(f"  {'Temperature':<20} {temp:<15.1f}°C {'20-28°C':<15} {temp_status:<15}")
+        temp = getattr(daily_result, 'temp_c', None)
+        humidity = getattr(daily_result, 'humidity', None)
+        co2 = getattr(daily_result, 'co2_umol_mol', None)
+        vpd = getattr(daily_result, 'vpd_kpa', None)
         
-        humidity = getattr(daily_result, 'humidity', 60.0)
-        humidity_status = "🟢 Optimal" if 50 <= humidity <= 80 else "🟡 Low" if humidity < 50 else "🟡 High"
-        output.append(f"  {'Humidity':<20} {humidity:<15.1f}% {'50-80%':<15} {humidity_status:<15}")
-        
-        co2 = getattr(daily_result, 'co2_umol_mol', 400.0)
-        co2_status = "🟢 Optimal" if co2 >= 400 else "🟡 Low"
-        output.append(f"  {'CO₂':<20} {co2:<15.0f} ppm {'≥400 ppm':<15} {co2_status:<15}")
-        
-        vpd = getattr(daily_result, 'vpd_kpa', 0.8)
-        vpd_status = "🟢 Optimal" if 0.6 <= vpd <= 1.2 else "🟡 High" if vpd > 1.2 else "🟡 Low"
-        output.append(f"  {'VPD':<20} {vpd:<15.2f} kPa {'0.6-1.2 kPa':<15} {vpd_status:<15}")
+        if temp is not None:
+            temp_status = "🟢 Optimal" if 20 <= temp <= 28 else "🟡 Warm" if temp > 28 else "🟡 Cool"
+            output.append(f"  {'Temperature':<20} {temp:<15.1f}°C {'20-28°C':<15} {temp_status:<15}")
+        else:
+            output.append(f"  {'Temperature':<20} {'N/A':<15} {'20-28°C':<15} {'Data Missing':<15}")
+            
+        if humidity is not None:
+            humidity_status = "🟢 Optimal" if 50 <= humidity <= 80 else "🟡 Low" if humidity < 50 else "🟡 High"
+            output.append(f"  {'Humidity':<20} {humidity:<15.1f}% {'50-80%':<15} {humidity_status:<15}")
+        else:
+            output.append(f"  {'Humidity':<20} {'N/A':<15} {'50-80%':<15} {'Data Missing':<15}")
+            
+        if co2 is not None:
+            co2_status = "🟢 Optimal" if co2 >= 400 else "🟡 Low"
+            output.append(f"  {'CO₂':<20} {co2:<15.0f} ppm {'≥400 ppm':<15} {co2_status:<15}")
+        else:
+            output.append(f"  {'CO₂':<20} {'N/A':<15} {'≥400 ppm':<15} {'Data Missing':<15}")
+            
+        if vpd is not None:
+            vpd_status = "🟢 Optimal" if 0.6 <= vpd <= 1.2 else "🟡 High" if vpd > 1.2 else "🟡 Low"
+            output.append(f"  {'VPD':<20} {vpd:<15.2f} kPa {'0.6-1.2 kPa':<15} {vpd_status:<15}")
+        else:
+            output.append(f"  {'VPD':<20} {'N/A':<15} {'0.6-1.2 kPa':<15} {'Data Missing':<15}")
         
         # 7. STRESS FACTORS (Per plant)
         output.append(f"\n😰 STRESS FACTORS (Per Plant):")
@@ -2633,64 +2738,99 @@ class CROPGROHydroponicSimulator:
         output.append(f"  {'-'*20} {'-'*15} {'-'*15} {'-'*15}")
         
         stresses = [
-            ('Temperature', getattr(daily_result, 'temperature_stress', 0.0), getattr(daily_result, 'temperature_stress_factor', 1.0), ''),
-            ('Water', getattr(daily_result, 'water_stress', 0.0), getattr(daily_result, 'water_stress_factor', 1.0), ''),
-            ('Nutrient', getattr(daily_result, 'nutrient_stress', 0.0), getattr(daily_result, 'nutrient_stress_factor', 1.0), ''),
-            ('Nitrogen', getattr(daily_result, 'nitrogen_stress', 0.0), getattr(daily_result, 'nitrogen_stress_factor', 1.0), ''),
-            ('Salinity', getattr(daily_result, 'salinity_stress', 0.0), getattr(daily_result, 'salinity_stress_factor', 1.0), '')
+            ('Temperature', getattr(daily_result, 'temperature_stress', None), getattr(daily_result, 'temperature_stress_factor', None)),
+            ('Water', getattr(daily_result, 'water_stress', None), getattr(daily_result, 'water_stress_factor', None)),
+            ('Nutrient', getattr(daily_result, 'nutrient_stress', None), getattr(daily_result, 'nutrient_stress_factor', None)),
+            ('Nitrogen', getattr(daily_result, 'nitrogen_stress', None), getattr(daily_result, 'nitrogen_stress_factor', None)),
+            ('Salinity', getattr(daily_result, 'salinity_stress', None), getattr(daily_result, 'salinity_stress_factor', None))
         ]
         
-        for name, level, effect, _ in stresses:
-            if level < 0.1:
-                status = "🟢 None"
-            elif level < 0.3:
-                status = "🟡 Mild"
-            elif level < 0.6:
-                status = "🟠 Moderate"
+        for name, level, effect in stresses:
+            if level is not None and effect is not None:
+                if level < 0.1:
+                    status = "🟢 None"
+                elif level < 0.3:
+                    status = "🟡 Mild"
+                elif level < 0.6:
+                    status = "🟠 Moderate"
+                else:
+                    status = "🔴 Severe"
+                output.append(f"  {name:<20} {level:<15.3f} {effect:<15.3f} {status:<15}")
             else:
-                status = "🔴 Severe"
-            output.append(f"  {name:<20} {level:<15.3f} {effect:<15.3f} {status:<15}")
+                output.append(f"  {name:<20} {'N/A':<15} {'N/A':<15} {'Data Missing':<15}")
         
         # 8. DEVELOPMENT PROGRESS (Per plant)
         output.append(f"\n📅 DEVELOPMENT PROGRESS (Per Plant):")
-        gdd = getattr(daily_result, 'accumulated_gdd', 0.0)
-        thermal_time = getattr(daily_result, 'thermal_time_daily', 0.0)
-        dev_rate = getattr(daily_result, 'development_rate', 0.0)
+        gdd = getattr(daily_result, 'accumulated_gdd', None)
+        thermal_time = getattr(daily_result, 'thermal_time_daily', None)
+        dev_rate = getattr(daily_result, 'development_rate', None)
         
-        # Estimate progress to harvest (assuming ~800 GDD to harvest for lettuce)
-        harvest_gdd = 800.0
-        progress = min(100.0, (gdd / harvest_gdd) * 100) if harvest_gdd > 0 else 0.0
-        
-        output.append(f"  • Accumulated GDD: {gdd:6.1f}°C-days (Target: {harvest_gdd:.0f}°C-days)")
-        output.append(f"  • Daily Thermal Time: {thermal_time:6.1f}°C-days")
-        output.append(f"  • Development Rate: {dev_rate:6.4f}")
-        output.append(f"  • Progress to Harvest: {progress:6.1f}%")
+        if gdd is not None and thermal_time is not None and dev_rate is not None:
+            # Estimate progress to harvest (assuming ~800 GDD to harvest for lettuce)
+            harvest_gdd = 800.0
+            progress = min(100.0, (gdd / harvest_gdd) * 100) if harvest_gdd > 0 else 0.0
+            
+            output.append(f"  • Accumulated GDD: {gdd:6.1f}°C-days (Target: {harvest_gdd:.0f}°C-days)")
+            output.append(f"  • Daily Thermal Time: {thermal_time:6.1f}°C-days")
+            output.append(f"  • Development Rate: {dev_rate:6.4f}")
+            output.append(f"  • Progress to Harvest: {progress:6.1f}%")
+        else:
+            output.append(f"  Development data not available")
         
         # 9. EFFICIENCY METRICS (System-wide)
         output.append(f"\n📊 EFFICIENCY METRICS (System-wide):")
-        water_use = getattr(daily_result, 'wue_kg_m3', 0.0)
-        light_use = getattr(daily_result, 'light_use_efficiency', 0.0)
-        n_efficiency = (daily_growth / max(0.1, getattr(daily_result, 'nitrogen_uptake_mg', 0.1))) * 1000 if getattr(daily_result, 'nitrogen_uptake_mg', 0.0) > 0 else 0.0
+        water_use = getattr(daily_result, 'wue_kg_m3', None)
+        light_use = getattr(daily_result, 'light_use_efficiency', None)
         
-        output.append(f"  • Water Use Efficiency: {water_use:6.2f} kg/m³")
-        output.append(f"  • Light Use Efficiency: {light_use:6.3f} g/MJ")
-        output.append(f"  • Nitrogen Use Efficiency: {n_efficiency:6.1f} g biomass/g N")
-        output.append(f"  • System Yield: {system_yield:6.1f} g/m²")
+        if water_use is not None:
+            output.append(f"  • Water Use Efficiency: {water_use:6.2f} kg/m³")
+        else:
+            output.append(f"  • Water Use Efficiency: Data not available")
+            
+        if light_use is not None:
+            output.append(f"  • Light Use Efficiency: {light_use:6.3f} g/MJ")
+        else:
+            output.append(f"  • Light Use Efficiency: Data not available")
+            
+        if daily_growth is not None:
+            n_uptake = getattr(daily_result, 'nitrogen_uptake_mg', None)
+            if n_uptake is not None and n_uptake > 0:
+                n_efficiency = (daily_growth / n_uptake) * 1000
+                output.append(f"  • Nitrogen Use Efficiency: {n_efficiency:6.1f} g biomass/g N")
+            else:
+                output.append(f"  • Nitrogen Use Efficiency: Data not available")
+        else:
+            output.append(f"  • Nitrogen Use Efficiency: Data not available")
+            
+        if system_yield is not None:
+            output.append(f"  • System Yield: {system_yield:6.1f} g/m²")
+        else:
+            output.append(f"  • System Yield: Data not available")
         
         # 10. PROJECTIONS (Based on current performance)
-        if day > 1 and daily_growth > 0:
-            days_to_harvest = max(0, (harvest_gdd - gdd) / max(0.1, thermal_time)) if thermal_time > 0 else 0
-            projected_yield = total_biomass + (daily_growth * days_to_harvest)
-            projected_system_yield = projected_yield * plant_count / system_area
+        if day > 1 and daily_growth is not None and daily_growth > 0 and gdd is not None and thermal_time is not None:
+            # Estimate days to harvest (assuming ~800 GDD to harvest for lettuce)
+            harvest_gdd = 800.0
+            remaining_gdd = max(0, harvest_gdd - gdd)
             
-            output.append(f"\n🔮 PROJECTIONS (Based on Current Performance):")
-            output.append(f"  • Days to Harvest: {days_to_harvest:6.1f} days")
-            output.append(f"  • Projected Final Biomass: {projected_yield:6.1f} g/plant")
-            output.append(f"  • Projected System Yield: {projected_system_yield:6.1f} g/m²")
+            # Estimate days based on thermal time
+            days_to_harvest = remaining_gdd / thermal_time if thermal_time > 0 else 0
+            projected_yield = total_biomass + (daily_growth * days_to_harvest)
+            
+            if plant_count is not None and system_area is not None:
+                projected_system_yield = projected_yield * plant_count / system_area
+                
+                output.append(f"\n🔮 PROJECTIONS (Based on Current Performance):")
+                output.append(f"  • Days to Harvest: {days_to_harvest:6.1f} days")
+                output.append(f"  • Projected Final Biomass: {projected_yield:6.1f} g/plant")
+                output.append(f"  • Projected System Yield: {projected_system_yield:6.1f} g/m²")
         
         # Footer
         output.append(f"\n{'-'*80}")
-        output.append(f"📋 Note: Biomass values are PER PLANT. Multiply by {plant_count} for total system values.")
+        if plant_count is not None:
+            output.append(f"📋 Note: Biomass values are PER PLANT. Multiply by {plant_count} for total system values.")
+        else:
+            output.append(f"📋 Note: Plant count not available")
         output.append(f"📋 Note: Environmental values are SYSTEM-WIDE (affect all plants).")
         output.append(f"{'='*80}")
         
@@ -2835,9 +2975,12 @@ class CROPGROHydroponicSimulator:
             rainfall=daily_weather_data.get('rainfall', 0.0)       # Default 0.0 mm
         )
         
+        # Get system CO2 from configuration
+        system_co2 = getattr(self.system_config, 'default_co2', 400.0)
+        
         # Interpolate to hourly weather
         hourly_weather_list = self.hourly_weather_interpolator.interpolate_daily_to_hourly(
-            daily_weather, day_of_year=day, latitude=40.0  # Default latitude
+            daily_weather, day_of_year=day, latitude=40.0, system_co2=system_co2
         )
         
         # Initialize accumulators
@@ -2859,6 +3002,8 @@ class CROPGROHydroponicSimulator:
             
             # === HOURLY PHOTOSYNTHESIS ===
             if hourly_weather.par > 0.1:  # Only during light hours
+                # Get photosynthesis parameters for LAI thresholds
+                photosynthesis_params = getattr(self.system_config, 'photosynthesis', {})
                 hourly_photosynthesis = self.photosynthesis_model.calculate_hourly_assimilation(
                     par_umol_m2_s=hourly_weather.par,
                     co2_ppm=hourly_weather.co2,
@@ -2866,7 +3011,7 @@ class CROPGROHydroponicSimulator:
                     lai=self.current_lai,
                     hour=hour,
                     ec_factor=stress_factors.get('salinity_factor', 1.0),
-                    config_dict=canopy_params
+                    config_dict=photosynthesis_params
                 )
                 total_daily_photosynthesis += hourly_photosynthesis
             else:
@@ -2880,7 +3025,7 @@ class CROPGROHydroponicSimulator:
                     'humidity': hourly_weather.humidity,
                     'flow_rate': env_conditions.get('flow_rate', 1.5),
                     'oxygen_level': env_conditions.get('oxygen_level', 8.0),
-                    'ph': env_conditions.get('ph', 6.0),
+                    'ph': env_conditions.get('ph', None),
                     'nutrient_concentrations': nutrient_concentrations
                 }
                 

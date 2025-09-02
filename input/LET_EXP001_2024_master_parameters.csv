@@ -22,6 +22,10 @@ HM_to_PM,100.0,gdd,Growing degree days from harvest to physiological maturity,th
 vegetative_default,35.0,gdd,Default thermal time for vegetative stage transitions,thermal_requirements,Tei et al. 1996,1.0
 head_formation_default,150.0,gdd,Default thermal time for head formation stage transitions,thermal_requirements,Tei et al. 1996,1.0
 reproductive_default,200.0,gdd,Default thermal time for reproductive stage transitions,thermal_requirements,Tei et al. 1996,1.0
+# Transition defaults structure for phenology model
+transition_defaults_vegetative,35.0,gdd,Default thermal time for vegetative stage transitions,thermal_requirements,Tei et al. 1996,1.0
+transition_defaults_head_formation,150.0,gdd,Default thermal time for head formation stage transitions,thermal_requirements,Tei et al. 1996,1.0
+transition_defaults_reproductive,200.0,gdd,Default thermal time for reproductive stage transitions,thermal_requirements,Tei et al. 1996,1.0
 transition_defaults,"{'vegetative': 35.0, 'head_formation': 150.0, 'reproductive': 200.0}",dict,Default thermal time requirements for stage transitions,thermal_requirements,Tei et al. 1996,1.0
 # === GENETIC PARAMETERS (GENETIC SYSTEM) ===,,,,,,
 EM_FL,28.5,days,Time from emergence to first flower (lettuce-specific),genetic_parameters,Boote et al. 2018,1.0
@@ -44,6 +48,23 @@ EC_TOLERANCE,1.8,dS_per_m,Maximum EC tolerance for lettuce,genetic_parameters,So
 ROOT_ACTIVITY,1.0,factor,Root activity coefficient for lettuce,genetic_parameters,Sonneveld & Voogt 2009,1.0
 PHOTOSYNTHETIC_CAPACITY,1.0,factor,Relative photosynthetic capacity,genetic_parameters,Seginer et al. 1991,1.0
 NITRATE_EFFICIENCY,0.85,fraction,Nitrogen use efficiency factor,genetic_parameters,Sonneveld & Voogt 2009,1.0
+# Performance parameters for cultivar evaluation
+yield_potential,0.85,fraction,Relative yield potential for cultivar evaluation,genetic_parameters,Tei et al. 1996,1.0
+adaptation_score,0.8,fraction,Environmental adaptation score for cultivar evaluation,genetic_parameters,Tei et al. 1996,1.0
+commercial_rating,0.8,fraction,Commercial viability rating for cultivar evaluation,genetic_parameters,Tei et al. 1996,1.0
+# Stress weight parameters for G×E modeling
+heat_stress_weight,0.3,fraction,Heat stress weight for adaptation calculation,genetic_parameters,Tei et al. 1996,1.0
+cold_stress_weight,0.25,fraction,Cold stress weight for adaptation calculation,genetic_parameters,Tei et al. 1996,1.0
+salinity_stress_weight,0.2,fraction,Salinity stress weight for adaptation calculation,genetic_parameters,Tei et al. 1996,1.0
+light_stress_weight,0.15,fraction,Light stress weight for adaptation calculation,genetic_parameters,Tei et al. 1996,1.0
+nutrient_stress_weight,0.25,fraction,Nutrient stress weight for adaptation calculation,genetic_parameters,Tei et al. 1996,1.0
+temperature_stress_weight,0.5,fraction,Temperature stress weight for trait expression,genetic_parameters,Tei et al. 1996,1.0
+nitrogen_excess_weight,0.3,fraction,Nitrogen excess weight for trait expression,genetic_parameters,Tei et al. 1996,1.0
+stress_response_weight,0.2,fraction,Stress response weight for root development,genetic_parameters,Tei et al. 1996,1.0
+adaptation_weight,0.6,fraction,Adaptation score weight for cultivar ranking,genetic_parameters,Tei et al. 1996,1.0
+yield_weight,0.25,fraction,Yield potential weight for cultivar ranking,genetic_parameters,Tei et al. 1996,1.0
+commercial_weight,0.15,fraction,Commercial rating weight for cultivar ranking,genetic_parameters,Tei et al. 1996,1.0
+heterosis_factor,1.05,fraction,Heterosis factor for hybrid performance prediction,genetic_parameters,Tei et al. 1996,1.0
 # === GENETIC COEFFICIENTS (DSSAT CROPGRO) ===,,,,,,
 # === PHOTOSYNTHESIS PARAMETERS (FARQUHAR MODEL) ===,,,,,,
 vcmax_25,55.0,umol_per_m2_per_s,Maximum carboxylation rate at 25°C for lettuce,photosynthesis,Bernacchi et al. 2001,1.0
@@ -68,8 +89,16 @@ light_penetration_lai,4.0,unitless,LAI threshold for light penetration (calibrat
 r,8.314,J_per_mol_per_K,Gas constant,photosynthesis,Farquhar et al. 1980,1.0
 ci_fraction,0.7,fraction,Intercellular CO2 fraction,photosynthesis,Farquhar et al. 1980,1.0
 o2_mmol_mol,210.0,mmol_per_mol,Atmospheric O2 concentration,photosynthesis,Farquhar et al. 1980,1.0
+# Additional photosynthesis parameters for advanced modeling
+min_par_threshold,0.1,umol_per_m2_per_s,Minimum PAR threshold for photosynthesis,photosynthesis,Farquhar et al. 1980,1.0
+enzyme_saturation_rate,0.1,unitless,Rate of enzyme saturation decline,photosynthesis,Farquhar et al. 1980,1.0
+min_enzyme_factor,0.3,unitless,Minimum enzyme efficiency factor,photosynthesis,Farquhar et al. 1980,1.0
+excess_lai_efficiency,0.2,unitless,Efficiency factor for excess LAI,photosynthesis,Farquhar et al. 1980,1.0
+umol_to_g_carbon_ratio,1.201e-5,unitless,Conversion ratio from umol CO2 to g C,photosynthesis,Farquhar et al. 1980,1.0
+seconds_per_hour,3600,seconds,Seconds per hour for time conversions,photosynthesis,Farquhar et al. 1980,1.0
+hours_per_day,24,hours,Hours per day for day length calculations,photosynthesis,Farquhar et al. 1980,1.0
 # === ENVIRONMENTAL PARAMETERS (SINGLE SOURCE) ===,,,,,,
-optimal_temperature,22.0,celsius,Optimal temperature for lettuce growth,environment,Seginer et al. 1991,1.0
+environment_optimal_temperature,22.0,celsius,Optimal temperature for lettuce growth,environment,Seginer et al. 1991,1.0
 optimal_temperature_max,28.0,celsius,Maximum temperature before stress,environment,Seginer et al. 1991,1.0
 optimal_temperature_min,15.0,celsius,Minimum temperature before stress,environment,Seginer et al. 1991,1.0
 optimal_light_intensity,18.0,MJ_per_m2_per_day,Optimal daily light integral,environment,Seginer et al. 1991,1.0
@@ -108,6 +137,22 @@ critical_photoperiod,12.0,hours,Critical photoperiod for development,phenology,T
 photoperiod_slope,0.1,days_per_hour,Photoperiod response slope,phenology,Tei et al. 1996,1.0
 photoperiod_sensitive,false,boolean,Whether cultivar is photoperiod sensitive,phenology,Tei et al. 1996,1.0
 vernalization_required,false,boolean,Whether vernalization is required,phenology,Tei et al. 1996,1.0
+# Additional phenology parameters for advanced modeling
+phenology_optimal_temperature_min,18.0,celsius,Lower optimal temperature for development,phenology,Tei et al. 1996,1.0
+phenology_optimal_temperature_max,24.0,celsius,Upper optimal temperature for development,phenology,Tei et al. 1996,1.0
+bolting_photoperiod_threshold,14.0,hours,Photoperiod threshold that triggers bolting,phenology,Tei et al. 1996,1.0
+bolting_temperature_threshold,25.0,celsius,Temperature threshold that accelerates bolting,phenology,Tei et al. 1996,1.0
+head_formation_node_requirement,8,nodes,Minimum nodes required for head formation,phenology,Tei et al. 1996,1.0
+environmental_buffer_days,5,days,Environmental buffer days for bolting risk,phenology,Tei et al. 1996,1.0
+bolting_photoperiod_divisor,2.0,unitless,Divisor for photoperiod bolting risk calculation,phenology,Tei et al. 1996,1.0
+bolting_photoperiod_risk_max,0.3,unitless,Maximum photoperiod bolting risk,phenology,Tei et al. 1996,1.0
+bolting_temperature_divisor,5.0,unitless,Divisor for temperature bolting risk calculation,phenology,Tei et al. 1996,1.0
+bolting_temperature_risk_max,0.4,unitless,Maximum temperature bolting risk,phenology,Tei et al. 1996,1.0
+environmental_history_days,7,days,Environmental history days for sustained stress,phenology,Tei et al. 1996,1.0
+bolting_sustained_stress_risk,0.2,unitless,Sustained stress bolting risk factor,phenology,Tei et al. 1996,1.0
+bolting_maturity_risk_factor,0.02,unitless,Maturity bolting risk factor per node,phenology,Tei et al. 1996,1.0
+bolting_maturity_risk_max,0.3,unitless,Maximum maturity bolting risk,phenology,Tei et al. 1996,1.0
+bolting_risk_threshold,0.7,unitless,Threshold for triggering bolting,phenology,Tei et al. 1996,1.0
 # === NITROGEN PARAMETERS (NITROGEN METABOLISM) ===,,,,,,
 nitrogen_uptake_efficiency,0.15,fraction,Nitrogen uptake efficiency from solution,nitrogen_parameters,Sonneveld & Voogt 2009,1.0
 uptake_efficiency,0.15,fraction,Nitrogen uptake efficiency from solution,nitrogen_parameters,Sonneveld & Voogt 2009,1.0
@@ -124,6 +169,76 @@ n_stress_threshold,0.75,fraction,Nitrogen stress threshold,nitrogen_parameters,S
 luxury_uptake_threshold,1.2,fraction,Luxury nitrogen uptake threshold,nitrogen_parameters,Sonneveld & Voogt 2009,1.0
 specific_root_activity,0.08,mg_N_per_cm_per_day,Specific root activity,nitrogen_parameters,Sonneveld & Voogt 2009,1.0
 root_zone_exploration,0.85,fraction,Root zone exploration efficiency,nitrogen_parameters,Sonneveld & Voogt 2009,1.0
+
+# === NITROGEN UPTAKE KINETICS PARAMETERS ===,,,,,,
+# Nitrate uptake kinetics
+uptake_kinetics_NO3_vmax,0.15,mg_N_per_g_root_per_hour,Maximum nitrate uptake rate,nitrogen_parameters,Marschner 2012,1.0
+uptake_kinetics_NO3_km,0.5,mg_N_per_L,Michaelis constant for nitrate,nitrogen_parameters,Marschner 2012,1.0
+uptake_kinetics_NO3_min_conc,0.1,mg_N_per_L,Minimum nitrate concentration for uptake,nitrogen_parameters,Marschner 2012,1.0
+uptake_kinetics_NO3_inhibition_ki,2.0,mg_N_per_L,Ammonium inhibition constant for nitrate,nitrogen_parameters,Marschner 2012,1.0
+
+# Ammonium uptake kinetics
+uptake_kinetics_NH4_vmax,0.12,mg_N_per_g_root_per_hour,Maximum ammonium uptake rate,nitrogen_parameters,Marschner 2012,1.0
+uptake_kinetics_NH4_km,0.3,mg_N_per_L,Michaelis constant for ammonium,nitrogen_parameters,Marschner 2012,1.0
+uptake_kinetics_NH4_min_conc,0.05,mg_N_per_L,Minimum ammonium concentration for uptake,nitrogen_parameters,Marschner 2012,1.0
+uptake_kinetics_NH4_inhibition_ki,1.5,mg_N_per_L,Nitrate inhibition constant for ammonium,nitrogen_parameters,Marschner 2012,1.0
+
+# Amino acid uptake kinetics
+uptake_kinetics_AA_vmax,0.08,mg_N_per_g_root_per_hour,Maximum amino acid uptake rate,nitrogen_parameters,Marschner 2012,1.0
+uptake_kinetics_AA_km,0.8,mg_N_per_L,Michaelis constant for amino acids,nitrogen_parameters,Marschner 2012,1.0
+uptake_kinetics_AA_min_conc,0.2,mg_N_per_L,Minimum amino acid concentration for uptake,nitrogen_parameters,Marschner 2012,1.0
+uptake_kinetics_AA_inhibition_ki,0.0,mg_N_per_L,No inhibition for amino acids,nitrogen_parameters,Marschner 2012,1.0
+
+# === NITROGEN ALLOCATION COEFFICIENTS ===,,,,,,
+# Vegetative stage allocation
+allocation_coefficients_vegetative_leaves,0.6,fraction,N allocation to leaves during vegetative growth,nitrogen_parameters,Gastal & Lemaire 2002,1.0
+allocation_coefficients_vegetative_stems,0.2,fraction,N allocation to stems during vegetative growth,nitrogen_parameters,Gastal & Lemaire 2002,1.0
+allocation_coefficients_vegetative_roots,0.2,fraction,N allocation to roots during vegetative growth,nitrogen_parameters,Gastal & Lemaire 2002,1.0
+
+# Reproductive stage allocation
+allocation_coefficients_reproductive_leaves,0.4,fraction,N allocation to leaves during reproduction,nitrogen_parameters,Gastal & Lemaire 2002,1.0
+allocation_coefficients_reproductive_stems,0.2,fraction,N allocation to stems during reproduction,nitrogen_parameters,Gastal & Lemaire 2002,1.0
+allocation_coefficients_reproductive_roots,0.1,fraction,N allocation to roots during reproduction,nitrogen_parameters,Gastal & Lemaire 2002,1.0
+allocation_coefficients_reproductive_reproductive,0.3,fraction,N allocation to reproductive organs,nitrogen_parameters,Gastal & Lemaire 2002,1.0
+
+# === CRITICAL NITROGEN CONCENTRATIONS ===,,,,,,
+# Leaf N concentrations
+critical_n_concentrations_leaves_minimum,0.015,fraction,Minimum leaf N concentration,nitrogen_parameters,Lemaire & Gastal 1997,1.0
+critical_n_concentrations_leaves_critical,0.025,fraction,Critical leaf N concentration,nitrogen_parameters,Lemaire & Gastal 1997,1.0
+critical_n_concentrations_leaves_optimal,0.045,fraction,Optimal leaf N concentration,nitrogen_parameters,Lemaire & Gastal 1997,1.0
+critical_n_concentrations_leaves_maximum,0.060,fraction,Maximum leaf N concentration,nitrogen_parameters,Lemaire & Gastal 1997,1.0
+
+# Stem N concentrations
+critical_n_concentrations_stems_minimum,0.008,fraction,Minimum stem N concentration,nitrogen_parameters,Lemaire & Gastal 1997,1.0
+critical_n_concentrations_stems_critical,0.015,fraction,Critical stem N concentration,nitrogen_parameters,Lemaire & Gastal 1997,1.0
+critical_n_concentrations_stems_optimal,0.025,fraction,Optimal stem N concentration,nitrogen_parameters,Lemaire & Gastal 1997,1.0
+critical_n_concentrations_stems_maximum,0.035,fraction,Maximum stem N concentration,nitrogen_parameters,Lemaire & Gastal 1997,1.0
+
+# Root N concentrations
+critical_n_concentrations_roots_minimum,0.012,fraction,Minimum root N concentration,nitrogen_parameters,Lemaire & Gastal 1997,1.0
+critical_n_concentrations_roots_critical,0.020,fraction,Critical root N concentration,nitrogen_parameters,Lemaire & Gastal 1997,1.0
+critical_n_concentrations_roots_optimal,0.035,fraction,Optimal root N concentration,nitrogen_parameters,Lemaire & Gastal 1997,1.0
+critical_n_concentrations_roots_maximum,0.050,fraction,Maximum root N concentration,nitrogen_parameters,Lemaire & Gastal 1997,1.0
+
+# Reproductive N concentrations
+critical_n_concentrations_reproductive_minimum,0.020,fraction,Minimum reproductive N concentration,nitrogen_parameters,Lemaire & Gastal 1997,1.0
+critical_n_concentrations_reproductive_critical,0.030,fraction,Critical reproductive N concentration,nitrogen_parameters,Lemaire & Gastal 1997,1.0
+critical_n_concentrations_reproductive_optimal,0.050,fraction,Optimal reproductive N concentration,nitrogen_parameters,Lemaire & Gastal 1997,1.0
+critical_n_concentrations_reproductive_maximum,0.070,fraction,Maximum reproductive N concentration,nitrogen_parameters,Lemaire & Gastal 1997,1.0
+
+# === NITROGEN REMOBILIZATION PARAMETERS ===,,,,,,
+# Remobilization rates by pool type
+remobilization_rates_structural,0.02,per_day,Structural N remobilization rate,nitrogen_parameters,Masclaux-Daubresse et al. 2010,1.0
+remobilization_rates_metabolic,0.15,per_day,Metabolic N remobilization rate,nitrogen_parameters,Masclaux-Daubresse et al. 2010,1.0
+remobilization_rates_storage,0.25,per_day,Storage N remobilization rate,nitrogen_parameters,Masclaux-Daubresse et al. 2010,1.0
+remobilization_rates_transport,0.30,per_day,Transport N remobilization rate,nitrogen_parameters,Masclaux-Daubresse et al. 2010,1.0
+
+# Remobilization efficiency by organ
+remobilization_efficiency_leaves,0.75,fraction,Leaf N remobilization efficiency,nitrogen_parameters,Masclaux-Daubresse et al. 2010,1.0
+remobilization_efficiency_stems,0.60,fraction,Stem N remobilization efficiency,nitrogen_parameters,Masclaux-Daubresse et al. 2010,1.0
+remobilization_efficiency_roots,0.50,fraction,Root N remobilization efficiency,nitrogen_parameters,Masclaux-Daubresse et al. 2010,1.0
+remobilization_efficiency_reproductive,0.40,fraction,Reproductive N remobilization efficiency,nitrogen_parameters,Masclaux-Daubresse et al. 2010,1.0
+
 # === NITROGEN METABOLISM PARAMETERS ===,,,,,,
 # === TEMPERATURE STRESS PARAMETERS (TEMPERATURE STRESS MODEL) ===,,,,,,
 heat_threshold_mild,25.0,celsius,Mild heat stress threshold,stress_parameters,Seginer et al. 1991,1.0
@@ -204,6 +319,12 @@ recovery_rate,0.03,per_day,Senescence recovery rate,senescence_parameters,Greger
 max_recovery,0.3,fraction,Maximum recovery from senescence,senescence_parameters,Gregersen et al. 2013,1.0
 reproductive_priority_factor,1.2,fraction,Reproductive priority factor,senescence_parameters,Gregersen et al. 2013,1.0
 lower_canopy_factor,1.5,fraction,Lower canopy senescence factor,senescence_parameters,Gregersen et al. 2013,1.0
+# Additional senescence parameters for advanced modeling
+active_senescence_multiplier,2.0,unitless,Multiplier for active senescence remobilization,senescence_parameters,Gregersen et al. 2013,1.0
+normal_senescence_multiplier,1.0,unitless,Multiplier for normal senescence remobilization,senescence_parameters,Gregersen et al. 2013,1.0
+stress_history_days,7,days,Number of days to keep stress history,senescence_parameters,Gregersen et al. 2013,1.0
+daily_area_loss_factor,0.1,fraction,Daily area loss factor during senescence,senescence_parameters,Gregersen et al. 2013,1.0
+daily_biomass_loss_factor,0.1,fraction,Daily biomass loss factor during senescence,senescence_parameters,Gregersen et al. 2013,1.0
 # === ROOT SYSTEM PARAMETERS ===,,,,,,
 primary_root_growth_rate,2.0,cm_per_day,Primary root growth rate,root_system,Sonneveld & Voogt 2009,1.0
 lateral_root_density,3.0,roots_per_cm,Lateral root density,root_system,Sonneveld & Voogt 2009,1.0
@@ -224,6 +345,43 @@ coarse_turnover_rate,0.005,per_day,Coarse root turnover rate,root_system,Sonneve
 fine_root_half_life_days,35.0,days,Fine root half-life,root_system,Sonneveld & Voogt 2009,1.0
 medium_root_half_life_days,70.0,days,Medium root half-life,root_system,Sonneveld & Voogt 2009,1.0
 coarse_root_half_life_days,140.0,days,Coarse root half-life,root_system,Sonneveld & Voogt 2009,1.0
+# Additional root system parameters for advanced modeling
+root_zone_efficiency_factor,0.6,fraction,Root zone efficiency factor for volume calculations,root_system,Sonneveld & Voogt 2009,1.0
+fine_min_activity,0.2,fraction,Minimum activity factor for fine roots,root_system,Sonneveld & Voogt 2009,1.0
+medium_min_activity,0.25,fraction,Minimum activity factor for medium roots,root_system,Sonneveld & Voogt 2009,1.0
+coarse_min_activity,0.3,fraction,Minimum activity factor for coarse roots,root_system,Sonneveld & Voogt 2009,1.0
+establishment_plateau_days,7.0,days,Establishment plateau duration for root activity,root_system,Sonneveld & Voogt 2009,1.0
+root_base_temperature,20.0,celsius,Base temperature for root uptake calculations,root_system,Sonneveld & Voogt 2009,1.0
+temperature_range,10.0,celsius,Temperature range for Q10 calculations,root_system,Sonneveld & Voogt 2009,1.0
+min_temperature_factor,0.5,fraction,Minimum temperature factor for root uptake,root_system,Sonneveld & Voogt 2009,1.0
+max_temperature_factor,2.5,fraction,Maximum temperature factor for root uptake,root_system,Sonneveld & Voogt 2009,1.0
+min_flow_rate,0.5,L_per_min,Minimum flow rate for root uptake,root_system,Sonneveld & Voogt 2009,1.0
+max_flow_rate,4.0,L_per_min,Maximum flow rate for root uptake,root_system,Sonneveld & Voogt 2009,1.0
+low_flow_factor,0.5,fraction,Flow factor below minimum flow rate,root_system,Sonneveld & Voogt 2009,1.0
+high_flow_factor,0.7,fraction,Flow factor above maximum flow rate,root_system,Sonneveld & Voogt 2009,1.0
+optimal_flow_rate,1.5,L_per_min,Optimal flow rate for root uptake,root_system,Sonneveld & Voogt 2009,1.0
+optimal_oxygen_level,6.0,mg_per_L,Optimal oxygen level for root uptake,root_system,Sonneveld & Voogt 2009,1.0
+ph_min,5.5,pH_units,Minimum pH for optimal root uptake,root_system,Sonneveld & Voogt 2009,1.0
+ph_max,6.5,pH_units,Maximum pH for optimal root uptake,root_system,Sonneveld & Voogt 2009,1.0
+min_ph_factor,0.3,fraction,Minimum pH factor for root uptake,root_system,Sonneveld & Voogt 2009,1.0
+ph_penalty_factor,0.15,fraction,pH penalty factor for root uptake,root_system,Sonneveld & Voogt 2009,1.0
+# Additional root system parameters for complete modeling
+system_type,nutrient_film_technique,unitless,Type of hydroponic system,root_system,Sonneveld & Voogt 2009,1.0
+channel_width,10.0,cm,Channel width for NFT system,root_system,Sonneveld & Voogt 2009,1.0
+channel_depth,5.0,cm,Channel depth for NFT system,root_system,Sonneveld & Voogt 2009,1.0
+n_channels,4,unitless,Number of parallel channels,root_system,Sonneveld & Voogt 2009,1.0
+
+channel_length,200.0,cm,Channel length for NFT system,root_system,Sonneveld & Voogt 2009,1.0
+# System multipliers for different hydroponic systems
+system_multipliers_nft_root_length_multiplier,1.0,unitless,Root length multiplier for NFT system,root_system,Sonneveld & Voogt 2009,1.0
+system_multipliers_nft_surface_area_multiplier,1.0,unitless,Surface area multiplier for NFT system,root_system,Sonneveld & Voogt 2009,1.0
+system_multipliers_nft_branching_multiplier,1.0,unitless,Branching multiplier for NFT system,root_system,Sonneveld & Voogt 2009,1.0
+system_multipliers_dwc_root_length_multiplier,0.8,unitless,Root length multiplier for DWC system,root_system,Sonneveld & Voogt 2009,1.0
+system_multipliers_dwc_surface_area_multiplier,1.1,unitless,Surface area multiplier for DWC system,root_system,Sonneveld & Voogt 2009,1.0
+system_multipliers_dwc_branching_multiplier,1.2,unitless,Branching multiplier for DWC system,root_system,Sonneveld & Voogt 2009,1.0
+system_multipliers_aeroponics_root_length_multiplier,1.5,unitless,Root length multiplier for aeroponics system,root_system,Sonneveld & Voogt 2009,1.0
+system_multipliers_aeroponics_surface_area_multiplier,2.0,unitless,Surface area multiplier for aeroponics system,root_system,Sonneveld & Voogt 2009,1.0
+system_multipliers_aeroponics_branching_multiplier,3.0,unitless,Branching multiplier for aeroponics system,root_system,Sonneveld & Voogt 2009,1.0
 # === STRESS PARAMETERS (STRESS RESPONSE THRESHOLDS) ===,,,,,,
 optimal_ec_min,1.0,dS_per_m,Minimum optimal electrical conductivity for growth,stress_parameters,Sonneveld & Voogt 2009,1.0
 optimal_ec_max,2.5,dS_per_m,Maximum optimal electrical conductivity for growth,stress_parameters,Sonneveld & Voogt 2009,1.0
@@ -265,6 +423,16 @@ beam_extinction_coeff,0.7,unitless,Beam extinction coefficient,canopy_parameters
 diffuse_extinction_coeff,0.5,unitless,Diffuse extinction coefficient,canopy_parameters,Campbell & Norman 1998,1.0
 clumping_index,0.9,unitless,Clumping index,canopy_parameters,Campbell & Norman 1998,1.0
 sunlit_fraction_method,spherical,unitless,Method for calculating sunlit fraction,canopy_parameters,Campbell & Norman 1998,1.0
+# Additional canopy architecture parameters for advanced modeling
+max_extinction_coefficient,10.0,unitless,Maximum extinction coefficient for horizontal sun,canopy_parameters,Campbell & Norman 1998,1.0
+upper_canopy_lai_factor,0.8,unitless,LAI distribution factor for upper canopy,canopy_parameters,Campbell & Norman 1998,1.0
+middle_canopy_lai_factor,1.2,unitless,LAI distribution factor for middle canopy,canopy_parameters,Campbell & Norman 1998,1.0
+lower_middle_canopy_lai_factor,0.9,unitless,LAI distribution factor for lower-middle canopy,canopy_parameters,Campbell & Norman 1998,1.0
+bottom_canopy_lai_factor,0.6,unitless,LAI distribution factor for bottom canopy,canopy_parameters,Campbell & Norman 1998,1.0
+shaded_light_fraction,0.2,unitless,Fraction of diffuse light reaching shaded leaves,canopy_parameters,Campbell & Norman 1998,1.0
+max_temperature_gradient,3.0,celsius,Maximum temperature gradient through canopy,canopy_parameters,Campbell & Norman 1998,1.0
+temperature_gradient_factor,0.5,unitless,Temperature gradient factor per LAI unit,canopy_parameters,Campbell & Norman 1998,1.0
+ppfd_to_photosynthesis_factor,0.05,unitless,PPFD to photosynthesis conversion factor,canopy_parameters,Campbell & Norman 1998,1.0
 # === CANOPY ARCHITECTURE PARAMETERS ===,,,,,,
 # === MODEL CONSTANTS (SIMULATION PARAMETERS) ===,,,,,,
 carbon_to_biomass_ratio,0.45,fraction,Carbon to biomass conversion ratio (calibrated),model_constants,Amthor 2000,1.0
@@ -306,6 +474,31 @@ respiration_acclimation_rate,0.03,per_day,Respiration acclimation rate (calibrat
 respiration_maintenance_base_rate,0.015,per_day,Maintenance respiration base rate (calibrated),respiration_parameters,Amthor 2000,1.0
 respiration_growth_efficiency,0.80,fraction,Growth efficiency factor for respiration (calibrated),respiration_parameters,Amthor 2000,1.0
 respiration_biosynthetic_cost,1.25,g_glucose_per_g_biomass,Biosynthetic cost for respiration (calibrated),respiration_parameters,Amthor 2000,1.0
+# Additional respiration parameters for advanced modeling
+max_temperature_threshold,40.0,celsius,Maximum temperature before protein denaturation,respiration_parameters,Amthor 2000,1.0
+temperature_decay_factor,0.1,unitless,Decay factor for high temperature respiration,respiration_parameters,Amthor 2000,1.0
+size_penalty_threshold,50.0,g,Biomass threshold for size penalty,respiration_parameters,Amthor 2000,1.0
+size_penalty_rate,0.02,unitless,Rate of size penalty increase,respiration_parameters,Amthor 2000,1.0
+glucose_to_carbon_ratio,0.4,unitless,Glucose to carbon conversion ratio,respiration_parameters,Amthor 2000,1.0
+min_history_threshold,3,days,Minimum temperature history for acclimation,respiration_parameters,Amthor 2000,1.0
+day_start_hour,6,hours,Start hour of day,respiration_parameters,Amthor 2000,1.0
+day_end_hour,18,hours,End hour of day,respiration_parameters,Amthor 2000,1.0
+day_respiration_factor,1.1,unitless,Day respiration factor,respiration_parameters,Amthor 2000,1.0
+night_respiration_factor,0.9,unitless,Night respiration factor,respiration_parameters,Amthor 2000,1.0
+carbon_to_co2_ratio,3.67,unitless,Carbon to CO2 conversion ratio,respiration_parameters,Amthor 2000,1.0
+circadian_amplitude_1,0.1,unitless,Amplitude of first circadian peak,respiration_parameters,Amthor 2000,1.0
+circadian_peak_1,4,hours,Hour of first circadian peak,respiration_parameters,Amthor 2000,1.0
+circadian_amplitude_2,0.05,unitless,Amplitude of second circadian peak,respiration_parameters,Amthor 2000,1.0
+circadian_peak_2,16,hours,Hour of second circadian peak,respiration_parameters,Amthor 2000,1.0
+diurnal_base_factor,1.0,unitless,Base factor for diurnal variation,respiration_parameters,Amthor 2000,1.0
+moderate_stress_threshold,3.0,celsius,Temperature threshold for moderate stress,respiration_parameters,Amthor 2000,1.0
+severe_stress_threshold,8.0,celsius,Temperature threshold for severe stress,respiration_parameters,Amthor 2000,1.0
+moderate_stress_factor,0.05,unitless,Factor for moderate stress,respiration_parameters,Amthor 2000,1.0
+severe_stress_base,1.25,unitless,Base factor for severe stress,respiration_parameters,Amthor 2000,1.0
+severe_stress_factor,0.1,unitless,Factor for severe stress,respiration_parameters,Amthor 2000,1.0
+daytime_respiratory_quotient,0.95,unitless,RQ during daytime,respiration_parameters,Amthor 2000,1.0
+nighttime_respiratory_quotient,0.85,unitless,RQ during nighttime,respiration_parameters,Amthor 2000,1.0
+optimal_temperature,22.0,celsius,Optimal temperature for respiration,respiration_parameters,Amthor 2000,1.0
 # === RESPIRATION PARAMETERS ===,,,,,,
 # === EXPERIMENT SETTINGS ===,,,,,,
 sowing_date,2025-08-15,date,Date when seeds were sown,experiment_settings,Research Protocol,1.0
@@ -315,6 +508,45 @@ harvest_date,2025-10-15,date,Planned harvest date,experiment_settings,Research P
 cultivar_name,Butterhead_Lettuce,unitless,Name of the lettuce cultivar,experiment_settings,Research Protocol,1.0
 treatment_id,LET_EXP001_2024,unitless,Unique identifier for this experiment,experiment_settings,Research Protocol,1.0
 replication_number,1,unitless,Replication number for this treatment,experiment_settings,Research Protocol,1.0
+# === ENVIRONMENTAL CONTROL PARAMETERS (HVAC & CO2 SYSTEMS) ===,,,,,,
+# Humidity and temperature control parameters
+humidity_deadband,5.0,percent,Humidity control deadband for basic control strategy,environmental_control_parameters,Seginer et al. 1991,1.0
+max_temperature_change_per_hour,2.0,celsius_per_hour,Maximum temperature change per hour for HVAC systems,environmental_control_parameters,Seginer et al. 1991,1.0
+ambient_temperature,20.0,celsius,External ambient temperature for thermal calculations,environmental_control_parameters,Seginer et al. 1991,1.0
+thermal_mass_factor,0.1,unitless,Thermal mass factor for building thermal inertia,environmental_control_parameters,Seginer et al. 1991,1.0
+# CO2 control parameters
+base_co2_loss_rate,50.0,umol_per_mol_per_hour,Baseline CO2 loss rate from ventilation and plant uptake,environmental_control_parameters,Seginer et al. 1991,1.0
+min_co2_concentration,300.0,umol_per_mol,Minimum CO2 concentration for system operation,environmental_control_parameters,Seginer et al. 1991,1.0
+max_co2_concentration,2000.0,umol_per_mol,Maximum CO2 concentration for system operation,environmental_control_parameters,Seginer et al. 1991,1.0
+light_saturation_threshold,200.0,umol_per_m2_per_s,Light saturation threshold for CO2 response calculations,environmental_control_parameters,Seginer et al. 1991,1.0
+co2_response_vmax,2.0,unitless,Maximum CO2 response factor for photosynthesis enhancement,environmental_control_parameters,Seginer et al. 1991,1.0
+co2_response_km,800.0,umol_per_mol,CO2 half-saturation constant for Michaelis-Menten kinetics,environmental_control_parameters,Seginer et al. 1991,1.0
+max_co2_enhancement_factor,1.4,unitless,Maximum CO2 enhancement factor for growth improvement calculations,environmental_control_parameters,Seginer et al. 1991,1.0
+# PID controller parameters for environmental control
+pid_humidity_kp,2.0,unitless,Proportional gain for humidity PID controller,environmental_control_parameters,Seginer et al. 1991,1.0
+pid_humidity_ki,0.5,unitless,Integral gain for humidity PID controller,environmental_control_parameters,Seginer et al. 1991,1.0
+pid_humidity_kd,0.1,unitless,Derivative gain for humidity PID controller,environmental_control_parameters,Seginer et al. 1991,1.0
+pid_co2_kp,1.5,unitless,Proportional gain for CO2 PID controller,environmental_control_parameters,Seginer et al. 1991,1.0
+pid_co2_ki,0.3,unitless,Integral gain for CO2 PID controller,environmental_control_parameters,Seginer et al. 1991,1.0
+pid_co2_kd,0.05,unitless,Derivative gain for CO2 PID controller,environmental_control_parameters,Seginer et al. 1991,1.0
+pid_temperature_kp,3.0,unitless,Proportional gain for temperature PID controller,environmental_control_parameters,Seginer et al. 1991,1.0
+pid_temperature_ki,0.8,unitless,Integral gain for temperature PID controller,environmental_control_parameters,Seginer et al. 1991,1.0
+pid_temperature_kd,0.2,unitless,Derivative gain for temperature PID controller,environmental_control_parameters,Seginer et al. 1991,1.0
+# === CONTROL EQUIPMENT PARAMETERS ===,,,,,,
+# Humidity control equipment
+humidifier_capacity,10.0,L_per_hour,Water addition rate for humidifier,control_equipment_parameters,Seginer et al. 1991,1.0
+dehumidifier_capacity,8.0,L_per_hour,Water removal rate for dehumidifier,control_equipment_parameters,Seginer et al. 1991,1.0
+humidifier_efficiency,0.85,fraction,Efficiency factor for humidifier,control_equipment_parameters,Seginer et al. 1991,1.0
+dehumidifier_efficiency,0.90,fraction,Efficiency factor for dehumidifier,control_equipment_parameters,Seginer et al. 1991,1.0
+# CO2 control equipment
+co2_injection_rate,100.0,umol_per_mol_per_min,Maximum CO2 injection rate,control_equipment_parameters,Seginer et al. 1991,1.0
+co2_sensor_accuracy,10.0,umol_per_mol,CO2 sensor precision,control_equipment_parameters,Seginer et al. 1991,1.0
+co2_mixing_time,15.0,minutes,Time for full CO2 mixing,control_equipment_parameters,Seginer et al. 1991,1.0
+# Air circulation equipment
+air_exchange_rate,0.5,air_changes_per_hour,Air exchange rate for ventilation,control_equipment_parameters,Seginer et al. 1991,1.0
+circulation_fan_power,50.0,watt,Power consumption for circulation fans,control_equipment_parameters,Seginer et al. 1991,1.0
+# Energy costs
+electricity_cost,0.12,USD_per_kWh,Electricity cost for energy calculations,control_equipment_parameters,Seginer et al. 1991,1.0
 # === ENVIRONMENTAL CONTROL PARAMETERS (PH MANAGEMENT) ===,,,,,,
 # === NUTRIENT UPTAKE PARAMETERS ===,,,,,,
 no3_uptake_vmax,0.03,mg_per_cm2_per_day,Maximum NO3 uptake rate per root surface area,nutrient_parameters,Clarkson & Hanson 1980,1.0
@@ -344,6 +576,20 @@ ec_factor_zn,0.50,dS_per_m_per_mg_per_L,EC factor for Zn,nutrient_parameters,Son
 ec_factor_cu,0.47,dS_per_m_per_mg_per_L,EC factor for Cu,nutrient_parameters,Sonneveld & Voogt 2009,1.0
 ec_factor_b,0.43,dS_per_m_per_mg_per_L,EC factor for B,nutrient_parameters,Sonneveld & Voogt 2009,1.0
 ec_factor_mo,0.55,dS_per_m_per_mg_per_L,EC factor for Mo,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+
+# EC uptake threshold parameters
+ec_uptake_high_threshold,1.5,unitless,High EC threshold for uptake stress,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_uptake_low_threshold,0.5,unitless,Low EC threshold for uptake stress,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+# EC uptake modifier parameters
+ec_uptake_modifier_n_high,0.2,unitless,High EC nitrogen uptake modifier,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_uptake_modifier_p_high,0.15,unitless,High EC phosphorus uptake modifier,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_uptake_modifier_k_high,0.25,unitless,High EC potassium uptake modifier,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_uptake_modifier_ca_high,0.1,unitless,High EC calcium uptake modifier,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_uptake_modifier_n_low,0.3,unitless,Low EC nitrogen uptake modifier,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_uptake_modifier_p_low,0.2,unitless,Low EC phosphorus uptake modifier,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_uptake_modifier_fe_low,0.4,unitless,Low EC iron uptake modifier,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+# Minimum volume fraction parameter
+minimum_volume_fraction,0.1,unitless,Minimum volume fraction for nutrient model,nutrient_parameters,Sonneveld & Voogt 2009,1.0
 ph_target_min,5.8,pH_units,Minimum target pH for hydroponic solution,nutrient_parameters,Sonneveld & Voogt 2009,1.0
 ph_target_max,6.2,pH_units,Maximum target pH for hydroponic solution,nutrient_parameters,Sonneveld & Voogt 2009,1.0
 ph_buffer_capacity,2.5,meq_per_L,Buffer capacity of nutrient solution,nutrient_parameters,Sonneveld & Voogt 2009,1.0
@@ -356,6 +602,32 @@ phosphate_buffer_pka2,7.20,unitless,Phosphate buffer pKa2,nutrient_parameters,St
 phosphate_buffer_pka3,12.33,unitless,Phosphate buffer pKa3,nutrient_parameters,Stumm & Morgan 1996,1.0
 ph_adjustment_rate,0.1,pH_units_per_hour,pH adjustment rate,nutrient_parameters,Sonneveld & Voogt 2009,1.0
 ph_deadband,0.1,pH_units,pH control deadband,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+# === PH SYSTEM STATE PARAMETERS ===,,,,,,
+current_ph,6.0,pH_units,Current pH of nutrient solution,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+total_alkalinity,2.0,meq_per_L,Total alkalinity as HCO3-,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+carbonate_conc,50.0,mg_per_L,Initial carbonate concentration,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+phosphate_total,60.0,mg_per_L,Total phosphate concentration,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ionic_strength,0.02,molar,Solution ionic strength,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+# === INTEGRATED STRESS PARAMETERS ===,,,,,,
+# Stress weights for integrated stress modeling (required format)
+stress_weight_temperature,0.5,fraction,Temperature stress weight in integrated model,stress_parameters,Sonneveld & Voogt 2009,1.0
+stress_weight_water,0.25,fraction,Water stress weight in integrated model,stress_parameters,Sonneveld & Voogt 2009,1.0
+stress_weight_nutrient,0.25,fraction,Nutrient stress weight in integrated model,stress_parameters,Sonneveld & Voogt 2009,1.0
+stress_weight_light,0.15,fraction,Light stress weight in integrated model,stress_parameters,Sonneveld & Voogt 2009,1.0
+stress_weight_salinity,0.2,fraction,Salinity stress weight in integrated model,stress_parameters,Sonneveld & Voogt 2009,1.0
+stress_weight_oxygen,0.1,fraction,Oxygen stress weight in integrated model,stress_parameters,Sonneveld & Voogt 2009,1.0
+stress_weight_ph,0.15,fraction,pH stress weight in integrated model,stress_parameters,Sonneveld & Voogt 2009,1.0
+# Process sensitivity parameters
+process_sensitivity_photosynthesis,0.8,fraction,Photosynthesis sensitivity to stress,stress_parameters,Sonneveld & Voogt 2009,1.0
+process_sensitivity_respiration,0.6,fraction,Respiration sensitivity to stress,stress_parameters,Sonneveld & Voogt 2009,1.0
+process_sensitivity_growth,0.9,fraction,Growth sensitivity to stress,stress_parameters,Sonneveld & Voogt 2009,1.0
+process_sensitivity_development,0.7,fraction,Development sensitivity to stress,stress_parameters,Sonneveld & Voogt 2009,1.0
+# Stress onset thresholds
+stress_onset_temperature,0.8,fraction,Temperature stress onset threshold,stress_parameters,Sonneveld & Voogt 2009,1.0
+stress_onset_water,0.6,fraction,Water stress onset threshold,stress_parameters,Sonneveld & Voogt 2009,1.0
+stress_onset_nutrient,0.7,fraction,Nutrient stress onset threshold,stress_parameters,Sonneveld & Voogt 2009,1.0
+stress_onset_light,0.5,fraction,Light stress onset threshold,stress_parameters,Sonneveld & Voogt 2009,1.0
+stress_onset_salinity,0.8,fraction,Salinity stress onset threshold,stress_parameters,Sonneveld & Voogt 2009,1.0
 # === NUTRIENT MOBILITY PARAMETERS ===,,,,,,
 nitrogen_mobility,high,unitless,Nitrogen mobility class,nutrient_mobility,Marschner 2012,1.0
 phosphorus_mobility,medium,unitless,Phosphorus mobility class,nutrient_mobility,Marschner 2012,1.0
@@ -376,6 +648,137 @@ root_conductivity,0.5,fraction,Root conductivity factor,nutrient_mobility,Marsch
 activation_energy,50000.0,J_per_mol,Activation energy for nutrient transport,nutrient_mobility,Marschner 2012,1.0
 nutrient_mobility_temperature_q10,2.0,unitless,Q10 temperature factor for nutrient mobility,nutrient_mobility,Marschner 2012,1.0
 nutrient_mobility_base_temperature,25.0,celsius,Base temperature for nutrient mobility,nutrient_mobility,Marschner 2012,1.0
+# Additional nutrient mobility parameters for advanced modeling
+mobility_classifications_nitrogen_mobility,highly_mobile,unitless,Nitrogen mobility classification,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_nitrogen_transport,bidirectional,unitless,Nitrogen transport mechanism,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_nitrogen_remobilization_efficiency,0.80,unitless,Nitrogen remobilization efficiency,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_nitrogen_deficiency_mobility,high,unitless,Nitrogen deficiency mobility,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_nitrogen_retranslocation_rate,0.15,unitless,Nitrogen retranslocation rate,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_phosphorus_mobility,highly_mobile,unitless,Phosphorus mobility classification,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_phosphorus_transport,bidirectional,unitless,Phosphorus transport mechanism,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_phosphorus_remobilization_efficiency,0.70,unitless,Phosphorus remobilization efficiency,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_phosphorus_deficiency_mobility,high,unitless,Phosphorus deficiency mobility,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_phosphorus_retranslocation_rate,0.12,unitless,Phosphorus retranslocation rate,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_potassium_mobility,highly_mobile,unitless,Potassium mobility classification,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_potassium_transport,bidirectional,unitless,Potassium transport mechanism,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_potassium_remobilization_efficiency,0.85,unitless,Potassium remobilization efficiency,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_potassium_deficiency_mobility,very_high,unitless,Potassium deficiency mobility,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_potassium_retranslocation_rate,0.20,unitless,Potassium retranslocation rate,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_calcium_mobility,poorly_mobile,unitless,Calcium mobility classification,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_calcium_transport,xylem_only,unitless,Calcium transport mechanism,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_calcium_remobilization_efficiency,0.05,unitless,Calcium remobilization efficiency,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_calcium_deficiency_mobility,very_low,unitless,Calcium deficiency mobility,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_calcium_retranslocation_rate,0.01,unitless,Calcium retranslocation rate,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_magnesium_mobility,moderately_mobile,unitless,Magnesium mobility classification,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_magnesium_transport,bidirectional,unitless,Magnesium transport mechanism,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_magnesium_remobilization_efficiency,0.45,unitless,Magnesium remobilization efficiency,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_magnesium_deficiency_mobility,moderate,unitless,Magnesium deficiency mobility,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_magnesium_retranslocation_rate,0.08,unitless,Magnesium retranslocation rate,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_sulfur_mobility,moderately_mobile,unitless,Sulfur mobility classification,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_sulfur_transport,bidirectional,unitless,Sulfur transport mechanism,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_sulfur_remobilization_efficiency,0.60,unitless,Sulfur remobilization efficiency,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_sulfur_deficiency_mobility,moderate,unitless,Sulfur deficiency mobility,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_sulfur_retranslocation_rate,0.10,unitless,Sulfur retranslocation rate,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_iron_mobility,poorly_mobile,unitless,Iron mobility classification,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_iron_transport,complex,unitless,Iron transport mechanism,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_iron_remobilization_efficiency,0.15,unitless,Iron remobilization efficiency,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_iron_deficiency_mobility,low,unitless,Iron deficiency mobility,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_iron_retranslocation_rate,0.03,unitless,Iron retranslocation rate,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_manganese_mobility,moderately_mobile,unitless,Manganese mobility classification,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_manganese_transport,complex,unitless,Manganese transport mechanism,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_manganese_remobilization_efficiency,0.35,unitless,Manganese remobilization efficiency,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_manganese_deficiency_mobility,moderate,unitless,Manganese deficiency mobility,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_manganese_retranslocation_rate,0.06,unitless,Manganese retranslocation rate,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_zinc_mobility,moderately_mobile,unitless,Zinc mobility classification,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_zinc_transport,complex,unitless,Zinc transport mechanism,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_zinc_remobilization_efficiency,0.40,unitless,Zinc remobilization efficiency,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_zinc_deficiency_mobility,moderate,unitless,Zinc deficiency mobility,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_zinc_retranslocation_rate,0.07,unitless,Zinc retranslocation rate,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_copper_mobility,moderately_mobile,unitless,Copper mobility classification,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_copper_transport,complex,unitless,Copper transport mechanism,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_copper_remobilization_efficiency,0.25,unitless,Copper remobilization efficiency,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_copper_deficiency_mobility,low,unitless,Copper deficiency mobility,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_copper_retranslocation_rate,0.04,unitless,Copper retranslocation rate,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_boron_mobility,poorly_mobile,unitless,Boron mobility classification,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_boron_transport,xylem_only,unitless,Boron transport mechanism,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_boron_remobilization_efficiency,0.08,unitless,Boron remobilization efficiency,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_boron_deficiency_mobility,very_low,unitless,Boron deficiency mobility,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_boron_retranslocation_rate,0.01,unitless,Boron retranslocation rate,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_molybdenum_mobility,moderately_mobile,unitless,Molybdenum mobility classification,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_molybdenum_transport,bidirectional,unitless,Molybdenum transport mechanism,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_molybdenum_remobilization_efficiency,0.50,unitless,Molybdenum remobilization efficiency,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_molybdenum_deficiency_mobility,moderate,unitless,Molybdenum deficiency mobility,nutrient_mobility,Marschner 2012,1.0
+mobility_classifications_molybdenum_retranslocation_rate,0.09,unitless,Molybdenum retranslocation rate,nutrient_mobility,Marschner 2012,1.0
+# Transport rates for nutrient mobility model
+xylem_transport_rates_nitrogen,0.25,unitless,Nitrogen xylem transport rate,nutrient_mobility,Marschner 2012,1.0
+xylem_transport_rates_phosphorus,0.15,unitless,Phosphorus xylem transport rate,nutrient_mobility,Marschner 2012,1.0
+xylem_transport_rates_potassium,0.30,unitless,Potassium xylem transport rate,nutrient_mobility,Marschner 2012,1.0
+xylem_transport_rates_calcium,0.20,unitless,Calcium xylem transport rate,nutrient_mobility,Marschner 2012,1.0
+xylem_transport_rates_magnesium,0.18,unitless,Magnesium xylem transport rate,nutrient_mobility,Marschner 2012,1.0
+xylem_transport_rates_sulfur,0.12,unitless,Sulfur xylem transport rate,nutrient_mobility,Marschner 2012,1.0
+xylem_transport_rates_iron,0.08,unitless,Iron xylem transport rate,nutrient_mobility,Marschner 2012,1.0
+xylem_transport_rates_manganese,0.10,unitless,Manganese xylem transport rate,nutrient_mobility,Marschner 2012,1.0
+xylem_transport_rates_zinc,0.10,unitless,Zinc xylem transport rate,nutrient_mobility,Marschner 2012,1.0
+xylem_transport_rates_copper,0.08,unitless,Copper xylem transport rate,nutrient_mobility,Marschner 2012,1.0
+xylem_transport_rates_boron,0.15,unitless,Boron xylem transport rate,nutrient_mobility,Marschner 2012,1.0
+xylem_transport_rates_molybdenum,0.12,unitless,Molybdenum xylem transport rate,nutrient_mobility,Marschner 2012,1.0
+phloem_transport_rates_nitrogen,0.20,unitless,Nitrogen phloem transport rate,nutrient_mobility,Marschner 2012,1.0
+phloem_transport_rates_phosphorus,0.18,unitless,Phosphorus phloem transport rate,nutrient_mobility,Marschner 2012,1.0
+phloem_transport_rates_potassium,0.25,unitless,Potassium phloem transport rate,nutrient_mobility,Marschner 2012,1.0
+phloem_transport_rates_calcium,0.01,unitless,Calcium phloem transport rate,nutrient_mobility,Marschner 2012,1.0
+phloem_transport_rates_magnesium,0.12,unitless,Magnesium phloem transport rate,nutrient_mobility,Marschner 2012,1.0
+phloem_transport_rates_sulfur,0.15,unitless,Sulfur phloem transport rate,nutrient_mobility,Marschner 2012,1.0
+phloem_transport_rates_iron,0.05,unitless,Iron phloem transport rate,nutrient_mobility,Marschner 2012,1.0
+phloem_transport_rates_manganese,0.08,unitless,Manganese phloem transport rate,nutrient_mobility,Marschner 2012,1.0
+phloem_transport_rates_zinc,0.10,unitless,Zinc phloem transport rate,nutrient_mobility,Marschner 2012,1.0
+phloem_transport_rates_copper,0.06,unitless,Copper phloem transport rate,nutrient_mobility,Marschner 2012,1.0
+phloem_transport_rates_boron,0.02,unitless,Boron phloem transport rate,nutrient_mobility,Marschner 2012,1.0
+phloem_transport_rates_molybdenum,0.12,unitless,Molybdenum phloem transport rate,nutrient_mobility,Marschner 2012,1.0
+# Buffering capacities for nutrient mobility model
+buffering_capacities_leaves_nitrogen,0.30,unitless,Leaves nitrogen buffering capacity,nutrient_mobility,Marschner 2012,1.0
+buffering_capacities_leaves_phosphorus,0.25,unitless,Leaves phosphorus buffering capacity,nutrient_mobility,Marschner 2012,1.0
+buffering_capacities_leaves_potassium,0.35,unitless,Leaves potassium buffering capacity,nutrient_mobility,Marschner 2012,1.0
+buffering_capacities_stems_nitrogen,0.20,unitless,Stems nitrogen buffering capacity,nutrient_mobility,Marschner 2012,1.0
+buffering_capacities_stems_phosphorus,0.15,unitless,Stems phosphorus buffering capacity,nutrient_mobility,Marschner 2012,1.0
+buffering_capacities_stems_potassium,0.25,unitless,Stems potassium buffering capacity,nutrient_mobility,Marschner 2012,1.0
+buffering_capacities_roots_nitrogen,0.15,unitless,Roots nitrogen buffering capacity,nutrient_mobility,Marschner 2012,1.0
+buffering_capacities_roots_phosphorus,0.20,unitless,Roots phosphorus buffering capacity,nutrient_mobility,Marschner 2012,1.0
+buffering_capacities_roots_potassium,0.20,unitless,Roots potassium buffering capacity,nutrient_mobility,Marschner 2012,1.0
+# Storage pool sizes for nutrient mobility model
+storage_pool_sizes_leaves_nitrogen,0.40,unitless,Leaves nitrogen storage pool size,nutrient_mobility,Marschner 2012,1.0
+storage_pool_sizes_leaves_phosphorus,0.30,unitless,Leaves phosphorus storage pool size,nutrient_mobility,Marschner 2012,1.0
+storage_pool_sizes_leaves_potassium,0.50,unitless,Leaves potassium storage pool size,nutrient_mobility,Marschner 2012,1.0
+storage_pool_sizes_stems_nitrogen,0.60,unitless,Stems nitrogen storage pool size,nutrient_mobility,Marschner 2012,1.0
+storage_pool_sizes_stems_phosphorus,0.50,unitless,Stems phosphorus storage pool size,nutrient_mobility,Marschner 2012,1.0
+storage_pool_sizes_stems_potassium,0.70,unitless,Stems potassium storage pool size,nutrient_mobility,Marschner 2012,1.0
+storage_pool_sizes_roots_nitrogen,0.35,unitless,Roots nitrogen storage pool size,nutrient_mobility,Marschner 2012,1.0
+storage_pool_sizes_roots_phosphorus,0.40,unitless,Roots phosphorus storage pool size,nutrient_mobility,Marschner 2012,1.0
+storage_pool_sizes_roots_potassium,0.45,unitless,Roots potassium storage pool size,nutrient_mobility,Marschner 2012,1.0
+# Redistribution thresholds for nutrient mobility model
+redistribution_thresholds_nitrogen,0.7,unitless,Nitrogen redistribution threshold,nutrient_mobility,Marschner 2012,1.0
+redistribution_thresholds_phosphorus,0.6,unitless,Phosphorus redistribution threshold,nutrient_mobility,Marschner 2012,1.0
+redistribution_thresholds_potassium,0.8,unitless,Potassium redistribution threshold,nutrient_mobility,Marschner 2012,1.0
+redistribution_thresholds_calcium,0.4,unitless,Calcium redistribution threshold,nutrient_mobility,Marschner 2012,1.0
+redistribution_thresholds_magnesium,0.6,unitless,Magnesium redistribution threshold,nutrient_mobility,Marschner 2012,1.0
+redistribution_thresholds_sulfur,0.6,unitless,Sulfur redistribution threshold,nutrient_mobility,Marschner 2012,1.0
+# Stress redistribution rates for nutrient mobility model
+stress_redistribution_rates_nitrogen,0.30,unitless,Nitrogen stress redistribution rate,nutrient_mobility,Marschner 2012,1.0
+stress_redistribution_rates_phosphorus,0.25,unitless,Phosphorus stress redistribution rate,nutrient_mobility,Marschner 2012,1.0
+stress_redistribution_rates_potassium,0.40,unitless,Potassium stress redistribution rate,nutrient_mobility,Marschner 2012,1.0
+stress_redistribution_rates_magnesium,0.20,unitless,Magnesium stress redistribution rate,nutrient_mobility,Marschner 2012,1.0
+stress_redistribution_rates_sulfur,0.25,unitless,Sulfur stress redistribution rate,nutrient_mobility,Marschner 2012,1.0
+# Sink strength coefficients for nutrient mobility model
+sink_strength_coefficients_vegetative_leaves,0.50,unitless,Vegetative stage leaves sink strength,nutrient_mobility,Marschner 2012,1.0
+sink_strength_coefficients_vegetative_stems,0.25,unitless,Vegetative stage stems sink strength,nutrient_mobility,Marschner 2012,1.0
+sink_strength_coefficients_vegetative_roots,0.25,unitless,Vegetative stage roots sink strength,nutrient_mobility,Marschner 2012,1.0
+sink_strength_coefficients_reproductive_leaves,0.30,unitless,Reproductive stage leaves sink strength,nutrient_mobility,Marschner 2012,1.0
+sink_strength_coefficients_reproductive_stems,0.20,unitless,Reproductive stage stems sink strength,nutrient_mobility,Marschner 2012,1.0
+sink_strength_coefficients_reproductive_roots,0.15,unitless,Reproductive stage roots sink strength,nutrient_mobility,Marschner 2012,1.0
+sink_strength_coefficients_reproductive_reproductive,0.35,unitless,Reproductive stage reproductive sink strength,nutrient_mobility,Marschner 2012,1.0
+sink_strength_coefficients_senescence_leaves,0.10,unitless,Senescence stage leaves sink strength,nutrient_mobility,Marschner 2012,1.0
+sink_strength_coefficients_senescence_stems,0.30,unitless,Senescence stage stems sink strength,nutrient_mobility,Marschner 2012,1.0
+sink_strength_coefficients_senescence_roots,0.25,unitless,Senescence stage roots sink strength,nutrient_mobility,Marschner 2012,1.0
+sink_strength_coefficients_senescence_reproductive,0.35,unitless,Senescence stage reproductive sink strength,nutrient_mobility,Marschner 2012,1.0
 # === NUTRIENT RECOVERY PARAMETERS ===,,,,,,
 # === INITIAL NUTRIENT CONCENTRATIONS (mg/L) ===,,,,,,
 initial_n_no3,200.0,mg_per_L,Initial NO3-N concentration in nutrient solution,nutrient_concentrations,Sonneveld & Voogt 2009,1.0
@@ -397,17 +800,15 @@ min_ec_threshold,1.0,dS_per_m,Minimum EC before solution change,nutrient_managem
 solution_change_interval,7,days,Automatic solution change interval,nutrient_management,Sonneveld & Voogt 2009,1.0
 ec_decline_rate,0.05,dS_per_m_per_day,Expected EC decline rate per day,nutrient_management,Sonneveld & Voogt 2009,1.0
 # === SYSTEM PARAMETERS ===,,,,,,
-system_type,NFT,unitless,Type of hydroponic system,system,Sonneveld & Voogt 2009,1.0
 tank_volume,500.0,liters,Total volume of nutrient solution tank,system,Sonneveld & Voogt 2009,1.0
 flow_rate,50.0,liters_per_hour,Rate of solution circulation,system,Sonneveld & Voogt 2009,1.0
-optimal_flow_rate,1.5,liters_per_minute,Optimal flow rate for NFT system,system,Sonneveld & Voogt 2009,1.0
 flow_rate_variation,0.2,fraction,Flow rate variation factor,system,Sonneveld & Voogt 2009,1.0
 system_area,1.0,square_meters,Growing area of the system,system,Sonneveld & Voogt 2009,1.0
 number_of_plants,12,plants,Number of plants in the system,system,Sonneveld & Voogt 2009,1.0
 plant_density,12.0,plants_per_m2,Plant density,system,Sonneveld & Voogt 2009,1.0
-channel_length,10.0,meters,Channel length for NFT,system,Sonneveld & Voogt 2009,1.0
-channel_width,10.0,cm,Channel width,system,Sonneveld & Voogt 2009,1.0
-channel_depth,5.0,cm,Channel depth,system,Sonneveld & Voogt 2009,1.0
+system_channel_length,10.0,meters,Channel length for NFT,system,Sonneveld & Voogt 2009,1.0
+system_channel_width,10.0,cm,Channel width,system,Sonneveld & Voogt 2009,1.0
+system_channel_depth,5.0,cm,Channel depth,system,Sonneveld & Voogt 2009,1.0
 container_volume,5.0,liters,Container volume per plant,system,Sonneveld & Voogt 2009,1.0
 solution_change_days,7,days,Solution change frequency,system,Sonneveld & Voogt 2009,1.0
 reservoir_topup_fraction,0.1,fraction,Reservoir top-up fraction,system,Sonneveld & Voogt 2009,1.0
@@ -443,6 +844,15 @@ photosynthesis_sensitivity_low,0.5,fraction,Low photosynthesis sensitivity,root_
 photosynthesis_sensitivity_high,0.85,fraction,High photosynthesis sensitivity,root_zone_temperature,Sonneveld & Voogt 2009,1.0
 rzt_water_uptake_sensitivity_low,0.7,fraction,Root zone temperature low water uptake sensitivity,root_zone_temperature,Sonneveld & Voogt 2009,1.0
 rzt_water_uptake_sensitivity_high,0.95,fraction,Root zone temperature high water uptake sensitivity,root_zone_temperature,Sonneveld & Voogt 2009,1.0
+# Additional root zone temperature parameters for advanced thermal modeling
+rzt_min_growth_factor,0.2,fraction,Minimum growth factor below effective temperature,root_zone_temperature,Sonneveld & Voogt 2009,1.0
+rzt_thermal_mass_factor,0.2,fraction,How quickly RZT responds to changes,root_zone_temperature,Sonneveld & Voogt 2009,1.0
+rzt_ambient_temp_amplitude,2.0,celsius,Amplitude of diurnal temperature variation,root_zone_temperature,Sonneveld & Voogt 2009,1.0
+rzt_root_respiration_heat,0.5,celsius,Heat generation from root respiration,root_zone_temperature,Sonneveld & Voogt 2009,1.0
+rzt_pump_heat_generation,0.3,celsius,Heat generation from circulation pumps,root_zone_temperature,Sonneveld & Voogt 2009,1.0
+rzt_ambient_exchange_factor,0.1,fraction,Factor for ambient temperature exchange,root_zone_temperature,Sonneveld & Voogt 2009,1.0
+rzt_thermal_response_time,2.0,hours,Thermal response time constant,root_zone_temperature,Sonneveld & Voogt 2009,1.0
+rzt_heat_transfer_coefficient,10.0,unitless,Heat transfer coefficient for calculations,root_zone_temperature,Sonneveld & Voogt 2009,1.0
 # === LEAF DEVELOPMENT PARAMETERS ===,,,,,,
 min_temp,4.0,celsius,Base temperature for development,leaf_development,Tei et al. 1996,1.0
 opt_temp_min,18.0,celsius,Lower optimum temperature,leaf_development,Tei et al. 1996,1.0
@@ -458,4 +868,4 @@ base_phyllochron,50.0,degree_days,Base phyllochron,leaf_development,Tei et al. 1
 leaf_angle,45.0,degrees,Leaf angle,leaf_development,Tei et al. 1996,1.0
 canopy_height,0.0,cm,Initial canopy height,leaf_development,Tei et al. 1996,1.0
 maximum_height,30.0,cm,Maximum canopy height,leaf_development,Tei et al. 1996,1.0
-# === CROP PARAMETERS (CROP GROWTH) ===,,,,,,
+  # === CROP PARAMETERS (CROP GROWTH) ===,,,,,,
