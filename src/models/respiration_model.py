@@ -100,6 +100,17 @@ class RespirationParameters:
     daytime_respiratory_quotient: float  # RQ during daytime
     nighttime_respiratory_quotient: float  # RQ during nighttime
     
+    # Biosynthetic costs (for growth respiration)
+    biosynthetic_costs: Dict[str, float]
+    
+    # Temperature acclimation bounds
+    min_acclimation_temperature: float  # Minimum temperature for acclimation
+    max_acclimation_temperature: float  # Maximum temperature for acclimation
+    
+    # Diurnal factor limits
+    min_diurnal_factor: float  # Minimum diurnal respiration factor
+    max_diurnal_factor: float  # Maximum diurnal respiration factor
+    
     @classmethod
     def from_config(cls, config_dict: dict) -> 'RespirationParameters':
         """Create RespirationParameters from CSV configuration data.
@@ -120,6 +131,15 @@ class RespirationParameters:
             TissueType.STEMS.value: get_required_param('tissue_factor_stems'),
             TissueType.ROOTS.value: get_required_param('tissue_factor_roots'),
             TissueType.REPRODUCTIVE.value: get_required_param('tissue_factor_reproductive')
+        }
+        
+        # Handle biosynthetic costs from CSV
+        biosynthetic_costs = {
+            'protein': get_required_param('protein_respiration_cost'),
+            'carbohydrate': get_required_param('carbohydrate_respiration_cost'),
+            'lipid': get_required_param('lipid_respiration_cost'),
+            'organic_acid': get_required_param('organic_acid_respiration_cost'),
+            'lignin': get_required_param('lignin_respiration_cost')
         }
         
         return cls(
@@ -187,7 +207,18 @@ class RespirationParameters:
             
             # Respiratory quotient parameters
             daytime_respiratory_quotient=get_required_param('daytime_respiratory_quotient'),
-            nighttime_respiratory_quotient=get_required_param('nighttime_respiratory_quotient')
+            nighttime_respiratory_quotient=get_required_param('nighttime_respiratory_quotient'),
+            
+            # Biosynthetic costs (for growth respiration)
+            biosynthetic_costs=biosynthetic_costs,
+            
+            # Temperature acclimation bounds
+            min_acclimation_temperature=get_required_param('min_acclimation_temperature'),
+            max_acclimation_temperature=get_required_param('max_acclimation_temperature'),
+            
+            # Diurnal factor limits
+            min_diurnal_factor=get_required_param('min_diurnal_factor'),
+            max_diurnal_factor=get_required_param('max_diurnal_factor')
         )
     
     def get_required_growth_composition(self, config_dict: dict) -> Dict[str, float]:
@@ -401,18 +432,15 @@ class EnhancedRespirationModel:
         
         # Use detailed composition by default if config is available
         if growth_composition is None and self.config_dict:
-            growth_composition = self.params.get_default_growth_composition(self.config_dict)
+            growth_composition = self.params.get_required_growth_composition(self.config_dict)
         
         # Detailed approach based on biochemical composition (now the default)
         if growth_composition is not None:
-            # Different biosynthetic costs for protein, carbohydrate, lipid
-            costs = {
-                'protein': 1.89,      # g glucose/g protein
-                'carbohydrate': 1.11, # g glucose/g carbohydrate  
-                'lipid': 2.84,        # g glucose/g lipid
-                'organic_acid': 1.0,  # g glucose/g organic acid
-                'lignin': 2.0         # g glucose/g lignin
-            }
+            # Get biosynthetic costs from CSV configuration - no hardcoded defaults allowed
+            if not hasattr(self.params, 'biosynthetic_costs'):
+                raise ValueError("❌ Biosynthetic costs must be provided in CSV configuration - no hardcoded defaults allowed")
+            
+            costs = self.params.biosynthetic_costs
             
             total_glucose_cost = 0.0
             for component, fraction in growth_composition.items():
@@ -463,10 +491,16 @@ class EnhancedRespirationModel:
             
             self.acclimated_reference_temp += acclimation_change
             
-            # Keep within reasonable bounds
+            # Keep within reasonable bounds from CSV configuration
             from ..utils.math_utils import clamp_value
+            min_temp = getattr(self.params, 'min_acclimation_temperature', None)
+            max_temp = getattr(self.params, 'max_acclimation_temperature', None)
+            
+            if min_temp is None or max_temp is None:
+                raise ValueError("❌ Temperature acclimation bounds (min_acclimation_temperature, max_acclimation_temperature) must be provided in CSV configuration")
+            
             self.acclimated_reference_temp = clamp_value(
-                self.acclimated_reference_temp, 15.0, 35.0
+                self.acclimated_reference_temp, min_temp, max_temp
             )
     
     def calculate_total_respiration(self, biomass_pools: List[BiomassPool], 
@@ -615,7 +649,14 @@ class EnhancedRespirationModel:
         # Base respiration varies from configurable range throughout day
         diurnal_factor = self.params.diurnal_base_factor + circadian_component1 + circadian_component2
         
-        return max(0.8, min(1.2, diurnal_factor))
+        # Apply limits from CSV configuration - no hardcoded defaults allowed
+        min_factor = getattr(self.params, 'min_diurnal_factor', None)
+        max_factor = getattr(self.params, 'max_diurnal_factor', None)
+        
+        if min_factor is None or max_factor is None:
+            raise ValueError("❌ Diurnal factor limits (min_diurnal_factor, max_diurnal_factor) must be provided in CSV configuration")
+        
+        return max(min_factor, min(max_factor, diurnal_factor))
     
     def _calculate_temperature_stress_factor(self, temperature: float) -> float:
         """
@@ -664,10 +705,25 @@ def create_lettuce_respiration_model(system_config=None) -> EnhancedRespirationM
         
     Returns:
         EnhancedRespirationModel configured with CSV parameters
+        
+    Raises:
+        ValueError: If required CSV parameters are missing
     """
+    if not system_config:
+        raise ValueError("❌ System configuration must be provided for respiration model")
+    
     try:
         # Get respiration parameters from CSV data loaded in system_config
-        respiration_params = getattr(system_config, 'respiration_parameters', {}).copy()
+        respiration_params = getattr(system_config, 'respiration_parameters', {})
+        if not respiration_params:
+            raise ValueError("❌ Respiration parameters must be provided in CSV configuration for respiration model")
+        
+        # Get environment parameters for temperature-related values
+        environment_params = getattr(system_config, 'environment', {})
+        
+        # Add environment parameters that respiration model needs
+        if 'optimal_temperature' in environment_params:
+            respiration_params['optimal_temperature'] = environment_params['optimal_temperature']
         
         # Map renamed parameters to expected parameter names
         param_mapping = {
@@ -686,9 +742,9 @@ def create_lettuce_respiration_model(system_config=None) -> EnhancedRespirationM
         parameters = RespirationParameters.from_config(respiration_params)
         return EnhancedRespirationModel(parameters, respiration_params)
         
+    except KeyError as e:
+        raise KeyError(f"Required respiration parameter '{e.args[0]}' not found in CSV configuration. Add to respiration_parameters section")
     except Exception as e:
-        print(f"Warning: Could not load CSV respiration parameters: {e}")
-        print("Using default respiration parameters")
-        return EnhancedRespirationModel()
+        raise ValueError(f"Failed to create respiration model from CSV configuration: {e}")
 
 

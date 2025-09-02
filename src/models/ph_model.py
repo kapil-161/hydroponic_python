@@ -42,6 +42,7 @@ class PHParameters:
     # Nutrient uptake effects
     nitrate_acidification_factor: float = None    # pH change per mg N
     ammonium_alkalinization_factor: float = None  # pH change per mg N
+    phosphate_acidification_factor: float = None  # pH change per mg P
     
     # Buffer chemistry constants
     carbonate_buffer_pka: float = None
@@ -53,12 +54,28 @@ class PHParameters:
     ph_adjustment_rate: float = None     # pH units/hour
     ph_deadband: float = None           # pH units
     
+    # Chemical constants
+    temperature_correction_factor: float = None  # pH change per °C from 25°C
+    ec_buffer_factor: float = None               # Buffer capacity multiplier per EC unit
+    proportional_control_factor: float = None    # Proportional control multiplier
+    hours_per_day: float = None                 # Hours per day for daily calculations
+    
     # pH system state parameters
     current_ph: float = None            # Current pH
     total_alkalinity: float = None      # Total alkalinity (mEq/L)
     carbonate_conc: float = None        # Carbonate concentration (mg/L)
     phosphate_total: float = None       # Total phosphate (mg/L)
     ionic_strength: float = None        # Ionic strength (M)
+    
+    # pH limits
+    ph_min_limit: float = None
+    ph_max_limit: float = None
+    
+    # Solubility data
+    phosphate_solubility_data: Dict[str, float] = None  # pH-dependent phosphate solubility
+    iron_solubility_data: Dict[str, float] = None       # pH-dependent iron solubility
+    calcium_phosphate_ksp: float = None                 # Solubility product Ca3(PO4)2
+    magnesium_phosphate_ksp: float = None               # Solubility product Mg3(PO4)2
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'PHParameters':
@@ -70,17 +87,28 @@ class PHParameters:
             ph_drift_rate=config_dict['ph_drift_rate'],
             nitrate_acidification_factor=config_dict['nitrate_acidification_factor'],
             ammonium_alkalinization_factor=config_dict['ammonium_alkalinization_factor'],
+            phosphate_acidification_factor=config_dict['phosphate_acidification_factor'],
             carbonate_buffer_pka=config_dict['carbonate_buffer_pka'],
             phosphate_buffer_pka1=config_dict['phosphate_buffer_pka1'],
             phosphate_buffer_pka2=config_dict['phosphate_buffer_pka2'],
             phosphate_buffer_pka3=config_dict['phosphate_buffer_pka3'],
             ph_adjustment_rate=config_dict['ph_adjustment_rate'],
             ph_deadband=config_dict['ph_deadband'],
+            temperature_correction_factor=config_dict['temperature_correction_factor'],
+            ec_buffer_factor=config_dict['ec_buffer_factor'],
+            proportional_control_factor=config_dict['proportional_control_factor'],
+            hours_per_day=config_dict.get('hours_per_day', 24.0),  # Default to 24 if not provided
             current_ph=config_dict.get('current_ph'),
             total_alkalinity=config_dict.get('total_alkalinity'),
             carbonate_conc=config_dict.get('carbonate_conc'),
             phosphate_total=config_dict.get('phosphate_total'),
-            ionic_strength=config_dict.get('ionic_strength')
+            ionic_strength=config_dict.get('ionic_strength'),
+            ph_min_limit=config_dict['ph_min_limit'],
+            ph_max_limit=config_dict['ph_max_limit'],
+            phosphate_solubility_data=config_dict['phosphate_solubility_data'],
+            iron_solubility_data=config_dict['iron_solubility_data'],
+            calcium_phosphate_ksp=config_dict['calcium_phosphate_ksp'],
+            magnesium_phosphate_ksp=config_dict['magnesium_phosphate_ksp']
         )
 
 
@@ -103,11 +131,11 @@ class PHState:
 
 @dataclass
 class NutrientSolubility:
-    """pH-dependent nutrient solubility data."""
+    """pH-dependent nutrient solubility data from CSV configuration."""
     phosphate_solubility: Dict[str, float]     # mg/L at different pH
     iron_solubility: Dict[str, float]          # mg/L at different pH  
-    calcium_phosphate_ksp: float = 2.07e-33    # Solubility product Ca3(PO4)2
-    magnesium_phosphate_ksp: float = 1.04e-24  # Solubility product Mg3(PO4)2
+    calcium_phosphate_ksp: float = None         # Solubility product Ca3(PO4)2
+    magnesium_phosphate_ksp: float = None       # Solubility product Mg3(PO4)2
 
 
 class HydroponicPHModel:
@@ -129,18 +157,14 @@ class HydroponicPHModel:
             carbonate_conc=parameters.carbonate_conc,
             phosphate_total=parameters.phosphate_total,
             ionic_strength=parameters.ionic_strength,
-            temperature=20.0  # Will be updated during simulation
+            temperature=None  # Must be set from CSV during simulation
         )
         
         self.nutrient_solubility = NutrientSolubility(
-            phosphate_solubility={
-                "4.0": 1200.0, "5.0": 800.0, "5.5": 400.0, "6.0": 200.0,
-                "6.5": 120.0, "7.0": 80.0, "7.5": 60.0, "8.0": 45.0
-            },
-            iron_solubility={
-                "4.0": 50.0, "5.0": 20.0, "5.5": 8.0, "6.0": 3.0,
-                "6.5": 1.0, "7.0": 0.3, "7.5": 0.1, "8.0": 0.03
-            }
+            phosphate_solubility=parameters.phosphate_solubility_data or {},
+            iron_solubility=parameters.iron_solubility_data or {},
+            calcium_phosphate_ksp=parameters.calcium_phosphate_ksp,
+            magnesium_phosphate_ksp=parameters.magnesium_phosphate_ksp
         )
     
     def calculate_henderson_hasselbalch_ph(self, total_carbonate: float, 
@@ -160,7 +184,7 @@ class HydroponicPHModel:
         """
         # Temperature-corrected pKa for carbonic acid
         pka = self.params.carbonate_buffer_pka
-        temp_correction = (temperature - 25.0) * 0.0055  # 0.0055 per °C
+        temp_correction = (temperature - 25.0) * self.params.temperature_correction_factor
         pka_corrected = pka - temp_correction
         
         # Convert CO2 to molar concentration
@@ -175,7 +199,11 @@ class HydroponicPHModel:
             # pH calculation requires CO2 concentration - no hardcoded defaults allowed
             raise ValueError("❌ CO2 concentration must be provided for pH calculation - no hardcoded defaults allowed")
             
-        return max(4.0, min(9.0, ph))  # Physically reasonable limits
+        # pH limits must come from CSV configuration - no hardcoded defaults allowed
+        if not hasattr(self.params, 'ph_min_limit') or not hasattr(self.params, 'ph_max_limit'):
+            raise ValueError("❌ pH limits (ph_min_limit, ph_max_limit) must be provided in CSV configuration")
+        
+        return max(self.params.ph_min_limit, min(self.params.ph_max_limit, ph))
     
     def calculate_phosphate_speciation(self, ph: float, total_phosphate: float) -> Dict[str, float]:
         """
@@ -229,23 +257,31 @@ class HydroponicPHModel:
         # Nitrate uptake acidifies (charge balance requires H+ release)
         no3_uptake_mg = nutrient_uptake.get('NO3', 0.0)
         if no3_uptake_mg > 0:
-            # Convert NO3 to elemental N for accurate stoichiometry
+            # Convert NO3 to elemental N for accurate stoichiometry (scientific constant)
             n_uptake_mg = no3_uptake_mg * (14.0 / 62.0)
             ph_change -= n_uptake_mg * self.params.nitrate_acidification_factor
         
         # Ammonium uptake alkalinizes (NH4+ uptake releases OH-)
         nh4_uptake_mg = nutrient_uptake.get('NH4', 0.0)
         if nh4_uptake_mg > 0:
+            # Convert NH4 to elemental N for accurate stoichiometry (scientific constant)
             n_uptake_mg = nh4_uptake_mg * (14.0 / 18.0)
             ph_change += n_uptake_mg * self.params.ammonium_alkalinization_factor
         
         # Phosphate uptake slightly acidifies
         po4_uptake_mg = nutrient_uptake.get('PO4', 0.0) 
         if po4_uptake_mg > 0:
+            # Convert PO4 to elemental P for accurate stoichiometry (scientific constant)
             p_uptake_mg = po4_uptake_mg * (31.0 / 95.0)
-            ph_change -= p_uptake_mg * 0.0005  # Small acidification
+            # Phosphate acidification factor must come from CSV configuration
+            if not hasattr(self.params, 'phosphate_acidification_factor'):
+                raise ValueError("❌ phosphate_acidification_factor must be provided in CSV configuration")
+            ph_change -= p_uptake_mg * self.params.phosphate_acidification_factor
         
         # Buffer capacity moderates changes
+        if self.ph_state.buffer_capacity is None or self.ph_state.buffer_capacity <= 0:
+            raise ValueError("❌ Buffer capacity must be provided in CSV configuration and must be positive")
+        
         buffered_change = ph_change / self.ph_state.buffer_capacity
         
         return buffered_change
@@ -263,6 +299,12 @@ class HydroponicPHModel:
             Available concentrations after pH effects (mg/L)
         """
         available_concentrations = nutrient_concentrations.copy()
+        
+        # Validate that solubility data is provided
+        if not self.nutrient_solubility.phosphate_solubility:
+            raise ValueError("❌ Phosphate solubility data must be provided in CSV configuration")
+        if not self.nutrient_solubility.iron_solubility:
+            raise ValueError("❌ Iron solubility data must be provided in CSV configuration")
         
         # Interpolate phosphate solubility
         ph_points = [float(p) for p in self.nutrient_solubility.phosphate_solubility.keys()]
@@ -338,12 +380,12 @@ class HydroponicPHModel:
         if abs(ph_error) > self.params.ph_deadband:
             if ph_error > 0:  # pH too high, dose acid
                 max_acid_dose = self.params.ph_adjustment_rate * time_hours
-                required_dose = min(max_acid_dose, abs(ph_error) * 2.0)  # Proportional control
+                required_dose = min(max_acid_dose, abs(ph_error) * self.params.proportional_control_factor)
                 acid_dose = required_dose
                 ph_change = -required_dose / self.ph_state.buffer_capacity
             else:  # pH too low, dose base
                 max_base_dose = self.params.ph_adjustment_rate * time_hours
-                required_dose = min(max_base_dose, abs(ph_error) * 2.0)
+                required_dose = min(max_base_dose, abs(ph_error) * self.params.proportional_control_factor)
                 base_dose = required_dose
                 ph_change = required_dose / self.ph_state.buffer_capacity
             
@@ -374,17 +416,20 @@ class HydroponicPHModel:
         uptake_ph_change = self.calculate_nutrient_uptake_ph_effect(nutrient_uptake)
         
         # 2. Natural pH drift (CO2 outgassing, etc.)
-        natural_drift = self.params.ph_drift_rate / 24.0  # Per hour
+        natural_drift = self.params.ph_drift_rate / self.params.hours_per_day  # Per hour
         
         # 3. Update buffer capacity based on EC (higher ionic strength = more buffering)
-        self.ph_state.buffer_capacity = self.params.ph_buffer_capacity * (1.0 + 0.1 * ec)
+        if ec is None:
+            raise ValueError("❌ Electrical conductivity (EC) must be provided for buffer capacity calculation")
+        
+        self.ph_state.buffer_capacity = self.params.ph_buffer_capacity * (1.0 + self.params.ec_buffer_factor * ec)
         
         # 4. Calculate new pH before control
         ph_before_control = current_ph + uptake_ph_change + natural_drift
         
-        # 5. Apply pH control system (simulates 24 hours of control)
+        # 5. Apply pH control system (simulates daily control)
         controlled_ph, acid_dosed, base_dosed = self.simulate_ph_control_system(
-            ph_before_control, time_hours=24.0
+            ph_before_control, time_hours=self.params.hours_per_day
         )
         
         # 6. Calculate pH-dependent nutrient availability
@@ -393,14 +438,18 @@ class HydroponicPHModel:
         )
         
         # 7. Calculate phosphate speciation
-        total_phosphate = available_nutrients.get('P-PO4', 0.0) * (31.0 / 95.0)  # Convert to P
+        # Convert PO4 to elemental P for accurate stoichiometry (scientific constant)
+        total_phosphate = available_nutrients.get('P-PO4', 0.0) * (31.0 / 95.0)
         phosphate_species = self.calculate_phosphate_speciation(controlled_ph, total_phosphate)
         
         # 8. Update system state
+        if temperature is None:
+            raise ValueError("❌ Temperature must be provided for pH model updates - no hardcoded defaults allowed")
+        
         self.ph_state.current_ph = controlled_ph
         self.ph_state.temperature = temperature
-        self.ph_state.acid_dosing_rate = acid_dosed / 24.0  # mL/L/hour
-        self.ph_state.base_dosing_rate = base_dosed / 24.0
+        self.ph_state.acid_dosing_rate = acid_dosed / self.params.hours_per_day  # mL/L/hour
+        self.ph_state.base_dosing_rate = base_dosed / self.params.hours_per_day
         
         return {
             'final_ph': controlled_ph,

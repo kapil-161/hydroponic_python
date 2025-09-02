@@ -152,7 +152,7 @@ class SenescenceParameters:
             # Advanced senescence parameters
             active_senescence_multiplier=config_dict['active_senescence_multiplier'],
             normal_senescence_multiplier=config_dict['normal_senescence_multiplier'],
-            stress_history_days=config_dict['stress_history_days'],
+            stress_history_days=int(config_dict['stress_history_days']),  # Ensure integer for slicing
             daily_area_loss_factor=config_dict['daily_area_loss_factor'],
             daily_biomass_loss_factor=config_dict['daily_biomass_loss_factor']
         )

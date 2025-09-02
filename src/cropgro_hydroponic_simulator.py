@@ -258,7 +258,7 @@ class CROPGROHydroponicSimulator:
                 # Store chlorophyll ratio for photosynthesis model integration
                 self.chlorophyll_ratio = nitrogen_params['chlorophyll_ratio']
             else:
-                self.chlorophyll_ratio = 0.02  # Default value
+                raise ValueError("❌ 'chlorophyll_ratio' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
             
             self.nitrogen_model = PlantNitrogenBalanceModel(nb_params)
         else:
@@ -381,7 +381,7 @@ class CROPGROHydroponicSimulator:
                 optimal_vpd_max=self._get_required_param(stress_parameters, 'optimal_vpd_max', 'stress_parameters CSV'),
                 vpd_stress_high_factor=self._get_required_param(stress_parameters, 'vpd_stress_high_factor', 'stress_parameters CSV'),
                 vpd_stress_low_factor=self._get_required_param(stress_parameters, 'vpd_stress_low_factor', 'stress_parameters CSV'),
-                optimal_ec=self._get_required_param(stress_parameters, 'optimal_ec', 'stress_parameters CSV'),
+                optimal_ec=self._get_required_param(environment_parameters, 'optimal_ec', 'environment CSV'),
                 ec_stress_high_factor=self._get_required_param(stress_parameters, 'ec_stress_high_factor', 'stress_parameters CSV'),
                 ec_stress_low_threshold=self._get_required_param(stress_parameters, 'ec_stress_low_threshold', 'stress_parameters CSV'),
                 ec_stress_low_factor=self._get_required_param(stress_parameters, 'ec_stress_low_factor', 'stress_parameters CSV'),
@@ -476,12 +476,20 @@ class CROPGROHydroponicSimulator:
         # Typical lettuce transplants: 2-3 weeks old, 2-4 true leaves + cotyledons
         # This eliminates the bootstrap paradox by starting with functional photosynthetic area
         
-        # Transplant biomass based on horticultural reports for lettuce plugs (dry mass ≈0.20–0.35 g)
-        # Use realistic split: ~60% leaves, 14% stem, 26% roots
-        # Increased leaf biomass to ensure positive carbon balance from start
-        initial_leaf_biomass = 0.70   # g DW (increased for carbon balance and more photosynthetic area)
-        initial_stem_biomass = 0.08   # g DW 
-        initial_root_biomass = 0.22   # g DW
+        # Transplant biomass must be provided in CSV configuration
+        # Get initial biomass from CSV parameters
+        initial_biomass_params = getattr(self.system_config, 'model_constants', {})
+        
+        initial_leaf_biomass = initial_biomass_params.get('initial_leaf_biomass')
+        initial_stem_biomass = initial_biomass_params.get('initial_stem_biomass')
+        initial_root_biomass = initial_biomass_params.get('initial_root_biomass')
+        
+        if initial_leaf_biomass is None:
+            raise ValueError("❌ 'initial_leaf_biomass' parameter must be provided in model_constants CSV - no hardcoded defaults allowed")
+        if initial_stem_biomass is None:
+            raise ValueError("❌ 'initial_stem_biomass' parameter must be provided in model_constants CSV - no hardcoded defaults allowed")
+        if initial_root_biomass is None:
+            raise ValueError("❌ 'initial_root_biomass' parameter must be provided in model_constants CSV - no hardcoded defaults allowed")
         
         self.biomass_pools = [
             BiomassPool(TissueType.LEAVES, initial_leaf_biomass, 2.0, 4.5, 0.0),
@@ -523,9 +531,12 @@ class CROPGROHydroponicSimulator:
         # Use calculated LAI without artificial minimum - let biology determine the starting LAI
         # Early transplants naturally start with small LAI (~0.1-0.3) which is realistic
         self.current_lai = calculated_lai
-        # Set realistic transplant height instead of mature canopy height
+        # Set realistic transplant height from CSV configuration
         # Transplants (V3 stage) typically 10-12 cm tall
-        self.canopy_height = 0.10  # 10 cm for transplant stage
+        initial_canopy_height = initial_biomass_params.get('initial_canopy_height')
+        if initial_canopy_height is None:
+            raise ValueError("❌ 'initial_canopy_height' parameter must be provided in model_constants CSV - no hardcoded defaults allowed")
+        self.canopy_height = initial_canopy_height
         
         # Get transplanting period dynamically from experiment settings CSV
         experiment_settings = getattr(self.system_config, 'experiment_settings', {})
@@ -977,12 +988,18 @@ class CROPGROHydroponicSimulator:
         3. Economic efficiency (reduce when not beneficial)
         4. Time of day simulation
         """
-        # Base ambient CO2
-        ambient_co2 = 400.0
+        # Base ambient CO2 must be provided in CSV configuration
+        env_params = getattr(self.system_config, 'environment_parameters', {})
+        ambient_co2 = env_params.get('ambient_co2')
+        light_threshold = env_params.get('light_threshold')
+        
+        if ambient_co2 is None:
+            raise ValueError("❌ 'ambient_co2' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
+        if light_threshold is None:
+            raise ValueError("❌ 'light_threshold' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
         
         # Light-dependent CO2 strategy
-        # Only enrich CO2 when light is sufficient for photosynthesis (>8 MJ/m²/day)
-        light_threshold = 8.0
+        # Only enrich CO2 when light is sufficient for photosynthesis
         if solar_radiation < light_threshold:
             # Low light - minimal enrichment to save costs
             return ambient_co2 + 50.0  # 450 ppm
@@ -993,18 +1010,24 @@ class CROPGROHydroponicSimulator:
         stage_factor = self._get_co2_stage_factor(current_stage)
         
         # Light intensity factor (more CO2 on sunny days)
-        max_solar = 20.0  # Typical max for the region
+        max_solar = env_params.get('max_solar_radiation')
+        if max_solar is None:
+            raise ValueError("❌ 'max_solar_radiation' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
         light_factor = min(1.2, solar_radiation / max_solar)
         
         # Calculate optimized CO2 level
         optimized_co2 = base_enrichment * stage_factor * light_factor
         
-        # Economic cap - don't exceed 1200 ppm (diminishing returns)
-        max_economic_co2 = 1200.0
+        # Economic cap - don't exceed economic limit (diminishing returns)
+        max_economic_co2 = env_params.get('max_economic_co2')
+        if max_economic_co2 is None:
+            raise ValueError("❌ 'max_economic_co2' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
         final_co2 = min(optimized_co2, max_economic_co2)
         
         # Ensure minimum enrichment during daylight
-        min_daylight_co2 = 500.0
+        min_daylight_co2 = env_params.get('min_daylight_co2')
+        if min_daylight_co2 is None:
+            raise ValueError("❌ 'min_daylight_co2' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
         return max(final_co2, min_daylight_co2)
     
     def _get_co2_stage_factor(self, growth_stage: str) -> float:
@@ -1114,8 +1137,10 @@ class CROPGROHydroponicSimulator:
         
         # 3. LIGHT STRESS (optimized for hydroponic LED systems)
         # In controlled environment hydroponics, light is usually adequate
-        # Optimal light intensity reduced for more realistic LED systems
-        optimal_light = 12.0  # MJ/m²/day - realistic for LED hydroponics
+        # Optimal light intensity must be provided in CSV configuration
+        optimal_light = env_params.get('optimal_light_intensity')
+        if optimal_light is None:
+            raise ValueError("❌ 'optimal_light_intensity' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
         light_factor = min(1.0, max(0.0, float(solar_radiation) / optimal_light))
         
         # 4. NITROGEN STRESS - Use nitrogen balance model for sophisticated calculation
@@ -1123,16 +1148,26 @@ class CROPGROHydroponicSimulator:
         # For now, use a simple solution-based calculation as fallback
         n_no3_conc = nutrient_concentrations.get('N-NO3', 0.0)  # mg/L
         
-        # Simple fallback calculation (will be replaced by nitrogen balance model)
+        # Nitrogen stress calculation using CSV parameters
         nitrogen_params = getattr(self.system_config, 'nitrogen_parameters', {})
-        optimal_n_min = nitrogen_params.get('optimal_n_min', 150.0)
-        optimal_n_max = nitrogen_params.get('optimal_n_max', 300.0)
-        severe_deficiency = nitrogen_params.get('severe_deficiency_threshold', 50.0)
+        optimal_n_min = nitrogen_params.get('optimal_n_min')
+        optimal_n_max = nitrogen_params.get('optimal_n_max')
+        severe_deficiency = nitrogen_params.get('severe_deficiency_threshold')
+        nitrogen_stress_factor = nitrogen_params.get('nitrogen_stress_factor')
+        
+        if optimal_n_min is None:
+            raise ValueError("❌ 'optimal_n_min' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
+        if optimal_n_max is None:
+            raise ValueError("❌ 'optimal_n_max' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
+        if severe_deficiency is None:
+            raise ValueError("❌ 'severe_deficiency_threshold' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
+        if nitrogen_stress_factor is None:
+            raise ValueError("❌ 'nitrogen_stress_factor' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
         
         if n_no3_conc < severe_deficiency:
-            nitrogen_stress_level = 0.8
+            nitrogen_stress_level = nitrogen_stress_factor
         elif n_no3_conc < optimal_n_min:
-            nitrogen_stress_level = 0.8 * (optimal_n_min - n_no3_conc) / (optimal_n_min - severe_deficiency)
+            nitrogen_stress_level = nitrogen_stress_factor * (optimal_n_min - n_no3_conc) / (optimal_n_min - severe_deficiency)
         elif n_no3_conc <= optimal_n_max:
             nitrogen_stress_level = 0.0
         else:
@@ -1143,13 +1178,25 @@ class CROPGROHydroponicSimulator:
         
         # 5. SALINITY STRESS (EC-based) - use dynamic EC parameters from environment CSV
         env_params = getattr(self.system_config, 'environment_parameters', {})
-        optimal_ec = env_params.get('optimal_ec', 2.0)  # CSV or fallback
-        max_ec = env_params.get('max_ec', 2.6)  # CSV or fallback 
-        min_ec = env_params.get('min_ec', 0.8)  # CSV or fallback
+        optimal_ec = env_params.get('optimal_ec')
+        max_ec = env_params.get('max_ec')
+        min_ec = env_params.get('min_ec')
+        
+        if optimal_ec is None:
+            raise ValueError("❌ 'optimal_ec' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
+        if max_ec is None:
+            raise ValueError("❌ 'max_ec' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
+        if min_ec is None:
+            raise ValueError("❌ 'min_ec' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
         
         # Use dynamic stress parameters from stress CSV
-        ec_stress_high_factor = stress_params.get('ec_stress_high_factor', 0.2)  # CSV or fallback
-        ec_stress_low_factor = stress_params.get('ec_stress_low_factor', 0.1)  # CSV or fallback
+        ec_stress_high_factor = stress_params.get('ec_stress_high_factor')
+        ec_stress_low_factor = stress_params.get('ec_stress_low_factor')
+        
+        if ec_stress_high_factor is None:
+            raise ValueError("❌ 'ec_stress_high_factor' parameter must be provided in stress_parameters CSV - no hardcoded defaults allowed")
+        if ec_stress_low_factor is None:
+            raise ValueError("❌ 'ec_stress_low_factor' parameter must be provided in stress_parameters CSV - no hardcoded defaults allowed")
         
         if ec_current > max_ec:
             # High EC stress - use dynamic factor
@@ -1169,7 +1216,10 @@ class CROPGROHydroponicSimulator:
         ph_factor = calculate_ph_effect(ph)
         
         # 7. OXYGEN STRESS (minimal in hydroponics)
-        oxygen_factor = 0.95  # Assume good aeration in hydroponic systems
+        # Oxygen factor must be provided in CSV configuration
+        oxygen_factor = env_params.get('oxygen_factor')
+        if oxygen_factor is None:
+            raise ValueError("❌ 'oxygen_factor' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
         
         # === CALCULATE COMBINED STRESS METRICS ===
         
@@ -1204,11 +1254,17 @@ class CROPGROHydroponicSimulator:
             nitrogen_stress += 0.05  # Higher nitrogen demand in later stages
         
         # Temperature stress varies with daily temperature fluctuations
-        temp_deviation = abs(env_conditions['actual_temperature'] - 22.0)  # Optimal temp
+        optimal_temperature = env_params.get('optimal_temperature')
+        if optimal_temperature is None:
+            raise ValueError("❌ 'optimal_temperature' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
+        temp_deviation = abs(env_conditions['actual_temperature'] - optimal_temperature)
         temp_stress += min(0.1, temp_deviation * 0.01)
         
         # Water stress increases with VPD
-        vpd_stress = max(0.0, (env_conditions['actual_vpd'] - 0.7) * 0.1)  # Optimal VPD = 0.7
+        optimal_vpd = env_params.get('optimal_vpd')
+        if optimal_vpd is None:
+            raise ValueError("❌ 'optimal_vpd' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
+        vpd_stress = max(0.0, (env_conditions['actual_vpd'] - optimal_vpd) * 0.1)
         water_stress += min(0.1, vpd_stress)
         
         stress_levels = {
@@ -1267,7 +1323,11 @@ class CROPGROHydroponicSimulator:
         
         # Apply genetic and stress modifiers ONLY ONCE
         overall_stress = np.prod([stress_factors[f] for f in ['temperature_factor', 'water_factor', 'nitrogen_factor', 'light_factor', 'salinity_factor']])
-        genetic_growth_modifier = 1.0  # Could be from cultivar performance
+        # Genetic growth modifier must be provided in CSV configuration
+        genetic_params = getattr(self.system_config, 'genetic_parameters', {})
+        genetic_growth_modifier = genetic_params.get('genetic_growth_modifier')
+        if genetic_growth_modifier is None:
+            raise ValueError("❌ 'genetic_growth_modifier' parameter must be provided in genetic_parameters CSV - no hardcoded defaults allowed")
         
         # Calculate net photosynthesis with stress effects applied ONCE
         canopy_photosynthesis = (
@@ -1644,11 +1704,18 @@ class CROPGROHydroponicSimulator:
         # Update canopy height
         if stage_props['is_vegetative']:
             genetic_growth_modifier = cultivar_performance.get('yield_index', 1.0)
-            height_growth = 0.004 * stress_factors['overall_stress_factor'] * genetic_growth_modifier
+            # Height growth factor must be provided in CSV configuration
+            growth_params = getattr(self.system_config, 'model_constants', {})
+            height_growth_factor = growth_params.get('height_growth_factor')
+            if height_growth_factor is None:
+                raise ValueError("❌ 'height_growth_factor' parameter must be provided in model_constants CSV - no hardcoded defaults allowed")
+            height_growth = height_growth_factor * stress_factors['overall_stress_factor'] * genetic_growth_modifier
             self.canopy_height += height_growth
         # Use dynamic maximum height from crop parameters CSV
         crop_params = getattr(self.system_config, 'crop_parameters', {})
-        maximum_height = crop_params.get('maximum_height', 0.25)  # Use CSV value or fallback
+        maximum_height = crop_params.get('maximum_height')
+        if maximum_height is None:
+            raise ValueError("❌ 'maximum_height' parameter must be provided in crop_parameters CSV - no hardcoded defaults allowed")
         self.canopy_height = min(maximum_height, self.canopy_height)
         
         # Update canopy architecture
@@ -1910,39 +1977,68 @@ class CROPGROHydroponicSimulator:
                 leaf_n_state = self.nitrogen_model.organ_states['leaves']
                 cropgro_result.leaf_nitrogen_conc = leaf_n_state.nitrogen_concentration * 100  # Convert to percentage
             else:
-                cropgro_result.leaf_nitrogen_conc = 4.5  # Default fallback
+                # Nitrogen concentration must be provided in CSV configuration
+                nitrogen_params = getattr(self.system_config, 'nitrogen_parameters', {})
+                default_leaf_n = nitrogen_params.get('default_leaf_nitrogen_conc')
+                if default_leaf_n is None:
+                    raise ValueError("❌ 'default_leaf_nitrogen_conc' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
+                cropgro_result.leaf_nitrogen_conc = default_leaf_n
             
             # Root nitrogen concentration  
             if 'roots' in self.nitrogen_model.organ_states:
                 root_n_state = self.nitrogen_model.organ_states['roots']
                 cropgro_result.root_nitrogen_conc = root_n_state.nitrogen_concentration * 100  # Convert to percentage
             else:
-                cropgro_result.root_nitrogen_conc = 2.8  # Default fallback
+                # Nitrogen concentration must be provided in CSV configuration
+                nitrogen_params = getattr(self.system_config, 'nitrogen_parameters', {})
+                default_root_n = nitrogen_params.get('default_root_nitrogen_conc')
+                if default_root_n is None:
+                    raise ValueError("❌ 'default_root_nitrogen_conc' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
+                cropgro_result.root_nitrogen_conc = default_root_n
         else:
-            # Fallback values if nitrogen model not properly initialized
-            cropgro_result.leaf_nitrogen_conc = 4.5
-            cropgro_result.root_nitrogen_conc = 2.8
+            # Nitrogen concentrations must be provided in CSV configuration
+            nitrogen_params = getattr(self.system_config, 'nitrogen_parameters', {})
+            default_leaf_n = nitrogen_params.get('default_leaf_nitrogen_conc')
+            default_root_n = nitrogen_params.get('default_root_nitrogen_conc')
+            
+            if default_leaf_n is None:
+                raise ValueError("❌ 'default_leaf_nitrogen_conc' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
+            if default_root_n is None:
+                raise ValueError("❌ 'default_root_nitrogen_conc' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
+            
+            cropgro_result.leaf_nitrogen_conc = default_leaf_n
+            cropgro_result.root_nitrogen_conc = default_root_n
         
         # === DETAILED NITROGEN DYNAMICS RESULTS ===
         # Calculate nitrogen pool dynamics based on plant growth and nitrogen uptake
         total_biomass = sum(pool.dry_mass for pool in self.biomass_pools)
         total_nitrogen_uptake = cropgro_result.nitrogen_uptake_mg / 1000.0  # Convert to g
         
-        # Estimate nitrogen pools based on biomass and typical N concentrations
+        # Estimate nitrogen pools based on biomass and CSV-configured N concentrations
+        nitrogen_params = getattr(self.system_config, 'nitrogen_parameters', {})
+        
         # Structural N: cell walls, structural proteins (low N content)
-        structural_n_conc = 0.01  # 1% N in structural components
+        structural_n_conc = nitrogen_params.get('structural_n_concentration')
+        if structural_n_conc is None:
+            raise ValueError("❌ 'structural_n_concentration' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
         cropgro_result.n_pool_structural = total_biomass * structural_n_conc
         
         # Metabolic N: enzymes, chlorophyll, active proteins (high N content)
-        metabolic_n_conc = 0.04  # 4% N in metabolic components
+        metabolic_n_conc = nitrogen_params.get('metabolic_n_concentration')
+        if metabolic_n_conc is None:
+            raise ValueError("❌ 'metabolic_n_concentration' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
         cropgro_result.n_pool_metabolic = total_biomass * metabolic_n_conc
         
         # Storage N: temporary storage, amino acids (medium N content)
-        storage_n_conc = 0.02  # 2% N in storage components
+        storage_n_conc = nitrogen_params.get('storage_n_concentration')
+        if storage_n_conc is None:
+            raise ValueError("❌ 'storage_n_concentration' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
         cropgro_result.n_pool_storage = total_biomass * storage_n_conc
         
         # Transport N: mobile N in xylem/phloem (very low)
-        transport_n_conc = 0.001  # 0.1% N in transport
+        transport_n_conc = nitrogen_params.get('transport_n_concentration')
+        if transport_n_conc is None:
+            raise ValueError("❌ 'transport_n_concentration' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
         cropgro_result.n_pool_transport = total_biomass * transport_n_conc
         
         # N remobilization: N moved from old to new tissues
@@ -1975,9 +2071,16 @@ class CROPGROHydroponicSimulator:
         # Calculate critical nitrogen concentration (simple approximation)
         if total_biomass > 0:
             current_n_conc = (cropgro_result.nitrogen_uptake_mg / 1000.0) / total_biomass
-            cropgro_result.n_critical_conc = current_n_conc * 1.2  # Critical is ~20% higher than current
+            critical_n_factor = nitrogen_params.get('critical_n_factor')
+            if critical_n_factor is None:
+                raise ValueError("❌ 'critical_n_factor' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
+            cropgro_result.n_critical_conc = current_n_conc * critical_n_factor  # Critical is factor higher than current
         else:
-            cropgro_result.n_critical_conc = 0.045  # Default for lettuce
+            # Critical nitrogen concentration must be provided in CSV configuration
+            default_critical_n = nitrogen_params.get('default_critical_n_concentration')
+            if default_critical_n is None:
+                raise ValueError("❌ 'default_critical_n_concentration' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
+            cropgro_result.n_critical_conc = default_critical_n
         
         # 6. STRESS RESPONSES (with safe attribute access)
         cropgro_result.temperature_stress_level = stress_factors['stress_levels']['temperature']
@@ -2041,7 +2144,12 @@ class CROPGROHydroponicSimulator:
                 raise ValueError("Root architecture model must have parameters")
         else:
             cropgro_result.root_cohorts = 0
-            cropgro_result.root_turnover_rate = 0.02
+            # Root turnover rate must be provided in CSV configuration
+            root_params = getattr(self.system_config, 'root_system_parameters', {})
+            root_turnover_rate = root_params.get('root_turnover_rate')
+            if root_turnover_rate is None:
+                raise ValueError("❌ 'root_turnover_rate' parameter must be provided in root_system_parameters CSV - no hardcoded defaults allowed")
+            cropgro_result.root_turnover_rate = root_turnover_rate
             
         cropgro_result.root_activity_young = root_response.get('average_root_activity', 0.0)
         cropgro_result.root_activity_old = max(0.0, root_response.get('average_root_activity', 0.0) - 0.2)
@@ -2078,23 +2186,34 @@ class CROPGROHydroponicSimulator:
         # Simulate environmental control system with some variation
         import math
         
+        # Get environment parameters from CSV configuration
+        env_params = getattr(self.system_config, 'environment', {})
+        
         # Temperature control with some variation around target
-        target_temp = 22.0  # Optimal temperature for lettuce
+        target_temp = env_params.get('target_temperature')
+        if target_temp is None:
+            raise ValueError("❌ 'target_temperature' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
         temp_control_variation = math.sin(day * 0.1) * 1.0  # Daily variation
         cropgro_result.controlled_temperature = target_temp + temp_control_variation
         
         # Humidity control with some variation
-        target_humidity = 70.0  # Optimal humidity
+        target_humidity = env_params.get('target_humidity')
+        if target_humidity is None:
+            raise ValueError("❌ 'target_humidity' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
         humidity_control_variation = math.sin(day * 0.15) * 5.0  # Daily variation
         cropgro_result.controlled_humidity = target_humidity + humidity_control_variation
         
         # CO2 control with some variation
-        target_co2 = 400.0  # Ambient CO2
+        target_co2 = env_params.get('target_co2')
+        if target_co2 is None:
+            raise ValueError("❌ 'target_co2' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
         co2_control_variation = math.sin(day * 0.2) * 20.0  # Daily variation
         cropgro_result.controlled_co2 = target_co2 + co2_control_variation
         
         # VPD target with some variation
-        target_vpd = 0.7  # Optimal VPD
+        target_vpd = env_params.get('target_vpd')
+        if target_vpd is None:
+            raise ValueError("❌ 'target_vpd' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
         vpd_control_variation = math.sin(day * 0.12) * 0.1  # Daily variation
         cropgro_result.vpd_target = target_vpd + vpd_control_variation
         
@@ -2106,6 +2225,9 @@ class CROPGROHydroponicSimulator:
     
     def _prepare_senescence_data(self) -> Dict[int, Dict]:
         """Prepare senescence data from current biomass pools"""
+        # Get nutrient parameters from CSV configuration
+        nutrient_params = getattr(self.system_config, 'nutrient_parameters', {})
+        
         cohort_data = {}
         for i, pool in enumerate(self.biomass_pools):
             organ_names = ['leaves', 'stems', 'roots']
@@ -2117,8 +2239,8 @@ class CROPGROHydroponicSimulator:
                 'canopy_position': 0.8 if organ_name == 'leaves' else 0.5,
                 'nutrient_content': {
                     'nitrogen': pool.nitrogen_content / 100.0,
-                    'phosphorus': 0.010,
-                    'potassium': 0.028
+                    'phosphorus': nutrient_params.get('default_phosphorus_content', 0.010),
+                    'potassium': nutrient_params.get('default_potassium_content', 0.028)
                 }
             }
         return cohort_data
@@ -2135,19 +2257,36 @@ class CROPGROHydroponicSimulator:
                 # Fallback to simple calculation if sophisticated model fails
                 pass
         
-        # Fallback: Simple hardcoded calculation
+        # Fallback: Simple calculation using CSV parameters
+        nutrient_params = getattr(self.system_config, 'nutrient_parameters', {})
         factors = {
-            'N-NO3': 0.0040,
-            'P-PO4': 0.0008,
-            'K': 0.0025,
-            'Ca': 0.0015,
-            'Mg': 0.0012,
+            'N-NO3': nutrient_params.get('ec_factor_n_no3'),
+            'P-PO4': nutrient_params.get('ec_factor_p_po4'),
+            'K': nutrient_params.get('ec_factor_k'),
+            'Ca': nutrient_params.get('ec_factor_ca'),
+            'Mg': nutrient_params.get('ec_factor_mg'),
         }
+        
+        # Validate that all EC factors are provided
+        for ion, factor in factors.items():
+            if factor is None:
+                raise ValueError(f"❌ 'ec_factor_{ion.lower()}' parameter must be provided in nutrient_parameters CSV - no hardcoded defaults allowed")
+        
         ec = 0.0
         for ion, conc in concentrations.items():
-            coeff = factors.get(ion, 0.0006)
+            coeff = factors.get(ion, nutrient_params.get('ec_factor_default', 0.0006))
+            if coeff is None:
+                raise ValueError(f"❌ 'ec_factor_default' parameter must be provided in nutrient_parameters CSV - no hardcoded defaults allowed")
             ec += coeff * conc
-        return max(0.05, min(5.0, ec))
+        
+        min_ec = nutrient_params.get('min_ec_limit')
+        max_ec = nutrient_params.get('max_ec_limit')
+        if min_ec is None:
+            raise ValueError("❌ 'min_ec_limit' parameter must be provided in nutrient_parameters CSV - no hardcoded defaults allowed")
+        if max_ec is None:
+            raise ValueError("❌ 'max_ec_limit' parameter must be provided in nutrient_parameters CSV - no hardcoded defaults allowed")
+        
+        return max(min_ec, min(max_ec, ec))
     
     def _calculate_vpd(self, temp: float, rel_humidity: float) -> float:
         """Calculate vapor pressure deficit using centralized utility"""
@@ -2157,8 +2296,17 @@ class CROPGROHydroponicSimulator:
         """Calculate reference evapotranspiration using Penman-Monteith equation"""
         # Simplified Penman-Monteith for daily ETo (mm/day)
         delta = 4098 * (0.6108 * np.exp(17.27 * temperature / (temperature + 237.3))) / ((temperature + 237.3) ** 2)
-        gamma = 0.665  # Psychrometric constant
-        u2 = 2.0  # Wind speed at 2m height (m/s) - typical greenhouse
+        
+        # Get parameters from CSV configuration
+        env_params = getattr(self.system_config, 'environment_parameters', {})
+        gamma = env_params.get('psychrometric_constant')
+        u2 = env_params.get('wind_speed_2m')
+        
+        if gamma is None:
+            raise ValueError("❌ 'psychrometric_constant' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
+        if u2 is None:
+            raise ValueError("❌ 'wind_speed_2m' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
+        
         vpd = self._calculate_vpd(temperature, humidity)
         
         # Simplified calculation
@@ -2171,7 +2319,18 @@ class CROPGROHydroponicSimulator:
     def _calculate_etc_prime(self, light_interception: float, temperature: float, humidity: float, solar_radiation: float) -> float:
         """Calculate crop evapotranspiration adjusted for canopy development"""
         eto = self._calculate_eto_reference(temperature, humidity, solar_radiation)
-        kc = 0.7 + (0.4 * light_interception)  # Crop coefficient based on canopy coverage
+        
+        # Crop coefficient must be provided in CSV configuration
+        crop_params = getattr(self.system_config, 'crop_parameters', {})
+        base_kc = crop_params.get('base_crop_coefficient')
+        kc_factor = crop_params.get('kc_light_interception_factor')
+        
+        if base_kc is None:
+            raise ValueError("❌ 'base_crop_coefficient' parameter must be provided in crop_parameters CSV - no hardcoded defaults allowed")
+        if kc_factor is None:
+            raise ValueError("❌ 'kc_light_interception_factor' parameter must be provided in crop_parameters CSV - no hardcoded defaults allowed")
+        
+        kc = base_kc + (kc_factor * light_interception)  # Crop coefficient based on canopy coverage
         return eto * kc
     
     def _calculate_etc_prime_with_eto(self, light_interception: float, eto_ref: float) -> float:
@@ -2236,12 +2395,31 @@ class CROPGROHydroponicSimulator:
         # Root hydraulic conductance (L/day/MPa/m²)
         # Higher root surface area = higher conductance
         root_surface_area_factor = min(2.0, lai / 2.0)  # Proxy for root development
-        base_root_conductance = 50.0  # L/day/MPa/m² for lettuce
+        
+        # Root conductance parameters must be provided in CSV configuration
+        root_params = getattr(self.system_config, 'root_system_parameters', {})
+        base_root_conductance = root_params.get('base_root_conductance')
+        root_scaling_factor = root_params.get('root_conductance_scaling_factor')
+        
+        if base_root_conductance is None:
+            raise ValueError("❌ 'base_root_conductance' parameter must be provided in root_system_parameters CSV - no hardcoded defaults allowed")
+        if root_scaling_factor is None:
+            raise ValueError("❌ 'root_conductance_scaling_factor' parameter must be provided in root_system_parameters CSV - no hardcoded defaults allowed")
+        
         root_conductance = base_root_conductance * root_surface_area_factor
         
         # Xylem hydraulic conductance (limited by stem cross-sectional area)  
         stem_biomass = self.biomass_pools[1].dry_mass if len(self.biomass_pools) > 1 else 1.0
-        xylem_conductance = 30.0 * math.sqrt(stem_biomass / 1.0)  # Scales with stem development
+        
+        base_xylem_conductance = root_params.get('base_xylem_conductance')
+        xylem_scaling_factor = root_params.get('xylem_conductance_scaling_factor')
+        
+        if base_xylem_conductance is None:
+            raise ValueError("❌ 'base_xylem_conductance' parameter must be provided in root_system_parameters CSV - no hardcoded defaults allowed")
+        if xylem_scaling_factor is None:
+            raise ValueError("❌ 'xylem_conductance_scaling_factor' parameter must be provided in root_system_parameters CSV - no hardcoded defaults allowed")
+        
+        xylem_conductance = base_xylem_conductance * math.sqrt(stem_biomass / xylem_scaling_factor)  # Scales with stem development
         
         # Series resistances: 1/Total = 1/Root + 1/Xylem
         total_conductance = 1.0 / (1.0/root_conductance + 1.0/xylem_conductance)
@@ -2259,7 +2437,10 @@ class CROPGROHydroponicSimulator:
         
         # 6. CAVITATION AND XYLEM FAILURE
         # Xylem cavitation occurs at very negative water potentials
-        cavitation_threshold = -2.0  # MPa for lettuce
+        cavitation_threshold = root_params.get('cavitation_threshold')
+        if cavitation_threshold is None:
+            raise ValueError("❌ 'cavitation_threshold' parameter must be provided in root_system_parameters CSV - no hardcoded defaults allowed")
+        
         if adjusted_leaf_potential < cavitation_threshold:
             cavitation_factor = max(0.1, 1.0 + (adjusted_leaf_potential - cavitation_threshold) / 1.0)
             hydraulic_water_uptake *= cavitation_factor
@@ -2282,11 +2463,18 @@ class CROPGROHydroponicSimulator:
         water_stress = stress_factors.get('water_stress_level', 0.0)
         salt_stress = stress_factors.get('salinity_stress', 0.0)
         
-        # Maximum osmotic adjustment: 0.3 MPa for lettuce
-        max_adjustment = 0.3
+        # Maximum osmotic adjustment must be provided in CSV configuration
+        stress_params = getattr(self.system_config, 'stress_parameters', {})
+        max_adjustment = stress_params.get('max_osmotic_adjustment')
+        salt_stress_factor = stress_params.get('salt_stress_osmotic_factor')
+        
+        if max_adjustment is None:
+            raise ValueError("❌ 'max_osmotic_adjustment' parameter must be provided in stress_parameters CSV - no hardcoded defaults allowed")
+        if salt_stress_factor is None:
+            raise ValueError("❌ 'salt_stress_osmotic_factor' parameter must be provided in stress_parameters CSV - no hardcoded defaults allowed")
         
         # Osmotic adjustment increases with stress
-        adjustment = max_adjustment * (water_stress + salt_stress * 0.5)
+        adjustment = max_adjustment * (water_stress + salt_stress * salt_stress_factor)
         
         return min(max_adjustment, adjustment)
 
@@ -2766,8 +2954,11 @@ class CROPGROHydroponicSimulator:
         dev_rate = getattr(daily_result, 'development_rate', None)
         
         if gdd is not None and thermal_time is not None and dev_rate is not None:
-            # Estimate progress to harvest (assuming ~800 GDD to harvest for lettuce)
-            harvest_gdd = 800.0
+            # Estimate progress to harvest using CSV configuration
+            phenology_params = getattr(self.system_config, 'phenology_parameters', {})
+            harvest_gdd = phenology_params.get('harvest_gdd')
+            if harvest_gdd is None:
+                raise ValueError("❌ 'harvest_gdd' parameter must be provided in phenology_parameters CSV - no hardcoded defaults allowed")
             progress = min(100.0, (gdd / harvest_gdd) * 100) if harvest_gdd > 0 else 0.0
             
             output.append(f"  • Accumulated GDD: {gdd:6.1f}°C-days (Target: {harvest_gdd:.0f}°C-days)")
@@ -2809,8 +3000,11 @@ class CROPGROHydroponicSimulator:
         
         # 10. PROJECTIONS (Based on current performance)
         if day > 1 and daily_growth is not None and daily_growth > 0 and gdd is not None and thermal_time is not None:
-            # Estimate days to harvest (assuming ~800 GDD to harvest for lettuce)
-            harvest_gdd = 800.0
+            # Estimate days to harvest using CSV configuration
+            phenology_params = getattr(self.system_config, 'phenology_parameters', {})
+            harvest_gdd = phenology_params.get('harvest_gdd')
+            if harvest_gdd is None:
+                raise ValueError("❌ 'harvest_gdd' parameter must be provided in phenology_parameters CSV - no hardcoded defaults allowed")
             remaining_gdd = max(0, harvest_gdd - gdd)
             
             # Estimate days based on thermal time
@@ -2930,12 +3124,29 @@ class CROPGROHydroponicSimulator:
                 management_performed = True
         
         # Complete solution change: Less frequent, variable timing
-        if day > 10:  # Not in first week
-            # Probability-based solution change (roughly every 10-14 days with variation)
-            days_since_start = day - 1
-            prob_solution_change = 0.05 + 0.02 * (days_since_start % 14) / 14  # 5-7% daily probability
-            
-            if np.random.random() < prob_solution_change or day % 12 == 0:  # Forced every 12 days as backup
+        # Always define days_since_start, but only do solution changes after day 10
+        days_since_start = day - 1
+        
+        # Solution change parameters must be provided in CSV configuration
+        system_params = getattr(self.system_config, 'system_parameters', {})
+        base_solution_change_prob = system_params.get('base_solution_change_probability')
+        solution_change_increase = system_params.get('solution_change_probability_increase')
+        forced_solution_change_interval = system_params.get('forced_solution_change_interval')
+        
+        if base_solution_change_prob is None:
+            raise ValueError("❌ 'base_solution_change_probability' parameter must be provided in system_parameters CSV - no hardcoded defaults allowed")
+        if solution_change_increase is None:
+            raise ValueError("❌ 'solution_change_probability_increase' parameter must be provided in system_parameters CSV - no hardcoded defaults allowed")
+        if forced_solution_change_interval is None:
+            raise ValueError("❌ 'forced_solution_change_interval' parameter must be provided in system_parameters CSV - no hardcoded defaults allowed")
+        
+        # Only calculate solution change probability after day 10
+        if day > 10:
+            prob_solution_change = base_solution_change_prob + solution_change_increase * (days_since_start % 14) / 14
+        else:
+            prob_solution_change = 0.0  # No solution changes in first 10 days
+        
+        if np.random.random() < prob_solution_change or day % forced_solution_change_interval == 0:  # Forced at interval as backup
                 logger.info(f"Day {day}: Complete solution change - replacing with fresh nutrient solution")
                 
                 # Replace all nutrients
