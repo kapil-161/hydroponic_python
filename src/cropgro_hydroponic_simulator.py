@@ -742,17 +742,47 @@ class CROPGROHydroponicSimulator:
                     concentration_reduction = total_uptake_mg / volume_m3  # mg/L reduction (mg per m³)
                     current_concentrations[nutrient_id] = max(0.0, current_concentrations[nutrient_id] - concentration_reduction)
 
-            # Check for automatic solution change
+            # Check for intelligent solution change based on actual need
             current_ec = self._calculate_ec(current_concentrations)
             nutrient_management_params = getattr(self.system_config, 'nutrient_management', {})
             min_ec_threshold = nutrient_management_params.get('min_ec_threshold', 1.0)
-            solution_change_interval = nutrient_management_params.get('solution_change_interval', 7)
+            max_ec_threshold = nutrient_management_params.get('max_ec_threshold', 3.0)
+            min_ph_threshold = nutrient_management_params.get('min_ph_threshold', 5.0)
+            max_ph_threshold = nutrient_management_params.get('max_ph_threshold', 7.5)
             
-            # Solution change conditions: EC too low OR interval reached
+            # Intelligent solution change conditions based on actual need
             ec_too_low = current_ec < min_ec_threshold
-            interval_reached = day % solution_change_interval == 0
+            ec_too_high = current_ec > max_ec_threshold
+            ph_too_low = current_ph < min_ph_threshold
+            ph_too_high = current_ph > max_ph_threshold
             
-            if ec_too_low or interval_reached:
+            # Check for critical nutrient depletion (any major nutrient below 20% of initial)
+            critical_nutrient_depletion = False
+            critical_nutrients = ['N-NO3', 'P-PO4', 'K']  # Essential macronutrients
+            for nutrient_id in critical_nutrients:
+                if nutrient_id in current_concentrations:
+                    initial_conc = nutrient_concentration_params.get(f'initial_{nutrient_id.lower().replace("-", "_")}', 100.0)
+                    current_conc = current_concentrations[nutrient_id]
+                    if current_conc < (initial_conc * 0.2):  # Below 20% of initial
+                        critical_nutrient_depletion = True
+                        break
+            
+            # Check for nutrient imbalance (N:P:K ratio severely disrupted)
+            nutrient_imbalance = False
+            n_conc = current_concentrations.get('N-NO3', 0.0)
+            p_conc = current_concentrations.get('P-PO4', 0.0)  
+            k_conc = current_concentrations.get('K', 0.0)
+            if n_conc > 0 and p_conc > 0 and k_conc > 0:
+                # Check if N:P or N:K ratios are extremely skewed
+                np_ratio = n_conc / p_conc
+                nk_ratio = n_conc / k_conc
+                if np_ratio > 15 or np_ratio < 2 or nk_ratio > 3 or nk_ratio < 0.5:
+                    nutrient_imbalance = True
+            
+            solution_change_needed = (ec_too_low or ec_too_high or ph_too_low or ph_too_high or 
+                                    critical_nutrient_depletion or nutrient_imbalance)
+            
+            if solution_change_needed:
                 # Reset nutrient concentrations to initial values
                 for param_name, nutrient_id in self.nutrient_mapping.items():
                     if param_name in nutrient_concentration_params:
@@ -766,11 +796,29 @@ class CROPGROHydroponicSimulator:
                         }
                         current_concentrations[nutrient_id] = default_values.get(nutrient_id, 0.0)
                 
-                # Log solution change
-                reason = "EC too low" if ec_too_low else "scheduled interval"
+                # Log solution change with specific reason
+                reasons = []
+                if ec_too_low:
+                    reasons.append(f"EC too low ({current_ec:.2f} < {min_ec_threshold:.2f} dS/m)")
+                if ec_too_high:
+                    reasons.append(f"EC too high ({current_ec:.2f} > {max_ec_threshold:.2f} dS/m)")
+                if ph_too_low:
+                    reasons.append(f"pH too low ({current_ph:.2f} < {min_ph_threshold:.2f})")
+                if ph_too_high:
+                    reasons.append(f"pH too high ({current_ph:.2f} > {max_ph_threshold:.2f})")
+                if critical_nutrient_depletion:
+                    reasons.append("critical nutrient depletion (major nutrient < 20% of initial)")
+                if nutrient_imbalance:
+                    reasons.append(f"nutrient imbalance (N:P:K = {n_conc:.1f}:{p_conc:.1f}:{k_conc:.1f})")
+                
+                reason_text = ", ".join(reasons)
                 print(f"Day {day}: Complete solution change - replacing with fresh nutrient solution")
-                print(f"  Reason: {reason} (EC: {current_ec:.2f} dS/m, threshold: {min_ec_threshold:.2f} dS/m)")
-                print(f"  pH: reset to {current_ph:.1f}")
+                print(f"  Reason: {reason_text}")
+                print(f"  Current conditions: EC={current_ec:.2f} dS/m, pH={current_ph:.2f}")
+                
+                # Reset pH to optimal range
+                system_params = getattr(self.system_config, 'system_parameters', {})
+                current_ph = system_params.get('default_ph', 6.0)
 
             # Update pH using comprehensive chemistry model
             # Calculate total nutrient uptake for all plants from daily_result

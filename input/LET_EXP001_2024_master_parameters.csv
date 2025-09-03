@@ -10,10 +10,10 @@ V6_to_V7,35.0,gdd,Growing degree days from sixth to seventh leaf,thermal_require
 V7_to_V8,35.0,gdd,Growing degree days from seventh to eighth leaf,thermal_requirements,Tei et al. 1996,1.0
 V8_to_V9,35.0,gdd,Growing degree days from eighth to ninth leaf,thermal_requirements,Tei et al. 1996,1.0
 V9_to_V10,35.0,gdd,Growing degree days from ninth to tenth leaf,thermal_requirements,Tei et al. 1996,1.0
-V10_to_V11+,40.0,gdd,Growing degree days from tenth leaf to mature vegetative,thermal_requirements,Tei et al. 1996,1.0
+V10_to_V11+,60.0,gdd,Growing degree days from tenth leaf to mature vegetative,thermal_requirements,Tei et al. 1996,1.0
 V11+_to_HI,120.0,gdd,Growing degree days from mature vegetative to head initiation,thermal_requirements,Tei et al. 1996,1.0
-HI_to_HD,180.0,gdd,Growing degree days from head initiation to head development,thermal_requirements,Tei et al. 1996,1.0
-HD_to_HM,200.0,gdd,Growing degree days from head development to harvest maturity,thermal_requirements,Tei et al. 1996,1.0
+HI_to_HD,120.0,gdd,Growing degree days from head initiation to head development,thermal_requirements,Tei et al. 1996,1.0
+HD_to_HM,120.0,gdd,Growing degree days from head development to harvest maturity,thermal_requirements,Tei et al. 1996,1.0
 HM_to_PM,100.0,gdd,Growing degree days from harvest to physiological maturity,thermal_requirements,Tei et al. 1996,1.0
 vegetative_default,35.0,gdd,Default thermal time for vegetative stage transitions,thermal_requirements,Tei et al. 1996,1.0
 head_formation_default,150.0,gdd,Default thermal time for head formation stage transitions,thermal_requirements,Tei et al. 1996,1.0
@@ -484,10 +484,10 @@ severe_stress_base,1.25,unitless,Base factor for severe stress,respiration_param
 severe_stress_factor,0.1,unitless,Factor for severe stress,respiration_parameters,Amthor 2000,1.0
 daytime_respiratory_quotient,0.95,unitless,RQ during daytime,respiration_parameters,Amthor 2000,1.0
 nighttime_respiratory_quotient,0.85,unitless,RQ during nighttime,respiration_parameters,Amthor 2000,1.0
-sowing_date,2025-08-15,date,Date when seeds were sown,experiment_settings,Research Protocol,1.0
-transplanting_date,2025-08-31,date,Date when seedlings were transplanted (16 days after sowing),experiment_settings,Research Protocol,1.0
+sowing_date,2025-08-18,date,Date when seeds were sown,experiment_settings,Research Protocol,1.0
+transplanting_date,2025-09-03,date,Date when seedlings were transplanted (16 days after sowing),experiment_settings,Research Protocol,1.0
 experiment_duration,60,days,Total duration of the experiment,experiment_settings,Research Protocol,1.0
-harvest_date,2025-10-15,date,Planned harvest date,experiment_settings,Research Protocol,1.0
+harvest_date,2025-11-02,date,Planned harvest date (60 days after transplanting),experiment_settings,Research Protocol,1.0
 cultivar_name,Butterhead_Lettuce,unitless,Name of the lettuce cultivar,experiment_settings,Research Protocol,1.0
 treatment_id,LET_EXP001_2024,unitless,Unique identifier for this experiment,experiment_settings,Research Protocol,1.0
 replication_number,R1,unitless,Replication number for this treatment,experiment_settings,Research Protocol,1.0
@@ -760,9 +760,11 @@ initial_zn,0.1,mg_per_L,Initial Zn concentration in nutrient solution,nutrient_c
 initial_cu,0.05,mg_per_L,Initial Cu concentration in nutrient solution,nutrient_concentrations,Sonneveld & Voogt 2009,1.0
 initial_b,0.3,mg_per_L,Initial B concentration in nutrient solution,nutrient_concentrations,Sonneveld & Voogt 2009,1.0
 initial_mo,0.05,mg_per_L,Initial Mo concentration in nutrient solution,nutrient_concentrations,Sonneveld & Voogt 2009,1.0
-target_ec,1.8,dS_per_m,Target EC for nutrient solution,nutrient_management,Sonneveld & Voogt 2009,1.0
-min_ec_threshold,1.0,dS_per_m,Minimum EC before solution change,nutrient_management,Sonneveld & Voogt 2009,1.0
-solution_change_interval,7,days,Automatic solution change interval,nutrient_management,Sonneveld & Voogt 2009,1.0
+target_ec,1.6,dS_per_m,Target EC for nutrient solution (lettuce optimal),nutrient_management,Sonneveld & Voogt 2009,1.0
+min_ec_threshold,0.8,dS_per_m,Minimum EC before solution change (nutrient depletion),nutrient_management,Sonneveld & Voogt 2009,1.0
+max_ec_threshold,2.2,dS_per_m,Maximum EC before solution change (lettuce salt stress),nutrient_management,Sonneveld & Voogt 2009,1.0
+min_ph_threshold,5.0,pH,Minimum pH before solution change,nutrient_management,Sonneveld & Voogt 2009,1.0
+max_ph_threshold,7.5,pH,Maximum pH before solution change,nutrient_management,Sonneveld & Voogt 2009,1.0
 ec_decline_rate,0.05,dS_per_m_per_day,Expected EC decline rate per day,nutrient_management,Sonneveld & Voogt 2009,1.0
 tank_volume,500.0,liters,Total volume of nutrient solution tank,system,Sonneveld & Voogt 2009,1.0
 flow_rate,50.0,liters_per_hour,Rate of solution circulation,system,Sonneveld & Voogt 2009,1.0
@@ -821,13 +823,13 @@ min_temp,4.0,celsius,Base temperature for development,leaf_development,Tei et al
 opt_temp_min,18.0,celsius,Lower optimum temperature,leaf_development,Tei et al. 1996,1.0
 opt_temp_max,24.0,celsius,Upper optimum temperature,leaf_development,Tei et al. 1996,1.0
 max_temp,35.0,celsius,Maximum temperature for development,leaf_development,Tei et al. 1996,1.0
-leaf_appearance_rate,0.5,leaves_per_day,Leaf appearance rate,leaf_development,Tei et al. 1996,1.0
+leaf_appearance_rate,0.9,leaves_per_day,Leaf appearance rate,leaf_development,Tei et al. 1996,1.0
 initial_leaf_number,2,leaves,Initial leaf number,leaf_development,Tei et al. 1996,1.0
-max_leaf_number,25,leaves,Maximum leaf number,leaf_development,Tei et al. 1996,1.0
+max_leaf_number,35,leaves,Maximum leaf number,leaf_development,Tei et al. 1996,1.0
 leaf_area_ratio,0.8,fraction,Leaf area ratio,leaf_development,Tei et al. 1996,1.0
 leaf_area_index,0.0,unitless,Initial leaf area index,leaf_development,Tei et al. 1996,1.0
 minimum_leaf_life,7,days,Minimum leaf life,leaf_development,Tei et al. 1996,1.0
-base_phyllochron,50.0,degree_days,Base phyllochron,leaf_development,Tei et al. 1996,1.0
+base_phyllochron,45.0,degree_days,Base phyllochron,leaf_development,Tei et al. 1996,1.0
 leaf_angle,45.0,degrees,Leaf angle,leaf_development,Tei et al. 1996,1.0
 canopy_height,0.0,cm,Initial canopy height,leaf_development,Tei et al. 1996,1.0
 base_crop_coefficient,0.7,unitless,Base crop coefficient for ETo calculations,crop_parameters,Allen et al. 1998,1.0
