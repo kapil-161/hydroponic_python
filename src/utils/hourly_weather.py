@@ -121,7 +121,10 @@ class HourlyWeatherInterpolator:
         
         # Calculate hour angle
         try:
-            hour_angle = math.acos(-math.tan(lat_rad) * math.tan(dec_rad))
+            # Clamp the argument to prevent complex numbers from acos
+            acos_arg = -math.tan(lat_rad) * math.tan(dec_rad)
+            acos_arg = max(-1.0, min(1.0, acos_arg))  # Ensure valid range for acos
+            hour_angle = math.acos(acos_arg)
             hour_angle_deg = math.degrees(hour_angle)
         except ValueError:
             # Handle polar day/night cases
@@ -159,6 +162,10 @@ class HourlyWeatherInterpolator:
         
         # Sinusoidal temperature variation
         temperature = temp_mean - temp_amplitude * math.cos(hour_angle)
+        
+        # Ensure temperature is real (not complex)
+        if isinstance(temperature, complex):
+            temperature = temperature.real
         
         # Apply curve shaping to make more realistic
         shape_factor = self.temp_curve_params['curve_shape']
@@ -236,6 +243,10 @@ class HourlyWeatherInterpolator:
         
         # Combine effects
         hourly_humidity = daily_humidity + humidity_variation + temp_effect
+        
+        # Ensure hourly_humidity is real (not complex) before constraining
+        if isinstance(hourly_humidity, complex):
+            hourly_humidity = hourly_humidity.real
         
         # Constrain to realistic bounds
         hourly_humidity = max(10.0, min(100.0, hourly_humidity))

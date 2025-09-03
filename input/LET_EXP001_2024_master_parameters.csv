@@ -125,7 +125,7 @@ harvest_gdd,800.0,gdd,Growing degree days to harvest maturity,phenology,Tei et a
 base_temperature,4.0,celsius,Base temperature for lettuce development,phenology,Tei et al. 1996,1.0
 maximum_temperature,35.0,celsius,Maximum temperature for development,phenology,Tei et al. 1996,1.0
 photoperiod_sensitivity,0.05,days_per_hour,Photoperiod sensitivity,phenology,Tei et al. 1996,1.0
-thermal_time_scale,0.9,fraction,Thermal time scaling factor,phenology,Tei et al. 1996,1.0
+thermal_time_scale,1.0,fraction,Thermal time scaling factor,phenology,Tei et al. 1996,1.0
 vernalization_temperature,5.0,celsius,Optimal vernalization temperature,phenology,Tei et al. 1996,1.0
 vernalization_days,0.0,days,Days of cold required (lettuce is day-neutral),phenology,Tei et al. 1996,1.0
 stress_acceleration_factor,1.3,fraction,Stress acceleration factor,phenology,Tei et al. 1996,1.0
@@ -847,3 +847,4 @@ light_stress_impact,0.15,fraction,Light stress impact weight (higher = more ligh
 salinity_stress_impact,0.2,fraction,Salinity stress impact weight (higher = more salinity stress applied),stress_parameters,Sonneveld & Voogt 2009,1.0
 oxygen_stress_impact,0.1,fraction,Oxygen stress impact weight (higher = more oxygen stress applied),stress_parameters,Sonneveld & Voogt 2009,1.0
 ph_stress_impact,0.15,fraction,pH stress impact weight (higher = more pH stress applied),stress_parameters,Sonneveld & Voogt 2009,1.0
+initial_root_activity,1.0,fraction,Initial activity factor for new root cohorts,root_system,Sonneveld & Voogt 2009,1.0

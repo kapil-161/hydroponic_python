@@ -770,6 +770,9 @@ class EnvironmentalControlSystem:
         Returns:
             Target relative humidity (%)
         """
+        # Ensure temperature is real (not complex)
+        if isinstance(temperature, complex):
+            temperature = temperature.real
         # Saturated vapor pressure using Magnus equation
         es = 0.6108 * math.exp(17.27 * temperature / (temperature + 237.3))
         

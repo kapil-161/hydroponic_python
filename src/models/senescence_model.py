@@ -256,10 +256,10 @@ class AdvancedSenescenceModel:
         Calculate stress-induced senescence rates.
         
         Args:
-            water_stress: Water stress level (0-1, 1=no stress)
-            nitrogen_stress: Nitrogen stress level (0-1, 1=no stress)
-            temperature_stress: Temperature stress level (0-1, 1=no stress)
-            light_stress: Light stress level (0-1, 1=no stress)
+            water_stress: Water stress level (0-1, 0=no stress, 1=maximum stress)
+            nitrogen_stress: Nitrogen stress level (0-1, 0=no stress, 1=maximum stress)
+            temperature_stress: Temperature stress level (0-1, 0=no stress, 1=maximum stress)
+            light_stress: Light stress level (0-1, 0=no stress, 1=maximum stress)
             
         Returns:
             Dictionary of stress-specific senescence rates
@@ -267,29 +267,29 @@ class AdvancedSenescenceModel:
         stress_rates = {}
         
         # Water stress senescence
-        if water_stress < self.params.water_stress_threshold:
-            stress_intensity = (self.params.water_stress_threshold - water_stress) / self.params.water_stress_threshold
+        if water_stress > self.params.water_stress_threshold:
+            stress_intensity = (water_stress - self.params.water_stress_threshold) / (1.0 - self.params.water_stress_threshold)
             stress_rates['water'] = self.params.water_stress_rate * stress_intensity
         else:
             stress_rates['water'] = 0.0
         
         # Nitrogen stress senescence
-        if nitrogen_stress < self.params.nitrogen_stress_threshold:
-            stress_intensity = (self.params.nitrogen_stress_threshold - nitrogen_stress) / self.params.nitrogen_stress_threshold
+        if nitrogen_stress > self.params.nitrogen_stress_threshold:
+            stress_intensity = (nitrogen_stress - self.params.nitrogen_stress_threshold) / (1.0 - self.params.nitrogen_stress_threshold)
             stress_rates['nitrogen'] = self.params.nitrogen_stress_rate * stress_intensity
         else:
             stress_rates['nitrogen'] = 0.0
         
         # Temperature stress senescence
-        if temperature_stress < self.params.temperature_stress_threshold:
-            stress_intensity = (self.params.temperature_stress_threshold - temperature_stress) / self.params.temperature_stress_threshold
+        if temperature_stress > self.params.temperature_stress_threshold:
+            stress_intensity = (temperature_stress - self.params.temperature_stress_threshold) / (1.0 - self.params.temperature_stress_threshold)
             stress_rates['temperature'] = self.params.temperature_stress_rate * stress_intensity
         else:
             stress_rates['temperature'] = 0.0
         
         # Light stress senescence
-        if light_stress < self.params.light_stress_threshold:
-            stress_intensity = (self.params.light_stress_threshold - light_stress) / self.params.light_stress_threshold
+        if light_stress > self.params.light_stress_threshold:
+            stress_intensity = (light_stress - self.params.light_stress_threshold) / (1.0 - self.params.light_stress_threshold)
             stress_rates['light'] = self.params.light_stress_rate * stress_intensity
         else:
             stress_rates['light'] = 0.0
@@ -337,7 +337,7 @@ class AdvancedSenescenceModel:
             return 0.0
         
         # Check if conditions are favorable for recovery
-        all_stress_low = all(stress > 0.8 for stress in current_stress_levels.values())
+        all_stress_low = all(stress < 0.2 for stress in current_stress_levels.values())
         
         if all_stress_low and cohort_state.senescence_stage in [SenescenceStage.EARLY_SENESCENCE]:
             # Recovery possible only in early stages and under good conditions
@@ -420,6 +420,11 @@ class AdvancedSenescenceModel:
         Returns:
             Complete senescence response
         """
+        # Validate that all required stress values are provided FIRST
+        for stress_type in ['water', 'nitrogen', 'temperature', 'light']:
+            if environmental_stress.get(stress_type) is None:
+                raise ValueError(f"❌ {stress_type.capitalize()} stress level must be provided in environmental conditions - no hardcoded defaults allowed")
+        
         # Update stress history
         for stress_type, level in environmental_stress.items():
             if stress_type in self.stress_history:
@@ -428,18 +433,13 @@ class AdvancedSenescenceModel:
                 if len(self.stress_history[stress_type]) > self.params.stress_history_days:
                     self.stress_history[stress_type] = self.stress_history[stress_type][-self.params.stress_history_days:]
         
-        # Calculate stress senescence rates
+        # Calculate stress senescence rates (now safe to call after validation)
         stress_rates = self.calculate_stress_senescence(
             environmental_stress.get('water', None),
             environmental_stress.get('nitrogen', None),
             environmental_stress.get('temperature', None),
             environmental_stress.get('light', None)
         )
-        
-        # Validate that all required stress values are provided
-        for stress_type in ['water', 'nitrogen', 'temperature', 'light']:
-            if environmental_stress.get(stress_type) is None:
-                raise ValueError(f"❌ {stress_type.capitalize()} stress level must be provided in environmental conditions - no hardcoded defaults allowed")
         
         # Process each cohort
         total_senescence = 0.0

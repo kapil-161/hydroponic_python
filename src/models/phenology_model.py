@@ -134,6 +134,11 @@ class PhenologyParameters:
         if thermal_requirements is None:
             raise ValueError("❌ thermal_requirements must be provided in CSV configuration - no hardcoded defaults allowed")
         
+        # Validate thermal_time_scale parameter range
+        thermal_time_scale_value = float(config_dict['thermal_time_scale'])
+        if not (0.5 <= thermal_time_scale_value <= 2.0):
+            raise ValueError(f"❌ thermal_time_scale must be between 0.5 and 2.0, got {thermal_time_scale_value}")
+        
         return cls(
             # Temperature parameters
             base_temperature=float(config_dict['base_temperature']),
@@ -167,7 +172,7 @@ class PhenologyParameters:
             bolting_risk_threshold=float(config_dict['bolting_risk_threshold']),
             
             # Model constants
-            thermal_time_scale=float(config_dict['thermal_time_scale']),
+            thermal_time_scale=thermal_time_scale_value,
             vernalization_required=bool(config_dict['vernalization_required']),
             vernalization_temperature=float(config_dict['vernalization_temperature']),
             vernalization_days=float(config_dict['vernalization_days']),
@@ -260,14 +265,14 @@ class ComprehensivePhenologyModel:
             return 0.0
         elif Tbase < T <= Topt1:
             # Linear increase from base to lower optimum
-            return self.params.thermal_time_scale * (T - Tbase) * (T - Tbase) / (Topt1 - Tbase)
+            return self.params.thermal_time_scale * (T - Tbase) / (Topt1 - Tbase)
         elif Topt1 < T <= Topt2:
-            # Optimal range - maximum rate
-            return self.params.thermal_time_scale * (T - Tbase)
+            # FIX: Constant optimal rate (maximum development)
+            return self.params.thermal_time_scale
         else:  # Topt2 < T < Tmax
-            # Linear decrease from upper optimum to maximum
+            # FIX: Linear decrease from upper optimum to maximum
             factor = (Tmax - T) / (Tmax - Topt2)
-            return self.params.thermal_time_scale * factor * (T - Tbase)
+            return self.params.thermal_time_scale * factor
     
     def calculate_temperature_factor(self, temperature: float) -> float:
         """

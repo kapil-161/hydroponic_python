@@ -60,10 +60,11 @@ class RootCohort:
     medium_min_activity: float = None    # Minimum activity for medium roots
     coarse_min_activity: float = None    # Minimum activity for coarse roots
     establishment_plateau_days: float = None  # Establishment plateau duration
+    initial_activity: float = None       # Initial activity factor for new roots
 
     def __post_init__(self):
         self.surface_area = self.calculate_surface_area()
-        self.activity_factor = self.calculate_activity_factor()
+        self.activity_factor = self.initial_activity if self.initial_activity is not None else 1.0
         self.specific_length = self.length / max(0.001, self.biomass)  # cm/g
 
     def calculate_surface_area(self) -> float:
@@ -220,6 +221,9 @@ class RootArchitectureParameters:
     medium_turnover_rate: float = None  # Must be provided from CSV
     coarse_turnover_rate: float = None  # Must be provided from CSV
 
+    # Root activity parameters
+    initial_root_activity: float = None  # Must be provided from CSV
+
     # System-specific adjustments
     system_multipliers: Dict[HydroponicSystemType, Dict[str, float]] = None  # Must be provided from CSV
     
@@ -272,6 +276,7 @@ class RootArchitectureParameters:
             medium_min_activity=config_dict['medium_min_activity'],
             coarse_min_activity=config_dict['coarse_min_activity'],
             establishment_plateau_days=config_dict['establishment_plateau_days'],
+            initial_root_activity=config_dict['initial_root_activity'],  # Fix: Add missing parameter
             system_multipliers=cls._parse_system_multipliers(config_dict)
         )
     
@@ -481,7 +486,8 @@ class RootArchitectureModel:
                             fine_min_activity=self.params.fine_min_activity,
                             medium_min_activity=self.params.medium_min_activity,
                             coarse_min_activity=self.params.coarse_min_activity,
-                            establishment_plateau_days=self.params.establishment_plateau_days
+                            establishment_plateau_days=self.params.establishment_plateau_days,
+                            initial_activity=self.params.initial_root_activity
                         )
                         zone.root_cohorts.append(new_cohort)
                         total_new_growth += cohort_length
@@ -552,6 +558,9 @@ class RootArchitectureModel:
         
         # 5. TEMPERATURE EFFECT ON ROOT ELONGATION
         temperature = environmental_conditions.get('temperature', 20.0)
+        # Ensure temperature is real (not complex)
+        if isinstance(temperature, complex):
+            temperature = temperature.real
         root_temp_optimum = 18.0  # °C optimal for lettuce roots  
         root_temp_max = 30.0      # °C maximum before damage
         

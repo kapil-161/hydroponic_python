@@ -274,15 +274,10 @@ class CROPGROHydroponicSimulator:
         self.temperature_stress = create_lettuce_temperature_stress_model(self.system_config)
         
         # 9. ROOT ARCHITECTURE
-        logger.info("Initializing root architecture model...")
-        system_type_enum = {
-            'NFT': HydroponicSystemType.NFT,
-            'DWC': HydroponicSystemType.DWC, 
-            'AEROPONICS': HydroponicSystemType.AEROPONICS
-        }.get(system_type, HydroponicSystemType.NFT)
-        
-        # Initialize with default tank volume, will be updated in simulate() method
-        self.root_model = create_enhanced_root_uptake_model(system_type_enum, 1500.0, self.system_config)
+        logger.info("Root architecture model will be initialized in run_simulation with correct system_type and tank volume...")
+        # Note: root_model creation moved to run_simulation to avoid inconsistency
+        # The root_model will be created with the final system_type (from CSV) and actual tank volume
+        self.root_model = None  # Will be initialized in run_simulation
         
         # 10. ENVIRONMENTAL CONTROL
         logger.info("Initializing environmental control...")
@@ -662,13 +657,18 @@ class CROPGROHydroponicSimulator:
         if current_ph is None:
             raise ValueError("Default pH must be provided in CSV configuration")
         
-        # Update root model with actual tank volume (important for NFT channel calculations)
+        # Initialize root model with correct system_type and actual tank volume
+        # This is the single point where root_model is created to avoid inconsistency
         system_type_enum = {
             'NFT': HydroponicSystemType.NFT,
-            'DWC': HydroponicSystemType.DWC, 
-            'AEROPONICS': HydroponicSystemType.AEROPONICS
+            'nutrient_film_technique': HydroponicSystemType.NFT,  # Support CSV format
+            'DWC': HydroponicSystemType.DWC,
+            'deep_water_culture': HydroponicSystemType.DWC,  # Support CSV format 
+            'AEROPONICS': HydroponicSystemType.AEROPONICS,
+            'aeroponics': HydroponicSystemType.AEROPONICS  # Support CSV format
         }.get(input_data.system_config.system_type, HydroponicSystemType.NFT)
         
+        logger.info(f"Initializing root architecture model with system_type: {input_data.system_config.system_type}, tank_volume: {current_tank_volume}L")
         self.root_model = create_enhanced_root_uptake_model(system_type_enum, current_tank_volume, self.system_config)
         
         # Main simulation loop - run until maturity or max days
@@ -707,7 +707,8 @@ class CROPGROHydroponicSimulator:
                 nutrient_concentrations=current_concentrations,
                 ph=current_ph,
                 previous_tank_volume=current_tank_volume,
-                plant_density=self.plant_density
+                plant_density=self.plant_density,
+                weather=weather
             )
             
             daily_results.append(daily_result)
@@ -895,10 +896,9 @@ class CROPGROHydroponicSimulator:
     def _validate_carbon_balance(self, photosynthesis: float, respiration: float, growth: float, day: int):
         """Validate carbon mass balance and log warnings if violated"""
         net_carbon = photosynthesis - respiration
-        # Account for both structural carbon and growth respiration costs
+        # Carbon incorporated into new biomass (structural carbon only)
         c_bm = self.params.carbon_to_biomass_ratio
-        rg = max(0.0, self.params.growth_respiration_fraction)
-        carbon_for_growth = growth * c_bm * (1.0 + rg)
+        carbon_in_biomass = growth * c_bm
         
         # Only warn when there is positive assimilation and/or positive growth
         # Negative net carbon with zero growth is physiologically plausible (maintenance exceeds assimilation)
@@ -906,11 +906,11 @@ class CROPGROHydroponicSimulator:
             # Check if carbon balance is reasonable (within 15% tolerance for early growth, 10% for mature plants)
             # Early growth tolerance (first 20 days) - higher tolerance due to establishment phase
             tolerance = 0.20 if day <= 20 else 0.10
-            denom = max(1e-9, max(abs(net_carbon), abs(carbon_for_growth)))
-            if abs(net_carbon - carbon_for_growth) > tolerance * denom:
+            denom = max(1e-9, max(abs(net_carbon), abs(carbon_in_biomass)))
+            if abs(net_carbon - carbon_in_biomass) > tolerance * denom:
                 logger.warning(
                     f"Day {day}: Carbon balance violation - Net carbon: {net_carbon:.3f}, "
-                    f"Carbon for growth: {carbon_for_growth:.3f}"
+                    f"Carbon in biomass: {carbon_in_biomass:.3f}"
                 )
         
         # Check for negative net carbon with positive growth
@@ -1143,36 +1143,40 @@ class CROPGROHydroponicSimulator:
             raise ValueError("❌ 'optimal_light_intensity' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
         light_factor = min(1.0, max(0.0, float(solar_radiation) / optimal_light))
         
-        # 4. NITROGEN STRESS - Use nitrogen balance model for sophisticated calculation
-        # The nitrogen balance model will calculate stress based on internal nitrogen status
-        # For now, use a simple solution-based calculation as fallback
-        n_no3_conc = nutrient_concentrations.get('N-NO3', 0.0)  # mg/L
-        
-        # Nitrogen stress calculation using CSV parameters
-        nitrogen_params = getattr(self.system_config, 'nitrogen_parameters', {})
-        optimal_n_min = nitrogen_params.get('optimal_n_min')
-        optimal_n_max = nitrogen_params.get('optimal_n_max')
-        severe_deficiency = nitrogen_params.get('severe_deficiency_threshold')
-        nitrogen_stress_factor = nitrogen_params.get('nitrogen_stress_factor')
-        
-        if optimal_n_min is None:
-            raise ValueError("❌ 'optimal_n_min' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
-        if optimal_n_max is None:
-            raise ValueError("❌ 'optimal_n_max' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
-        if severe_deficiency is None:
-            raise ValueError("❌ 'severe_deficiency_threshold' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
-        if nitrogen_stress_factor is None:
-            raise ValueError("❌ 'nitrogen_stress_factor' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
-        
-        if n_no3_conc < severe_deficiency:
-            nitrogen_stress_level = nitrogen_stress_factor
-        elif n_no3_conc < optimal_n_min:
-            nitrogen_stress_level = nitrogen_stress_factor * (optimal_n_min - n_no3_conc) / (optimal_n_min - severe_deficiency)
-        elif n_no3_conc <= optimal_n_max:
-            nitrogen_stress_level = 0.0
-        else:
-            excess_stress = min(0.3, (n_no3_conc - optimal_n_max) / 1000.0)
-            nitrogen_stress_level = excess_stress
+        # 4. NITROGEN STRESS - Use sophisticated nitrogen balance model for accurate calculation
+        # The nitrogen balance model calculates stress based on internal plant nitrogen status
+        try:
+            # Use sophisticated nitrogen balance model for accurate internal nitrogen stress
+            nitrogen_stress_level = self.nitrogen_model.calculate_nitrogen_stress_level()
+        except (AttributeError, TypeError):
+            # Fallback to simple solution-based calculation if nitrogen model not available
+            n_no3_conc = nutrient_concentrations.get('N-NO3', 0.0)  # mg/L
+            
+            # Nitrogen stress calculation using CSV parameters
+            nitrogen_params = getattr(self.system_config, 'nitrogen_parameters', {})
+            optimal_n_min = nitrogen_params.get('optimal_n_min')
+            optimal_n_max = nitrogen_params.get('optimal_n_max')
+            severe_deficiency = nitrogen_params.get('severe_deficiency_threshold')
+            nitrogen_stress_factor = nitrogen_params.get('nitrogen_stress_factor')
+            
+            if optimal_n_min is None:
+                raise ValueError("❌ 'optimal_n_min' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
+            if optimal_n_max is None:
+                raise ValueError("❌ 'optimal_n_max' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
+            if severe_deficiency is None:
+                raise ValueError("❌ 'severe_deficiency_threshold' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
+            if nitrogen_stress_factor is None:
+                raise ValueError("❌ 'nitrogen_stress_factor' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
+            
+            if n_no3_conc < severe_deficiency:
+                nitrogen_stress_level = nitrogen_stress_factor
+            elif n_no3_conc < optimal_n_min:
+                nitrogen_stress_level = nitrogen_stress_factor * (optimal_n_min - n_no3_conc) / (optimal_n_min - severe_deficiency)
+            elif n_no3_conc <= optimal_n_max:
+                nitrogen_stress_level = 0.0
+            else:
+                excess_stress = min(0.3, (n_no3_conc - optimal_n_max) / 1000.0)
+                nitrogen_stress_level = excess_stress
         
         nitrogen_factor = max(0.0, 1.0 - nitrogen_stress_level)
         
@@ -1305,7 +1309,8 @@ class CROPGROHydroponicSimulator:
     
     def _calculate_carbon_driven_growth(self, env_conditions: Dict[str, Any], 
                                       stress_factors: Dict[str, float],
-                                      stage_props: Dict[str, Any]) -> Dict[str, float]:
+                                      stage_props: Dict[str, Any],
+                                      daylength: float) -> Dict[str, float]:
         """Calculate growth rates driven by carbon assimilation"""
         # Calculate photosynthesis
         # Get photosynthesis parameters for LAI thresholds
@@ -1386,7 +1391,7 @@ class CROPGROHydroponicSimulator:
                            solar_radiation: float, daylength: float, 
                            nutrient_concentrations: Dict[str, float], ph: float = None,
                            previous_tank_volume: float = 0.0,
-                           plant_density: float = 1.0) -> DailyResults:
+                           plant_density: float = 1.0, weather=None) -> DailyResults:
         """
         REFACTORED SIMULATION LOOP with linear data flow and centralized stress calculation.
         
@@ -1444,21 +1449,40 @@ class CROPGROHydroponicSimulator:
             self.current_cultivar, stress_factors
         )
         
-        # === STEP 4: DSSAT-STYLE HOURLY INTEGRATION ===
+        # === STEP 4: CANOPY ARCHITECTURE UPDATE ===
+        # Update canopy architecture before photosynthesis calculation to get sunlit/shaded LAI
+        canopy_response = self.canopy_model.daily_update(
+            total_lai=self.current_lai,
+            canopy_height=self.canopy_height,
+            light_env=env_conditions['light_environment'],
+            air_temperature=env_conditions['actual_temperature'],
+            co2_concentration=env_conditions['actual_co2']
+        )
+        
+        # === STEP 5: DSSAT-STYLE HOURLY INTEGRATION ===
         # Run internal hourly loop for key processes (photosynthesis, nutrient uptake)
+        # Use actual weather data if available, otherwise fall back to approximations
+        if weather and hasattr(weather, 'temp_min') and hasattr(weather, 'temp_max'):
+            temp_min = weather.temp_min
+            temp_max = weather.temp_max
+        else:
+            temp_min = temperature - 3.0  # Fallback approximation
+            temp_max = temperature + 3.0  # Fallback approximation
+            
         daily_integrated_results = self._run_hourly_integration(
             day=day,
             daily_weather_data={
                 'temp_avg': temperature,
-                'temp_min': temperature - 3.0,  # Simple approximation
-                'temp_max': temperature + 3.0,  # Simple approximation
+                'temp_min': temp_min,
+                'temp_max': temp_max,
                 'rel_humidity': humidity,
                 'solar_radiation': solar_radiation
             },
             env_conditions=env_conditions,
             stress_factors=stress_factors,
             nutrient_concentrations=nutrient_concentrations,
-            daylength=daylength
+            daylength=daylength,
+            canopy_response=canopy_response  # Pass canopy response to hourly integration
         )
         
         # Extract hourly-integrated results
@@ -1514,10 +1538,9 @@ class CROPGROHydroponicSimulator:
             for organ, fraction in allocation_fractions.items()
         }
         
-        # Calculate growth respiration in carbon units based on new growth
+        # Calculate growth respiration using sophisticated respiration model
         total_new_growth = sum(actual_growth_rates.values())
-        # growth_respiration (g C/day) = growth_biomass (g) * c_bm (g C/g) * rg (g C per g C incorporated)
-        growth_respiration = total_new_growth * c_bm * rg
+        growth_respiration = self.respiration_model.calculate_growth_respiration(total_new_growth)
         
         # Update total respiration to include growth costs
         total_respiration = respiration_response.total_respiration + growth_respiration
@@ -1558,10 +1581,12 @@ class CROPGROHydroponicSimulator:
         solution_conc_for_uptake = {}
         nutrient_mapping = {
             'N-NO3': 'NO3',
+            'N-NH4': 'NH4',  # CRITICAL FIX: Add missing ammonium mapping
             'P-PO4': 'PO4',
             'K': 'K',
             'Ca': 'Ca',
-            'Mg': 'Mg'
+            'Mg': 'Mg',
+            'S-SO4': 'SO4'  # CRITICAL FIX: Add missing sulfate mapping
         }
         
         for sol_key, uptake_key in nutrient_mapping.items():
@@ -1577,57 +1602,52 @@ class CROPGROHydroponicSimulator:
         # === STEP 8: INTERNAL ALLOCATION ===
         # Distribute uptaken nutrients within the plant
         
-        # Extract nitrogen uptake from root model (authoritative source)
-        # CRITICAL FIX: Root model returns NO3 uptake (mg NO3/day), convert to elemental N
-        no3_uptake_mg_per_day = root_response.get('NO3_uptake_rate', 0.0)
-        # Convert NO3 to elemental N: molecular weight NO3=62, N=14, so N = NO3 * (14/62)
-        nitrogen_uptake_mg_per_day = no3_uptake_mg_per_day * (14.0 / 62.0)
-        nitrogen_uptake_g_per_day = nitrogen_uptake_mg_per_day / 1000.0
+        # Extract ALL nutrient uptakes from root model (complete fix for data flow bug)
+        # Root model calculates: NO3, NH4, PO4, K, Ca, Mg, SO4
         
-        # Extract phosphorus uptake with unit conversion
-        # CRITICAL FIX: Root model returns PO4 uptake (mg PO4/day), convert to elemental P
+        # Nitrogen sources (NO3 + NH4)
+        no3_uptake_mg_per_day = root_response.get('NO3_uptake_rate', 0.0)
+        nh4_uptake_mg_per_day = root_response.get('NH4_uptake_rate', 0.0)
+        # Convert to elemental N: NO3 (62→14), NH4 (18→14)
+        no3_nitrogen_mg = no3_uptake_mg_per_day * (14.0 / 62.0)
+        nh4_nitrogen_mg = nh4_uptake_mg_per_day * (14.0 / 18.0)
+        total_nitrogen_uptake_mg = no3_nitrogen_mg + nh4_nitrogen_mg
+        nitrogen_uptake_g_per_day = total_nitrogen_uptake_mg / 1000.0
+        
+        # Phosphorus (PO4)
         po4_uptake_mg_per_day = root_response.get('PO4_uptake_rate', 0.0)
-        # Convert PO4 to elemental P: molecular weight PO4=95, P=31, so P = PO4 * (31/95)
+        # Convert PO4 to elemental P: molecular weight PO4=95, P=31
         phosphorus_uptake_mg_per_day = po4_uptake_mg_per_day * (31.0 / 95.0)
         phosphorus_uptake_g_per_day = phosphorus_uptake_mg_per_day / 1000.0
         
-        # Use nitrogen balance model for internal allocation and transport only
-        nitrogen_response = self.nitrogen_model.update_nitrogen_pools(
-            external_nitrogen_input=nitrogen_uptake_g_per_day,
-            organ_growth_rates=actual_growth_rates,
-            environmental_factors={
-                'temperature_factor': stress_factors['temperature_factor'],
-                'water_status': stress_factors['water_factor'],
-                'ph_factor': stress_factors['ph_factor']
-            },
-            growth_stage='vegetative' if stage_props['is_vegetative'] else 'reproductive',
-            stress_factors=stress_factors['stress_levels'],
-            senescence_rates={'leaves': 0.002, 'stems': 0.001, 'roots': 0.0005}
-        )
+        # Other essential nutrients (direct elemental uptake)
+        potassium_uptake_mg_per_day = root_response.get('K_uptake_rate', 0.0)
+        potassium_uptake_g_per_day = potassium_uptake_mg_per_day / 1000.0
         
-        # Calculate organ nutrient demands for mobility model
-        organ_demands = {}
-        for organ, growth_rate in actual_growth_rates.items():
-            organ_demands[organ] = {
-                'nitrogen': growth_rate * 0.045,
-                'phosphorus': growth_rate * 0.008,
-                'potassium': growth_rate * 0.035,
-                'calcium': growth_rate * 0.015,
-                'magnesium': growth_rate * 0.006
-            }
+        calcium_uptake_mg_per_day = root_response.get('Ca_uptake_rate', 0.0) 
+        calcium_uptake_g_per_day = calcium_uptake_mg_per_day / 1000.0
         
-        # Update nutrient mobility (internal redistribution)
-        mobility_response = self.mobility_model.daily_update(
-            organ_demands=organ_demands,
-            stress_factors=stress_factors['stress_levels'],
-            senescence_rates={'leaves': 0.002, 'stems': 0.001, 'roots': 0.0005},
-            growth_stage='vegetative' if stage_props['is_vegetative'] else 'reproductive',
-            water_fluxes={'leaves': 0.25, 'stems': 0.15, 'roots': 0.35},
-            assimilate_fluxes={'leaves': 0.12, 'stems': 0.08, 'roots': 0.05},
-            temperature=env_conditions['actual_temperature']
-        )
+        magnesium_uptake_mg_per_day = root_response.get('Mg_uptake_rate', 0.0)
+        magnesium_uptake_g_per_day = magnesium_uptake_mg_per_day / 1000.0
         
-        # Update senescence processes
+        # Sulfur (SO4)
+        so4_uptake_mg_per_day = root_response.get('SO4_uptake_rate', 0.0)
+        # Convert SO4 to elemental S: molecular weight SO4=96, S=32
+        sulfur_uptake_mg_per_day = so4_uptake_mg_per_day * (32.0 / 96.0)
+        sulfur_uptake_g_per_day = sulfur_uptake_mg_per_day / 1000.0
+        
+        # Create comprehensive nutrient uptake summary for other models
+        nutrient_uptakes_g_per_day = {
+            'nitrogen': nitrogen_uptake_g_per_day,
+            'phosphorus': phosphorus_uptake_g_per_day,
+            'potassium': potassium_uptake_g_per_day,
+            'calcium': calcium_uptake_g_per_day,
+            'magnesium': magnesium_uptake_g_per_day,
+            'sulfur': sulfur_uptake_g_per_day
+        }
+        
+        # === STEP 7: CALCULATE DYNAMIC SENESCENCE RATES ===
+        # Update senescence processes FIRST to get dynamic senescence rates for nitrogen/mobility models
         cohort_data = self._prepare_senescence_data()
         environmental_stress = {
             'water': stress_factors['stress_levels']['water'],
@@ -1641,6 +1661,76 @@ class CROPGROHydroponicSimulator:
         
         senescence_response = self.senescence_model.daily_update(
             cohort_data, environmental_stress, developmental_state
+        )
+        
+        # Extract dynamic senescence rates from senescence model response
+        # Map cohort IDs (0=leaves, 1=stems, 2=roots) to organ names
+        organ_names = ['leaves', 'stems', 'roots']
+        dynamic_senescence_rates = {}
+        for cohort_id, cohort_response in senescence_response.cohort_responses.items():
+            if cohort_id < len(organ_names):
+                organ_name = organ_names[cohort_id]
+                dynamic_senescence_rates[organ_name] = cohort_response.daily_senescence_rate
+        
+        # Ensure all organs have senescence rates (fallback to minimal values if not present)
+        for organ_name in organ_names:
+            if organ_name not in dynamic_senescence_rates:
+                # Use minimal fallback rates if cohort is missing
+                fallback_rates = {'leaves': 0.0005, 'stems': 0.0002, 'roots': 0.0001}
+                dynamic_senescence_rates[organ_name] = fallback_rates[organ_name]
+        
+        # === STEP 8: NITROGEN AND MOBILITY MODELS WITH DYNAMIC SENESCENCE ===
+        # Use nitrogen balance model for internal allocation and transport with dynamic senescence rates
+        nitrogen_response = self.nitrogen_model.update_nitrogen_pools(
+            external_nitrogen_input=nitrogen_uptake_g_per_day,
+            organ_growth_rates=actual_growth_rates,
+            environmental_factors={
+                'temperature': stress_factors['temperature_factor'],
+                'water': stress_factors['water_factor'],
+                'pH': stress_factors['ph_factor']
+            },
+            growth_stage='vegetative' if stage_props['is_vegetative'] else 'reproductive',
+            stress_factors=stress_factors['stress_levels'],
+            senescence_rates=dynamic_senescence_rates
+        )
+        
+        # Calculate sophisticated nitrogen demand for consistency with nitrogen_model
+        environmental_factors_for_demand = {
+            'temperature': stress_factors['temperature_factor'],
+            'water': stress_factors['water_factor'],
+            'pH': stress_factors['ph_factor']
+        }
+        
+        sophisticated_n_demand = self.nitrogen_model.calculate_nitrogen_demand(
+            actual_growth_rates, 
+            stage_props['stage_name'],
+            environmental_factors_for_demand
+        )
+        
+        # Calculate organ nutrient demands for mobility model (using sophisticated N demand)
+        organ_demands = {}
+        for organ, growth_rate in actual_growth_rates.items():
+            # Use sophisticated nitrogen demand from nitrogen_model instead of hardcoded formula
+            nitrogen_demand = sophisticated_n_demand.get(organ, growth_rate * 0.045)  # Fallback to hardcoded if organ missing
+            
+            organ_demands[organ] = {
+                'nitrogen': nitrogen_demand,
+                'phosphorus': growth_rate * 0.008,
+                'potassium': growth_rate * 0.035,
+                'calcium': growth_rate * 0.015,
+                'magnesium': growth_rate * 0.006,
+                'sulfur': growth_rate * 0.005  # Add sulfur demand
+            }
+        
+        # Update nutrient mobility (internal redistribution) with dynamic senescence rates
+        mobility_response = self.mobility_model.daily_update(
+            organ_demands=organ_demands,
+            stress_factors=stress_factors['stress_levels'],
+            senescence_rates=dynamic_senescence_rates,
+            growth_stage='vegetative' if stage_props['is_vegetative'] else 'reproductive',
+            water_fluxes={'leaves': 0.25, 'stems': 0.15, 'roots': 0.35},
+            assimilate_fluxes={'leaves': 0.12, 'stems': 0.08, 'roots': 0.05},
+            temperature=env_conditions['actual_temperature']
         )
 
         
@@ -1718,15 +1808,6 @@ class CROPGROHydroponicSimulator:
             raise ValueError("❌ 'maximum_height' parameter must be provided in crop_parameters CSV - no hardcoded defaults allowed")
         self.canopy_height = min(maximum_height, self.canopy_height)
         
-        # Update canopy architecture
-        canopy_response = self.canopy_model.daily_update(
-            total_lai=self.current_lai,
-            canopy_height=self.canopy_height,
-            light_env=env_conditions['light_environment'],
-            air_temperature=env_conditions['actual_temperature'],
-            co2_concentration=env_conditions['actual_co2']
-        )
-        
         # Update integrated stress model
         integrated_stress_response = self.integrated_stress.daily_update(
             current_stress_levels=stress_factors['stress_levels']
@@ -1774,9 +1855,23 @@ class CROPGROHydroponicSimulator:
         total_biomass = sum(pool.dry_mass for pool in self.biomass_pools)
         
         # Create comprehensive CROPGRO results with ALL details
+        # Convert weather date string to datetime if provided
+        if weather and hasattr(weather, 'date'):
+            try:
+                if isinstance(weather.date, str):
+                    actual_date = datetime.strptime(weather.date, '%Y-%m-%d')
+                else:
+                    actual_date = weather.date
+            except (ValueError, AttributeError):
+                # Fallback if date parsing fails
+                actual_date = datetime.now() + timedelta(days=day-1)
+        else:
+            # Fallback if no weather object provided
+            actual_date = datetime.now() + timedelta(days=day-1)
+            
         cropgro_result = DailyResults(
             day=day,
-            date=datetime.now() + timedelta(days=day-1),
+            date=actual_date,
             
             # Required basic fields - use pre-calculated values to avoid repetition
             eto_ref=eto_ref,  # Pre-calculated
@@ -1938,11 +2033,27 @@ class CROPGROHydroponicSimulator:
         
         # 5. NITROGEN DYNAMICS - USE ROOT MODEL AS SINGLE SOURCE OF TRUTH
         # CRITICAL FIX: Store corrected elemental nitrogen uptake (not NO3)
-        cropgro_result.nitrogen_uptake_mg = nitrogen_uptake_mg_per_day  # Elemental N from NO3 conversion
+        cropgro_result.nitrogen_uptake_mg = total_nitrogen_uptake_mg  # Elemental N from NO3 + NH4 conversion
         
         # 6. PHOSPHORUS DYNAMICS - USE ROOT MODEL AS SINGLE SOURCE OF TRUTH
         # CRITICAL FIX: Store corrected elemental phosphorus uptake (not PO4)
         cropgro_result.phosphorus_uptake_mg = phosphorus_uptake_mg_per_day  # Elemental P from PO4 conversion
+        
+        # 7. ALL OTHER ESSENTIAL NUTRIENTS - COMPLETE DATA FLOW FIX
+        # Store all nutrient uptakes for proper solution depletion
+        cropgro_result.NO3_uptake_rate = no3_uptake_mg_per_day        # NO3 uptake (mg/day)
+        cropgro_result.NH4_uptake_rate = nh4_uptake_mg_per_day        # NH4 uptake (mg/day)  
+        cropgro_result.PO4_uptake_rate = po4_uptake_mg_per_day        # PO4 uptake (mg/day)
+        cropgro_result.K_uptake_rate = potassium_uptake_mg_per_day    # K uptake (mg/day)
+        cropgro_result.Ca_uptake_rate = calcium_uptake_mg_per_day     # Ca uptake (mg/day)
+        cropgro_result.Mg_uptake_rate = magnesium_uptake_mg_per_day   # Mg uptake (mg/day)
+        cropgro_result.SO4_uptake_rate = so4_uptake_mg_per_day        # SO4 uptake (mg/day)
+        
+        # Also store convenient attributes for solution mapping
+        setattr(cropgro_result, 'N-NO3_uptake_rate', no3_uptake_mg_per_day)
+        setattr(cropgro_result, 'N-NH4_uptake_rate', nh4_uptake_mg_per_day)
+        setattr(cropgro_result, 'P-PO4_uptake_rate', po4_uptake_mg_per_day)
+        setattr(cropgro_result, 'S-SO4_uptake_rate', so4_uptake_mg_per_day)
         
         # Validate that root model is providing realistic uptake
         # Only warn if there ARE nutrients available but still zero uptake
@@ -1959,11 +2070,9 @@ class CROPGROHydroponicSimulator:
             'roots': actual_growth_rates.get('roots', 0.0)
         }
         
-        # Use nitrogen balance model for demand calculation
-        n_demand_by_organ = self.nitrogen_model.calculate_nitrogen_demand(
-            organ_growth_rates, 
-            stage_props['stage_name']
-        )
+        # Reuse the sophisticated nitrogen demand already calculated for mobility model
+        # (This avoids duplication and ensures consistency between models)
+        n_demand_by_organ = sophisticated_n_demand
         total_n_demand_g = sum(n_demand_by_organ.values())
         cropgro_result.nitrogen_demand_mg = max(10.0, total_n_demand_g * 1000)  # Convert g to mg, minimum 10 mg/day
         
@@ -3155,8 +3264,14 @@ class CROPGROHydroponicSimulator:
                         current_concentrations[nutrient_id] = optimal_concentrations[nutrient_id]
                         logger.info(f"  {nutrient_id}: reset to {optimal_concentrations[nutrient_id]} ppm")
                     else:
-                        # For other nutrients, use recharge concentration
-                        target = params.recharge_conc if hasattr(params, 'recharge_conc') else params.initial_conc
+                        # For other nutrients, check if params is an object or a value
+                        if hasattr(params, 'recharge_conc'):
+                            target = params.recharge_conc
+                        elif hasattr(params, 'initial_conc'):
+                            target = params.initial_conc
+                        else:
+                            # If params is just a value, use it directly
+                            target = float(params) if isinstance(params, (int, float, str)) else 0.0
                         current_concentrations[nutrient_id] = target
                 
                 management_performed = True
@@ -3165,7 +3280,8 @@ class CROPGROHydroponicSimulator:
     
     def _run_hourly_integration(self, day: int, daily_weather_data: Dict[str, float], 
                                env_conditions: Dict[str, float], stress_factors: Dict[str, float],
-                               nutrient_concentrations: Dict[str, float], daylength: float) -> Dict[str, Any]:
+                               nutrient_concentrations: Dict[str, float], daylength: float, 
+                               canopy_response: Any = None) -> Dict[str, Any]:
         """
         DSSAT-style internal hourly integration loop.
         
@@ -3215,6 +3331,14 @@ class CROPGROHydroponicSimulator:
             if hourly_weather.par > 0.1:  # Only during light hours
                 # Get photosynthesis parameters for LAI thresholds
                 photosynthesis_params = getattr(self.system_config, 'photosynthesis', {})
+                
+                # Use canopy response for sunlit/shaded LAI if available
+                sunlit_lai = None
+                shaded_lai = None
+                if canopy_response and hasattr(canopy_response, 'sunlit_lai') and hasattr(canopy_response, 'shaded_lai'):
+                    sunlit_lai = canopy_response.sunlit_lai
+                    shaded_lai = canopy_response.shaded_lai
+                
                 hourly_photosynthesis = self.photosynthesis_model.calculate_hourly_assimilation(
                     par_umol_m2_s=hourly_weather.par,
                     co2_ppm=hourly_weather.co2,
@@ -3222,7 +3346,9 @@ class CROPGROHydroponicSimulator:
                     lai=self.current_lai,
                     hour=hour,
                     ec_factor=stress_factors.get('salinity_factor', 1.0),
-                    config_dict=photosynthesis_params
+                    config_dict=photosynthesis_params,
+                    sunlit_lai=sunlit_lai,
+                    shaded_lai=shaded_lai
                 )
                 total_daily_photosynthesis += hourly_photosynthesis
             else:

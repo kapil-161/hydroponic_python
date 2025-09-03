@@ -178,26 +178,16 @@ def run_single_simulation(days: int, cultivar_id: str, system_type: str, treatme
     crop_params = DefaultConfigurations.get_lettuce_parameters()
     nutrient_params = DefaultConfigurations.get_default_nutrients()
     
-    # Update nutrient_params with dynamic nutrient solution values from CSV
-    if hasattr(system_config, 'nutrient_solution'):
-        from src.models.nutrient_models import NutrientParams
-        for nutrient_id, nutrient_data in system_config.nutrient_solution.items():
-            if nutrient_id in nutrient_params:
-                original_param = nutrient_params[nutrient_id]
-                nutrient_params[nutrient_id] = NutrientParams(
-                    nutrient_id=original_param.nutrient_id,
-                    nutrient_name=original_param.nutrient_name,
-                    chemical_form=original_param.chemical_form,
-                    initial_conc=nutrient_data['initial_ppm'],
-                    recharge_conc=nutrient_data['optimal_ppm'],
-                    uptake_conc=original_param.uptake_conc,
-                    sensitivity_coeff=original_param.sensitivity_coeff,
-                    is_nutritive=original_param.is_nutritive,
-                    min_conc=nutrient_data['minimum_ppm'],
-                    max_conc=nutrient_data['max_ppm'],
-                    charge=original_param.charge,
-                    molar_mass=original_param.molar_mass
-                )
+    # Load all nutrient-related parameters from CSV (FIXED: removes buggy conditional)
+    # Load from nutrient_concentrations, nutrient_management, and nutrient_parameters categories
+    nutrient_categories = ['nutrient_concentrations', 'nutrient_management', 'nutrient_parameters']
+    
+    for category in nutrient_categories:
+        if hasattr(system_config, category):
+            category_data = getattr(system_config, category)
+            if isinstance(category_data, dict):
+                # Add all parameters from this category to nutrient_params
+                nutrient_params.update(category_data)
 
     # Load weather data
     weather_data_file = f'{input_dir}/{file_prefix}_weather.csv'
@@ -358,8 +348,14 @@ def get_parameter_bounds():
     }
 
 
-def apply_proportional_scaling(original_params: Dict[str, Any], target_param: str, increase_percent: float) -> Dict[str, Any]:
-    """Apply proportional scaling to allocation fractions and bounds checking for weather parameters"""
+def apply_proportional_scaling(original_params: Dict[str, Any], target_param: str, change_percent: float) -> Dict[str, Any]:
+    """Apply proportional scaling to allocation fractions and bounds checking for weather parameters
+    
+    Args:
+        original_params: Dictionary of original parameters
+        target_param: Parameter to modify
+        change_percent: Percentage change (can be positive or negative)
+    """
     allocation_groups = get_allocation_groups()
     parameter_bounds = get_parameter_bounds()
     modified_params = deepcopy(original_params)
@@ -374,7 +370,7 @@ def apply_proportional_scaling(original_params: Dict[str, Any], target_param: st
     if target_group is None:
         # Not an allocation parameter, modify normally with bounds checking
         original_value = original_params[target_param]['value']
-        new_value = original_value * (1 + increase_percent / 100.0)
+        new_value = original_value * (1 + change_percent / 100.0)
         
         # Check bounds for weather/environmental parameters
         if target_param in parameter_bounds:
@@ -382,6 +378,10 @@ def apply_proportional_scaling(original_params: Dict[str, Any], target_param: st
             if new_value < min_bound or new_value > max_bound:
                 # Skip parameter if it would exceed realistic bounds
                 return None
+        
+        # Check for negative values in parameters that should be positive
+        if new_value < 0 and not any(word in target_param.lower() for word in ['min', 'offset', 'base', 'threshold']):
+            return None
         
         modified_params[target_param]['value'] = new_value
         return modified_params
@@ -399,9 +399,13 @@ def apply_proportional_scaling(original_params: Dict[str, Any], target_param: st
     if total_original == 0:
         return modified_params  # Avoid division by zero
     
-    # Increase target parameter
+    # Modify target parameter
     original_target = group_values[target_param]
-    new_target = original_target * (1 + increase_percent / 100.0)
+    new_target = original_target * (1 + change_percent / 100.0)
+    
+    # Check if new target value is valid (non-negative and not too large)
+    if new_target < 0 or new_target > 1.0:
+        return None
     
     # Calculate scaling factor for other parameters to maintain sum = 1.0
     remaining_original = total_original - original_target
@@ -413,6 +417,13 @@ def apply_proportional_scaling(original_params: Dict[str, Any], target_param: st
     
     scaling_factor = remaining_target / remaining_original
     
+    # Check if scaling would create negative values
+    for param in target_group:
+        if param != target_param and param in group_values:
+            scaled_value = group_values[param] * scaling_factor
+            if scaled_value < 0:
+                return None
+    
     # Apply changes
     modified_params[target_param]['value'] = new_target
     
@@ -423,11 +434,11 @@ def apply_proportional_scaling(original_params: Dict[str, Any], target_param: st
     return modified_params
 
 
-def run_sensitivity_analysis(days: int, cultivar_id: str, system_type: str, treatment_id: str, input_dir: str, increase_percent: float = 10.0):
-    """Run sensitivity analysis by increasing each parameter by specified percentage"""
+def run_sensitivity_analysis(days: int, cultivar_id: str, system_type: str, treatment_id: str, input_dir: str, change_percent: float = 10.0):
+    """Run two-sided sensitivity analysis by testing both increases and decreases for each parameter"""
     
-    print("🔬 CROPGRO Parameter Sensitivity Analysis")
-    print("=" * 60)
+    print("🔬 CROPGRO Two-Sided Parameter Sensitivity Analysis")
+    print("=" * 70)
     
     # Load original parameters
     file_prefix = treatment_id if treatment_id else cultivar_id
@@ -460,148 +471,228 @@ def run_sensitivity_analysis(days: int, cultivar_id: str, system_type: str, trea
             numeric_params[param_name] = param_data
     
     print(f"📊 Found {len(numeric_params)} numeric parameters to analyze")
-    print(f"🔄 Testing {increase_percent}% increase for each parameter...")
+    print(f"🔄 Testing ±{change_percent}% change for each parameter (both increase and decrease)...")
     print("🔧 Using proportional scaling for allocation fractions")
-    print("-" * 60)
+    print("-" * 70)
     
-    # Test each parameter
+    # Test each parameter with both positive and negative changes
     for i, (param_name, param_data) in enumerate(numeric_params.items(), 1):
         print(f"[{i}/{len(numeric_params)}] Testing parameter: {param_name}")
         
-        # Apply proportional scaling for allocation parameters
-        modified_params = apply_proportional_scaling(original_params, param_name, increase_percent)
-        
-        if modified_params is None:
-            # Parameter couldn't be scaled or would exceed bounds
-            allocation_groups = get_allocation_groups()
-            parameter_bounds = get_parameter_bounds()
-            
-            # Determine reason for skipping
-            if any(param_name in param_list for param_list in allocation_groups.values()):
-                reason = 'Cannot scale proportionally without negative values'
-                message = "Cannot scale proportionally"
-            elif param_name in parameter_bounds:
-                original_value = param_data['value']
-                new_value = original_value * (1 + increase_percent / 100.0)
-                min_bound, max_bound = parameter_bounds[param_name]
-                reason = f'Would exceed realistic bounds ({new_value:.2f} outside {min_bound}-{max_bound})'
-                message = f"Would exceed bounds ({new_value:.2f})"
-            else:
-                reason = 'Unknown constraint violation'
-                message = "Unknown constraint violation"
-            
-            skipped_params.append({
-                'parameter_name': param_name,
-                'reason': reason
-            })
-            print(f"  ⏭️ Skipped: {message}")
-            continue
-            
         original_value = param_data['value']
-        modified_value = modified_params[param_name]['value']
         
-        # Create temporary modified CSV file
-        temp_master_file = f'{input_dir}/{file_prefix}_master_parameters_temp.csv'
-        save_modified_parameters(modified_params, temp_master_file)
+        # Test both positive and negative changes
+        for direction, change_sign in [('increase', +1), ('decrease', -1)]:
+            actual_change_percent = change_sign * change_percent
+            
+            print(f"  📈 Testing {direction} ({actual_change_percent:+.1f}%)...")
+            
+            # Apply proportional scaling for allocation parameters
+            modified_params = apply_proportional_scaling(original_params, param_name, actual_change_percent)
+            
+            if modified_params is None:
+                # Parameter couldn't be scaled or would exceed bounds
+                allocation_groups = get_allocation_groups()
+                parameter_bounds = get_parameter_bounds()
+                
+                # Determine reason for skipping
+                reason = ""
+                if any(param_name in param_list for param_list in allocation_groups.values()):
+                    reason = f'Cannot scale proportionally for {direction}'
+                elif param_name in parameter_bounds:
+                    new_value = original_value * (1 + actual_change_percent / 100.0)
+                    min_bound, max_bound = parameter_bounds[param_name]
+                    reason = f'{direction.capitalize()} would exceed bounds ({new_value:.2f} outside {min_bound}-{max_bound})'
+                else:
+                    reason = f'{direction.capitalize()} creates invalid value'
+                
+                skipped_params.append({
+                    'parameter_name': param_name,
+                    'direction': direction,
+                    'reason': reason
+                })
+                print(f"    ⏭️ Skipped {direction}: {reason}")
+                continue
+                
+            modified_value = modified_params[param_name]['value']
+            
+            # Create temporary modified CSV file
+            temp_master_file = f'{input_dir}/{file_prefix}_master_parameters_temp_{direction}.csv'
+            save_modified_parameters(modified_params, temp_master_file)
+            
+            try:
+                # Run simulation with modified parameter
+                temp_treatment_id = f"{treatment_id}_{direction}" if treatment_id else f"{cultivar_id}_{direction}"
+                
+                # Temporarily rename the file for the simulation
+                import shutil
+                temp_sim_file = f'{input_dir}/{temp_treatment_id}_master_parameters.csv'
+                shutil.copy2(temp_master_file, temp_sim_file)
+                
+                # Copy weather file for temp simulation
+                original_weather = f'{input_dir}/{file_prefix}_weather.csv'
+                temp_weather = f'{input_dir}/{temp_treatment_id}_weather.csv'
+                shutil.copy2(original_weather, temp_weather)
+                
+                # For genetic parameters, use temp_treatment_id as cultivar_id to load modified genetic profile
+                if param_data['category'] == 'genetic_parameters':
+                    # Use temp_treatment_id as both cultivar and treatment to get modified genetic coefficients
+                    results, final_biomass = run_single_simulation(days, temp_treatment_id, system_type, temp_treatment_id, input_dir)
+                else:
+                    # For non-genetic parameters, use original cultivar_id
+                    results, final_biomass = run_single_simulation(days, cultivar_id, system_type, temp_treatment_id, input_dir)
+                
+                # Calculate sensitivity metrics
+                biomass_change = final_biomass - baseline_biomass
+                biomass_change_percent = (biomass_change / baseline_biomass) * 100 if baseline_biomass > 0 else 0
+                sensitivity_ratio = biomass_change_percent / actual_change_percent if actual_change_percent != 0 else 0
+                
+                sensitivity_results.append({
+                    'parameter_name': param_name,
+                    'category': param_data['category'],
+                    'original_value': original_value,
+                    'modified_value': modified_value,
+                    'direction': direction,
+                    'parameter_change_percent': actual_change_percent,
+                    'baseline_biomass': baseline_biomass,
+                    'modified_biomass': final_biomass,
+                    'biomass_change': biomass_change,
+                    'biomass_change_percent': biomass_change_percent,
+                    'sensitivity_ratio': sensitivity_ratio
+                })
+                
+                print(f"    ✅ {original_value:.3f} → {modified_value:.3f}")
+                print(f"    📊 Biomass: {baseline_biomass:.3f} → {final_biomass:.3f} g ({biomass_change_percent:+.2f}%)")
+                print(f"    🎯 Sensitivity ratio: {sensitivity_ratio:.3f}")
+                
+                # Clean up temp files
+                Path(temp_sim_file).unlink(missing_ok=True)
+                Path(temp_weather).unlink(missing_ok=True)
+                
+            except Exception as e:
+                failed_simulations.append({
+                    'parameter_name': param_name,
+                    'direction': direction,
+                    'error': str(e)
+                })
+                print(f"    ❌ Failed {direction}: {e}")
+                
+                # Clean up temp files on failure
+                Path(temp_sim_file).unlink(missing_ok=True)
+                Path(temp_weather).unlink(missing_ok=True)
+            
+            # Clean up main temp file
+            Path(temp_master_file).unlink(missing_ok=True)
         
-        try:
-            # Run simulation with modified parameter
-            temp_treatment_id = f"{treatment_id}_temp" if treatment_id else f"{cultivar_id}_temp"
-            
-            # Temporarily rename the file for the simulation
-            import shutil
-            temp_sim_file = f'{input_dir}/{temp_treatment_id}_master_parameters.csv'
-            shutil.copy2(temp_master_file, temp_sim_file)
-            
-            # Copy weather file for temp simulation
-            original_weather = f'{input_dir}/{file_prefix}_weather.csv'
-            temp_weather = f'{input_dir}/{temp_treatment_id}_weather.csv'
-            shutil.copy2(original_weather, temp_weather)
-            
-            results, final_biomass = run_single_simulation(days, cultivar_id, system_type, temp_treatment_id, input_dir)
-            
-            # Calculate sensitivity metrics
-            biomass_change = final_biomass - baseline_biomass
-            biomass_change_percent = (biomass_change / baseline_biomass) * 100 if baseline_biomass > 0 else 0
-            sensitivity_ratio = biomass_change_percent / increase_percent
-            
-            sensitivity_results.append({
-                'parameter_name': param_name,
-                'category': param_data['category'],
-                'original_value': original_value,
-                'modified_value': modified_value,
-                'parameter_change_percent': increase_percent,
-                'baseline_biomass': baseline_biomass,
-                'modified_biomass': final_biomass,
-                'biomass_change': biomass_change,
-                'biomass_change_percent': biomass_change_percent,
-                'sensitivity_ratio': sensitivity_ratio
-            })
-            
-            print(f"  ✅ Original: {original_value:.3f} → Modified: {modified_value:.3f}")
-            print(f"  📊 Biomass: {baseline_biomass:.3f} → {final_biomass:.3f} g ({biomass_change_percent:+.2f}%)")
-            print(f"  🎯 Sensitivity ratio: {sensitivity_ratio:.3f}")
-            
-            # Clean up temp files
-            Path(temp_sim_file).unlink(missing_ok=True)
-            Path(temp_weather).unlink(missing_ok=True)
-            
-        except Exception as e:
-            failed_simulations.append({
-                'parameter_name': param_name,
-                'error': str(e)
-            })
-            print(f"  ❌ Failed: {e}")
-            
-            # Clean up temp files on failure
-            Path(temp_sim_file).unlink(missing_ok=True)
-            Path(temp_weather).unlink(missing_ok=True)
-        
-        # Clean up main temp file
-        Path(temp_master_file).unlink(missing_ok=True)
         print()
     
     # Generate results summary
-    print("=" * 80)
-    print("🎯 SENSITIVITY ANALYSIS RESULTS")
-    print("=" * 80)
+    print("=" * 90)
+    print("🎯 TWO-SIDED SENSITIVITY ANALYSIS RESULTS")
+    print("=" * 90)
     
     if sensitivity_results:
-        # Sort by absolute sensitivity ratio
-        sensitivity_results.sort(key=lambda x: abs(x['sensitivity_ratio']), reverse=True)
+        # Group results by parameter for comparison
+        parameter_groups = {}
+        for result in sensitivity_results:
+            param_name = result['parameter_name']
+            if param_name not in parameter_groups:
+                parameter_groups[param_name] = {'increase': None, 'decrease': None}
+            parameter_groups[param_name][result['direction']] = result
         
-        print(f"\n📊 PARAMETER SENSITIVITY RANKING:")
-        print(f"{'Rank':<4} {'Parameter':<30} {'Category':<12} {'Sensitivity':<12} {'Biomass Change':<15}")
-        print("-" * 80)
-        
-        for rank, result in enumerate(sensitivity_results, 1):
-            sens_ratio = result['sensitivity_ratio']
-            biomass_change = result['biomass_change_percent']
+        # Create comparison analysis
+        comparison_results = []
+        for param_name, directions in parameter_groups.items():
+            increase_result = directions.get('increase')
+            decrease_result = directions.get('decrease')
             
-            # Color coding based on sensitivity
-            if abs(sens_ratio) > 1.0:
+            if increase_result and decrease_result:
+                # Calculate asymmetry metrics
+                inc_ratio = increase_result['sensitivity_ratio']
+                dec_ratio = decrease_result['sensitivity_ratio']
+                
+                # Asymmetry index: 0 = symmetric, >0 = more sensitive to increases, <0 = more sensitive to decreases
+                asymmetry = (abs(inc_ratio) - abs(dec_ratio)) / max(abs(inc_ratio), abs(dec_ratio), 0.001)
+                max_sensitivity = max(abs(inc_ratio), abs(dec_ratio))
+                
+                comparison_results.append({
+                    'parameter_name': param_name,
+                    'category': increase_result['category'],
+                    'increase_sensitivity': inc_ratio,
+                    'decrease_sensitivity': dec_ratio,
+                    'max_sensitivity': max_sensitivity,
+                    'asymmetry_index': asymmetry,
+                    'increase_biomass_change': increase_result['biomass_change_percent'],
+                    'decrease_biomass_change': decrease_result['biomass_change_percent']
+                })
+        
+        # Sort by maximum sensitivity
+        comparison_results.sort(key=lambda x: x['max_sensitivity'], reverse=True)
+        
+        print(f"\n📊 TWO-SIDED PARAMETER SENSITIVITY RANKING:")
+        print(f"{'Rank':<4} {'Parameter':<25} {'Category':<12} {'Inc.Sens.':<9} {'Dec.Sens.':<9} {'Asymmetry':<10} {'Status':<12}")
+        print("-" * 90)
+        
+        for rank, result in enumerate(comparison_results, 1):
+            inc_sens = result['increase_sensitivity']
+            dec_sens = result['decrease_sensitivity']
+            asymmetry = result['asymmetry_index']
+            max_sens = result['max_sensitivity']
+            
+            # Color coding based on maximum sensitivity
+            if max_sens > 1.0:
                 status = "🔴 HIGH"
-            elif abs(sens_ratio) > 0.5:
+            elif max_sens > 0.5:
                 status = "🟡 MEDIUM"
-            elif abs(sens_ratio) > 0.1:
+            elif max_sens > 0.1:
                 status = "🟢 LOW"
             else:
                 status = "⚪ MINIMAL"
             
-            print(f"{rank:<4} {result['parameter_name']:<30} {result['category']:<12} {sens_ratio:+7.3f} {status:<12} {biomass_change:+7.2f}%")
+            # Asymmetry indicator
+            if abs(asymmetry) > 0.3:
+                if asymmetry > 0:
+                    asym_indicator = "↗️ INC"
+                else:
+                    asym_indicator = "↘️ DEC"
+            else:
+                asym_indicator = "↔️ SYM"
+            
+            print(f"{rank:<4} {result['parameter_name']:<25} {result['category']:<12} "
+                  f"{inc_sens:+8.3f} {dec_sens:+8.3f} {asym_indicator:<10} {status:<12}")
         
-        # Identify parameters with no effect
-        no_effect_params = [r for r in sensitivity_results if abs(r['sensitivity_ratio']) < 0.01]
+        # Identify highly asymmetric parameters
+        asymmetric_params = [r for r in comparison_results if abs(r['asymmetry_index']) > 0.5]
         
-        if no_effect_params:
-            print(f"\n⚪ PARAMETERS WITH MINIMAL EFFECT ON BIOMASS:")
-            print(f"{'Parameter':<30} {'Category':<12} {'Biomass Change':<15} {'Possible Reasons':<30}")
+        if asymmetric_params:
+            print(f"\n🔄 HIGHLY ASYMMETRIC PARAMETERS (Non-linear Response):")
+            print(f"{'Parameter':<30} {'Category':<12} {'Asymmetry':<12} {'Interpretation':<30}")
             print("-" * 95)
             
-            for result in no_effect_params:
+            for result in asymmetric_params:
                 param_name = result['parameter_name']
                 category = result['category']
-                change = result['biomass_change_percent']
+                asymmetry = result['asymmetry_index']
+                
+                if asymmetry > 0:
+                    interpretation = "More sensitive to increases"
+                else:
+                    interpretation = "More sensitive to decreases"
+                
+                print(f"{param_name:<30} {category:<12} {asymmetry:+8.3f} {interpretation:<30}")
+        
+        # Identify parameters with minimal effect
+        minimal_params = [r for r in comparison_results if r['max_sensitivity'] < 0.01]
+        
+        if minimal_params:
+            print(f"\n⚪ PARAMETERS WITH MINIMAL EFFECT ON BIOMASS:")
+            print(f"{'Parameter':<30} {'Category':<12} {'Max Sensitivity':<15} {'Possible Reasons':<30}")
+            print("-" * 95)
+            
+            for result in minimal_params:
+                param_name = result['parameter_name']
+                category = result['category']
+                max_sens = result['max_sensitivity']
                 
                 # Analyze possible reasons for no effect
                 reasons = []
@@ -621,30 +712,51 @@ def run_sensitivity_analysis(days: int, cultivar_id: str, system_type: str, trea
                     reasons.append("Parameter not active/limiting")
                 
                 reason_str = ", ".join(reasons) if reasons else "Unknown"
-                print(f"{param_name:<30} {category:<12} {change:+7.2f}% {reason_str:<30}")
+                print(f"{param_name:<30} {category:<12} {max_sens:8.3f} {reason_str:<30}")
+        
+        # Show symmetric vs asymmetric response summary
+        symmetric_count = sum(1 for r in comparison_results if abs(r['asymmetry_index']) <= 0.3)
+        asymmetric_count = len(comparison_results) - symmetric_count
+        
+        print(f"\n📈 RESPONSE SYMMETRY ANALYSIS:")
+        print(f"  ↔️ Symmetric parameters (linear response): {symmetric_count}")
+        print(f"  🔄 Asymmetric parameters (non-linear response): {asymmetric_count}")
+        print(f"  🎯 Total parameters analyzed: {len(comparison_results)}")
         
         # Save detailed results
-        results_file = f"outputs/sensitivity_analysis_{file_prefix}.csv"
+        results_file = f"outputs/two_sided_sensitivity_analysis_{file_prefix}.csv"
         
         Path("outputs").mkdir(exist_ok=True)
-        results_df = pd.DataFrame(sensitivity_results)
-        results_df.to_csv(results_file, index=False)
-        print(f"\n💾 Detailed results saved to: {results_file}")
+        
+        # Save individual results
+        individual_df = pd.DataFrame(sensitivity_results)
+        individual_df.to_csv(results_file, index=False)
+        
+        # Save comparison results
+        comparison_file = f"outputs/sensitivity_comparison_{file_prefix}.csv"
+        comparison_df = pd.DataFrame(comparison_results)
+        comparison_df.to_csv(comparison_file, index=False)
+        
+        print(f"\n💾 Detailed individual results saved to: {results_file}")
+        print(f"💾 Comparison analysis saved to: {comparison_file}")
     
     if failed_simulations:
         print(f"\n❌ FAILED SIMULATIONS ({len(failed_simulations)}):")
         for failure in failed_simulations:
-            print(f"  • {failure['parameter_name']}: {failure['error']}")
+            direction = failure.get('direction', 'unknown')
+            print(f"  • {failure['parameter_name']} ({direction}): {failure['error']}")
     
     if skipped_params:
-        print(f"\n⏭️ SKIPPED PARAMETERS ({len(skipped_params)}):")
+        print(f"\n⏭️ SKIPPED PARAMETER TESTS ({len(skipped_params)}):")
         for skip in skipped_params:
-            print(f"  • {skip['parameter_name']}: {skip['reason']}")
+            direction = skip.get('direction', 'unknown')
+            print(f"  • {skip['parameter_name']} ({direction}): {skip['reason']}")
     
-    print(f"\n✅ Sensitivity analysis completed!")
-    print(f"📈 Tested {len(sensitivity_results)} parameters successfully")
+    print(f"\n✅ Two-sided sensitivity analysis completed!")
+    print(f"📈 Tested {len(sensitivity_results)} parameter variations successfully")
     print(f"❌ Failed {len(failed_simulations)} parameter tests")
-    print(f"⏭️ Skipped {len(skipped_params)} parameters")
+    print(f"⏭️ Skipped {len(skipped_params)} parameter variations")
+    print(f"🔍 This analysis reveals both linear and non-linear parameter responses!")
 
 
 def main():
@@ -654,7 +766,7 @@ def main():
     parser.add_argument('--system', type=str, default='NFT', choices=['NFT', 'DWC', 'AEROPONICS'], help='Hydroponic system type')
     parser.add_argument('--treatment-id', type=str, help='Treatment identifier (e.g., T01, T02)')
     parser.add_argument('--input-dir', type=str, default='input', help='Input directory containing CSV configuration files')
-    parser.add_argument('--increase-percent', type=float, default=10.0, help='Percentage to increase each parameter (default: 10%)')
+    parser.add_argument('--change-percent', type=float, default=10.0, help='Percentage to change each parameter (±, default: ±10%)')
     
     args = parser.parse_args()
 
@@ -665,7 +777,7 @@ def main():
             system_type=args.system,
             treatment_id=args.treatment_id,
             input_dir=args.input_dir,
-            increase_percent=args.increase_percent
+            change_percent=args.change_percent
         )
     except Exception as e:
         print(f"❌ Sensitivity analysis failed: {e}")

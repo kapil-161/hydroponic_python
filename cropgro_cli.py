@@ -189,27 +189,16 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
     crop_params = DefaultConfigurations.get_lettuce_parameters()
     nutrient_params = DefaultConfigurations.get_default_nutrients()
     
-    # Update nutrient_params with dynamic nutrient solution values from CSV
-    if hasattr(system_config, 'nutrient_solution'):
-        from src.models.nutrient_models import NutrientParams
-        for nutrient_id, nutrient_data in system_config.nutrient_solution.items():
-            if nutrient_id in nutrient_params:
-                # Update the existing nutrient parameter with CSV values
-                original_param = nutrient_params[nutrient_id]
-                nutrient_params[nutrient_id] = NutrientParams(
-                    nutrient_id=original_param.nutrient_id,
-                    nutrient_name=original_param.nutrient_name,
-                    chemical_form=original_param.chemical_form,
-                    initial_conc=nutrient_data['initial_ppm'],  # Use CSV value
-                    recharge_conc=nutrient_data['optimal_ppm'], # Use CSV value
-                    uptake_conc=original_param.uptake_conc,
-                    sensitivity_coeff=original_param.sensitivity_coeff,
-                    is_nutritive=original_param.is_nutritive,
-                    min_conc=nutrient_data['minimum_ppm'],     # Use CSV value
-                    max_conc=nutrient_data['max_ppm'],         # Use CSV value
-                    charge=original_param.charge,
-                    molar_mass=original_param.molar_mass
-                )
+    # Load all nutrient-related parameters from CSV (FIXED: removes buggy conditional)
+    # Load from nutrient_concentrations, nutrient_management, and nutrient_parameters categories
+    nutrient_categories = ['nutrient_concentrations', 'nutrient_management', 'nutrient_parameters']
+    
+    for category in nutrient_categories:
+        if hasattr(system_config, category):
+            category_data = getattr(system_config, category)
+            if isinstance(category_data, dict):
+                # Add all parameters from this category to nutrient_params
+                nutrient_params.update(category_data)
 
     # Update system_config with dynamic system settings from CSV
     if hasattr(system_config, 'system_settings'):
@@ -590,8 +579,21 @@ python3 cropgro_cli.py --days 30 --cultivar LET_EXP001_2024 --output-csv my_resu
         return
 
     try:
-        results, detected_file_prefix = run_simulation(args.days, args.cultivar, args.system, args.print_daily, args.treatment_id, args.input_dir)
+        simulation_result = run_simulation(args.days, args.cultivar, args.system, args.print_daily, args.treatment_id, args.input_dir)
 
+        # CRITICAL FIX: Check if simulation failed (returned None or None, None)
+        if simulation_result is None or (isinstance(simulation_result, tuple) and simulation_result[0] is None):
+            print("❌ Simulation failed - cannot generate outputs. Please fix the errors above and try again.")
+            return
+        
+        # Unpack the results safely
+        if isinstance(simulation_result, tuple):
+            results, detected_file_prefix = simulation_result
+        else:
+            # Handle case where only results are returned
+            results = simulation_result
+            detected_file_prefix = args.cultivar
+        
         # Output CSV via DataFrame (curated columns)
         if args.output_csv:
             df = results.to_dataframe()
