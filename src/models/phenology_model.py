@@ -264,15 +264,16 @@ class ComprehensivePhenologyModel:
         if T <= Tbase or T >= Tmax:
             return 0.0
         elif Tbase < T <= Topt1:
-            # Linear increase from base to lower optimum
-            return self.params.thermal_time_scale * (T - Tbase) / (Topt1 - Tbase)
+            # Linear increase from base to lower optimum - return actual GDD
+            factor = (T - Tbase) / (Topt1 - Tbase)
+            return (T - Tbase) * factor * self.params.thermal_time_scale
         elif Topt1 < T <= Topt2:
-            # FIX: Constant optimal rate (maximum development)
-            return self.params.thermal_time_scale
+            # Optimal range - return full degree days
+            return (T - Tbase) * self.params.thermal_time_scale
         else:  # Topt2 < T < Tmax
-            # FIX: Linear decrease from upper optimum to maximum
+            # Linear decrease from upper optimum to maximum - return actual GDD
             factor = (Tmax - T) / (Tmax - Topt2)
-            return self.params.thermal_time_scale * factor
+            return (T - Tbase) * factor * self.params.thermal_time_scale
     
     def calculate_temperature_factor(self, temperature: float) -> float:
         """

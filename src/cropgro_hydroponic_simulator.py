@@ -688,14 +688,14 @@ class CROPGROHydroponicSimulator:
             
             # REALISTIC NUTRIENT MANAGEMENT
             # Individual nutrient monitoring and targeted supplementation
-            nutrient_management_performed = self._perform_realistic_nutrient_management(
+            nutrient_management_performed, solution_change_ph = self._perform_realistic_nutrient_management(
                 day, current_concentrations, input_data, logger
             )
             
-            # Update pH only if nutrients were changed
-            if nutrient_management_performed:
-                current_ph = system_params['default_ph']
-                logger.info(f"  pH: reset to {current_ph:.1f}")
+            # Reset pH only during complete solution changes
+            if solution_change_ph is not None:
+                current_ph = solution_change_ph
+            # Otherwise, pH will be updated dynamically by the pH model based on nutrient uptake and drift
             
             # Run daily simulation step
             daily_result = self._simulate_daily_step(
@@ -708,7 +708,8 @@ class CROPGROHydroponicSimulator:
                 ph=current_ph,
                 previous_tank_volume=current_tank_volume,
                 plant_density=self.plant_density,
-                weather=weather
+                weather=weather,
+                original_tank_volume=input_data.system_config.tank_volume
             )
             
             daily_results.append(daily_result)
@@ -1446,7 +1447,8 @@ class CROPGROHydroponicSimulator:
                            solar_radiation: float, daylength: float, 
                            nutrient_concentrations: Dict[str, float], ph: float = None,
                            previous_tank_volume: float = 0.0,
-                           plant_density: float = 1.0, weather=None) -> DailyResults:
+                           plant_density: float = 1.0, weather=None, 
+                           original_tank_volume: float = 500.0) -> DailyResults:
         """
         REFACTORED SIMULATION LOOP with linear data flow and centralized stress calculation.
         
@@ -1904,7 +1906,9 @@ class CROPGROHydroponicSimulator:
             self.current_lai
         )
         system_water_use_l = water_uptake_l * self.system_area
-        tank_volume = max(0.0, previous_tank_volume - system_water_use_l)
+        # Maintain minimum tank volume (10% of original capacity) for system functionality
+        min_tank_volume = original_tank_volume * 0.1
+        tank_volume = max(min_tank_volume, previous_tank_volume - system_water_use_l)
         self.cumulative_water_L += system_water_use_l
         
         # === CREATE COMPREHENSIVE DAILY RESULTS ===
@@ -2604,7 +2608,12 @@ class CROPGROHydroponicSimulator:
             
             # Updated mass and concentration
             final_mass = max(0.0, initial_mass - total_uptake_mg)
-            final_conc = final_mass / tank_volume_L
+            # Safety check: prevent division by zero when tank volume is depleted
+            if tank_volume_L > 0.0:
+                final_conc = final_mass / tank_volume_L
+            else:
+                # If tank is empty, concentration becomes zero
+                final_conc = 0.0
             
             updated_concentrations[nutrient] = final_conc
             
@@ -3439,9 +3448,12 @@ class CROPGROHydroponicSimulator:
         """
         Perform realistic nutrient management with individual nutrient monitoring.
         
-        Returns True if any nutrient management was performed, False otherwise.
+        Returns (management_performed, new_ph) where:
+        - management_performed: True if any nutrient management was performed
+        - new_ph: None for routine management, pH value for complete solution changes
         """
         management_performed = False
+        new_ph = None
         
         # Get optimal concentrations from CSV configuration
         nutrient_solution_params = getattr(self.system_config, 'nutrient_solution', {})
@@ -3528,6 +3540,11 @@ class CROPGROHydroponicSimulator:
         if np.random.random() < prob_solution_change or day % forced_solution_change_interval == 0:  # Forced at interval as backup
                 logger.info(f"Day {day}: Complete solution change - replacing with fresh nutrient solution")
                 
+                # Reset pH to target value during complete solution change
+                system_params = getattr(input_data.system_config, 'system_parameters', {})
+                new_ph = system_params.get('default_ph', 6.0)
+                logger.info(f"  pH: reset to {new_ph:.1f} during solution change")
+                
                 # Replace all nutrients
                 for nutrient_id, params in input_data.nutrient_params.items():
                     if nutrient_id in optimal_concentrations:
@@ -3546,7 +3563,7 @@ class CROPGROHydroponicSimulator:
                 
                 management_performed = True
         
-        return management_performed
+        return management_performed, new_ph
     
     def _run_hourly_integration(self, day: int, daily_weather_data: Dict[str, float], 
                                env_conditions: Dict[str, float], stress_factors: Dict[str, float],
