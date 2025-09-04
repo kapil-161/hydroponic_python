@@ -146,15 +146,15 @@ class LeafDevelopmentModel:
         if T <= Tmin or T >= Tmax:
             return 0.0
         elif Tmin < T <= Topt1:
-            # Linear increase from Tmin to Topt1
+            # FIX: Linear increase from Tmin to Topt1
             return (T - Tmin) / (Topt1 - Tmin) * (Topt1 - Tmin)
         elif Topt1 < T <= Topt2:
-            # Optimal range - maximum rate
-            return T - Tmin
+            # FIX: Optimal range - constant maximum rate
+            return Topt1 - Tmin
         else:  # Topt2 < T < Tmax
-            # Linear decrease from Topt2 to Tmax
+            # FIX: Linear decrease from Topt2 to Tmax
             factor = (Tmax - T) / (Tmax - Topt2)
-            return factor * (T - Tmin)
+            return factor * (Topt1 - Tmin)
     
     def calculate_stress_factors(self, water_stress: float = 1.0, 
                                nitrogen_stress: float = 1.0,

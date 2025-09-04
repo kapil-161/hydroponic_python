@@ -308,7 +308,8 @@ class EnhancedRespirationModel:
         )
         
         # Prevent excessive respiration at very high temperatures
-        temp = float(temperature)
+        from ..utils.temperature_utils import sanitize_temperature
+        temp = sanitize_temperature(temperature)
         if temp > self.params.max_temperature_threshold:
             # Protein denaturation effects
             excess_temp = temp - self.params.max_temperature_threshold
@@ -609,7 +610,7 @@ class EnhancedRespirationModel:
         
         # Final hourly respiration rates
         adjusted_maintenance = hourly_maintenance * hourly_adjustment * temp_stress_factor
-        adjusted_growth = hourly_growth * hourly_adjustment
+        adjusted_growth = hourly_growth * hourly_adjustment * temp_stress_factor  # Fix: apply temp_stress_factor
         adjusted_total = adjusted_maintenance + adjusted_growth
         
         # Calculate carbon cost (CO2 release)
@@ -724,6 +725,16 @@ def create_lettuce_respiration_model(system_config=None) -> EnhancedRespirationM
         # Add environment parameters that respiration model needs
         if 'optimal_temperature' in environment_params:
             respiration_params['optimal_temperature'] = environment_params['optimal_temperature']
+        
+        # Get model constants for growth composition fractions
+        model_constants = getattr(system_config, 'model_constants', {})
+        
+        # Add growth composition fractions from model_constants to respiration_params
+        composition_params = ['protein_fraction', 'carbohydrate_fraction', 'lipid_fraction', 
+                            'organic_acid_fraction', 'lignin_fraction']
+        for param in composition_params:
+            if param in model_constants:
+                respiration_params[param] = model_constants[param]
         
         # Map renamed parameters to expected parameter names
         param_mapping = {

@@ -7,7 +7,22 @@ Provides standardized Q10, thermal time, VPD, pH, and temperature factor calcula
 
 import math
 import numpy as np
-from typing import Optional
+from typing import Optional, Any
+
+
+def sanitize_temperature(temperature: Any) -> float:
+    """
+    Sanitize temperature value to ensure it's a real number.
+    
+    Args:
+        temperature: Temperature value (may be complex)
+        
+    Returns:
+        Real temperature value as float
+    """
+    if isinstance(temperature, complex):
+        return temperature.real
+    return float(temperature)
 
 
 def calculate_q10_temperature_factor(temperature: float, 
@@ -28,6 +43,9 @@ def calculate_q10_temperature_factor(temperature: float,
     Returns:
         Temperature factor (1.0 at reference temperature)
     """
+    # Ensure temperature is real (not complex)
+    if isinstance(temperature, complex):
+        temperature = temperature.real
     temp_diff = float(temperature) - reference_temp
     factor = q10_factor ** (temp_diff / 10.0)
     return clamp_value(factor, min_factor, max_factor)
@@ -51,6 +69,9 @@ def calculate_thermal_time(temperature: float,
     Returns:
         Thermal time units (0 = no development, 1 = optimal)
     """
+    # Ensure temperature is real (not complex)
+    if isinstance(temperature, complex):
+        temperature = temperature.real
     if temperature <= base_temp or temperature >= max_temp:
         return 0.0
     

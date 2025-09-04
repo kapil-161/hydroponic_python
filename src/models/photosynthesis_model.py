@@ -102,7 +102,9 @@ class PhotosynthesisModel:
 
     def calculate_hourly_assimilation(self, par_umol_m2_s: float, co2_ppm: float, temp_c: float, 
                                      lai: float, hour: int, ec_factor: float, 
-                                     config_dict: Optional[Dict[str, Any]] = None) -> float:
+                                     config_dict: Optional[Dict[str, Any]] = None,
+                                     sunlit_lai: Optional[float] = None, 
+                                     shaded_lai: Optional[float] = None) -> float:
         """Calculate hourly carbon assimilation (g C/m2 ground area/hour).
         
         DSSAT-style hourly photosynthesis calculation for internal integration.
@@ -122,10 +124,45 @@ class PhotosynthesisModel:
         # No photosynthesis during night hours or with zero PAR
         if par_umol_m2_s <= self.params.min_par_threshold:
             return 0.0
+        
+        # Use provided sunlit/shaded LAI or fall back to total LAI if not available
+        if sunlit_lai is None:
+            sunlit_lai = lai
+        if shaded_lai is None:
+            shaded_lai = 0.0
             
-        return self._calculate_instantaneous_assimilation(
-            par_umol_m2_s, co2_ppm, temp_c, lai, ec_factor, config_dict
+        # Ensure sunlit + shaded = total LAI
+        if abs((sunlit_lai + shaded_lai) - lai) > 0.001:
+            # Normalize to ensure they sum to total LAI
+            total_calculated = sunlit_lai + shaded_lai
+            if total_calculated > 0:
+                sunlit_lai = (sunlit_lai / total_calculated) * lai
+                shaded_lai = (shaded_lai / total_calculated) * lai
+            else:
+                sunlit_lai = lai
+                shaded_lai = 0.0
+        
+        # Calculate photosynthesis for sunlit portion
+        sunlit_photosynthesis = self._calculate_instantaneous_assimilation(
+            par_umol_m2_s, co2_ppm, temp_c, sunlit_lai, ec_factor, config_dict
         )
+        
+        # Calculate photosynthesis for shaded portion with reduced light
+        if shaded_lai > 0:
+            # Shaded leaves receive diffuse light only
+            # Use a fraction of the incident PAR for shaded leaves
+            shaded_par = par_umol_m2_s * self.params.shaded_light_fraction if hasattr(self.params, 'shaded_light_fraction') else par_umol_m2_s * 0.3
+            
+            shaded_photosynthesis = self._calculate_instantaneous_assimilation(
+                shaded_par, co2_ppm, temp_c, shaded_lai, ec_factor, config_dict
+            )
+        else:
+            shaded_photosynthesis = 0.0
+        
+        # Total canopy photosynthesis is sum of sunlit and shaded portions
+        total_canopy_photosynthesis = sunlit_photosynthesis + shaded_photosynthesis
+        
+        return total_canopy_photosynthesis
     
     def _calculate_instantaneous_assimilation(self, par_umol_m2_s: float, co2_ppm: float, 
                                             temp_c: float, lai: float, ec_factor: float = 1.0, 
@@ -184,36 +221,31 @@ class PhotosynthesisModel:
         # Convert to hourly g C/m² (3600 seconds/hour, configurable g C/μmol CO2)
         hourly_g_c_per_m2 = net_photosynthesis_rate * 3600.0 * self.params.umol_to_g_carbon_ratio
         
-        # Handle light penetration constraints
-        if lai > light_penetration_lai:
-            light_penetration_factor = light_penetration_lai / lai
-            effective_par = par_umol_m2_s * light_penetration_factor
-            
-            # Recalculate with reduced light
-            i2 = self.params.alpha * effective_par
-            j = (i2 + jmax - np.sqrt((i2 + jmax)**2 - 4 * self.params.theta * i2 * jmax)) / (2 * self.params.theta)
-            aj_shaded = j * (ci - self.params.gamma_star) / (4 * (ci + 2 * self.params.gamma_star))
-            
-            net_rate_shaded = max(0.0, min(ac, aj_shaded) - rd)
-            hourly_g_c_per_m2 = net_rate_shaded * 3600.0 * self.params.umol_to_g_carbon_ratio
-            
-            effective_lai = light_penetration_lai + (lai - light_penetration_lai) * self.params.excess_lai_efficiency
-        else:
-            effective_lai = lai
-        
-        # Scale by effective LAI and apply stress factors
-        total_hourly_assimilation = hourly_g_c_per_m2 * effective_lai * ec_factor
+        # Scale by LAI to get total assimilation for this portion per ground area
+        # The calling function handles sunlit/shaded LAI separation
+        total_hourly_assimilation = hourly_g_c_per_m2 * lai * ec_factor
         
         return max(0.0, total_hourly_assimilation)
 
-    def calculate_daily_assimilation(self, par_umol_m2_s: float, co2_ppm: float, temp_c: float, lai: float, photoperiod_hours: float, ec_factor: float, config_dict: Optional[Dict[str, Any]] = None) -> float:
+    def calculate_daily_assimilation(self, par_umol_m2_s: float, co2_ppm: float, temp_c: float, lai: float, photoperiod_hours: float, ec_factor: float, config_dict: Optional[Dict[str, Any]] = None, sunlit_lai: Optional[float] = None, shaded_lai: Optional[float] = None) -> float:
         """Calculate daily carbon assimilation (g C/m2 ground area/day).
 
-        This function calculates photosynthesis PER UNIT LEAF AREA first, then scales by 
-        effective LAI to get total canopy assimilation per unit ground area.
+        This function calculates photosynthesis separately for sunlit and shaded portions
+        of the canopy, then sums them to get total canopy assimilation per unit ground area.
         
         Uses photoperiod_hours to integrate over light period rather than 24h.
         Includes real-world light penetration and shading constraints.
+        
+        Args:
+            par_umol_m2_s: Photosynthetically active radiation (μmol/m²/s)
+            co2_ppm: CO2 concentration (ppm)
+            temp_c: Temperature (°C)
+            lai: Total leaf area index
+            photoperiod_hours: Photoperiod length (hours)
+            ec_factor: EC stress factor
+            config_dict: Configuration dictionary with LAI thresholds
+            sunlit_lai: Sunlit leaf area index (if None, will use total LAI)
+            shaded_lai: Shaded leaf area index (if None, will use 0)
         """
         # Convert CO2 ppm to umol/mol and apply stomatal limitation
         ci = co2_ppm * self.params.ci_fraction
@@ -230,12 +262,80 @@ class PhotosynthesisModel:
         if enzyme_saturation_lai is None or light_penetration_lai is None:
             raise ValueError("❌ LAI thresholds must be provided in CSV configuration - no hardcoded defaults allowed")
         
+        # Use provided sunlit/shaded LAI or fall back to total LAI if not available
+        if sunlit_lai is None:
+            sunlit_lai = lai
+        if shaded_lai is None:
+            shaded_lai = 0.0
+            
+        # Ensure sunlit + shaded = total LAI
+        if abs((sunlit_lai + shaded_lai) - lai) > 0.001:
+            # Normalize to ensure they sum to total LAI
+            total_calculated = sunlit_lai + shaded_lai
+            if total_calculated > 0:
+                sunlit_lai = (sunlit_lai / total_calculated) * lai
+                shaded_lai = (shaded_lai / total_calculated) * lai
+            else:
+                sunlit_lai = lai
+                shaded_lai = 0.0
+        
+        # Calculate photosynthesis for sunlit portion
+        sunlit_photosynthesis = self._calculate_portion_photosynthesis(
+            par_umol_m2_s, ci, temp_c, sunlit_lai, photoperiod_hours,
+            vcmax_base, jmax_base, rd, enzyme_saturation_lai, light_penetration_lai
+        )
+        
+        # Calculate photosynthesis for shaded portion with reduced light
+        if shaded_lai > 0:
+            # Shaded leaves receive diffuse light only
+            # Use a fraction of the incident PAR for shaded leaves
+            shaded_par = par_umol_m2_s * self.params.shaded_light_fraction if hasattr(self.params, 'shaded_light_fraction') else par_umol_m2_s * 0.3
+            
+            shaded_photosynthesis = self._calculate_portion_photosynthesis(
+                shaded_par, ci, temp_c, shaded_lai, photoperiod_hours,
+                vcmax_base, jmax_base, rd, enzyme_saturation_lai, light_penetration_lai
+            )
+        else:
+            shaded_photosynthesis = 0.0
+        
+        # Total canopy photosynthesis is sum of sunlit and shaded portions
+        total_canopy_photosynthesis = sunlit_photosynthesis + shaded_photosynthesis
+        
+        # Apply EC stress factor to final photosynthesis
+        total_canopy_photosynthesis *= ec_factor
+        
+        return max(0.0, total_canopy_photosynthesis)
+    
+    def _calculate_portion_photosynthesis(self, par_umol_m2_s: float, ci: float, temp_c: float, 
+                                        portion_lai: float, photoperiod_hours: float,
+                                        vcmax_base: float, jmax_base: float, rd: float,
+                                        enzyme_saturation_lai: float, light_penetration_lai: float) -> float:
+        """Calculate photosynthesis for a specific portion of the canopy (sunlit or shaded).
+        
+        Args:
+            par_umol_m2_s: Photosynthetically active radiation (μmol/m²/s)
+            ci: Internal CO2 concentration (μmol/mol)
+            temp_c: Temperature (°C)
+            portion_lai: Leaf area index for this portion
+            photoperiod_hours: Photoperiod length (hours)
+            vcmax_base: Base Vcmax at current temperature
+            jmax_base: Base Jmax at current temperature
+            rd: Dark respiration rate
+            enzyme_saturation_lai: LAI threshold for enzyme saturation
+            light_penetration_lai: LAI threshold for light penetration
+            
+        Returns:
+            Photosynthesis for this portion (g C/m² ground area/day)
+        """
+        if portion_lai <= 0:
+            return 0.0
+            
         # Real-world enzyme saturation at high LAI
         # RuBisCO and electron transport capacity don't scale infinitely with leaf area
-        if lai > enzyme_saturation_lai:
+        if portion_lai > enzyme_saturation_lai:
             # Enzyme limitation factor - diminishing returns above threshold
-            enzyme_saturation_factor = 1.0 - self.params.enzyme_saturation_rate * (lai - enzyme_saturation_lai)
-            enzyme_saturation_factor = max(self.params.min_enzyme_factor, enzyme_saturation_factor)  # Configurable minimum capacity
+            enzyme_saturation_factor = 1.0 - self.params.enzyme_saturation_rate * (portion_lai - enzyme_saturation_lai)
+            enzyme_saturation_factor = max(self.params.min_enzyme_factor, enzyme_saturation_factor)
             vcmax = vcmax_base * enzyme_saturation_factor
             jmax = jmax_base * enzyme_saturation_factor
         else:
@@ -243,67 +343,36 @@ class PhotosynthesisModel:
             jmax = jmax_base
 
         # Rubisco-limited rate (Ac)
-        # O2 concentration: convert mmol/mol to μmol/mol for consistency with ci and kinetic constants
-        o2_umol_mol = self.params.o2_mmol_mol * 1000.0  # 210 mmol/mol → 210,000 μmol/mol
-        ko_umol_mol = self.params.ko * 1000.0  # Convert Ko from mmol/mol to μmol/mol
+        o2_umol_mol = self.params.o2_mmol_mol * 1000.0
+        ko_umol_mol = self.params.ko * 1000.0
         ac = vcmax * (ci - self.params.gamma_star) / (ci + self.params.kc * (1 + o2_umol_mol / ko_umol_mol))
 
         # Light-limited rate (Aj)
-        # J = (alpha * PAR * Jmax) / sqrt( (alpha * PAR)^2 + Jmax^2 )
-        # Simplified light response (non-rectangular hyperbola)
         i2 = self.params.alpha * par_umol_m2_s
         j = (i2 + jmax - np.sqrt((i2 + jmax)**2 - 4 * self.params.theta * i2 * jmax)) / (2 * self.params.theta)
         aj = j * (ci - self.params.gamma_star) / (4 * (ci + 2 * self.params.gamma_star))
 
-        # Net photosynthesis: subtract dark respiration (Farquhar model standard)
-        # Dark respiration occurs during both light and dark periods
+        # Net photosynthesis: subtract dark respiration
         net_photosynthesis_rate = max(0.0, min(ac, aj) - rd)
         
         # Integrate net photosynthesis over photoperiod
         photoperiod_seconds = max(0.0, photoperiod_hours) * self.params.seconds_per_hour
         net_day_umol = net_photosynthesis_rate * photoperiod_seconds
         
-        # Dark respiration continues during dark period (configurable day length - photoperiod_hours)
+        # Dark respiration continues during dark period
         dark_period_hours = max(0.0, self.params.hours_per_day - photoperiod_hours)
         dark_period_seconds = dark_period_hours * self.params.seconds_per_hour
         dark_respiration_umol = rd * dark_period_seconds
         
-        # Total daily net carbon = net photosynthesis - dark period respiration
+        # Total daily net carbon for this portion
         net_umol_day = max(0.0, net_day_umol - dark_respiration_umol)
-        # Convert from umol CO2 to g C: configurable conversion ratio
+        
+        # Convert from umol CO2 to g C
         g_c_m2_day = max(0.0, net_umol_day) * self.params.umol_to_g_carbon_ratio
-
-        # Real-world light penetration constraints using CSV parameters
-        # Effective LAI decreases with canopy density due to shading
-        if lai > light_penetration_lai:
-            # Severe shading above threshold - diminishing returns
-            light_penetration_factor = light_penetration_lai / lai  # Linear decline in effectiveness
-            effective_par = par_umol_m2_s * light_penetration_factor
-            
-            # Recalculate with reduced light
-            i2 = self.params.alpha * effective_par
-            j = (i2 + jmax - np.sqrt((i2 + jmax)**2 - 4 * self.params.theta * i2 * jmax)) / (2 * self.params.theta)
-            aj_shaded = j * (ci - self.params.gamma_star) / (4 * (ci + 2 * self.params.gamma_star))
-            
-            photoperiod_seconds = max(0.0, photoperiod_hours) * self.params.seconds_per_hour
-            gross_day_umol_shaded = max(0.0, min(ac, aj_shaded)) * photoperiod_seconds
-            net_umol_day = gross_day_umol_shaded
-            g_c_m2_day = max(0.0, net_umol_day) * self.params.umol_to_g_carbon_ratio
-            
-            # Only threshold LAI contributes fully, rest at diminishing returns
-            effective_lai = light_penetration_lai + (lai - light_penetration_lai) * self.params.excess_lai_efficiency  # Configurable efficiency for excess canopy
-        else:
-            effective_lai = lai
         
-        # Scale by effective LAI to get total canopy assimilation per ground area
-        # g_c_m2_day is per unit leaf area, effective_lai converts to per unit ground area
-        total_g_c_m2_day = g_c_m2_day * effective_lai
+        # Scale by portion LAI to get total assimilation for this portion per ground area
+        total_g_c_m2_day = g_c_m2_day * portion_lai
         
-        # Apply EC stress factor to final photosynthesis
-        # EC stress affects stomatal conductance and nutrient availability
-        total_g_c_m2_day *= ec_factor
-
-
         return max(0.0, total_g_c_m2_day)
 
 

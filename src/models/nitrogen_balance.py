@@ -410,18 +410,28 @@ class PlantNitrogenBalanceModel:
         )
     
     def calculate_nitrogen_demand(self, organ_growth_rates: Dict[str, float],
-                                growth_stage: str) -> Dict[str, float]:
+                                growth_stage: str, environmental_factors: Dict[str, float]) -> Dict[str, float]:
         """
         Calculate nitrogen demand for growth.
         
         Args:
             organ_growth_rates: Growth rates by organ (g dry mass/day)
             growth_stage: Current growth stage
+            environmental_factors: Environmental conditions affecting N demand
             
         Returns:
             Nitrogen demand by organ (g N/day)
         """
         demand_by_organ = {}
+        
+        # Calculate environmental effect on nitrogen demand
+        temp_factor = environmental_factors.get('temperature', 1.0)
+        water_factor = environmental_factors.get('water', 1.0)
+        ph_factor = environmental_factors.get('pH', 1.0)
+        
+        # Environmental stress increases N demand for metabolic processes
+        env_stress = max(0.5, min(temp_factor, water_factor, ph_factor))
+        demand_modifier = 1.0 / env_stress if env_stress > 0 else 2.0  # Higher demand under stress
         
         for organ_name, growth_rate in organ_growth_rates.items():
             if growth_rate > 0 and organ_name in self.params.critical_n_concentrations:
@@ -435,8 +445,8 @@ class PlantNitrogenBalanceModel:
                 elif growth_stage == 'reproductive' and organ_name == 'reproductive':
                     target_concentration *= 1.2  # High N demand for reproductive organs
                 
-                # Calculate N demand for new growth
-                n_demand = growth_rate * target_concentration
+                # Calculate N demand for new growth (adjusted by environmental conditions)
+                n_demand = growth_rate * target_concentration * demand_modifier
                 demand_by_organ[organ_name] = n_demand
             else:
                 demand_by_organ[organ_name] = 0.0
@@ -527,18 +537,28 @@ class PlantNitrogenBalanceModel:
         )
     
     def calculate_nitrogen_remobilization(self, stress_factors: Dict[str, float],
-                                        senescence_rates: Dict[str, float]) -> float:
+                                        senescence_rates: Dict[str, float],
+                                        environmental_factors: Dict[str, float]) -> float:
         """
         Calculate nitrogen remobilization from senescing and stressed tissues.
         
         Args:
             stress_factors: Stress levels by type (0-1, 1=no stress)
             senescence_rates: Senescence rates by organ (fraction/day)
+            environmental_factors: Environmental conditions affecting remobilization rates
             
         Returns:
             Total remobilized nitrogen (g N/day)
         """
         total_remobilized = 0.0
+        
+        # Calculate environmental effect on remobilization rates
+        temp_factor = environmental_factors.get('temperature', 1.0)
+        water_factor = environmental_factors.get('water', 1.0)
+        ph_factor = environmental_factors.get('pH', 1.0)
+        
+        # Combined environmental effect on enzymatic remobilization processes
+        env_effect = temp_factor * water_factor * ph_factor
         
         # Stress-induced remobilization
         overall_stress = 1.0 - min(stress_factors.values()) if stress_factors else 1.0
@@ -549,18 +569,20 @@ class PlantNitrogenBalanceModel:
                     # Calculate remobilizable N from different pools
                     remobilizable_n = 0.0
                     
-                    # Storage N - most readily available
+                    # Storage N - most readily available (affected by environmental factors)
                     storage_remob = (organ_state.storage_n * 
-                                   self.params.remobilization_rates[NitrogenPool.STORAGE.value])
+                                   self.params.remobilization_rates[NitrogenPool.STORAGE.value] * 
+                                   env_effect)
                     
-                    # Metabolic N - available under stress
+                    # Metabolic N - available under stress (affected by temperature and pH)
                     metabolic_remob = (organ_state.metabolic_n * 
                                      self.params.remobilization_rates[NitrogenPool.METABOLIC.value] * 
-                                     overall_stress)
+                                     overall_stress * env_effect)
                     
-                    # Transport N - highly mobile
+                    # Transport N - highly mobile (less affected by environment)
                     transport_remob = (organ_state.transport_n * 
-                                     self.params.remobilization_rates[NitrogenPool.TRANSPORT.value])
+                                     self.params.remobilization_rates[NitrogenPool.TRANSPORT.value] * 
+                                     min(env_effect, 1.2))  # Cap transport effect
                     
                     remobilizable_n = storage_remob + metabolic_remob + transport_remob
                     
@@ -585,9 +607,9 @@ class PlantNitrogenBalanceModel:
                 organ_state = self.organ_states[organ_name]
                 efficiency = self.params.remobilization_efficiency[organ_name]
                 
-                # Remobilize from senescing tissue
+                # Remobilize from senescing tissue (affected by environmental conditions)
                 senescence_remob = (organ_state.total_nitrogen * senescence_rate * 
-                                  efficiency * 0.5)  # 50% of N in senescing tissue
+                                  efficiency * 0.5 * env_effect)  # 50% of N in senescing tissue
                 
                 organ_state.daily_remobilization += senescence_remob
                 total_remobilized += senescence_remob
@@ -693,16 +715,16 @@ class PlantNitrogenBalanceModel:
             limiting_factors=[]
         )
 
-        # Calculate nitrogen remobilization
+        # Calculate nitrogen remobilization (now using environmental factors)
         remobilized_n = self.calculate_nitrogen_remobilization(
-            stress_factors, senescence_rates
+            stress_factors, senescence_rates, environmental_factors
         )
 
         # Total available nitrogen for allocation
         available_n = external_nitrogen_input + remobilized_n
 
-        # Calculate nitrogen demand
-        n_demand = self.calculate_nitrogen_demand(organ_growth_rates, growth_stage)
+        # Calculate nitrogen demand (now using environmental factors)
+        n_demand = self.calculate_nitrogen_demand(organ_growth_rates, growth_stage, environmental_factors)
 
         # Allocate nitrogen to organs
         allocation_response = self.allocate_nitrogen(
@@ -726,16 +748,32 @@ class PlantNitrogenBalanceModel:
                 if organ_state.dry_mass > 0:
                     organ_state.nitrogen_concentration = organ_state.total_nitrogen / organ_state.dry_mass
 
-                # Update nitrogen pools proportionally
-                if organ_state.total_nitrogen > 0:
+                # Update nitrogen pools by partitioning newly allocated nitrogen
+                if allocated_n > 0:
+                    # Partition newly allocated nitrogen into functional pools based on physiological principles
+                    # These fractions should be configurable from CSV in the future
+                    structural_fraction = 0.4    # 40% to structural components (proteins, cell walls)
+                    metabolic_fraction = 0.35    # 35% to metabolic functions (enzymes, signaling)
+                    storage_fraction = 0.15      # 15% to storage pools (vacuolar N, amino acids)
+                    transport_fraction = 0.10    # 10% to transport forms (nitrate, amino acids)
+                    
+                    # Add newly allocated nitrogen to each pool
+                    organ_state.structural_n += allocated_n * structural_fraction
+                    organ_state.metabolic_n += allocated_n * metabolic_fraction
+                    organ_state.storage_n += allocated_n * storage_fraction
+                    organ_state.transport_n += allocated_n * transport_fraction
+                    
+                    # Ensure pools sum to total nitrogen (accounting for any previous values)
                     total_pools = (organ_state.structural_n + organ_state.metabolic_n +
                                  organ_state.storage_n + organ_state.transport_n)
-                    if total_pools > 0:
-                        scale_factor = organ_state.total_nitrogen / total_pools
-                        organ_state.structural_n *= scale_factor
-                        organ_state.metabolic_n *= scale_factor
-                        organ_state.storage_n *= scale_factor
-                        organ_state.transport_n *= scale_factor
+                    
+                    # Normalize if there's a discrepancy (should be minimal)
+                    if abs(total_pools - organ_state.total_nitrogen) > 0.001:
+                        normalization_factor = organ_state.total_nitrogen / total_pools
+                        organ_state.structural_n *= normalization_factor
+                        organ_state.metabolic_n *= normalization_factor
+                        organ_state.storage_n *= normalization_factor
+                        organ_state.transport_n *= normalization_factor
 
                 # Update nitrogen status
                 self.update_organ_nitrogen_status(organ_name)

@@ -284,7 +284,7 @@ class TemperatureStressModel:
         )
         return f
 
-    def update_damage_and_recovery(self, stress_level: float, stress_type: TemperatureStressType):
+    def update_damage_and_recovery(self, stress_level: float, stress_type: TemperatureStressType, duration_hours: float = 24.0):
         if stress_type == TemperatureStressType.HEAT and stress_level > self.params.heat_damage_threshold:
             damage_rate = (stress_level - self.params.heat_damage_threshold) * 0.01
             self.damage.heat_damage = min(1.0, self.damage.heat_damage + damage_rate)
@@ -297,12 +297,18 @@ class TemperatureStressModel:
                 self.damage.cold_damage = min(1.0, self.damage.cold_damage + damage_rate)
                 self.damage.damage_recovery_rate = self.params.recovery_rate_cold
         else:
+            # FIX: Scale recovery rates by time step duration
+            time_scale = duration_hours / 24.0  # Convert to daily fraction
+            
             if self.damage.heat_damage > 0:
-                self.damage.heat_damage = max(0.0, self.damage.heat_damage - self.params.recovery_rate_heat)
+                recovery_amount = self.params.recovery_rate_heat * time_scale
+                self.damage.heat_damage = max(0.0, self.damage.heat_damage - recovery_amount)
             if self.damage.cold_damage > 0:
-                self.damage.cold_damage = max(0.0, self.damage.cold_damage - self.params.recovery_rate_cold)
+                recovery_amount = self.params.recovery_rate_cold * time_scale
+                self.damage.cold_damage = max(0.0, self.damage.cold_damage - recovery_amount)
             if self.damage.frost_damage > 0:
-                self.damage.frost_damage = max(0.0, self.damage.frost_damage - self.params.recovery_rate_cold * 0.5)
+                recovery_amount = self.params.recovery_rate_cold * 0.5 * time_scale
+                self.damage.frost_damage = max(0.0, self.damage.frost_damage - recovery_amount)
 
     def daily_update(self, temperature: float, duration_hours: float = 24.0) -> TemperatureStressResponse:
         stress_type = self.classify_temperature_stress(temperature)
@@ -326,7 +332,7 @@ class TemperatureStressModel:
             process_factors.development *= damage_factor
             process_factors.overall *= damage_factor
 
-        self.update_damage_and_recovery(final_stress, stress_type)
+        self.update_damage_and_recovery(final_stress, stress_type, duration_hours)
         self.stress_history.append((final_stress, temperature))
         if len(self.stress_history) > self.params.stress_memory_duration:
             self.stress_history = self.stress_history[-self.params.stress_memory_duration :]
@@ -747,8 +753,8 @@ class IntegratedStressModel:
         active: Dict[str, float] = {}
         for st, state in stress_states.items():
             sensitivity = sensitivities.get(st, None)
-        if sensitivity is None:
-            raise ValueError(f"Process sensitivity for {st} must be provided in CSV configuration")
+            if sensitivity is None:
+                raise ValueError(f"Process sensitivity for {st} must be provided in CSV configuration")
             acute = state.acute_stress
             chronic = state.chronic_stress
             combined = min(acute, chronic * 0.8 + acute * 0.2)
