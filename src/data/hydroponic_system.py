@@ -652,14 +652,23 @@ class SimulationResults:
                 'Root_Fresh_Weight_g': 1,
                 'Plant_Height_cm': 1,
             }
+            # Convert complex numbers to real values and round all numeric values to 2 decimal places
             for key, value in row.items():
-                if isinstance(value, float):
-                    decimals = precision_overrides.get(key, 2)
-                    row[key] = round(value, decimals)
+                if isinstance(value, complex):
+                    row[key] = round(value.real, 2)
+                elif isinstance(value, float):
+                    row[key] = round(value, 2)
 
             data.append(row)
             
-        return pd.DataFrame(data)
+        df = pd.DataFrame(data)
+        
+        # Format all numeric columns to 2 decimal places
+        for col in df.columns:
+            if df[col].dtype in ['float64', 'float32']:
+                df[col] = df[col].round(2)
+        
+        return df
     
     def calculate_summary_stats(self):
         """Calculate summary statistics for the simulation."""

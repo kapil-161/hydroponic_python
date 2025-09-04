@@ -2050,7 +2050,10 @@ class CROPGROHydroponicSimulator:
         ac = vcmax_temp * (ci - photosynthesis_params.gamma_star) / (ci + photosynthesis_params.kc * (1 + 210000 / photosynthesis_params.ko))
         
         i2 = photosynthesis_params.alpha * env_conditions['light_environment'].ppfd_above_canopy
-        j = (i2 + jmax_temp - np.sqrt((i2 + jmax_temp)**2 - 4 * photosynthesis_params.theta * i2 * jmax_temp)) / (2 * photosynthesis_params.theta)
+        # Ensure discriminant is non-negative to prevent complex numbers
+        discriminant = (i2 + jmax_temp)**2 - 4 * photosynthesis_params.theta * i2 * jmax_temp
+        discriminant = max(0.0, discriminant)  # Clamp to non-negative
+        j = (i2 + jmax_temp - np.sqrt(discriminant)) / (2 * photosynthesis_params.theta)
         aj = j * (ci - photosynthesis_params.gamma_star) / (4 * (ci + 2 * photosynthesis_params.gamma_star))
         
         cropgro_result.rubisco_limited = ac

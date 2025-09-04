@@ -390,15 +390,15 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
     print(f"\n⚖️  FINAL BIOMASS RESULTS:")
     print(f"  {'Metric':<25} {'Per Plant':<15} {'Total System':<15} {'Per m²':<15}")
     print(f"  {'-'*25} {'-'*15} {'-'*15} {'-'*15}")
-    print(f"  {'Final Biomass':<25} {final_biomass:<15.2f} g {total_system_biomass:<15.1f} g {system_yield:<15.1f} g/m²")
+    print(f"  {'Final Biomass':<25} {final_biomass.real if isinstance(final_biomass, complex) else final_biomass:<15.2f} g {total_system_biomass.real if isinstance(total_system_biomass, complex) else total_system_biomass:<15.1f} g {system_yield.real if isinstance(system_yield, complex) else system_yield:<15.1f} g/m²")
     
     if total_growth is not None:
-        print(f"  {'Total Growth':<25} {total_growth:<15.2f} g {total_system_growth:<15.1f} g {(total_system_growth/system_area):<15.1f} g/m²")
+        print(f"  {'Total Growth':<25} {total_growth.real if isinstance(total_growth, complex) else total_growth:<15.2f} g {total_system_growth.real if isinstance(total_system_growth, complex) else total_system_growth:<15.1f} g {(total_system_growth.real if isinstance(total_system_growth, complex) else total_system_growth)/system_area:<15.1f} g/m²")
     else:
         print(f"  {'Total Growth':<25} {'Data Missing':<15} {'Data Missing':<15} {'Data Missing':<15}")
         
     if avg_daily_growth is not None:
-        print(f"  {'Avg Daily Growth':<25} {avg_daily_growth:<15.3f} g/day {avg_system_growth:<15.2f} g/day {(avg_system_growth/system_area):<15.2f} g/m²/day")
+        print(f"  {'Avg Daily Growth':<25} {avg_daily_growth.real if isinstance(avg_daily_growth, complex) else avg_daily_growth:<15.3f} g/day {avg_system_growth.real if isinstance(avg_system_growth, complex) else avg_system_growth:<15.2f} g/day {(avg_system_growth.real if isinstance(avg_system_growth, complex) else avg_system_growth)/system_area:<15.2f} g/m²/day")
     else:
         print(f"  {'Avg Daily Growth':<25} {'Data Missing':<15} {'Data Missing':<15} {'Data Missing':<15}")
     
@@ -471,8 +471,8 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 
                 print(f"\n🔮 HARVEST PROJECTIONS:")
                 print(f"  • Days to Harvest: {days_to_harvest:.1f} days")
-                print(f"  • Projected Final Biomass: {projected_final_biomass:.1f} g/plant")
-                print(f"  • Projected System Yield: {projected_system_yield:.1f} g/m²")
+                print(f"  • Projected Final Biomass: {projected_final_biomass.real if isinstance(projected_final_biomass, complex) else projected_final_biomass:.1f} g/plant")
+                print(f"  • Projected System Yield: {projected_system_yield.real if isinstance(projected_system_yield, complex) else projected_system_yield:.1f} g/m²")
             else:
                 print(f"\n🔮 HARVEST PROJECTIONS:")
                 print(f"  • Thermal time data not available for projections")

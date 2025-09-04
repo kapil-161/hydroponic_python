@@ -382,3 +382,18 @@ def validate_fraction(value: Union[int, float], param_name: str = "value") -> fl
         Validated fraction value
     """
     return validate_range(value, 0.0, 1.0, param_name)
+
+
+def ensure_real(value: Union[int, float, complex]) -> float:
+    """
+    Ensure a value is real (not complex).
+    
+    Args:
+        value: Input value (int, float, or complex)
+        
+    Returns:
+        Real part of the value as float
+    """
+    if isinstance(value, complex):
+        return float(value.real)
+    return float(value)
