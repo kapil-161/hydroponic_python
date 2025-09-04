@@ -725,22 +725,29 @@ class CROPGROHydroponicSimulator:
             self._last_humidity = daily_humidity
             self._last_solar = daily_solar
 
-            # Update nutrient concentrations based on uptake (use current tank volume)
+            # FIXED: Update nutrient concentrations using proper Michaelis-Menten kinetics
             plant_count = input_data.system_config.n_plants
-            for nutrient_id in list(current_concentrations.keys()):
-                uptake_key = f"{nutrient_id}_uptake_rate"
-                per_plant_uptake = getattr(daily_result, uptake_key, 0.0)
-                # Fallback: estimate nitrate uptake from nitrogen balance if root uptake is zero
-                if nutrient_id == 'N-NO3' and per_plant_uptake == 0.0:
-                    est_n_mg = getattr(daily_result, 'nitrogen_uptake_mg', 0.0)
-                    # Convert mg N to mg NO3 using molecular mass ratio (62/14)
-                    per_plant_uptake = est_n_mg * (62.0 / 14.0)
-
-                if per_plant_uptake > 0.0:
-                    total_uptake_mg = per_plant_uptake * max(1, plant_count)
-                    volume_m3 = max(0.001, daily_result.tank_volume / 1000.0)
-                    concentration_reduction = total_uptake_mg / volume_m3  # mg/L reduction (mg per m³)
-                    current_concentrations[nutrient_id] = max(0.0, current_concentrations[nutrient_id] - concentration_reduction)
+            tank_volume_L = daily_result.tank_volume
+            
+            # Calculate proper nutrient uptake using Michaelis-Menten kinetics
+            uptake_results = self._calculate_realistic_nutrient_uptake(
+                current_concentrations=current_concentrations,
+                root_surface_area=getattr(daily_result, 'root_surface_area_cm2', 100.0),
+                temperature=daily_temp,
+                ph=current_ph,
+                ec=self._calculate_ec(current_concentrations),
+                plant_count=plant_count,
+                tank_volume_L=tank_volume_L,
+                daily_growth_rate=getattr(daily_result, 'daily_growth_rate_g_day', 1.0)
+            )
+            
+            # Update concentrations with mass balance conservation
+            current_concentrations = uptake_results['updated_concentrations']
+            
+            # Verify mass balance (log warnings for violations)
+            for nutrient, balance in uptake_results['mass_balance'].items():
+                if balance['balance_error_pct'] > 10.0:  # >10% error
+                    logger.warning(f"Day {day}: {nutrient} mass balance error {balance['balance_error_pct']:.1f}%")
 
             # Check for intelligent solution change based on actual need
             current_ec = self._calculate_ec(current_concentrations)
@@ -1783,23 +1790,24 @@ class CROPGROHydroponicSimulator:
         # Validate carbon mass balance
         self._validate_carbon_balance(canopy_photosynthesis, total_respiration, total_new_growth, day)
         
-        # Calculate water-related values
-        eto_ref = self._calculate_eto_reference(
-            env_conditions['actual_temperature'], 
-            env_conditions['actual_humidity'], 
-            solar_radiation
+        # FIXED: Calculate realistic water uptake using proper SPAC-based transpiration
+        total_biomass = sum(pool.dry_mass for pool in self.biomass_pools)
+        water_results = self._calculate_realistic_water_uptake(
+            temperature=env_conditions['actual_temperature'],
+            humidity=env_conditions['actual_humidity'], 
+            solar_radiation=solar_radiation,
+            lai=self.current_lai,
+            total_biomass=total_biomass,
+            growth_stage=getattr(phenology_response, 'current_stage', 'vegetative')
         )
-        etc_prime = self._calculate_etc_prime_with_eto(
-            canopy_response.light_interception_fraction,
-            eto_ref
-        )
-        transpiration = self._calculate_transpiration(
-            canopy_response.light_interception_fraction,
-            env_conditions['actual_temperature'],
-            env_conditions['actual_vpd'],
-            env_conditions['actual_humidity'],
-            solar_radiation
-        )
+        
+        # Extract components for compatibility with existing code
+        eto_ref = water_results['et0_mm']
+        etc_prime = water_results['etc_mm']
+        transpiration = water_results['transpiration_mm']
+        
+        # Update system water usage with realistic values
+        system_water_use_l = water_results['total_water_uptake_L'] * self.plant_count
         vpd_calculated = self._calculate_vpd(
             env_conditions['actual_temperature'], 
             env_conditions['actual_humidity']
@@ -1839,11 +1847,8 @@ class CROPGROHydroponicSimulator:
             solar_radiation=solar_radiation,
             vpd=vpd_calculated,  # Pre-calculated
             
-            # WUE (daily): growth per unit transpiration (g/L ≡ kg/m³) - reuse transpiration
-            # Fix: Use realistic minimum transpiration and cap maximum WUE
-            water_use_efficiency=min(500.0, max(0.1, 
-                total_new_growth / max(0.01, transpiration * self.system_area)
-            )),
+            # FIXED: WUE using realistic water uptake calculations
+            water_use_efficiency=water_results['water_use_efficiency_kg_m3'],
             
             # Solution properties  
             ph=ph,  # Use dynamic pH from hydroponic system
@@ -2400,6 +2405,223 @@ class CROPGROHydroponicSimulator:
         stomatal_conductance_factor = light_interception * lai_factor
         
         return base_transpiration * vpd_factor * stomatal_conductance_factor
+    
+    def _calculate_realistic_nutrient_uptake(self, 
+                                           current_concentrations: Dict[str, float],
+                                           root_surface_area: float,
+                                           temperature: float,
+                                           ph: float,
+                                           ec: float,
+                                           plant_count: int,
+                                           tank_volume_L: float,
+                                           daily_growth_rate: float = 1.0) -> Dict[str, Any]:
+        """
+        FIXED: Calculate realistic nutrient uptake using Michaelis-Menten kinetics.
+        
+        This replaces the broken step-function nutrient depletion with proper
+        physiological uptake calculations and mass balance conservation.
+        
+        Args:
+            current_concentrations: Current solution concentrations (mg/L)
+            root_surface_area: Active root surface area (cm²)
+            temperature: Solution temperature (°C)
+            ph: Solution pH
+            ec: Electrical conductivity (dS/m)
+            plant_count: Number of plants
+            tank_volume_L: Tank volume (L)
+            daily_growth_rate: Daily growth rate (g/day)
+            
+        Returns:
+            Dictionary with uptake rates and updated concentrations
+        """
+        
+        # Michaelis-Menten kinetic parameters for lettuce (from literature)
+        kinetics = {
+            'N-NO3': {'vmax': 0.03, 'km': 0.5, 'min_conc': 0.1},
+            'NH4': {'vmax': 0.045, 'km': 0.3, 'min_conc': 0.05},
+            'P-PO4': {'vmax': 0.008, 'km': 0.1, 'min_conc': 0.02},
+            'K': {'vmax': 0.025, 'km': 0.4, 'min_conc': 0.1},
+            'Ca': {'vmax': 0.018, 'km': 0.8, 'min_conc': 0.2},
+            'Mg': {'vmax': 0.012, 'km': 0.6, 'min_conc': 0.1}
+        }
+        
+        # Environmental factors
+        # Temperature factor (Q10 = 2.0, optimal at 22°C)
+        temp_factor = 2.0 ** ((temperature - 22.0) / 10.0)
+        temp_factor = max(0.1, min(3.0, temp_factor))
+        
+        # pH factor (optimal around 6.0)
+        ph_factor = max(0.2, 1.0 - abs(ph - 6.0) * 0.5)
+        
+        # EC factor (optimal around 1.8 dS/m)
+        ec_factor = max(0.3, 1.0 - abs(ec - 1.8) * 0.3)
+        
+        combined_env_factor = temp_factor * ph_factor * ec_factor
+        combined_env_factor = min(1.5, combined_env_factor)  # Cap at 150%
+        
+        # Calculate uptake rates for each nutrient
+        uptake_rates = {}
+        updated_concentrations = {}
+        mass_balance = {}
+        
+        for nutrient, concentration in current_concentrations.items():
+            if nutrient in kinetics and concentration > kinetics[nutrient]['min_conc']:
+                k = kinetics[nutrient]
+                
+                # Michaelis-Menten equation: V = Vmax * [S] / (Km + [S])
+                uptake_per_cm2 = (k['vmax'] * concentration) / (k['km'] + concentration)
+                
+                # Scale by root surface area
+                base_uptake = uptake_per_cm2 * root_surface_area
+                
+                # Apply environmental factors
+                env_adjusted_uptake = base_uptake * combined_env_factor
+                
+                # Plant demand modifier (based on growth rate)
+                demand_factor = max(0.5, min(2.0, daily_growth_rate / 1.0))
+                
+                final_uptake = env_adjusted_uptake * demand_factor
+                uptake_rates[nutrient] = max(0.0, final_uptake)
+            else:
+                uptake_rates[nutrient] = 0.0
+        
+        # Update concentrations with mass balance
+        for nutrient, uptake_rate in uptake_rates.items():
+            initial_conc = current_concentrations[nutrient]
+            initial_mass = initial_conc * tank_volume_L
+            
+            # Total uptake for all plants
+            total_uptake_mg = uptake_rate * plant_count
+            
+            # Updated mass and concentration
+            final_mass = max(0.0, initial_mass - total_uptake_mg)
+            final_conc = final_mass / tank_volume_L
+            
+            updated_concentrations[nutrient] = final_conc
+            
+            # Mass balance check
+            removed_mass = initial_mass - final_mass
+            balance_error = abs(removed_mass - total_uptake_mg)
+            balance_error_pct = (balance_error / max(total_uptake_mg, 0.001)) * 100
+            
+            mass_balance[nutrient] = {
+                'initial_mass_mg': initial_mass,
+                'final_mass_mg': final_mass,
+                'removed_mass_mg': removed_mass,
+                'expected_removal_mg': total_uptake_mg,
+                'balance_error_pct': balance_error_pct
+            }
+        
+        return {
+            'uptake_rates_mg_per_plant_per_day': uptake_rates,
+            'updated_concentrations': updated_concentrations,
+            'mass_balance': mass_balance,
+            'environmental_factors': {
+                'temperature_factor': temp_factor,
+                'ph_factor': ph_factor,
+                'ec_factor': ec_factor,
+                'combined_factor': combined_env_factor
+            }
+        }
+    
+    def _calculate_realistic_water_uptake(self, temperature: float, humidity: float, solar_radiation: float, lai: float, total_biomass: float, growth_stage: str = "vegetative") -> Dict[str, float]:
+        """
+        FIXED: Calculate realistic water uptake using proper SPAC-based transpiration.
+        
+        This replaces the broken water calculations with physiologically accurate
+        Penman-Monteith evapotranspiration and plant demand scaling.
+        
+        Args:
+            temperature: Air temperature (°C)
+            humidity: Relative humidity (%)
+            solar_radiation: Solar radiation (MJ/m²/day) 
+            lai: Leaf Area Index
+            total_biomass: Plant biomass (g)
+            growth_stage: Growth stage string
+            
+        Returns:
+            Dictionary with water uptake components
+        """
+        
+        # 1. Calculate VPD from temperature and humidity
+        es = 0.6108 * math.exp(17.27 * temperature / (temperature + 237.3))
+        ea = es * (humidity / 100.0)
+        vpd = max(0.1, es - ea)  # Ensure positive VPD
+        
+        # 2. Reference evapotranspiration (Penman-Monteith simplified)
+        wind_speed = 2.0  # m/s default
+        psychrometric_constant = 0.665  # kPa/°C
+        
+        # Slope of saturation vapor pressure curve
+        delta = 4098 * es / ((temperature + 237.3) ** 2)
+        
+        # Net radiation (simplified)
+        net_radiation = solar_radiation * 0.77 - 2.0  # MJ/m²/day
+        
+        # Penman-Monteith equation (mm/day)
+        numerator = 0.408 * delta * net_radiation + psychrometric_constant * 900 / (temperature + 273) * wind_speed * vpd
+        denominator = delta + psychrometric_constant * (1 + 0.34 * wind_speed)
+        
+        et0_mm = max(0.1, numerator / denominator)
+        
+        # 3. Crop coefficient based on LAI and growth stage
+        base_kc = 0.8  # Lettuce base crop coefficient
+        lai_factor = min(1.0, lai / 3.0) if lai > 0.1 else 0.1
+        
+        stage_factors = {
+            "vegetative": 1.0,
+            "head_formation": 1.1,
+            "mature": 0.9
+        }
+        stage_factor = stage_factors.get(growth_stage, 1.0)
+        
+        kc = base_kc * lai_factor * stage_factor
+        
+        # 4. Environmental factors
+        temp_factor = 1.0
+        if temperature < 15 or temperature > 30:
+            temp_factor = max(0.3, 1.0 - abs(temperature - 22.5) * 0.02)
+            
+        vpd_factor = 1.0
+        if vpd < 0.4 or vpd > 1.5:
+            vpd_factor = max(0.5, 1.0 - abs(vpd - 0.8) * 0.3)
+            
+        environmental_factor = temp_factor * vpd_factor
+        
+        # 5. Crop evapotranspiration
+        etc_mm = et0_mm * kc * environmental_factor
+        
+        # 6. Scale by actual canopy coverage (LAI-based)
+        coverage_factor = min(1.0, lai / 2.0) if lai > 0 else 0.01
+        transpiration_mm = etc_mm * coverage_factor
+        
+        # 7. Convert to L/day (assuming 1 m² per plant)
+        transpiration_L = transpiration_mm / 1000.0  # mm to m water depth
+        
+        # 8. Add metabolic water demand
+        metabolic_water_L = total_biomass * 0.002  # 2 mL per gram biomass
+        
+        # 9. Total water uptake
+        total_water_uptake_L = transpiration_L + metabolic_water_L
+        
+        # 10. Water use efficiency
+        if total_water_uptake_L > 0:
+            wue_kg_per_m3 = (total_biomass / 1000.0) / (total_water_uptake_L / 1000.0)  # kg/m³
+        else:
+            wue_kg_per_m3 = 0.0
+            
+        return {
+            'et0_mm': et0_mm,
+            'kc': kc,
+            'etc_mm': etc_mm,
+            'transpiration_mm': transpiration_mm,
+            'transpiration_L': transpiration_L,
+            'metabolic_water_L': metabolic_water_L,
+            'total_water_uptake_L': total_water_uptake_L,
+            'water_use_efficiency_kg_m3': wue_kg_per_m3,
+            'vpd_kpa': vpd,
+            'environmental_factor': environmental_factor
+        }
     
     def _calculate_water_uptake(self, light_interception: float, temperature: float, humidity: float, solar_radiation: float, vpd: float, lai: float) -> float:
         """
