@@ -616,3 +616,209 @@ def create_lettuce_senescence_model(system_config=None) -> AdvancedSenescenceMod
         raise ValueError(f"❌ Failed to load CSV senescence parameters: {e}. System requires CSV data - no hardcoded defaults allowed.")
 
 
+"""
+=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+
+This file models plant senescence - the natural aging and death process of plant tissues, particularly 
+leaves. Think of it as modeling how leaves age, turn yellow, and eventually die, while recycling their 
+nutrients back to the plant. It's like modeling the autumn leaf cycle, but in real-time throughout the 
+plant's life.
+
+KEY FUNCTIONS AND EQUATIONS:
+
+1. calculate_age_senescence()
+   - What it does: Calculates how much a leaf ages naturally each day
+   - Equation: senescence_rate = base_rate × age_factor, where age_factor = 1 + (excess_age / 100)
+   - Real-world meaning: Like how older people age faster than young people. Young leaves stay healthy 
+     longer, but once they pass their prime, they deteriorate at an accelerating rate.
+
+2. calculate_stress_senescence()
+   - What it does: Calculates premature aging due to environmental stress
+   - Equation: stress_rate = base_stress_rate × stress_intensity
+   - where stress_intensity = (actual_stress - threshold) / (1 - threshold)
+   - Real-world meaning: Like how stress makes people age faster. Plants under stress (drought, heat, 
+     nutrient deficiency) will drop leaves earlier to survive.
+
+3. calculate_developmental_senescence()
+   - What it does: Calculates strategic leaf dropping during reproduction or due to shading
+   - Equations:
+     * Reproductive priority: extra_rate = base_rate × (priority_factor - 1)
+     * Shading effect: extra_rate = base_rate × shading_factor × (canopy_factor - 1)
+   - Real-world meaning: Like how pregnant mammals prioritize the baby's needs over their own health. 
+     Plants drop lower, shaded leaves to redirect energy to reproduction and upper, productive leaves.
+
+4. calculate_recovery_rate()
+   - What it does: Calculates if mildly senescent leaves can recover under good conditions
+   - Condition: stress < 0.2 AND stage = early_senescence
+   - Equation: recovery_rate = min(max_recovery_rate, senescence_damage × 0.1)
+   - Real-world meaning: Like how people can recover from minor illnesses with rest and good nutrition. 
+     Only slightly yellowing leaves can recover - severely damaged ones cannot.
+
+5. update_senescence_stage()
+   - What it does: Determines the current health stage of each leaf
+   - Stages: healthy → early → active → late → dead
+   - Thresholds set by damage levels (0-1 scale)
+   - Real-world meaning: Like medical staging of disease progression. Each stage has different symptoms 
+     and treatment options (or in this case, nutrient recovery potential).
+
+6. calculate_nutrient_remobilization()
+   - What it does: Calculates how much nutrients are recovered from dying leaves
+   - Equations:
+     * Normal senescence: daily_recovery = available × senescence_rate × normal_multiplier × efficiency
+     * Active senescence: daily_recovery = available × senescence_rate × active_multiplier × efficiency
+   - Real-world meaning: Like organ donation - when leaves "die," they donate their valuable nutrients 
+     back to the plant. Different nutrients have different "donation rates" (efficiencies).
+
+7. daily_update()
+   - What it does: Updates senescence status for all leaves every day
+   - Process: Age leaves → Calculate stress → Apply senescence → Recover nutrients → Update stages
+   - Real-world meaning: Like a daily health checkup for every leaf on the plant, tracking which ones 
+     are healthy, which are aging, and which are ready to be "recycled."
+
+SENESCENCE TRIGGERS AND BIOLOGY:
+
+Age-Based Senescence:
+- Natural programmed cell death after a certain lifespan
+- Like human aging - inevitable but rate varies with health
+- Measured in Growing Degree Days (heat units accumulated)
+- Accelerates exponentially once past natural lifespan
+
+Water Stress Senescence:
+- Drought forces plants to drop leaves to reduce water loss
+- Like animals shedding fur in extreme heat
+- Starts when water stress exceeds threshold (typically 0.3-0.4)
+- Rate proportional to stress severity
+
+Nitrogen Stress Senescence:
+- N deficiency triggers early leaf drop to recover nitrogen
+- Like the body breaking down muscle for protein during starvation
+- Mobile nutrients (N, P, K) are remobilized most efficiently
+- Older leaves sacrificed first to feed younger, productive leaves
+
+Temperature Stress Senescence:
+- Heat or cold shock damages leaf proteins and membranes
+- Like frostbite or heat stroke in humans
+- Different from optimal temperature effects - this is damage
+- Can be rapid (within days) under extreme conditions
+
+Light Stress (Shading) Senescence:
+- Shaded leaves become energy drains rather than energy producers
+- Like keeping lights on in unused rooms - wasteful
+- Lower canopy leaves dropped first when crowded
+- Triggered when light levels drop below photosynthetic compensation point
+
+Developmental Senescence:
+- Strategic resource reallocation during reproduction
+- Like pregnancy nutrition prioritization in mammals
+- Plant "decides" some leaves are expendable to fuel seed production
+- Also includes apical dominance effects (top growth suppresses lower growth)
+
+NUTRIENT REMOBILIZATION PROCESS:
+
+High Mobility Nutrients (Easily Recovered):
+- Nitrogen (60-80% recovery): Proteins broken down to amino acids
+- Phosphorus (50-70% recovery): Released from DNA, ATP, membranes
+- Potassium (40-60% recovery): Leaches easily from cells
+- Magnesium (30-50% recovery): Extracted from chlorophyll
+
+Medium Mobility Nutrients:
+- Sulfur (20-40% recovery): From proteins and enzymes
+- Iron (10-30% recovery): Some forms more mobile than others
+- Zinc (10-25% recovery): Released from enzymes
+
+Low Mobility Nutrients (Poorly Recovered):
+- Calcium (5-15% recovery): Locked in cell walls, hard to extract
+- Manganese (5-15% recovery): Structural roles
+- Boron (2-10% recovery): Cell wall component
+- Copper (2-8% recovery): Enzyme cofactor, tightly bound
+
+SENESCENCE STAGES AND SYMPTOMS:
+
+Healthy Stage:
+- Green, fully functional leaves
+- Normal photosynthesis and transpiration
+- No visible symptoms
+- Can recover from any stress
+
+Early Senescence:
+- Slight yellowing starts (chlorophyll breakdown begins)
+- Reduced photosynthetic capacity (20-30% decline)
+- Nutrient remobilization begins slowly
+- Still recoverable under good conditions
+
+Active Senescence:
+- Obvious yellowing, browning at edges
+- Major nutrient remobilization occurring
+- Photosynthesis greatly reduced (>50% decline)
+- Protein degradation accelerating
+- Point of no return - cannot recover
+
+Late Senescence:
+- Brown, crispy appearance
+- Minimal biological activity
+- Most nutrients already remobilized
+- Structural breakdown occurring
+- Abscission layer forming (preparing to drop)
+
+Dead Stage:
+- Complete loss of function
+- Brown/black color, brittle texture
+- No nutrient recovery possible
+- Ready for abscission (falling off)
+- May harbor diseases if not removed
+
+ENVIRONMENTAL OPTIMIZATION:
+
+To Minimize Senescence:
+1. Maintain optimal water levels (avoid drought stress)
+2. Provide adequate nitrogen throughout growth
+3. Keep temperatures in optimal range (18-24°C for most crops)
+4. Ensure adequate light for all leaves (proper spacing, pruning)
+5. Monitor for diseases that trigger premature senescence
+6. Avoid mechanical damage to leaves
+
+To Maximize Nutrient Recovery:
+1. Allow gradual senescence rather than sudden stress
+2. Don't remove yellowing leaves too early (let nutrients mobilize)
+3. Maintain good environmental conditions during senescence
+4. Time harvests to capture remobilized nutrients in fruits/seeds
+5. Plan nitrogen application to support remobilization process
+
+PRACTICAL APPLICATIONS:
+
+For Hydroponic Growers:
+1. Monitor leaf color changes as early stress indicators
+2. Remove fully senescent leaves to prevent disease
+3. Adjust nutrient solutions when seeing stress-induced senescence
+4. Plan harvest timing to capture maximum nutrient remobilization
+5. Use senescence patterns to optimize environmental controls
+6. Understand that some leaf drop is normal and beneficial
+
+For System Design:
+1. Design for easy removal of senescent plant material
+2. Plan drainage to handle increased transpiration during stress
+3. Include monitoring systems for early senescence detection
+4. Design climate control to minimize stress-induced senescence
+5. Plan nutrient injection systems for remobilization support
+
+KEY CONCEPTS FOR NON-CODERS:
+
+Programmed Cell Death: Like the planned obsolescence of products, leaves have built-in lifespans 
+that can be modified by environmental conditions but not eliminated.
+
+Nutrient Economy: Plants are incredibly efficient recyclers, recovering 50-80% of nutrients from 
+dying leaves. It's like a highly efficient recycling program built into every plant.
+
+Stress Signaling: Environmental stress triggers chemical signals that accelerate senescence. 
+Think of it as the plant's emergency protocols kicking in during crisis.
+
+Resource Allocation: Plants constantly decide which tissues to support and which to sacrifice, 
+like a business deciding which departments to fund during budget cuts.
+
+Recovery Windows: Only mild senescence can be reversed, like how only minor injuries can heal 
+completely while severe damage leaves permanent effects.
+
+This senescence model helps optimize plant health by predicting when and why leaves will age, 
+allowing growers to take preventive action and maximize the efficiency of the plant's natural 
+nutrient recycling systems.
+"""

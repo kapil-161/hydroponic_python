@@ -688,7 +688,7 @@ void MainWindow::generateBatchFile()
     batchContent += "echo Date,Day,System_ID,Crop_ID,Treatment_ID";
     
     // Add headers from first treatment file (excluding Date, Day, System_ID, Crop_ID which are already added)
-    batchContent += ",ETO_Ref_mm,ETC_Prime_mm,Transpiration_mm,Water_Total_L,Tank_Volume_L,Temp_C,Solar_Rad_MJ,VPD_kPa,WUE_kg_m3,pH,EC,RZT_C,RZT_Growth_Factor,RZT_Nutrient_Factor,V_Stage,Leaf_Number,Leaf_Area_m2,Avg_Leaf_Area_cm2,CO2_umol_mol,VPD_Actual_kPa,Env_Photo_Factor,Env_Transp_Factor,N-NO3_mg_L,P-PO4_mg_L,K_mg_L,Ca_mg_L,Mg_mg_L,LAI,Growth_Stage,Total_Biomass_g,Integrated_Stress,Temperature_Stress,Water_Stress,Nutrient_Stress,Nitrogen_Stress,Salinity_Stress > " + singleOutputFile + "\n";
+    batchContent += ",ETO_Ref_mm,ETC_Prime_mm,Transpiration_mm,Water_Total_L,Tank_Volume_L,Temp_C,Solar_Rad_MJ,VPD_kPa,WUE_L_kg,pH,EC,RZT_C,RZT_Growth_Factor,RZT_Nutrient_Factor,V_Stage,Leaf_Number,Leaf_Area_m2,Avg_Leaf_Area_cm2,CO2_umol_mol,VPD_Actual_kPa,Env_Photo_Factor,Env_Transp_Factor,N-NO3_mg_L,P-PO4_mg_L,K_mg_L,Ca_mg_L,Mg_mg_L,LAI,Growth_Stage,Total_Biomass_g,Integrated_Stress,Temperature_Stress,Water_Stress,Nutrient_Stress,Nitrogen_Stress,Salinity_Stress > " + singleOutputFile + "\n";
     
     // Combine all treatment files
     batchContent += "for %%f in (temp_treatments\\treatment_*.csv) do (\n";
@@ -747,7 +747,15 @@ void MainWindow::generateBatchFile()
             "cp -r ../input/* temp_input_%8/\n"
         ).arg(QString::number(i + 1), QString::number(combinations.size()), combo, treatmentId);
         
-        // Parse the combination to get treatment parameters
+        // Create treatment-specific master parameters file
+        batchContent += QString(
+            "echo \"Creating treatment-specific master parameters for %1...\"\n"
+            "cp ../input/%2_%3_master_parameters.csv temp_input_%4/%1_master_parameters.csv\n"
+            "echo \"Creating treatment-specific weather file for %1...\"\n"
+            "cp ../input/%2_%3_weather.csv temp_input_%4/%1_weather.csv\n"
+        ).arg(treatmentId, cropType, experimentName, treatmentId);
+        
+        // Parse the combination to get treatment parameters and modify master file
         QStringList parts = combo.split("_");
         for (const QString &part : parts) {
             if (part.contains(":")) {
@@ -756,40 +764,35 @@ void MainWindow::generateBatchFile()
                     QString category = keyValue[0].toLower();
                     QString value = keyValue[1];
                     
-                    if (category == "ec") {
+                    if (category == "temperature") {
+                        batchContent += QString(
+                            "echo \"Setting temperature to %1°C for treatment %2...\"\n"
+                            "sed -i '' 's/environment_optimal_temperature,.*/environment_optimal_temperature,%1,celsius,Optimal temperature for treatment %2,environment,UI Generated,1.0/' temp_input_%2/%2_master_parameters.csv\n"
+                        ).arg(value, treatmentId, cropType, experimentName);
+                    } else if (category == "ec") {
                         batchContent += QString(
                             "echo \"Setting EC to %1 for treatment %2...\"\n"
-                            "sed -i '' 's/initial_ec,.*/initial_ec,%1/' temp_input_%2/%3_%4_system_settings.csv\n"
+                            "sed -i '' 's/optimal_ec,.*/optimal_ec,%1,dS_per_m,Optimal EC for treatment %2,environment,UI Generated,1.0/' temp_input_%2/%2_master_parameters.csv\n"
                         ).arg(value, treatmentId, cropType, experimentName);
                     } else if (category == "ph") {
                         batchContent += QString(
                             "echo \"Setting pH to %1 for treatment %2...\"\n"
-                            "sed -i '' 's/initial_ph,.*/initial_ph,%1/' temp_input_%2/%3_%4_system_settings.csv\n"
-                        ).arg(value, treatmentId, cropType, experimentName);
-                    } else if (category == "nitrogen") {
-                        batchContent += QString(
-                            "echo \"Setting Nitrogen to %1 ppm for treatment %2...\"\n"
-                            "sed -i '' 's/N-NO3,200/N-NO3,%1/' temp_input_%2/%3_%4_nutrient_solution.csv\n"
-                        ).arg(value, treatmentId, cropType, experimentName);
-                    } else if (category == "temperature") {
-                        batchContent += QString(
-                            "echo \"Setting temperature to %1°C for treatment %2...\"\n"
-                            "sed -i '' 's/target_temperature,.*/target_temperature,%1/' temp_input_%2/%3_%4_system_settings.csv\n"
+                            "sed -i '' 's/current_ph,.*/current_ph,%1,pH_units,Current pH for treatment %2,nutrient_parameters,UI Generated,1.0/' temp_input_%2/%2_master_parameters.csv\n"
                         ).arg(value, treatmentId, cropType, experimentName);
                     } else if (category == "rootzonetemp") {
                         batchContent += QString(
                             "echo \"Setting root zone temperature to %1°C for treatment %2...\"\n"
-                            "sed -i '' 's/optimal_temperature,.*/optimal_temperature,%1/' temp_input_%2/%3_%4_root_zone_parameters.csv\n"
+                            "sed -i '' 's/optimal_root_temperature,.*/optimal_root_temperature,%1,celsius,Optimal root zone temperature for treatment %2,root_zone_temperature,UI Generated,1.0/' temp_input_%2/%2_master_parameters.csv\n"
                         ).arg(value, treatmentId, cropType, experimentName);
-                    } else if (category == "light") {
+                    } else if (category == "nitrogen") {
                         batchContent += QString(
-                            "echo \"Setting light intensity to %1 MJ/m²/day for treatment %2...\"\n"
-                            "sed -i '' 's/optimal_light_intensity,.*/optimal_light_intensity,%1/' temp_input_%2/%3_%4_environment_parameters.csv\n"
+                            "echo \"Setting Nitrogen to %1 ppm for treatment %2...\"\n"
+                            "sed -i '' 's/initial_n_no3,.*/initial_n_no3,%1,mg_per_L,Initial NO3-N concentration for treatment %2,nutrient_concentrations,UI Generated,1.0/' temp_input_%2/%2_master_parameters.csv\n"
                         ).arg(value, treatmentId, cropType, experimentName);
                     } else if (category == "co2") {
                         batchContent += QString(
                             "echo \"Setting CO2 to %1 ppm for treatment %2...\"\n"
-                            "sed -i '' 's/co2_concentration,.*/co2_concentration,%1/' temp_input_%2/%3_%4_system_settings.csv\n"
+                            "sed -i '' 's/target_co2,.*/target_co2,%1,ppm,Target CO2 concentration for treatment %2,environment,UI Generated,1.0/' temp_input_%2/%2_master_parameters.csv\n"
                         ).arg(value, treatmentId, cropType, experimentName);
                     }
                 }
@@ -797,20 +800,20 @@ void MainWindow::generateBatchFile()
         }
         
         batchContent += QString(
-            "python3 ../cropgro_cli.py --cultivar %4_%5 --days %6 --treatment-id %8 --input-dir temp_input_%8 --output-csv %7\n"
+            "python3 ../cropgro_cli.py --cultivar %2_%3 --days %4 --treatment-id %1 --input-dir temp_input_%1 --output-csv %5\n"
             "if [ $? -ne 0 ]; then\n"
-            "    echo \"Treatment %8 failed!\"\n"
+            "    echo \"Treatment %1 failed!\"\n"
             "    exit 1\n"
             "fi\n"
-            "echo \"Treatment %8 completed successfully!\"\n"
-            "rm -rf temp_input_%8\n"
+            "echo \"Treatment %1 completed successfully!\"\n"
+            "rm -rf temp_input_%1\n"
             "echo\n\n"
-        ).arg(cropType, experimentName, QString::number(duration), tempOutputFile, treatmentId);
+        ).arg(treatmentId, cropType, experimentName, QString::number(duration), tempOutputFile);
     }
     
     // Combine all treatment files into single CSV with Treatment_ID column
     batchContent += "echo \"Combining all treatments into single CSV file...\"\n";
-    batchContent += "echo \"Date,Day,Treatment_ID,System_ID,Crop_ID,ETO_Ref_mm,ETC_Prime_mm,Transpiration_mm,Water_Total_L,Tank_Volume_L,Temp_C,Solar_Rad_MJ,VPD_kPa,WUE_kg_m3,pH,EC,RZT_C,RZT_Growth_Factor,RZT_Nutrient_Factor,V_Stage,Leaf_Number,Leaf_Area_m2,Avg_Leaf_Area_cm2,CO2_umol_mol,VPD_Actual_kPa,Env_Photo_Factor,Env_Transp_Factor,N-NO3_mg_L,P-PO4_mg_L,K_mg_L,Ca_mg_L,Mg_mg_L,LAI,Growth_Stage,Total_Biomass_g,Integrated_Stress,Temperature_Stress,Water_Stress,Nutrient_Stress,Nitrogen_Stress,Salinity_Stress\" > " + singleOutputFile + "\n";
+    batchContent += "echo \"Date,Day,Treatment_ID,System_ID,Crop_ID,ETO_Ref_mm,ETC_Prime_mm,Transpiration_mm,Water_Total_L,Tank_Volume_L,Temp_C,Solar_Rad_MJ,VPD_kPa,WUE_L_kg,pH,EC,RZT_C,RZT_Growth_Factor,RZT_Nutrient_Factor,V_Stage,Leaf_Number,Leaf_Area_m2,Avg_Leaf_Area_cm2,CO2_umol_mol,VPD_Actual_kPa,Env_Photo_Factor,Env_Transp_Factor,N-NO3_mg_L,P-PO4_mg_L,K_mg_L,Ca_mg_L,Mg_mg_L,LAI,Growth_Stage,Total_Biomass_g,Integrated_Stress,Temperature_Stress,Water_Stress,Nutrient_Stress,Nitrogen_Stress,Salinity_Stress\" > " + singleOutputFile + "\n";
     
     // Generate treatment ID mapping
     for (int i = 0; i < combinations.size(); ++i) {

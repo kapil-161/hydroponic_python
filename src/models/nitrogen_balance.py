@@ -905,3 +905,90 @@ def create_lettuce_nitrogen_balance_model(system_config=None) -> PlantNitrogenBa
     return PlantNitrogenBalanceModel(parameters)
 
 
+"""
+=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+
+This file manages how plants absorb, use, and recycle nitrogen - one of the most important nutrients 
+for plant growth. Think of it like managing the protein metabolism in a human body - how we absorb 
+amino acids, build proteins, and recycle them when needed.
+
+KEY FUNCTIONS AND EQUATIONS:
+
+1. calculate_nitrogen_uptake()
+   - What it does: Calculates how much nitrogen roots can absorb from the nutrient solution
+   - Equation: Uses Michaelis-Menten kinetics: uptake = (Vmax × concentration) / (Km + concentration)
+   - Real-world meaning: Like enzymes in your body, root uptake has a maximum rate. At low nutrient 
+     concentrations, uptake increases with concentration. At high concentrations, it plateaus.
+     Similar to how you can only digest so much protein per hour regardless of how much you eat.
+
+2. calculate_nitrogen_demand()
+   - What it does: Determines how much nitrogen each plant part needs for growth
+   - Equation: demand = growth_rate × target_nitrogen_concentration × environmental_modifier
+   - Real-world meaning: Growing tissues need nitrogen to build proteins. Fast-growing parts 
+     (like young leaves) need more nitrogen than slow-growing parts (like mature stems).
+
+3. allocate_nitrogen()
+   - What it does: Distributes available nitrogen among plant organs based on priorities
+   - Equations: 
+     * If sufficient N: allocation = full_demand
+     * If insufficient N: allocation = available_N × (priority × demand) / total_weighted_demand
+   - Real-world meaning: Like budgeting limited money among family members - highest priority 
+     needs get met first. Young growing leaves get priority over older mature parts.
+
+4. calculate_nitrogen_remobilization()
+   - What it does: Calculates how much nitrogen can be recycled from old tissues to growing ones
+   - Equations:
+     * storage_remob = storage_N × remobilization_rate × environmental_factor
+     * stress_remob = metabolic_N × stress_level × efficiency
+   - Real-world meaning: When plants are stressed or aging, they can "cannibalize" old leaves 
+     to feed new growth. Like your body breaking down muscle protein during starvation.
+
+5. calculate_nitrogen_stress_level()
+   - What it does: Determines overall plant nitrogen stress based on tissue concentrations
+   - Equations: Weighted average of organ-specific stress levels
+   - Real-world meaning: Different plant parts have different nitrogen requirements. Stress 
+     is calculated like a weighted GPA - leaves (most important) count more than stems.
+
+6. update_nitrogen_pools()
+   - What it does: Tracks nitrogen in different functional pools within each organ
+   - Pools: Structural (cell walls), Metabolic (enzymes), Storage (reserves), Transport (mobile forms)
+   - Real-world meaning: Like tracking how money is allocated in different accounts - 
+     checking (metabolic), savings (storage), investments (structural), cash (transport).
+
+KEY NITROGEN CONCEPTS:
+
+NITROGEN FORMS:
+- Nitrate (NO3-): Main form in hydroponic solutions, mobile in plant
+- Ammonium (NH4+): Alternative form, can be toxic at high levels
+- Amino acids: Organic forms, directly usable by plants
+- Urea: Organic form that must be converted before use
+
+NITROGEN POOLS IN PLANTS:
+- Structural: Proteins in cell walls and structure (hard to mobilize)
+- Metabolic: Enzymes, chlorophyll (essential but some can be recycled)
+- Storage: Amino acids, storage proteins (easily mobilized when needed)
+- Transport: Mobile forms moving between organs
+
+NITROGEN USE EFFICIENCY (NUE):
+- How much biomass produced per unit nitrogen absorbed
+- High NUE = efficient use, low NUE = wasteful use
+- Affected by genetics, environment, and management
+
+UPTAKE KINETICS:
+- Vmax: Maximum uptake rate (genetic potential)
+- Km: Half-saturation constant (efficiency at low concentrations)
+- Inhibition: Competition between different nitrogen forms
+
+PRACTICAL APPLICATIONS:
+- Optimize nutrient solution concentrations for maximum uptake efficiency
+- Predict nitrogen deficiency before symptoms appear
+- Time nitrogen applications based on plant demand patterns
+- Minimize nitrogen waste and environmental impact
+- Breed plants with better nitrogen use efficiency
+- Diagnose nutrient problems and adjust feeding programs
+
+This system helps growers provide the right amount of nitrogen at the right time, maximizing 
+plant growth while minimizing waste and cost - like being a nutritionist for plants.
+"""
+
+

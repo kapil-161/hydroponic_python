@@ -1242,3 +1242,200 @@ def create_enhanced_root_uptake_model(system_type: HydroponicSystemType = Hydrop
 # Demonstration
 # =========================
 
+
+"""
+=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+
+This file models the complete root system of hydroponic plants - like modeling the entire "underground" 
+network that feeds the plant. Think of it as designing the plant's digestive system, circulatory system,
+and foundation all in one. Just like how human body parts work together, plant roots have different 
+types that do different jobs.
+
+KEY FUNCTIONS AND EQUATIONS:
+
+1. RootCohort.calculate_surface_area()
+   - What it does: Calculates the total surface area of root segments
+   - Equation: surface_area = π × diameter × length
+   - Real-world meaning: Like calculating the surface area of a pipe to know how much water it can 
+     absorb. More surface area = more nutrient absorption capacity.
+
+2. RootCohort.calculate_activity_factor()
+   - What it does: Determines how active/effective roots are based on their age
+   - Equation: activity = 0.5^(age_days / half_life_days), with minimum limits
+   - Real-world meaning: Like how a new sponge absorbs better than an old one. Young roots are more 
+     active at absorbing nutrients than old, tired roots.
+
+3. RootCohort.calculate_uptake_capacity()
+   - What it does: Calculates how much nutrients this root segment can absorb per day
+   - Equation: uptake_capacity = surface_area × activity_factor × base_uptake_rate
+   - Real-world meaning: Like calculating how much water a garden hose can deliver - depends on 
+     the hose size (surface area), condition (activity), and water pressure (base rate).
+
+4. RootZoneLayer.calculate_root_length_density()
+   - What it does: Measures how densely packed roots are in a volume of space
+   - Equation: density = total_root_length / volume
+   - Real-world meaning: Like measuring how many roads exist per square mile in a city. Higher 
+     density means better access to resources but also more competition.
+
+5. RootZoneLayer.adjust_uptake_rate()
+   - What it does: Adjusts nutrient absorption based on environmental conditions
+   - Equations: 
+     * Temperature effect: rate × Q10^((T - T_base) / T_range)
+     * Flow effect: rate × (flow_rate / optimal_flow)
+     * pH effect: rate × pH_factor based on deviation from optimal
+   - Real-world meaning: Like how your appetite changes with room temperature, food quality, and 
+     your health. Roots absorb nutrients better under ideal conditions.
+
+6. RootArchitectureModel.daily_update()
+   - What it does: Updates the entire root system for one day of growth
+   - Process: Ages existing roots, grows new roots, calculates uptake capacity
+   - Real-world meaning: Like a daily health check and growth update for the entire root system.
+     Old roots get less effective, new roots grow where conditions are good.
+
+7. generate_new_roots()
+   - What it does: Creates new root segments based on growth conditions
+   - Equations: 
+     * new_growth = base_rate × N_stress × water_stress × temp_stress × system_multiplier
+     * Root distribution among fine/medium/coarse types based on fractions
+   - Real-world meaning: Like how your body grows new blood vessels where they're needed most. 
+     Roots grow more where nutrients are abundant and conditions are favorable.
+
+8. _calculate_zone_growth_potential()
+   - What it does: Determines where new roots should grow based on biological signals
+   - Key factors:
+     * Auxin gradient (plant hormone that decreases with distance from shoot)
+     * Nutrient availability (roots grow toward food sources)
+     * Oxygen levels (roots need to breathe too)
+     * Root competition (overcrowding reduces growth)
+     * Temperature effects (optimal temperature for growth)
+   - Equation: growth_potential = auxin × nutrients × oxygen × competition × temperature
+   - Real-world meaning: Like how tree branches grow toward sunlight and roots grow toward water. 
+     Plants are smart - they put energy where it gives the best return.
+
+9. EnhancedRootUptakeModel.calculate_nutrient_uptake()
+   - What it does: Calculates actual nutrient absorption using Michaelis-Menten kinetics
+   - Equation: uptake_rate = (Vmax × concentration) / (Km + concentration)
+   - Real-world meaning: Like how your digestive system has a maximum rate it can process food,
+     no matter how much you eat. Same with roots - there's a maximum absorption rate.
+
+10. _calculate_nutrient_competition()
+    - What it does: Models competition between similar nutrients for transport proteins
+    - Equation: inhibition_factor = 1 / (1 + competitor_concentration/Ki)
+    - Real-world meaning: Like how different medications can interfere with each other in your 
+      body. Similar nutrients compete for the same "transport trucks" in plant roots.
+
+11. _calculate_ph_effect_on_uptake()
+    - What it does: Adjusts uptake based on pH affecting nutrient availability
+    - Different nutrients prefer different pH ranges (5.5-7.5 typically optimal)
+    - Real-world meaning: Like how some vitamins are absorbed better with certain foods or 
+      stomach conditions. Each nutrient has its preferred pH environment.
+
+ROOT SYSTEM TYPES AND THEIR CHARACTERISTICS:
+
+Fine Roots (<0.2mm diameter):
+- Like capillaries in your circulatory system
+- High activity, short lifespan (weeks to months)  
+- Primary nutrient and water absorption
+- Make up 60-70% of total root length but only 20-30% of biomass
+
+Medium Roots (0.2-1.0mm diameter):
+- Like arteries - transport and some absorption
+- Moderate activity, medium lifespan (months to years)
+- Connect fine roots to main root system
+- Provide structural support and transport
+
+Coarse Roots (>1.0mm diameter):
+- Like major highways - mainly transport and structure
+- Low absorption activity, long lifespan (years)
+- Store carbohydrates and provide anchoring
+- Connect to plant stem and provide main transport routes
+
+HYDROPONIC SYSTEM ADAPTATIONS:
+
+NFT (Nutrient Film Technique):
+- Roots grow in shallow channels with flowing nutrient film
+- High oxygen availability, continuous nutrient flow
+- Compact root system, high efficiency
+- Like IV drip feeding - constant nutrient delivery
+
+DWC (Deep Water Culture):
+- Roots suspended in aerated nutrient solution
+- Maximum root-solution contact, requires high aeration
+- Extensive root development possible
+- Like living in a nutrient-rich swimming pool
+
+Aeroponics:
+- Roots suspended in air, misted with nutrients
+- Maximum oxygen availability, precise nutrient control
+- Most efficient but requires careful management
+- Like breathing nutrients instead of drinking them
+
+ENVIRONMENTAL FACTORS AFFECTING ROOT GROWTH:
+
+Temperature Effects (Q10 relationships):
+- Root growth doubles approximately every 10°C increase (within optimal range)
+- Optimal root temperature: 18-22°C for most crops
+- Too hot (>30°C): protein denaturation, reduced uptake
+- Too cold (<10°C): slow metabolism, poor growth
+
+Oxygen Requirements:
+- Roots need dissolved oxygen for respiration (cellular energy production)
+- Optimal: >6 mg/L dissolved oxygen
+- Critical minimum: 2-3 mg/L (below this, roots die)
+- Signs of low oxygen: brown, slimy roots (root rot)
+
+pH Effects on Nutrient Availability:
+- pH 5.5-6.5: optimal for most nutrient uptake
+- Too acidic (<5.0): aluminum toxicity, phosphorus deficiency
+- Too alkaline (>7.0): iron, manganese, phosphorus lockout
+- Each nutrient has specific pH preferences
+
+Flow Rate Optimization:
+- NFT: 1-2 L/min optimal flow rate
+- Too slow: nutrient depletion, stagnation
+- Too fast: root damage, excessive turbulence
+- Just right: continuous fresh nutrients without stress
+
+PRACTICAL APPLICATIONS:
+
+For Hydroponic Growers:
+1. Monitor root color (white = healthy, brown = problems)
+2. Maintain proper dissolved oxygen levels with air pumps
+3. Keep solution temperature in optimal range (18-22°C)
+4. Adjust pH regularly to maintain 5.5-6.5 range
+5. Provide adequate but not excessive flow rates
+6. Replace solution regularly to prevent nutrient imbalances
+
+For System Design:
+1. Size root zones appropriately for plant growth stage
+2. Ensure adequate aeration in all hydroponic systems
+3. Design for easy root inspection and maintenance
+4. Plan for root growth - systems need expansion space
+5. Include temperature control for root zones
+6. Design drainage to prevent root rot from stagnant water
+
+KEY CONCEPTS FOR NON-CODERS:
+
+Root Architecture: The 3D structure and organization of the root system, like the blueprint of 
+an underground city with different districts (zones) and transportation networks (root types).
+
+Michaelis-Menten Kinetics: The mathematical description of how enzymes work, applied to nutrient 
+uptake. It shows that uptake increases with concentration but has a maximum limit - like a 
+highway that gets congested during rush hour.
+
+Q10 Temperature Response: The observation that biological processes roughly double in rate for 
+every 10°C temperature increase (within optimal ranges). Like how cooking goes faster at 
+higher temperatures, but too hot burns the food.
+
+Root Turnover: The natural cycle of root death and replacement. Fine roots live weeks to months,
+while coarse roots can live for years. Like how your body constantly replaces skin cells - 
+some tissues renew quickly, others slowly.
+
+Competitive Inhibition: When similar nutrients compete for the same transport proteins in roots.
+Like having multiple people trying to use the same elevator - they interfere with each other's
+movement.
+
+This root system model integrates all these biological processes to simulate realistic plant 
+growth and nutrient uptake in hydroponic systems, helping optimize growing conditions for 
+maximum plant health and productivity.
+"""

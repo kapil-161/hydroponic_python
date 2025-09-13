@@ -1946,8 +1946,8 @@ class CROPGROHydroponicSimulator:
             solar_radiation=solar_radiation,
             vpd=vpd_calculated,  # Pre-calculated
             
-            # FIXED: WUE using realistic water uptake calculations
-            water_use_efficiency=water_results['water_use_efficiency_kg_m3'],
+            # FIXED: WUE using realistic water uptake calculations (L/kg)
+            water_use_efficiency=water_results['water_use_efficiency_L_kg'],
             
             # Solution properties  
             ph=ph,  # Use dynamic pH from hydroponic system
@@ -2725,11 +2725,11 @@ class CROPGROHydroponicSimulator:
         # 9. Total water uptake
         total_water_uptake_L = transpiration_L + metabolic_water_L
         
-        # 10. Water use efficiency
-        if total_water_uptake_L > 0:
-            wue_kg_per_m3 = (total_biomass / 1000.0) / (total_water_uptake_L / 1000.0)  # kg/m³
+        # 10. Water use efficiency (L/kg) - Water used per unit biomass
+        if total_biomass > 0:
+            wue_L_per_kg = total_water_uptake_L / (total_biomass / 1000.0)  # L/kg
         else:
-            wue_kg_per_m3 = 0.0
+            wue_L_per_kg = 0.0
             
         return {
             'et0_mm': et0_mm,
@@ -2739,7 +2739,7 @@ class CROPGROHydroponicSimulator:
             'transpiration_L': transpiration_L,
             'metabolic_water_L': metabolic_water_L,
             'total_water_uptake_L': total_water_uptake_L,
-            'water_use_efficiency_kg_m3': wue_kg_per_m3,
+            'water_use_efficiency_L_kg': wue_L_per_kg,
             'vpd_kpa': vpd,
             'environmental_factor': environmental_factor
         }
@@ -3361,11 +3361,11 @@ class CROPGROHydroponicSimulator:
         
         # 9. EFFICIENCY METRICS (System-wide)
         output.append(f"\n📊 EFFICIENCY METRICS (System-wide):")
-        water_use = getattr(daily_result, 'wue_kg_m3', None)
+        water_use = getattr(daily_result, 'water_use_efficiency', None)
         light_use = getattr(daily_result, 'light_use_efficiency', None)
         
         if water_use is not None:
-            output.append(f"  • Water Use Efficiency: {water_use:6.2f} kg/m³")
+            output.append(f"  • Water Use Efficiency: {water_use:6.2f} L/kg")
         else:
             output.append(f"  • Water Use Efficiency: Data not available")
             
@@ -3765,3 +3765,212 @@ class CROPGROHydroponicSimulator:
             'daily_rzt_effects': daily_rzt_effects,
             'hourly_diagnostics': hourly_diagnostics
         }
+
+
+"""
+=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+
+This file is the MAIN SIMULATION ENGINE - the "brain" of the entire hydroponic system simulation.
+Think of it as the conductor of an orchestra, coordinating all the different plant biology models 
+to create a complete, realistic simulation of how plants grow in hydroponic systems. It's like 
+having a digital twin of your entire growing operation that can predict plant growth, resource 
+needs, and optimal growing conditions.
+
+THE SIMULATOR AS A DIGITAL PLANT FACTORY:
+
+Imagine the simulator as a sophisticated digital plant factory that models every aspect of plant 
+growth from the molecular level to the whole plant level. It integrates:
+
+🌱 **Genetics**: Different plant varieties with unique characteristics
+🌿 **Development**: How plants progress through growth stages
+🔄 **Metabolism**: Energy production (photosynthesis) and consumption (respiration) 
+🍃 **Architecture**: How leaves and roots are arranged for optimal resource capture
+💧 **Nutrition**: How plants absorb and use nutrients
+😰 **Stress Response**: How plants react to environmental challenges
+🌡️ **Environment**: Temperature, light, humidity effects on all processes
+
+KEY CLASSES AND THEIR PURPOSE:
+
+1. SimulationParameters
+   - What it does: Stores all the configuration settings for the simulation
+   - Contains: Biomass allocation ratios, stress thresholds, environmental limits
+   - Real-world meaning: Like the settings panel on a sophisticated piece of equipment - 
+     it controls how all the different systems interact and respond to conditions.
+
+2. CROPGROHydroponicSimulator
+   - What it does: The master controller that runs the entire simulation
+   - Integration: Coordinates 15+ different plant biology models simultaneously
+   - Real-world meaning: Like the central computer system in a modern greenhouse that 
+     monitors everything from root temperature to leaf photosynthesis and makes 
+     real-time adjustments to optimize plant growth.
+
+MAIN SIMULATION FUNCTIONS EXPLAINED:
+
+3. __init__() - System Initialization
+   - What it does: Sets up all the individual plant biology models
+   - Models initialized:
+     * Genetic parameters (plant variety characteristics)
+     * Phenology (growth stage timing)
+     * Photosynthesis (energy production)
+     * Respiration (energy consumption)
+     * Root architecture (nutrient/water uptake)
+     * Leaf development (growth patterns)
+     * Senescence (aging and nutrient recycling)
+     * Stress response (environmental adaptation)
+     * Environmental control (climate management)
+   - Real-world meaning: Like setting up a complete laboratory with all the specialized 
+     equipment needed to study every aspect of plant biology simultaneously.
+
+4. simulate_day() - Daily Plant Growth Simulation
+   - What it does: Runs one complete day of plant growth simulation
+   - Process Flow:
+     a) Update plant development stage
+     b) Calculate photosynthesis (energy production)
+     c) Calculate respiration (energy consumption)
+     d) Update root and leaf growth
+     e) Process nutrient uptake and cycling
+     f) Assess environmental stress
+     g) Update solution chemistry (pH, nutrients)
+     h) Record all results
+   - Real-world meaning: Like having a team of plant scientists take detailed measurements 
+     and observations of your plants every single day, tracking everything from cellular 
+     processes to whole-plant growth.
+
+5. hourly_integration() - Detailed Sub-Daily Modeling
+   - What it does: Breaks down daily processes into hour-by-hour calculations
+   - Why important: Many plant processes vary throughout the day (photosynthesis peaks 
+     at midday, respiration continues at night)
+   - Calculations: 24 hourly updates for photosynthesis, uptake, and environmental control
+   - Real-world meaning: Like having sensors that take measurements every hour instead of 
+     just once per day, giving much more accurate and detailed information about what's 
+     happening in your growing system.
+
+6. update_biomass_allocation() - Growth Resource Distribution
+   - What it does: Determines how much of the plant's daily growth goes to leaves, stems, 
+     or roots based on the current growth stage
+   - Growth stages affect allocation:
+     * Vegetative stage: More energy to leaves and roots
+     * Reproductive stage: More energy to fruits/seeds, less to leaves
+   - Real-world meaning: Like how a growing child allocates nutrition - when young, more 
+     goes to brain and bone development; when mature, more goes to maintaining health 
+     and reproduction.
+
+7. calculate_stress_factors() - Environmental Stress Assessment
+   - What it does: Evaluates how current environmental conditions affect plant health
+   - Stress types monitored:
+     * Temperature stress (too hot or cold)
+     * Light stress (too much or too little)
+     * Water stress (drought or flooding)
+     * Nutrient stress (deficiencies or toxicities)
+     * pH stress (too acidic or alkaline)
+     * Salt stress (high EC levels)
+   - Real-world meaning: Like a plant health monitoring system that continuously checks 
+     if conditions are optimal and identifies any factors that might slow growth or 
+     cause problems.
+
+8. update_solution_chemistry() - Nutrient Solution Management
+   - What it does: Tracks how plant nutrient uptake changes the hydroponic solution
+   - Processes modeled:
+     * Nutrient depletion as plants absorb them
+     * pH changes from nutrient uptake patterns
+     * Automatic pH and nutrient correction
+     * Salt buildup and EC management
+   - Real-world meaning: Like having an automated chemistry lab that constantly monitors 
+     your nutrient solution and predicts when you'll need to add nutrients or adjust pH.
+
+INTEGRATION OF PLANT BIOLOGY MODELS:
+
+The simulator is unique because it doesn't just model one aspect of plant growth - it 
+integrates ALL the major plant biology processes and shows how they interact:
+
+**Photosynthesis ↔ Respiration**: Energy production vs. consumption balance
+**Genetics ↔ Environment**: How plant variety interacts with growing conditions  
+**Development ↔ Resource Allocation**: How growth stage affects resource distribution
+**Stress ↔ All Processes**: How environmental stress affects every aspect of growth
+**Nutrition ↔ Growth**: How nutrient availability controls growth rates
+**Roots ↔ Shoots**: How underground and above-ground parts communicate and support each other
+
+SIMULATION OUTPUTS AND THEIR MEANING:
+
+Daily Results Include:
+- **Growth Metrics**: Biomass gain, leaf development, root expansion
+- **Physiological Rates**: Photosynthesis, respiration, transpiration
+- **Resource Consumption**: Water uptake, nutrient absorption
+- **Environmental Response**: Stress levels, adaptation status
+- **Solution Chemistry**: pH, EC, individual nutrient concentrations
+- **System Performance**: Efficiency metrics, resource use ratios
+
+PRACTICAL APPLICATIONS:
+
+For Commercial Growers:
+1. **Crop Planning**: Predict harvest dates and yields for different varieties
+2. **Resource Optimization**: Minimize water and nutrient use while maximizing growth
+3. **Climate Control**: Optimize temperature, humidity, CO2 for maximum productivity
+4. **Problem Prevention**: Identify potential issues before they become serious
+5. **Variety Selection**: Choose the best plant varieties for specific conditions
+6. **System Design**: Size tanks, pumps, and growing areas appropriately
+
+For Researchers:
+1. **Hypothesis Testing**: Test theories about plant growth without expensive experiments
+2. **Parameter Sensitivity**: Identify which factors most strongly affect growth
+3. **Model Validation**: Compare simulation results with real experimental data
+4. **Publication Data**: Generate comprehensive datasets for scientific papers
+5. **Grant Applications**: Demonstrate feasibility of research projects
+
+For Students and Educators:
+1. **Learning Tool**: Understand complex plant biology through interactive simulation
+2. **Experimentation**: Try different growing strategies without real plants
+3. **Data Analysis**: Learn to interpret complex biological datasets
+4. **System Understanding**: See how all plant processes work together
+
+SIMULATION ACCURACY AND VALIDATION:
+
+The simulator is based on:
+- **Scientific Literature**: Equations and parameters from peer-reviewed research
+- **CROPGRO Heritage**: Built on the proven CROPGRO crop modeling framework
+- **Experimental Validation**: Parameters calibrated against real growing data
+- **Expert Review**: Developed with input from plant physiologists and hydroponic experts
+
+WHAT MAKES THIS SIMULATION SPECIAL:
+
+1. **Comprehensive Integration**: Models all major plant processes simultaneously
+2. **Hydroponic Focus**: Specifically designed for soilless growing systems
+3. **Real-time Feedback**: Shows how daily management decisions affect long-term outcomes
+4. **Scientific Rigor**: Based on established plant physiology principles
+5. **Practical Utility**: Provides actionable insights for real growing operations
+
+LIMITATIONS AND CONSIDERATIONS:
+
+Like any model, the simulator has limitations:
+- **Data Quality**: Results are only as good as the input parameters and weather data
+- **Variety Specificity**: Each plant variety may need specific parameter calibration
+- **System Specificity**: Different hydroponic systems may behave differently
+- **Pathogen/Pest Effects**: Does not model diseases or pest damage
+- **Equipment Failures**: Assumes all system components work perfectly
+
+KEY CONCEPTS FOR NON-CODERS:
+
+System Integration: How multiple complex systems work together seamlessly, like all the 
+different systems in a car (engine, transmission, brakes, etc.) working together.
+
+Real-time Modeling: Calculations that happen continuously as conditions change, like 
+a GPS navigation system that updates your route based on current traffic.
+
+Feedback Loops: When the output of a process affects its input, creating dynamic responses, 
+like how a thermostat turns heating on and off based on room temperature.
+
+Process Coupling: When multiple biological processes influence each other, like how 
+photosynthesis rate affects respiration rate, which affects growth rate.
+
+Predictive Modeling: Using current conditions and biological principles to forecast 
+future outcomes, like weather forecasting but for plant growth.
+
+Digital Twin: A computer model that behaves like the real system it represents, allowing 
+you to test scenarios without affecting the actual plants or equipment.
+
+This CROPGRO Hydroponic Simulator represents the cutting edge of agricultural technology - 
+a sophisticated digital twin that can help growers, researchers, and students understand 
+and optimize plant growth in controlled environment agriculture. It transforms complex 
+plant biology into practical insights for better crop production, resource efficiency, 
+and sustainable food systems.
+"""

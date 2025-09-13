@@ -733,3 +733,85 @@ def create_lettuce_nutrient_mobility_model(system_config=None) -> NutrientMobili
     return NutrientMobilityModel(parameters)
 
 
+"""
+=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+
+This file manages two critical aspects of plant nutrition: how nutrients behave in the water 
+solution and how they move within the plant. Think of it like managing both the "cafeteria" 
+(nutrient solution) and the "delivery system" (plant transport).
+
+PART 1: NUTRIENT CONCENTRATION MODEL
+
+1. calculate_ec_from_concentrations()
+   - What it does: Calculates electrical conductivity (EC) from individual nutrient levels
+   - Equation: Total_EC = Σ(nutrient_concentration × ec_factor)
+   - Real-world meaning: EC measures how "salty" the nutrient solution is. Like measuring 
+     saltiness of soup - more dissolved nutrients = higher conductivity.
+
+2. calculate_ec_based_uptake_modifier()
+   - What it does: Adjusts how well plants can absorb nutrients based on solution saltiness
+   - Equations: 
+     * High EC: uptake_modifier = max(0.3, 1.0 - (ec_ratio - 1.0) × modifier)
+     * Low EC: uptake_modifier = min(1.3, 1.0 + (threshold - ec_ratio) × modifier)
+   - Real-world meaning: Too salty = plant can't drink well. Too dilute = not enough nutrients.
+     Like drinking seawater vs plain water - both are problematic.
+
+PART 2: NUTRIENT MOBILITY MODEL (In-Plant Transport)
+
+3. calculate_transport_capacity()
+   - What it does: Determines how much nutrients can move through plant "highways"
+   - Equation: capacity = base_capacity × nutrient_feedback × environmental_factor
+   - Real-world meaning: Plants have two main transport systems - xylem (like arteries carrying 
+     water up) and phloem (like veins carrying food around). Capacity depends on water flow 
+     and plant health.
+
+4. calculate_sink_demands()
+   - What it does: Calculates how much nutrients each plant part needs
+   - Equation: adjusted_demand = demand × organ_sink_strength × mobility_modifier
+   - Real-world meaning: Growing leaves need lots of nitrogen, fruits need phosphorus. 
+     Like different body parts needing different vitamins during growth.
+
+5. calculate_source_supplies()
+   - What it does: Determines how much nutrients each plant part can give to others
+   - Equations:
+     * base_supply = storage_pool × 0.1 + buffer_pool × 0.05
+     * stress_supply = storage_pool × stress_rate × stress_level
+     * senescence_supply = metabolic_pool × senescence_rate × remobilization_efficiency
+   - Real-world meaning: Old leaves can donate nutrients to young growing parts. 
+     Like parents giving money to children - stored reserves get redistributed.
+
+6. calculate_transport_fluxes()
+   - What it does: Calculates actual nutrient movement between plant parts
+   - Equation: flux_rate = min(max_flux, sink_demand, transport_capacity) × efficiency
+   - Real-world meaning: Movement is limited by supply, demand, and "highway capacity". 
+     Like traffic flow - limited by cars available, destination capacity, and road size.
+
+7. update_organ_pools()
+   - What it does: Updates nutrient storage in each plant part after transport
+   - Equations: Track metabolic_pool, storage_pool, transport_pool, buffer_pool
+   - Real-world meaning: Keeps track of nutrient "bank accounts" in leaves, stems, roots. 
+     Money flows between accounts based on needs and availability.
+
+KEY CONCEPTS:
+
+NUTRIENT MOBILITY CLASSES:
+- Highly mobile (N, P, K): Can move anywhere in plant (like cash)
+- Moderately mobile (S, Fe, Zn): Some movement restrictions (like checking account)
+- Poorly mobile (Ca, B): Hard to relocate once deposited (like real estate)
+- Immobile: Stays where first deposited (like concrete foundation)
+
+TRANSPORT MECHANISMS:
+- Xylem: One-way up from roots (like elevator going only up)
+- Phloem: Two-way transport (like elevator that goes both ways)
+- Complex: Multiple pathways with different rules
+
+PRACTICAL APPLICATIONS:
+- Optimize nutrient solution strength (EC management)
+- Time nutrient applications for maximum uptake
+- Predict deficiency symptoms and locations
+- Design feeding schedules based on plant growth stage
+- Understand why some nutrients can't be "rescued" once deficient
+
+This system helps growers maintain optimal nutrition throughout the plant's life cycle.
+"""
+

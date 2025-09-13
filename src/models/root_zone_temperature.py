@@ -400,4 +400,87 @@ def create_lettuce_rzt_model(system_config=None) -> RootZoneTemperatureModel:
         raise ValueError(f"❌ Failed to load CSV root zone temperature parameters: {e}. No hardcoded defaults allowed.")
 
 
+"""
+=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+
+This file manages root zone temperature (RZT) - the temperature around plant roots in hydroponic 
+systems. Think of it like controlling the water temperature in a fish tank - it affects everything 
+the roots do, from absorbing nutrients to growing.
+
+KEY FUNCTIONS AND EQUATIONS:
+
+1. calculate_optimal_rzt()
+   - What it does: Determines the ideal root temperature based on air temperature
+   - Equation: optimal_RZT = air_temperature + offset (typically +3°C)
+   - Real-world meaning: Plants like their roots slightly warmer than the air around their leaves.
+     Like how your feet feel better when they're warmer than your head in cold weather.
+
+2. calculate_rzt_growth_factor()
+   - What it does: Calculates how root temperature affects overall plant growth
+   - Equations:
+     * Below optimal: factor = base_factor + (optimal_temp - current_temp) × linear_slope
+     * Above optimal: factor = base_factor - (current_temp - optimal_temp) × decline_slope
+   - Real-world meaning: Growth increases linearly until optimal temperature, then drops rapidly 
+     if too hot. Like Goldilocks - there's a "just right" temperature zone.
+
+3. calculate_nutrient_uptake_factor()
+   - What it does: Calculates how root temperature affects nutrient absorption efficiency
+   - Equation: factor = 1.0 ± temperature_difference × sensitivity
+   - Real-world meaning: Cold roots can't absorb nutrients well (like trying to drink a thick 
+     shake through a straw). Too hot and they get damaged and also can't absorb properly.
+
+4. calculate_water_uptake_factor()
+   - What it does: Determines how root temperature affects water absorption
+   - Similar equations to nutrient uptake but different sensitivity
+   - Real-world meaning: Root temperature affects how efficiently roots can pump water up to 
+     the leaves. Cold = sluggish pumping, too hot = damage and poor pumping.
+
+5. calculate_photosynthesis_factor()
+   - What it does: Shows how root temperature indirectly affects photosynthesis (food production)
+   - Real-world meaning: Happy roots = healthy plant = better photosynthesis. It's all connected - 
+     roots are like the foundation of a house, affecting everything above.
+
+6. calculate_root_metabolism_factor()
+   - What it does: Calculates how temperature affects root cellular activity
+   - Real-world meaning: Root cells need to be active to do their job. Cold = sluggish cells, 
+     optimal = active cells, too hot = damaged cells.
+
+7. _calculate_thermal_dynamics()
+   - What it does: Models how root zone temperature changes over time with various heat sources/sinks
+   - Equations: Uses exponential approach to target temperature with time constants
+   - Real-world meaning: Root zones don't change temperature instantly - they have "thermal mass" 
+     like how a pot of water takes time to heat up or cool down.
+
+KEY TEMPERATURE CONCEPTS:
+
+OPTIMAL RANGE:
+- Usually 3-5°C warmer than air temperature
+- For lettuce: typically 18-25°C root zone
+- Too cold (<15°C): Slow growth, poor nutrient uptake
+- Too hot (>28°C): Root damage, stress, poor growth
+
+THERMAL DYNAMICS:
+- Thermal mass: How quickly temperature changes (large systems = slow changes)
+- Heat sources: Pumps, ambient air, heaters
+- Heat sinks: Cooling systems, evaporation, cold ambient air
+
+RESPONSE PATTERNS:
+- Linear increase up to optimal (more heat = better growth)
+- Rapid decline above optimal (overheating = damage)
+- Different sensitivities for different processes (growth vs nutrient uptake)
+
+PRACTICAL APPLICATIONS:
+- Optimize root zone heating systems for maximum efficiency
+- Predict plant performance based on root temperature
+- Adjust nutrient concentrations based on uptake efficiency
+- Schedule irrigation based on water uptake capacity  
+- Design thermal management systems for hydroponic facilities
+- Understand why plants perform poorly in certain seasons
+
+This system helps growers maintain the "happy zone" for roots, which is the foundation 
+for healthy, productive plants. Like keeping your feet warm in winter - it affects 
+your whole body's comfort and performance.
+"""
+
+
 

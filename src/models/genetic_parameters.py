@@ -524,3 +524,61 @@ def create_lettuce_genetic_system(system_config=None) -> Tuple[GeneticParameterD
         raise ValueError(f"❌ Failed to load CSV genetic parameters: {e}. System requires CSV data - no hardcoded defaults allowed.")
 
 
+"""
+=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+
+This file manages the genetic "blueprint" of different lettuce varieties. It's like having a database
+of different dog breeds - each has unique characteristics that determine how they look and behave.
+
+KEY FUNCTIONS AND EQUATIONS:
+
+1. calculate_adaptation_index()
+   - What it does: Scores how well a lettuce variety will perform in specific conditions
+   - Equation: adaptation = base_score - Σ(stress × (1 - tolerance) × weight)
+   - Real-world meaning: Like rating how well a person from a cold climate would handle 
+     living in a desert. Some lettuce varieties handle heat better, others handle cold better.
+
+2. calculate_phenotype_expression()
+   - What it does: Predicts how genetic traits actually show up under environmental conditions
+   - Equation: expression = base_trait × environmental_modifier
+   - Real-world meaning: Your genetic height potential might be 6 feet, but poor nutrition 
+     during childhood might result in only 5'8". Same with plants - genes set potential,
+     environment determines actual expression.
+
+3. predict_cultivar_performance()
+   - What it does: Combines multiple trait predictions to forecast overall plant performance
+   - Equations: 
+     * yield_index = Σ(trait_value × weight) for yield-related traits
+     * quality_index = Σ(trait_value × weight) for quality-related traits
+   - Real-world meaning: Like predicting a student's GPA based on individual subject scores.
+     Different traits contribute different amounts to overall success.
+
+4. identify_breeding_targets()
+   - What it does: Finds the best "parent" plants for creating new varieties
+   - Equation: overall_score = adaptation_score × adaptation_weight + yield_potential × yield_weight
+   - Real-world meaning: Like matchmaking for plants - finding parents that complement 
+     each other's strengths to create better offspring.
+
+5. estimate_hybrid_performance()
+   - What it does: Predicts how good a "child" plant would be from two specific "parents"
+   - Equation: hybrid_trait = (parent1_trait + parent2_trait) / 2 × heterosis_factor
+   - Real-world meaning: Children often get traits that are average of both parents, 
+     sometimes with "hybrid vigor" making them even better than expected.
+
+KEY GENETIC COEFFICIENTS:
+- LFMAX: Maximum photosynthesis rate (like engine horsepower)
+- SLAVR: Leaf area per weight (like surface area to mass ratio)
+- SIZLF: Maximum leaf size (self-explanatory)
+- EC_TOLERANCE: Salt tolerance (how much salt the plant can handle)
+- NITRATE_EFFICIENCY: How well the plant uses nitrogen fertilizer
+
+BREEDING APPLICATIONS:
+- Identify best varieties for specific growing conditions
+- Predict which parent combinations will produce superior offspring  
+- Design breeding programs to develop new varieties with desired traits
+- Optimize variety selection for different markets (yield vs quality focus)
+
+This is essentially a sophisticated plant genetics database that helps predict performance 
+and guide breeding decisions, similar to how animal breeders choose breeding pairs.
+"""
+

@@ -660,3 +660,199 @@ def create_lettuce_phenology_model(system_config=None, initial_stage: LettuceGro
     return ComprehensivePhenologyModel(parameters, initial_stage)
 
 
+"""
+=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+
+This file models plant phenology - the timing of developmental events in a plant's life cycle. 
+Think of it as modeling the plant's biological calendar, tracking when major life events happen 
+like germination, leafing, flowering, and maturity. It's like having a detailed growth chart 
+that predicts when each stage will occur based on environmental conditions.
+
+KEY FUNCTIONS AND EQUATIONS:
+
+1. calculate_thermal_time()
+   - What it does: Converts daily temperature into "heat units" for plant development
+   - Equation: Uses cardinal temperature model with base, optimal, and maximum temperatures
+     * Below base temp: thermal_time = 0 (too cold for growth)
+     * Base to optimal: thermal_time = (T - base) × factor × scale
+     * Optimal range: thermal_time = (T - base) × scale
+     * Above optimal: thermal_time = (T - base) × declining_factor × scale
+   - Real-world meaning: Like how cooking time depends on oven temperature. Plants need a certain 
+     amount of "heat cooking time" to complete each growth stage, but too much heat slows things down.
+
+2. calculate_temperature_factor()
+   - What it does: Determines how efficiently temperature drives development
+   - Range: 0-1 where 1 = optimal temperature
+   - Real-world meaning: Like performance efficiency at different temperatures. A car engine 
+     runs best at optimal temperature - too cold and it's sluggish, too hot and it overheats.
+
+3. calculate_photoperiod_factor()
+   - What it does: Adjusts development rate based on day length (hours of sunlight)
+   - Applies to: Mainly flowering/bolting stages (lettuce is day-neutral for vegetative growth)
+   - Range: 0.5-1.5 where 1 = neutral effect
+   - Real-world meaning: Like how some people need more/less daylight to feel energetic. Some 
+     plants are programmed to flower only when days are long (summer) or short (fall).
+
+4. calculate_stress_factor()
+   - What it does: Shows how environmental stress affects development timing
+   - Equation: stress_factor = max(water_acceleration, temperature_acceleration)
+   - Key insight: Stress typically accelerates development (plants rush to reproduce before dying)
+   - Real-world meaning: Like how people mature faster under hardship. Stressed plants "panic" 
+     and try to complete their life cycle quickly to ensure survival.
+
+5. calculate_bolting_risk()
+   - What it does: Predicts probability of premature flowering (bolting) in lettuce
+   - Factors considered:
+     * Long daylight hours (>14 hours triggers bolting)
+     * High temperatures (>25°C accelerates bolting)
+     * Plant maturity (older plants more likely to bolt)
+     * Sustained stress conditions
+   - Equation: risk = photoperiod_risk + temperature_risk + maturity_risk + sustained_stress_risk
+   - Real-world meaning: Like predicting when a teenager might rebel. Multiple stress factors 
+     increase the chance that lettuce will "give up" on making leaves and start making flowers.
+
+6. get_next_stage()
+   - What it does: Determines what growth stage comes next in the plant's development
+   - Logic: Normal progression (seed→leaves→head→harvest) OR bolting pathway (leaves→flowers→seeds)
+   - Real-world meaning: Like a GPS navigation system for plant development, choosing the route 
+     based on current conditions and destination (reproductive success vs harvest quality).
+
+7. daily_update()
+   - What it does: Advances the plant's development by one day
+   - Process: Calculate thermal time → Apply environmental factors → Update stage progress → 
+     Check for stage transitions → Update plant status
+   - Real-world meaning: Like a daily diary entry tracking the plant's growth milestones and 
+     predicting when the next major event will occur.
+
+GROWTH STAGES EXPLAINED:
+
+Early Stages (Germination to Emergence):
+- Germination (GE): Seed absorbs water, starts sprouting
+- Emergence (VE): Seedling breaks through soil surface
+- Thermal time: 50-80 GDD depending on conditions
+- Like a baby's first weeks - critical foundation period
+
+Vegetative Stages (V1-V10+):
+- V1-V10: Each number represents one new leaf pair
+- Each V-stage: ~40-60 GDD (about 3-5 days at optimal temperature)
+- Node number tracks developmental progress
+- Like childhood growth spurts - each stage builds on the previous
+
+Head Formation (Lettuce-Specific):
+- Head Initiation (HI): Plant begins forming compact center
+- Head Development (HD): Center leaves curl inward, head tightens
+- Harvest Maturity (HM): Head reaches commercial size/firmness
+- Like adolescent growth - rapid change in body shape
+
+Reproductive Stages (If Bolting Occurs):
+- Bolting Initiation (BI): Stem elongates rapidly
+- Flowering (FL): Flower buds develop
+- Anthesis (AN): Flowers open, pollination occurs
+- Seed Development (SD): Seeds form and mature
+- Like adulthood - energy shifts from growth to reproduction
+
+ENVIRONMENTAL FACTORS AFFECTING DEVELOPMENT:
+
+Temperature Effects (Cardinal Temperature Model):
+- Base temperature (4-5°C): Minimum for any development
+- Optimal range (15-20°C): Maximum development rate
+- Maximum temperature (30-35°C): Development stops (heat damage)
+- Below/above optimal: Development slows progressively
+
+Thermal Time Accumulation:
+- Growing Degree Days (GDD) = daily heat units above base temperature
+- Total GDD needed varies by variety: 800-1200 for lettuce maturity
+- Like a savings account - plant "deposits" daily heat units until it has 
+  enough to "purchase" the next developmental stage
+
+Photoperiod (Day Length) Effects:
+- Most lettuce varieties are day-neutral for vegetative growth
+- Long days (>14-16 hours) trigger bolting in sensitive varieties
+- Short days may delay flowering in some types
+- Like a biological alarm clock set by sunrise/sunset patterns
+
+Stress Acceleration Effects:
+- Water stress: Plants rush to reproduce before dying from drought
+- Heat stress: Accelerated development to escape damaging conditions  
+- Nutrient stress: Early reproduction when resources are limited
+- Like emergency protocols - stress triggers "survival mode"
+
+BOLTING BIOLOGY AND PREDICTION:
+
+What is Bolting?
+- Premature shift from vegetative growth to reproductive development
+- Stem elongates rapidly, leaves become bitter, head quality deteriorates
+- Natural response to stress or end-of-season cues
+- Like a plant's "midlife crisis" - sudden change in priorities
+
+Bolting Triggers:
+1. Long photoperiods (>14-16 hours daylight)
+2. High temperatures (>25-30°C sustained)
+3. Plant maturity (>10-12 nodes developed)
+4. Water/nutrient stress
+5. Root binding or transplant shock
+
+Bolting Risk Assessment:
+- Daily risk calculation based on environmental history
+- Risk accumulates over time with sustained stress
+- Threshold typically 0.6-0.8 (60-80% probability)
+- Early warning allows preventive action
+
+PRACTICAL APPLICATIONS:
+
+For Hydroponic Growers:
+1. **Planting Schedule**: Use thermal time to predict harvest dates
+2. **Environment Control**: Maintain optimal temperature (18-22°C) for fastest growth
+3. **Bolting Prevention**: Monitor day length and temperature, provide shade/cooling
+4. **Harvest Timing**: Track stage progress to optimize harvest window
+5. **Variety Selection**: Choose day-neutral varieties for year-round production
+6. **Succession Planting**: Plan new seedings based on predicted maturity dates
+
+For System Design:
+1. **Climate Control**: Design heating/cooling to maintain optimal temperature
+2. **Lighting Systems**: Control photoperiod to prevent premature bolting
+3. **Environmental Monitoring**: Track temperature and day length history
+4. **Automation**: Program systems to respond to phenological predictions
+5. **Production Planning**: Optimize facility utilization based on growth timing
+
+THERMAL TIME CALCULATIONS:
+
+Example Calculation (20°C average temperature):
+- Base temperature: 5°C
+- Daily thermal time: 20 - 5 = 15 GDD
+- Weekly accumulation: 15 × 7 = 105 GDD
+- Time to V5 stage: 300 GDD ÷ 15 GDD/day = 20 days
+
+Cool Weather (15°C average):
+- Daily thermal time: 15 - 5 = 10 GDD  
+- Time to V5: 300 ÷ 10 = 30 days (50% longer)
+
+Hot Weather (30°C average):
+- Above optimal, efficiency drops to ~60%
+- Effective thermal time: 9 GDD/day
+- Time to V5: 300 ÷ 9 = 33 days (heat stress slows development)
+
+KEY CONCEPTS FOR NON-CODERS:
+
+Biological Calendar: Plants have internal calendars that track developmental progress using 
+temperature and day length as timing cues, like how animals migrate based on seasons.
+
+Thermal Time: The concept that plants need a specific amount of accumulated heat to complete 
+each growth stage, like how bread needs total baking time regardless of daily variations.
+
+Cardinal Temperatures: Each plant has minimum, optimal, and maximum temperatures for development,
+like how humans perform best in comfortable temperature ranges.
+
+Photoperiodism: Plant responses to day length that trigger specific developmental events,
+like how shorter days in fall trigger leaf color changes in deciduous trees.
+
+Stress Response: Environmental stress typically accelerates plant development as a survival
+strategy, like how animals reproduce earlier when threatened.
+
+Stage-Gate Development: Plants must complete each developmental stage before proceeding to
+the next, like educational grade levels that build on previous learning.
+
+This phenology model helps predict plant development timing, optimize growing conditions, 
+and prevent problems like premature bolting, enabling more efficient and successful 
+hydroponic crop production.
+"""

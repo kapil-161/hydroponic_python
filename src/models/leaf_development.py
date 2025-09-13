@@ -390,4 +390,83 @@ def create_lettuce_leaf_development_model(system_config=None) -> LeafDevelopment
     return LeafDevelopmentModel(parameters)
 
 
+"""
+=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+
+This file models how lettuce leaves develop over time - from tiny leaf buds to full-sized mature 
+leaves, and eventually aging and dying. Think of it like tracking a person's growth from baby 
+to adult to old age, but for individual leaves.
+
+KEY FUNCTIONS AND EQUATIONS:
+
+1. calculate_thermal_time()
+   - What it does: Calculates "biological time" based on temperature 
+   - Equations: Uses cardinal temperature model with optimal range
+   - Real-world meaning: Plants don't grow by calendar time - they grow by accumulated heat. 
+     Cold days = slow growth, warm days = fast growth. It's like how you walk faster when 
+     you're warm vs when you're cold.
+
+2. update_v_stage()
+   - What it does: Determines when new leaves appear (V-stage = vegetative stage)
+   - Equation: new_leaf_appears = thermal_time_accumulated >= phyllochron
+   - Real-world meaning: Plants produce new leaves on a predictable schedule based on heat 
+     accumulation. Each new leaf is a "V-stage" (V1, V2, V3, etc.). Like a biological clock.
+
+3. update_leaf_areas()
+   - What it does: Calculates how individual leaves grow in size over time
+   - Equations: 
+     * daily_increase = remaining_potential × growth_rate × stress_factors
+     * final_area = min(current_area + daily_increase, genetic_maximum)
+   - Real-world meaning: Each leaf starts tiny and grows toward its genetic maximum size. 
+     Growth slows as it approaches maximum (like filling a balloon - easy at first, harder near full).
+
+4. _calculate_leaf_position_factor()
+   - What it does: Determines how leaf size varies by position on the plant
+   - Equation: position_factor varies from 0.4 to 1.0 depending on leaf number
+   - Real-world meaning: Early leaves are small, middle leaves are biggest, late leaves 
+     get smaller again. Like how tree branches get smaller toward the top.
+
+5. calculate_stress_factors()
+   - What it does: Calculates how environmental stress affects leaf development
+   - Equations: factor = max(minimum, stress_level / threshold)
+   - Real-world meaning: Drought, nutrient deficiency, or temperature stress slow down 
+     leaf development. Like how you work slower when you're tired or sick.
+
+KEY DEVELOPMENT CONCEPTS:
+
+PHYLLOCHRON:
+- Time interval between successive leaf appearances
+- Measured in thermal time (degree-days), not calendar days
+- Lettuce: typically 3-5 days at optimal temperature
+
+V-STAGE PROGRESSION:
+- V1 = first true leaf, V2 = second leaf, etc.
+- Used to track plant development stage
+- Critical for timing management decisions
+
+LEAF LIFE CYCLE:
+- Primordial: Leaf bud forming inside plant
+- Emerging: Tiny leaf becomes visible
+- Expanding: Active cell division and growth
+- Mature: Full size, maximum photosynthesis
+- Senescing: Aging, yellowing, nutrient remobilization
+
+ENVIRONMENTAL EFFECTS:
+- Temperature: Affects development rate (too cold = slow, too hot = damage)
+- Water stress: Reduces leaf expansion (cells need water to expand)
+- Nitrogen stress: Reduces leaf size and number
+- Light: Affects leaf thickness and photosynthetic capacity
+
+PRACTICAL APPLICATIONS:
+- Predict harvest timing based on leaf development stage
+- Optimize environmental conditions for maximum leaf area
+- Schedule nutrient applications based on development needs
+- Identify stress conditions before they severely impact yield
+- Plan planting schedules for consistent production
+
+This system helps growers understand and optimize the leaf development process, 
+which is crucial since leaves are the "solar panels" that capture energy for plant growth.
+"""
+
+
 

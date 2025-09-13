@@ -539,3 +539,54 @@ def create_lettuce_canopy_model(system_config=None) -> CanopyArchitectureModel:
     return CanopyArchitectureModel(parameters)
 
 
+"""
+=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+
+This file simulates how a lettuce canopy (the leafy part) catches and uses light. Think of it like 
+modeling how sunlight gets filtered through layers of leaves from top to bottom.
+
+KEY FUNCTIONS AND EQUATIONS:
+
+1. calculate_extinction_coefficient()
+   - What it does: Calculates how much light gets blocked by leaves at different sun angles
+   - Equation: k = x / cos(zenith_angle) where x depends on leaf angle distribution
+   - Real-world meaning: When sun is directly overhead (small angle), less light is blocked.
+     When sun is low (large angle), more light gets blocked by leaves.
+
+2. distribute_leaf_area() 
+   - What it does: Spreads the total leaf area through different height layers
+   - Equation: Uses beta distribution with layer_lai = (factor/n_layers) * total_lai
+   - Real-world meaning: Lettuce has more leaves in the middle sections, less at top and bottom.
+     This matches how real lettuce plants grow.
+
+3. calculate_light_distribution()
+   - What it does: Uses Beer's Law to calculate how light decreases through leaf layers
+   - Equation: Light_remaining = Light_initial × e^(-k × LAI)
+   - Real-world meaning: Each leaf layer absorbs some light, so deeper leaves get less light.
+     Like walking into a forest - it gets darker as you go deeper.
+
+4. calculate_row_effects()
+   - What it does: Accounts for spaces between plant rows where light can "leak through"
+   - Equation: row_factor = 0.8 + 0.2 × ground_coverage
+   - Real-world meaning: If plants don't cover 100% of the ground, some light is "wasted"
+     by hitting empty spaces between plants.
+
+5. calculate_temperature_profile()
+   - What it does: Calculates how temperature changes from top to bottom of canopy
+   - Equation: layer_temp = air_temp - (temp_gradient × relative_position)
+   - Real-world meaning: Top leaves are warmer (closer to sun), bottom leaves are cooler.
+     Important because temperature affects how fast plants grow.
+
+OVERALL PURPOSE:
+This model helps predict:
+- How much light each leaf layer receives
+- How this affects photosynthesis (food production) 
+- How temperature varies through the plant
+- Which leaves are in sun vs shade
+
+This information is crucial for optimizing:
+- Plant spacing (how close together to plant)
+- Light intensity needed
+- Where to measure temperature
+- Expected growth patterns
+"""

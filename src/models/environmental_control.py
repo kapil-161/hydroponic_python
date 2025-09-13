@@ -920,3 +920,94 @@ def create_lettuce_environmental_control_system(system_config=None) -> Environme
         print(f"Warning: Could not load CSV environmental control parameters: {e}")
         print("Using default environmental control parameters")
         return EnvironmentalControlSystem()
+
+
+"""
+=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+
+This file manages the environmental control systems for hydroponic facilities - basically the 
+"climate control" for plants. Think of it as a very sophisticated HVAC system that controls 
+humidity, CO2, and temperature to create perfect growing conditions.
+
+KEY FUNCTIONS AND EQUATIONS:
+
+1. calculate_vpd() and calculate_optimal_humidity()
+   - What it does: Manages Vapor Pressure Deficit (VPD) - the "thirst" level of the air
+   - Equations: 
+     * VPD = saturated_vapor_pressure - actual_vapor_pressure
+     * optimal_humidity = (target_vapor_pressure / saturated_vapor_pressure) × 100
+   - Real-world meaning: VPD is like measuring how "thirsty" the air is. Too low = muggy (plants 
+     can't breathe), too high = desert-dry (plants stress from water loss). Perfect VPD = plants 
+     transpire optimally and stay healthy.
+
+2. calculate_co2_photosynthesis_factor()
+   - What it does: Calculates how CO2 levels affect plant food production (photosynthesis)
+   - Equation: Uses Michaelis-Menten kinetics: factor = (Vmax × CO2) / (Km + CO2)
+   - Real-world meaning: More CO2 = more plant food production, but with diminishing returns. 
+     Like feeding people - first few meals make huge difference, but there's a limit to benefit.
+
+3. calculate_vpd_stress_factor()
+   - What it does: Determines how VPD affects plant stress and performance
+   - Equations: Stress factors based on deviation from optimal VPD range
+   - Real-world meaning: Plants have a "comfort zone" for humidity. Outside this zone, they 
+     either struggle with water loss (too dry) or can't regulate temperature (too humid).
+
+4. calculate_humidity_control_action()
+   - What it does: Determines when and how much to humidify or dehumidify
+   - Equations: Uses PID control: output = Kp×error + Ki×∫error + Kd×(d/dt)error
+   - Real-world meaning: Like a smart thermostat but for humidity. It "learns" how much 
+     adjustment is needed and responds smoothly without overshooting.
+
+5. calculate_co2_control_action()
+   - What it does: Manages CO2 injection systems for optimal photosynthesis
+   - Equations: PID control with time-based strategies (morning vs afternoon targets)
+   - Real-world meaning: Plants need more CO2 when they're actively photosynthesizing (lights on). 
+     System injects CO2 during light hours, stops at night to save money.
+
+6. _calculate_time_based_co2_target()
+   - What it does: Adjusts CO2 targets throughout the day based on plant needs
+   - Strategies: Morning-only, full-day, or adaptive enrichment
+   - Real-world meaning: Plants are hungriest for CO2 in the morning when photosynthesis 
+     starts ramping up. Smart systems give them more then, less later to save cost.
+
+7. hourly_update() and comprehensive_control()
+   - What it does: Coordinates all environmental systems working together
+   - Real-world meaning: Like a conductor orchestrating a symphony - humidity, CO2, and 
+     temperature must work together harmoniously for optimal plant growth.
+
+KEY ENVIRONMENTAL CONCEPTS:
+
+VPD (VAPOR PRESSURE DEFICIT):
+- Optimal range: 0.7-0.85 kPa for lettuce
+- Too low (<0.5 kPa): Plants can't transpire, risk of disease
+- Too high (>1.2 kPa): Plants lose too much water, stress out
+- Perfect VPD: Plants transpire just right, stay healthy and productive
+
+CO2 ENRICHMENT:
+- Ambient: ~400 ppm (parts per million)
+- Optimal: 1000-1500 ppm during light hours
+- Effect: 20-30% yield improvement when done correctly
+- Cost: Must balance against energy and CO2 costs
+
+CONTROL STRATEGIES:
+- Passive: No control (cheapest, least optimal)
+- Basic: Simple on/off (moderate cost and performance) 
+- PID: Smooth, intelligent control (higher cost, best performance)
+
+EQUIPMENT INTEGRATION:
+- Humidifiers/Dehumidifiers: Control humidity levels
+- CO2 Injectors: Add CO2 during photosynthesis periods
+- Ventilation: Remove excess heat and humidity, control CO2
+- Sensors: Monitor conditions and provide feedback
+
+PRACTICAL APPLICATIONS:
+- Optimize plant growth rates and yields
+- Prevent plant diseases (humidity control)
+- Maximize photosynthesis efficiency (CO2 and VPD optimization)  
+- Reduce energy costs through smart scheduling
+- Maintain consistent growing conditions regardless of weather
+- Predict and prevent environmental stress before it affects plants
+
+This system creates a "plant paradise" - perfect growing conditions that maximize health, 
+growth rate, and harvest quality while minimizing resource waste and operating costs.
+"""

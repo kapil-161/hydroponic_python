@@ -486,3 +486,75 @@ def create_lettuce_ph_model(system_config=None) -> HydroponicPHModel:
         raise KeyError(f"Required pH parameter '{e.args[0]}' not found in CSV configuration. Add to nutrient_parameters section")
     except Exception as e:
         raise ValueError(f"Failed to create pH model from CSV configuration: {e}")
+
+
+"""
+=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+
+This file manages the pH (acidity/alkalinity) of the nutrient solution, which is critical for 
+plant nutrition. Think of it like managing the acidity of your swimming pool - too acidic or 
+too alkaline and things don't work properly.
+
+KEY FUNCTIONS AND EQUATIONS:
+
+1. calculate_henderson_hasselbalch_ph()
+   - What it does: Calculates pH using the fundamental acid-base chemistry equation
+   - Equation: pH = pKa + log([HCO3-]/[H2CO3])
+   - Real-world meaning: This is the gold standard chemistry equation for pH in buffered 
+     solutions. Like a chemical recipe that tells you exactly how acidic or basic 
+     your solution will be based on its ingredients.
+
+2. calculate_phosphate_speciation()
+   - What it does: Calculates how phosphorus exists in different chemical forms at different pH
+   - Equations: Uses Henderson-Hasselbalch for each phosphate species (H3PO4, H2PO4-, HPO4--, PO4---)
+   - Real-world meaning: Phosphorus "changes shape" at different pH levels. At low pH it's one 
+     form, at high pH it's another. Only certain forms can be absorbed by plants.
+
+3. calculate_nutrient_uptake_ph_effect()
+   - What it does: Calculates how pH changes when plants absorb different nutrients
+   - Equations:
+     * Nitrate uptake: pH_change = -N_uptake × acidification_factor
+     * Ammonium uptake: pH_change = +N_uptake × alkalinization_factor  
+   - Real-world meaning: When plants eat different nutrients, they either release acid or base 
+     into the solution, changing the pH. 
+4. calculate_ph_dependent_solubility()
+   - What it does: Determines which nutrients will precipitate (fall out of solution) at current pH
+   - Equations: Uses interpolation between solubility data points
+   - Real-world meaning: Some nutrients become "unavailable" at wrong pH - they form crystals 
+     that plants can't absorb. Like sugar dissolving in water - temperature affects how much 
+     you can dissolve.
+
+5. simulate_ph_control_system()
+   - What it does: Simulates automatic pH adjustment with acid and base dosing
+   - Equations: 
+     * pH_change = dose_amount / buffer_capacity
+     * dose_required = error × proportional_factor
+   - Real-world meaning: Like a smart pool controller that automatically adds acid or base 
+     to keep pH in the right range. The controller "sees" the pH error and responds proportionally.
+
+KEY CHEMISTRY CONCEPTS:
+
+BUFFER SYSTEM:
+- Buffer capacity: How much the solution resists pH changes (like a shock absorber)
+- Higher buffer capacity = more stable pH = easier to manage
+
+pH EFFECTS ON NUTRIENTS:
+- Low pH (acidic): Iron and manganese more available, phosphorus less available
+- High pH (alkaline): Phosphorus more available, iron and manganese less available  
+- Optimal range: 5.5-6.5 for most hydroponic crops
+
+AUTOMATIC CONTROL:
+- Deadband: pH range where no adjustment is made (prevents constant small adjustments)
+- Proportional control: Bigger pH error = bigger correction dose
+- Control rate: How fast corrections can be made (limited by equipment capacity)
+
+PRACTICAL APPLICATIONS:
+- Prevents nutrient lockout (when plants can't absorb available nutrients)
+- Optimizes nutrient availability for maximum plant growth
+- Prevents precipitation that can clog irrigation systems
+- Maintains stable growing conditions despite changing plant uptake patterns
+- Predicts when manual intervention might be needed
+
+This system ensures the nutrient solution stays in the "Goldilocks zone" - not too acidic, 
+not too alkaline, but just right for optimal plant nutrition.
+"""

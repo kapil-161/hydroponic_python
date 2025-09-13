@@ -411,4 +411,91 @@ def create_lettuce_photosynthesis_model(system_config=None) -> PhotosynthesisMod
     return PhotosynthesisModel(parameters)
 
 
+"""
+=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+
+This file models photosynthesis - the process where plants use light, CO2, and water to make 
+food (sugar). Think of it as modeling the "solar panel + factory" system in leaves that 
+converts sunlight into plant growth.
+
+KEY FUNCTIONS AND EQUATIONS:
+
+1. calculate_daily_assimilation()
+   - What it does: Calculates how much carbon (sugar) the plant produces in one day
+   - Uses: Farquhar-von Caemmerer-Berry model (the gold standard for photosynthesis)
+   - Real-world meaning: Like calculating how much electricity your solar panels produce 
+     per day based on sunlight, temperature, and panel efficiency.
+
+2. _arrhenius_temp_response()
+   - What it does: Calculates how temperature affects enzyme activity in photosynthesis
+   - Equation: rate = base_rate × exp(activation_energy × (T - 25°C) / (25°C × R × T))
+   - Real-world meaning: Enzymes work faster when warm, slower when cold. Like how you 
+     move faster on a warm day vs a cold day. But too hot damages the enzymes.
+
+3. Rubisco-limited rate (Ac)
+   - What it does: Calculates photosynthesis when the Rubisco enzyme is the bottleneck
+   - Equation: Ac = Vcmax × (Ci - Γ*) / (Ci + Kc × (1 + O2/Ko))
+   - Real-world meaning: Rubisco is the main enzyme that "catches" CO2. When CO2 is low 
+     or Rubisco is saturated, this becomes the limiting factor. Like having only one 
+     cashier at a busy store - the cashier speed limits everything.
+
+4. Light-limited rate (Aj)
+   - What it does: Calculates photosynthesis when light capture is the bottleneck
+   - Equations: 
+     * J = (I + Jmax - √((I + Jmax)² - 4θIJmax)) / 2θ
+     * Aj = J × (Ci - Γ*) / (4(Ci + 2Γ*))
+   - Real-world meaning: When light is dim, the "solar panels" in leaves can't capture 
+     enough energy to run the factory at full speed. Like trying to work in a dark room.
+
+5. Net photosynthesis calculation
+   - What it does: Subtracts plant "breathing" (respiration) from gross photosynthesis
+   - Equation: Net = min(Ac, Aj) - Rd
+   - Real-world meaning: Plants use some of their own sugar for maintenance and growth 
+     (respiration). Net photosynthesis = total production - plant's own consumption.
+
+KEY PHOTOSYNTHESIS CONCEPTS:
+
+LIMITING FACTORS:
+- Rubisco-limited: Not enough enzyme or too little CO2
+- Light-limited: Not enough light energy
+- The slowest process limits overall rate (like weakest link in chain)
+
+TEMPERATURE EFFECTS:
+- Low temperatures: Enzymes work slowly
+- Optimal temperatures: Maximum enzyme activity  
+- High temperatures: Enzyme damage and increased respiration
+
+CO2 EFFECTS:
+- Higher CO2 = more photosynthesis (up to a point)
+- CO2 enhancement: 20-30% yield increase possible with enrichment
+- Diminishing returns: Eventually other factors become limiting
+
+LIGHT EFFECTS:
+- More light = more energy for photosynthesis
+- Light saturation: Eventually photosystem capacity is exceeded
+- Daily integration: Total production depends on both intensity and duration
+
+LAI (LEAF AREA INDEX) EFFECTS:
+- More leaves = more "solar panels" = more photosynthesis
+- But leaves shade each other, reducing efficiency per leaf
+- Optimal LAI balances total capture vs per-leaf efficiency
+
+ENVIRONMENTAL INTERACTIONS:
+- EC stress: High salt reduces photosynthesis efficiency
+- Water stress: Stomata close, reducing CO2 uptake
+- Nutrient stress: Reduces enzyme production and chlorophyll
+
+PRACTICAL APPLICATIONS:
+- Optimize light intensity and duration for maximum carbon gain
+- Design CO2 enrichment strategies for best return on investment
+- Predict yield based on environmental conditions
+- Time harvests when daily carbon gain starts declining
+- Manage leaf area for optimal light interception
+- Design greenhouse climate control for maximum photosynthesis
+
+This system helps growers understand how environmental factors affect the fundamental 
+process that drives all plant growth - converting sunlight into plant biomass.
+"""
+
+
 

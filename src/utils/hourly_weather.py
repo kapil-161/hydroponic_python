@@ -283,3 +283,185 @@ class HourlyWeatherInterpolator:
 def create_hourly_weather_interpolator() -> HourlyWeatherInterpolator:
     """Create an hourly weather interpolator with default parameters."""
     return HourlyWeatherInterpolator()
+
+
+"""
+=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+
+This file creates realistic hour-by-hour weather patterns from daily weather summaries. 
+Think of it as a sophisticated weather simulator that takes basic daily information (like 
+"high 25°C, low 15°C, sunny") and creates detailed hourly forecasts showing exactly what 
+conditions are like every hour of the day. It's like expanding a weather summary into 
+a complete hourly timeline.
+
+WHAT THIS MODULE DOES:
+
+Instead of using the same conditions all day (which isn't realistic), this system creates 
+natural daily weather cycles:
+- **Temperature**: Cool at dawn, warm at midday, cooling at night
+- **Sunlight**: Dark before sunrise, bright at midday, dark after sunset
+- **Humidity**: High at night, lower during the day
+- **Air movement**: Calm at night, breezy during the day
+
+KEY CLASSES AND FUNCTIONS:
+
+1. HourlyWeather (Data Container)
+   - What it does: Stores weather conditions for one specific hour
+   - Contains: Temperature, humidity, light levels, wind, CO2, VPD
+   - Real-world meaning: Like a detailed weather station reading taken at exactly 
+     2:00 PM, showing all environmental conditions at that precise moment.
+
+2. HourlyWeatherInterpolator (Weather Pattern Generator)
+   - What it does: Converts daily weather summaries into 24 hourly readings
+   - Based on: DSSAT agricultural modeling standards (scientifically validated)
+   - Real-world meaning: Like a meteorologist who can predict what the weather will 
+     be like every hour of the day based on the daily forecast.
+
+MAIN FUNCTIONS EXPLAINED:
+
+3. interpolate_daily_to_hourly()
+   - What it does: Creates 24 hourly weather readings from one daily summary
+   - Input: Daily high/low temperatures, total sunlight, average humidity
+   - Output: Hour-by-hour conditions throughout the entire day
+   - Real-world meaning: Like taking a daily weather forecast and creating a detailed 
+     hourly schedule - "6 AM: 15°C, dark; 12 PM: 25°C, bright sun; 8 PM: 20°C, dim"
+
+4. _calculate_daylength()
+   - What it does: Calculates sunrise/sunset times and daylight hours for any location/date
+   - Uses: Astronomical formulas based on Earth's rotation and orbit
+   - Factors: Day of year, latitude (how far north/south you are)
+   - Real-world meaning: Like an astronomical calculator that tells you exactly when 
+     the sun rises and sets at your location on any day of the year.
+
+5. _interpolate_temperature()
+   - What it does: Creates realistic hourly temperatures using sine wave patterns
+   - Pattern: Cool at dawn (6 AM), warmest mid-afternoon (2 PM), cooling at night
+   - Mathematics: Sinusoidal curve adjusted for natural temperature cycles
+   - Real-world meaning: Like modeling how your house temperature changes throughout 
+     the day - coolest just before sunrise, warmest in mid-afternoon.
+
+6. _interpolate_solar_radiation()
+   - What it does: Distributes daily sunlight across daylight hours realistically
+   - Pattern: Zero before sunrise, peak at solar noon, zero after sunset
+   - Calculations: Converts daily solar energy to hourly light intensity
+   - Outputs: Both total solar energy and PAR (plant-usable light)
+   - Real-world meaning: Like calculating how bright the sun is every hour - pitch 
+     black at midnight, blazing bright at noon, gradual increase and decrease.
+
+7. _interpolate_humidity()
+   - What it does: Creates hourly humidity patterns that vary inversely with temperature
+   - Pattern: Higher humidity when cool (night), lower when warm (day)
+   - Physics: Based on air's capacity to hold moisture at different temperatures
+   - Real-world meaning: Like how the air feels more humid on cool mornings and drier 
+     in the hot afternoon sun, even if the actual water content doesn't change much.
+
+8. _interpolate_wind_speed()
+   - What it does: Creates natural daily wind patterns
+   - Pattern: Calmer at night, breezier during the day
+   - Cause: Temperature differences create air movement (convection)
+   - Real-world meaning: Like how it's typically calmer in the early morning and 
+     more breezy in the afternoon when the sun heats the ground.
+
+SCIENTIFIC BASIS AND PATTERNS:
+
+Daily Temperature Cycle (Sinusoidal Pattern):
+- **Minimum**: Around 6 AM (just before sunrise)
+- **Maximum**: Around 2-3 PM (a few hours after solar noon)
+- **Pattern**: Smooth sine wave, not linear change
+- **Physics**: Based on heat accumulation and radiation balance
+
+Solar Radiation Distribution:
+- **Dawn/Dusk**: Gradual increase/decrease, not instant on/off
+- **Peak**: Solar noon (when sun is highest in sky)
+- **Zero**: Night hours (obviously no solar energy)
+- **Daily Total**: Distributed to match measured daily radiation
+
+Humidity-Temperature Relationship:
+- **Physical Law**: Warm air holds more moisture than cold air
+- **Daily Pattern**: Relative humidity highest when temperature is lowest
+- **Not Linear**: Complex relationship based on atmospheric physics
+- **Local Effects**: Modified by plant transpiration and evaporation
+
+Day Length Calculations:
+- **Astronomical**: Based on Earth's tilt and orbital position
+- **Location Dependent**: Northern locations have extreme seasonal variation
+- **Seasonal Changes**: Summer = long days, Winter = short days
+- **Latitude Effects**: Equator = 12 hours year-round, Poles = extreme variation
+
+PRACTICAL APPLICATIONS:
+
+For Plant Biology Accuracy:
+1. **Photosynthesis Modeling**: Needs accurate hourly light levels
+2. **Transpiration Calculation**: Requires hourly temperature and humidity
+3. **Stress Assessment**: Identifies peak stress periods during the day
+4. **Growth Patterns**: Many processes follow diurnal (daily) rhythms
+
+For Energy Management:
+1. **Heating/Cooling Loads**: Peak cooling needs during hot afternoon hours
+2. **LED Supplementation**: Reduce artificial lighting when sun is bright
+3. **Ventilation Control**: More air exchange needed during warm periods
+4. **Thermal Mass**: Use thermal storage during cool periods
+
+For Irrigation Optimization:
+1. **Water Demand**: Highest during hot, bright, dry afternoon hours
+2. **Efficiency**: Avoid watering during peak heat/sun to reduce evaporation
+3. **Disease Prevention**: Consider humidity levels when timing irrigation
+4. **Automation**: Program systems based on predicted hourly conditions
+
+MATHEMATICAL APPROACHES:
+
+Sinusoidal Interpolation:
+- Uses sine/cosine functions to create smooth, natural curves
+- Avoids unrealistic sudden jumps between hourly values
+- Based on well-established patterns in atmospheric science
+- Adjustable parameters allow fine-tuning for different climates
+
+Phase Relationships:
+- Temperature and humidity are "out of phase" (opposite patterns)
+- Solar radiation synchronized with daylight period
+- Wind patterns correlate with temperature gradients
+- All patterns coordinated for realistic interactions
+
+Curve Shaping:
+- Raw sine waves adjusted to match real-world observations
+- Temperature curves made more realistic with shaping factors
+- Solar curves adjusted for atmospheric effects
+- Boundary conditions ensure physically possible values
+
+INTEGRATION WITH PLANT MODELING:
+
+This hourly weather data feeds into:
+- **Photosynthesis models**: Need accurate PAR and temperature every hour
+- **Transpiration models**: Require VPD and temperature patterns
+- **Stress models**: Identify when conditions exceed plant tolerances
+- **Development models**: Some processes are triggered by specific conditions
+
+Quality Assurance:
+- Values constrained to physically realistic ranges
+- Smooth transitions prevent calculation errors
+- Energy conservation (daily totals match input data)
+- Biological relevance (patterns match plant response literature)
+
+KEY CONCEPTS FOR NON-CODERS:
+
+Interpolation: Filling in the gaps between known data points with realistic estimates,
+like drawing a smooth curve through scattered points on a graph.
+
+Diurnal Cycles: The natural daily rhythms in weather patterns, similar to how your 
+body temperature and energy levels change throughout the day.
+
+Sinusoidal Patterns: Smooth, wave-like changes that repeat regularly, like the swing 
+of a pendulum or the up-and-down motion of ocean waves.
+
+Phase Relationships: How different patterns relate to each other in time, like how 
+tide timing relates to moon phases, or how humidity relates to temperature.
+
+Astronomical Calculations: Using mathematical formulas to predict celestial events 
+like sunrise/sunset, based on well-understood planetary motions.
+
+This hourly weather interpolation system transforms basic daily weather information 
+into detailed, realistic environmental conditions that enable precise modeling of 
+plant responses throughout each day. It provides the temporal resolution needed for 
+accurate simulation of biological processes that respond to changing environmental 
+conditions on an hourly basis.
+"""

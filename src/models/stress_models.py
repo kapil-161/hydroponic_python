@@ -924,3 +924,258 @@ def create_lettuce_integrated_stress_model(system_config=None) -> IntegratedStre
         raise ValueError(f"❌ Failed to load integrated stress parameters from CSV: {e}. No hardcoded defaults allowed.")
 
 
+"""
+=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+
+This file models plant stress - how plants respond to unfavorable environmental conditions. 
+Think of it as modeling the plant's "stress response system" like how humans react to different 
+types of stress (physical, emotional, environmental). Plants have sophisticated mechanisms to 
+detect, respond to, and adapt to stressful conditions.
+
+SECTION 1: TEMPERATURE STRESS MODEL
+
+Temperature stress affects plants like extreme weather affects humans - too hot or cold causes 
+immediate discomfort and long-term damage if sustained.
+
+KEY FUNCTIONS AND EQUATIONS:
+
+1. classify_temperature_stress()
+   - What it does: Categorizes temperature into stress types
+   - Categories: optimal, heat, cold, frost
+   - Thresholds: Based on plant-specific temperature ranges
+   - Real-world meaning: Like categorizing weather as comfortable, hot, chilly, or freezing. 
+     Each category affects the plant differently.
+
+2. calculate_base_stress_level()
+   - What it does: Calculates stress intensity based on temperature deviation from optimal
+   - Equation: Linear scaling in zones (mild: 0-0.3, moderate: 0.3-0.7, severe: 0.7-1.0)
+   - Heat stress: temp > optimal_max triggers increasing stress
+   - Cold stress: temp < optimal_min triggers increasing stress
+   - Real-world meaning: Like measuring discomfort level - slightly warm is minor stress, 
+     sweltering heat is major stress.
+
+3. update_acclimation()
+   - What it does: Models plant adaptation to repeated stress exposure
+   - Equation: acclimation += rate × (target - current_acclimation)
+   - Heat acclimation: Plants develop heat tolerance over days/weeks
+   - Cold acclimation: Plants develop frost tolerance (hardening)
+   - Real-world meaning: Like how people adapt to climate when moving to new locations. 
+     Gradual exposure builds tolerance.
+
+4. apply_acclimation_effects()
+   - What it does: Reduces stress impact based on acclimation level
+   - Equation: adjusted_stress = base_stress × (1 - acclimation × effectiveness)
+   - Heat acclimation: 40% stress reduction when fully acclimated
+   - Cold acclimation: 50% stress reduction when fully acclimated
+   - Real-world meaning: Like how athletes perform better in conditions they've trained in. 
+     Adapted plants handle stress better.
+
+5. calculate_process_stress_factors()
+   - What it does: Determines how stress affects different plant functions
+   - Processes affected: photosynthesis, growth, development, respiration
+   - Equation: process_factor = max(0, 1 - stress_level × sensitivity)
+   - Real-world meaning: Like how stress affects different human abilities differently. 
+     Heat might affect thinking more than physical strength.
+
+6. update_damage_and_recovery()
+   - What it does: Tracks permanent damage and healing over time
+   - Damage accumulation: Severe stress causes lasting damage
+   - Recovery: Plants heal gradually under good conditions
+   - Real-world meaning: Like how injuries heal over time, but severe trauma may leave 
+     permanent effects. Plants can recover from mild stress but not severe damage.
+
+SECTION 2: INTEGRATED STRESS MODEL
+
+This models how multiple stresses interact - like dealing with multiple problems at once, 
+which is usually worse than dealing with each separately.
+
+KEY FUNCTIONS AND EQUATIONS:
+
+7. calculate_acute_stress()
+   - What it does: Measures immediate stress response
+   - Threshold-based: Stress below threshold is scaled non-linearly
+   - Equation: For stress < 0.5: factor = (stress/0.5)², above 0.5: linear
+   - Real-world meaning: Like immediate pain response - minor discomfort barely registers, 
+     but severe pain demands immediate attention.
+
+8. calculate_chronic_stress()
+   - What it does: Measures long-term stress effects using weighted history
+   - Equation: weighted_average with exponential decay (recent stress weighted more)
+   - Memory effect: Recent stress has more impact than old stress
+   - Real-world meaning: Like chronic health conditions - ongoing stress accumulates and 
+     has lasting effects even when current conditions improve.
+
+9. calculate_acclimation_effect()
+   - What it does: Models adaptation to sustained stress over 3+ days
+   - Rate-based: Gradual increase in tolerance with exposure time
+   - Effectiveness: Depends on stress severity (can't adapt to extreme stress)
+   - Real-world meaning: Like building calluses from manual labor - repeated exposure 
+     builds tolerance, but there are limits.
+
+10. calculate_stress_interactions()
+    - What it does: Models how different stresses combine (usually making each other worse)
+    - Interaction types:
+      * Multiplicative: stresses multiply each other's effects
+      * Synergistic: stresses amplify each other beyond multiplication
+      * Additive: stresses simply add together
+    - Examples: drought + heat = much worse than either alone
+    - Real-world meaning: Like how being sick and tired makes everything worse than 
+      either condition alone. Multiple problems compound each other.
+
+11. calculate_process_stress_response()
+    - What it does: Determines how combined stresses affect specific plant processes
+    - Combines: individual stress effects + interactions + acclimation + damage
+    - Process sensitivity: Different processes have different stress tolerance
+    - Real-world meaning: Like how different skills are affected differently by stress - 
+      some people lose creativity first, others lose physical coordination.
+
+STRESS TYPES AND EFFECTS:
+
+Water Stress:
+- Drought: Reduced water availability, triggers wilting and leaf drop
+- Flooding: Root suffocation, nutrient washout
+- Interactive effects: Makes temperature stress much worse
+- Biological response: Stomatal closure, root growth toward water
+
+Temperature Stress:
+- Heat: Protein denaturation, enzyme dysfunction, increased respiration
+- Cold: Membrane damage, reduced enzyme activity, ice crystal formation
+- Frost: Cell rupture from ice crystals, tissue death
+- Acclimation: Heat shock proteins, membrane composition changes
+
+Nutrient Stress:
+- Deficiency: Reduced growth, chlorosis, specific symptoms per nutrient
+- Toxicity: Ion imbalance, pH changes, metabolic disruption
+- Interactive effects: pH affects nutrient availability
+
+Light Stress:
+- Low light: Reduced photosynthesis, etiolation, competition responses
+- High light: Photoinhibition, free radical damage, heat buildup
+- Photoperiod: Day length affects flowering and development
+
+Salinity Stress:
+- Osmotic effect: Water uptake difficulty, cellular dehydration
+- Ionic effect: Sodium/chloride toxicity, nutrient imbalances
+- Interactive effects: Compounds water stress effects
+
+pH Stress:
+- Acidic: Aluminum toxicity, phosphorus deficiency
+- Alkaline: Iron deficiency, micronutrient lockout
+- Buffer system: Plants try to maintain internal pH
+
+Oxygen Stress:
+- Hypoxia: Root suffocation, anaerobic respiration, root rot
+- Critical in hydroponics: Dissolved oxygen must stay above 3-4 mg/L
+- Root zone aeration essential for healthy plants
+
+STRESS RESPONSE MECHANISMS:
+
+Immediate Responses (minutes to hours):
+- Stomatal closure to conserve water
+- Osmotic adjustment (accumulating sugars/salts)
+- Heat shock protein production
+- Antioxidant enzyme activation
+
+Short-term Responses (hours to days):
+- Growth rate adjustment
+- Resource reallocation
+- Leaf angle changes (heat avoidance)
+- Root growth toward resources
+
+Long-term Responses (days to weeks):
+- Morphological changes (smaller leaves, deeper roots)
+- Biochemical acclimation (membrane composition)
+- Developmental changes (early flowering)
+- Epigenetic modifications
+
+ACCLIMATION VS ADAPTATION:
+
+Acclimation (Individual Response):
+- Physiological adjustments during plant's lifetime
+- Reversible changes based on environment
+- Examples: heat tolerance, cold hardiness, drought tolerance
+- Like learning to work in different conditions
+
+Adaptation (Population Response):
+- Genetic changes over generations
+- Irreversible improvements in stress tolerance
+- Natural selection favors stress-resistant individuals
+- Like evolution of desert plants
+
+STRESS MEMORY AND PRIMING:
+
+Stress Memory:
+- Plants "remember" previous stress exposure
+- Faster/stronger response to repeated stress
+- Molecular basis: epigenetic marks, protein modifications
+- Duration: typically days to weeks
+
+Stress Priming:
+- Mild stress prepares plants for severe stress
+- Cross-protection: one stress type can protect against another
+- Practical application: controlled stress to improve tolerance
+- Like vaccination - small exposure prevents severe damage
+
+PRACTICAL APPLICATIONS:
+
+For Hydroponic Growers:
+1. **Environmental Monitoring**: Track all stress factors continuously
+2. **Stress Prevention**: Maintain optimal ranges for all parameters
+3. **Gradual Acclimation**: Slowly adjust conditions rather than sudden changes
+4. **Multi-stress Awareness**: Address combinations of stresses, not just individual ones
+5. **Recovery Time**: Allow plants time to recover between stress events
+6. **Early Detection**: Monitor for early stress symptoms before damage occurs
+
+For System Design:
+1. **Redundant Systems**: Backup systems for critical environmental controls
+2. **Buffer Capacity**: Design systems to handle environmental fluctuations
+3. **Sensor Integration**: Monitor multiple stress factors simultaneously
+4. **Alarm Systems**: Alert for stress conditions before damage occurs
+5. **Automated Response**: Systems that automatically adjust to prevent stress
+6. **Recovery Protocols**: Procedures for helping plants recover from stress
+
+STRESS INTERACTION EXAMPLES:
+
+Drought + Heat (Synergistic):
+- Combined effect worse than sum of parts
+- Water shortage + high temperature = rapid plant death
+- Prevention: Extra water during heat waves
+
+Cold + Wet (Multiplicative):
+- Cold reduces root function, excess water causes root rot
+- Common in winter hydroponic systems
+- Prevention: Reduce watering frequency in cold conditions
+
+Nutrient Deficiency + pH Imbalance (Synergistic):
+- Wrong pH makes nutrient deficiency worse
+- Nutrients present but not available to plant
+- Prevention: Maintain optimal pH (5.5-6.5) at all times
+
+Light Stress + Temperature Stress (Additive):
+- High light generates heat, both stress the plant
+- Common under grow lights without adequate cooling
+- Prevention: Provide adequate ventilation and light management
+
+KEY CONCEPTS FOR NON-CODERS:
+
+Stress Tolerance: A plant's ability to maintain function under unfavorable conditions,
+like a person's ability to work under pressure.
+
+Stress Avoidance: Mechanisms to prevent exposure to stress, like seeking shade or
+closing stomata, similar to wearing warm clothes in cold weather.
+
+Hormesis: The concept that mild stress can actually benefit plants by triggering
+protective mechanisms, like how exercise stress makes people stronger.
+
+Stress Memory: Plants can "learn" from stress experiences and respond better to
+future stress, like how people develop coping mechanisms.
+
+Stress Signaling: Plants have sophisticated communication systems that detect and
+respond to stress, like the human nervous system detecting pain and responding.
+
+This stress model helps predict plant responses to environmental challenges, optimize
+growing conditions to minimize stress, and design systems that maintain plant health
+even under changing conditions, leading to more resilient and productive hydroponic
+crop production.
+"""
+

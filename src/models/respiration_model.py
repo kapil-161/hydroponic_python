@@ -759,3 +759,93 @@ def create_lettuce_respiration_model(system_config=None) -> EnhancedRespirationM
         raise ValueError(f"Failed to create respiration model from CSV configuration: {e}")
 
 
+"""
+=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+
+This file models plant respiration - the process where plants "breathe" by consuming their own 
+sugar and oxygen to power cellular activities. Think of it as the plant's metabolism or energy 
+consumption system, like how humans burn calories to stay alive and active.
+
+KEY FUNCTIONS AND EQUATIONS:
+
+1. calculate_maintenance_respiration()
+   - What it does: Calculates energy needed just to keep plant tissues alive
+   - Equation: respiration = base_rate × biomass × temp_factor × age_factor × tissue_factor
+   - Real-world meaning: Like your body's resting metabolic rate - energy needed just to 
+     keep cells alive, maintain proteins, and replace damaged parts. Older tissues need 
+     more maintenance, like an old car needing more repairs.
+
+2. calculate_growth_respiration()
+   - What it does: Calculates energy cost of building new plant tissues
+   - Equations:
+     * Simple: growth_respiration = biosynthetic_cost × (1 - efficiency) × new_growth
+     * Detailed: growth_respiration = Σ(component_cost × fraction × new_growth)
+   - Real-world meaning: Like the extra calories you burn when building muscle. Making 
+     new proteins, cell walls, and other components requires energy beyond just maintenance.
+
+3. calculate_temperature_factor()
+   - What it does: Calculates how temperature affects metabolic rate
+   - Equation: factor = Q10^((temperature - reference) / 10)
+   - Real-world meaning: Warmer = faster metabolism, colder = slower metabolism. Like how 
+     you're more active on warm days vs cold days. Q10 = 2 means doubling rate every 10°C.
+
+4. calculate_age_factor()
+   - What it does: Shows how respiration increases as tissues age
+   - Equation: factor = 1.0 + (age_coefficient × age_days)
+   - Real-world meaning: Older tissues are less efficient and require more energy maintenance. 
+     Like how older machines need more energy to do the same work.
+
+5. hourly_update()
+   - What it does: Calculates hourly respiration rates with diurnal (day/night) variation
+   - Real-world meaning: Plant respiration varies throughout the day - higher during day 
+     when plants are active, lower at night when they're "resting."
+
+6. _calculate_diurnal_respiration_factor()
+   - What it does: Models natural daily rhythm in respiration rates
+   - Equation: Uses sine waves with peaks at ~4 AM and ~4 PM
+   - Real-world meaning: Plants have internal clocks (circadian rhythms) that control 
+     metabolism. Respiration peaks don't match photosynthesis peaks.
+
+KEY RESPIRATION CONCEPTS:
+
+TWO TYPES OF RESPIRATION:
+- Maintenance: Keeping existing cells alive (like paying rent)
+- Growth: Building new tissues (like construction costs)
+
+TEMPERATURE EFFECTS:
+- Q10 = 2: Rate doubles every 10°C increase
+- Too hot: Enzymes break down, respiration becomes inefficient
+- Too cold: Everything slows down dramatically
+
+TISSUE-SPECIFIC RATES:
+- Leaves: High respiration (active metabolism)
+- Stems: Medium respiration (transport and support)
+- Roots: Medium respiration (active uptake)
+- Reproductive parts: Very high respiration (rapid development)
+
+RESPIRATORY QUOTIENT (RQ):
+- RQ = CO2 produced / O2 consumed
+- Carbohydrates: RQ = 1.0
+- Fats: RQ = 0.7
+- Proteins: RQ = 0.8
+- Varies by time of day and substrate being used
+
+ENVIRONMENTAL INTERACTIONS:
+- High EC stress: Increases energy cost of maintenance
+- Water stress: Forces more energy into osmoregulation
+- Size penalties: Large plants have disproportionately high maintenance costs
+
+PRACTICAL APPLICATIONS:
+- Calculate daily carbon budget (photosynthesis - respiration = net gain)
+- Optimize temperature for maximum growth efficiency
+- Predict energy costs of different management strategies
+- Understand why plants grow slower at temperature extremes
+- Design climate control to minimize energy waste
+- Time harvests when daily net carbon gain starts declining
+
+This system helps growers understand the "energy economics" of plant growth - balancing 
+energy production (photosynthesis) against energy consumption (respiration) for maximum 
+net productivity.
+"""
+
+

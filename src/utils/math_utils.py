@@ -397,3 +397,190 @@ def ensure_real(value: Union[int, float, complex]) -> float:
     if isinstance(value, complex):
         return float(value.real)
     return float(value)
+
+
+"""
+=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+
+This file contains mathematical utility functions - the basic mathematical tools used throughout 
+the hydroponic simulation. Think of it as a sophisticated calculator toolbox that provides 
+safe, reliable mathematical operations specifically designed for biological modeling. It's like 
+having a set of specialized tools that prevent mathematical errors and handle edge cases that 
+could crash the simulation.
+
+PURPOSE OF MATHEMATICAL UTILITIES:
+
+In plant biology simulations, mathematical calculations can encounter problematic situations:
+- Division by zero (like calculating growth rate when time = 0)
+- Negative values in square roots (mathematically impossible)
+- Values outside realistic biological ranges
+- Complex numbers appearing in real-world calculations
+
+These utilities provide "bulletproof" mathematical functions that handle these issues gracefully.
+
+KEY MATHEMATICAL SAFETY FUNCTIONS:
+
+1. clamp_value() & related functions
+   - What it does: Forces values to stay within specified limits
+   - Example: Ensures stress factors stay between 0-1, never -5 or 300
+   - Real-world meaning: Like speed limits on roads - prevents dangerous extremes. 
+     In biology, a plant can't be "200% stressed" or have "-30% growth."
+
+2. safe_divide()
+   - What it does: Prevents division by zero errors
+   - Problem solved: Growth_rate = biomass / time fails when time = 0
+   - Solution: Returns a default value when denominator is zero
+   - Real-world meaning: Like having a backup plan when a calculation becomes impossible.
+
+3. safe_sqrt()
+   - What it does: Handles square roots of negative numbers
+   - Problem solved: sqrt(-5) crashes programs
+   - Solution: Uses absolute value, so sqrt(-5) becomes sqrt(5)
+   - Real-world meaning: Like taking the square root of a measurement - negative distances 
+     don't exist physically, so we assume it meant the positive value.
+
+4. safe_log()
+   - What it does: Handles logarithms of zero or negative numbers
+   - Problem solved: log(0) or log(-3) are mathematically undefined
+   - Solution: Returns default value for invalid inputs
+   - Real-world meaning: Like measuring pH or growth rates on logarithmic scales - 
+     impossible inputs are handled gracefully.
+
+INTERPOLATION AND SCALING FUNCTIONS:
+
+5. linear_interpolate()
+   - What it does: Smoothly converts values from one scale to another
+   - Example: Convert temperature 15-25°C to growth factor 0.5-1.0
+   - Equation: output = out_min + ((value - in_min) / (in_max - in_min)) × (out_max - out_min)
+   - Real-world meaning: Like converting between measurement units (inches to centimeters) 
+     but for any relationship. Creates smooth transitions instead of sudden jumps.
+
+6. sigmoid_response()
+   - What it does: Creates smooth S-shaped curves for biological responses
+   - Pattern: Gradual change → rapid change → gradual change again
+   - Example: Plant response to increasing nutrient concentration
+   - Real-world meaning: Like how your alertness responds to coffee - gradual at first, 
+     then rapid effect, then levels off. Many biological processes follow this pattern.
+
+7. gaussian_response()
+   - What it does: Creates bell-shaped curves with optimal peaks
+   - Pattern: Response peaks at optimal value, decreases as you move away
+   - Example: Temperature response (optimal at 22°C, worse at 10°C or 35°C)
+   - Real-world meaning: Like performance in sports - there's an optimal training intensity, 
+     too little or too much both reduce performance.
+
+STATISTICAL AND ANALYSIS FUNCTIONS:
+
+8. weighted_average()
+   - What it does: Calculates averages where some values are more important than others
+   - Example: Overall plant stress = (0.4 × water_stress) + (0.3 × temp_stress) + (0.3 × nutrient_stress)
+   - Real-world meaning: Like calculating your grade where the final exam counts more 
+     than homework assignments.
+
+9. calculate_rmse() - Root Mean Square Error
+   - What it does: Measures how accurate predictions are compared to real measurements
+   - Lower RMSE = more accurate predictions
+   - Real-world meaning: Like measuring how close your GPS estimates are to actual 
+     travel times - smaller error means better predictions.
+
+10. moving_average()
+    - What it does: Smooths out daily fluctuations by averaging nearby values
+    - Example: 3-day moving average of growth rate reduces day-to-day noise
+    - Real-world meaning: Like looking at your average weight over a week instead of 
+      daily fluctuations - reveals the underlying trend.
+
+BIOLOGICAL GROWTH PATTERNS:
+
+11. exponential_decay()
+    - What it does: Models how things decrease over time at a constant rate
+    - Equation: value(t) = initial_value × e^(-decay_rate × time)
+    - Examples: Radioactive decay, nutrient breakdown, enzyme degradation
+    - Real-world meaning: Like how a car depreciates - fastest loss initially, 
+      then gradually slowing.
+
+12. logistic_growth()
+    - What it does: Models growth that starts slow, accelerates, then levels off
+    - Pattern: Slow start → rapid growth → approaching maximum limit
+    - Example: Plant biomass growth in limited space
+    - Real-world meaning: Like population growth in a city - starts small, grows rapidly 
+      with resources available, then slows as space/resources become limited.
+
+VALIDATION FUNCTIONS:
+
+13. validate_range(), validate_positive(), validate_fraction()
+    - What they do: Check that input values make biological sense
+    - Purpose: Prevent impossible inputs like negative biomass or 150% humidity
+    - Real-world meaning: Like quality control inspectors checking that measurements 
+      are reasonable before processing.
+
+14. ensure_real()
+    - What it does: Converts complex mathematical results back to real numbers
+    - Problem: Sometimes calculations produce complex numbers (like 3+2i)
+    - Solution: Takes only the real part for biological applications
+    - Real-world meaning: Like ignoring the imaginary part of a calculation - 
+      plants exist in the real world, not mathematical imaginary space.
+
+PRACTICAL APPLICATIONS:
+
+For Simulation Reliability:
+1. **Error Prevention**: Stops simulations from crashing due to mathematical errors
+2. **Boundary Enforcement**: Keeps values within biologically realistic ranges
+3. **Graceful Degradation**: Handles edge cases without failing completely
+4. **Data Quality**: Validates inputs before processing
+
+For Biological Accuracy:
+1. **Response Curves**: Models realistic plant responses to environmental factors
+2. **Growth Patterns**: Captures natural growth limitations and saturation effects
+3. **Stress Integration**: Combines multiple stress factors appropriately
+4. **Statistical Analysis**: Validates model predictions against experimental data
+
+For Model Development:
+1. **Parameter Fitting**: Helps calibrate models against experimental data
+2. **Sensitivity Analysis**: Determines which factors most affect outcomes
+3. **Uncertainty Handling**: Manages mathematical uncertainties gracefully
+4. **Optimization**: Finds optimal growing conditions mathematically
+
+MATHEMATICAL CONCEPTS EXPLAINED:
+
+Linear vs Non-Linear Responses:
+- **Linear**: Output changes proportionally with input (double input = double output)
+- **Non-Linear**: Complex relationships (Sigmoid, Gaussian, Exponential)
+- **Biology Reality**: Most biological processes are non-linear
+
+Saturation Effects:
+- **Concept**: Increasing inputs eventually show diminishing returns
+- **Example**: More fertilizer helps up to a point, then becomes toxic
+- **Mathematical**: Modeled with sigmoid or logistic functions
+
+Optimization Curves:
+- **Bell Curves**: One optimal point with decreasing performance on either side
+- **Example**: Temperature response - optimal at 22°C, worse at 10°C or 35°C
+- **Mathematical**: Gaussian functions capture this behavior
+
+Error Handling Philosophy:
+- **Fail-Safe**: When impossible calculations occur, choose safe defaults
+- **Biological Realism**: Replace mathematical artifacts with realistic values
+- **Continuous Operation**: Never crash the simulation over mathematical issues
+
+KEY CONCEPTS FOR NON-CODERS:
+
+Robust Programming: Writing code that handles unexpected situations gracefully, 
+like designing a bridge that can handle unusual loads without collapsing.
+
+Edge Cases: Unusual situations that might break normal calculations, like what 
+happens when you divide by zero or take the square root of a negative number.
+
+Boundary Conditions: The limits of what makes sense in real-world applications, 
+like ensuring percentages stay between 0% and 100%.
+
+Response Curves: Mathematical descriptions of how living things respond to changes 
+in their environment, usually following predictable patterns.
+
+Statistical Validation: Comparing model predictions with real measurements to 
+determine accuracy and reliability.
+
+These mathematical utilities provide the foundation for reliable, accurate simulation 
+of plant biology by ensuring that all calculations remain mathematically valid and 
+biologically meaningful. They enable sophisticated modeling while preventing the 
+computational errors that could compromise simulation accuracy or stability.
+"""

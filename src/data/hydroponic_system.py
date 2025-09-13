@@ -72,7 +72,7 @@ class DailyResults:
     temp_avg: float  # °C
     solar_radiation: float  # MJ/m²/day
     vpd: float  # kPa
-    water_use_efficiency: float  # kg/m³
+    water_use_efficiency: float  # L/kg
     ph: float = None
     ec: float = None
     rzt: float = None  # Root zone temperature (°C)
@@ -298,7 +298,7 @@ class SimulationResults:
                 'Transpiration_mm': result.transpiration,
                 'Water_Total_L': result.water_uptake_total,
                 'Tank_Volume_L': result.tank_volume,
-                'WUE_kg_m3': result.water_use_efficiency,
+                'WUE_L_kg': result.water_use_efficiency,
                 '  ': '',  # Separator
             })
             
@@ -845,3 +845,199 @@ def calculate_dynamic_dry_matter_content(result, plant_part: str, strict_validat
         final_dry_matter = max(0.035, min(0.10, final_dry_matter))  # 3.5-10% for shoots
     
     return final_dry_matter
+
+
+"""
+=== FUNCTION EXPLANATIONS ===
+
+This file defines the data structures and configuration for the hydroponic simulation system. 
+Think of it as the digital blueprint and result storage system for your hydroponic farm. 
+It's like having a comprehensive logbook that records every detail about your growing system, 
+from the physical setup to daily plant measurements.
+
+KEY DATA STRUCTURES AND THEIR PURPOSE:
+
+1. HydroSystemConfig
+   - What it does: Stores the physical specifications of your hydroponic system
+   - Contains: tank size, flow rate, system type, growing area, number of plants
+   - Real-world meaning: Like the specifications sheet for your hydroponic system - tells you 
+     the tank capacity, pump flow rate, whether it's NFT/DWC/Aeroponics, and how many plants 
+     it can grow.
+
+2. CropParameters
+   - What it does: Stores plant-specific characteristics for the crop being grown
+   - Contains: crop coefficients, plant height, root depth, leaf area index
+   - Real-world meaning: Like a plant profile card that describes how big the plant gets, 
+     how much water it needs, and its growing characteristics. Different crops (lettuce, 
+     tomatoes, herbs) have different profiles.
+
+3. WeatherData
+   - What it does: Stores daily environmental conditions
+   - Contains: temperature (min/max/average), solar radiation, humidity, wind speed
+   - Real-world meaning: Like a weather station log that records all the environmental 
+     conditions that affect plant growth. This data drives the simulation calculations.
+
+4. DailyResults
+   - What it does: Stores all the calculated results for each day of simulation
+   - Contains: Over 100+ different measurements and calculations
+   - Real-world meaning: Like a comprehensive daily report card for your plants, recording 
+     everything from how much water they drank to how much they grew, their stress levels, 
+     and nutrient concentrations.
+
+5. SimulationResults
+   - What it does: Combines all daily results into a complete simulation report
+   - Contains: All daily data plus summary statistics and metadata
+   - Real-world meaning: Like a complete grow cycle report that documents the entire 
+     journey from planting to harvest, with detailed analytics and summaries.
+
+KEY FUNCTIONS AND CALCULATIONS:
+
+6. to_dataframe()
+   - What it does: Converts simulation results into a spreadsheet format for analysis
+   - Process: Takes all daily results and organizes them into logical groups
+   - Groups created:
+     * Experiment metadata (dates, system info, treatment IDs)
+     * Environmental conditions (temperature, light, humidity)
+     * Water dynamics (consumption, transpiration, tank levels)
+     * Solution chemistry (pH, EC, nutrient concentrations)
+     * Plant development (growth stages, leaf number, biomass)
+     * Stress factors (temperature, water, nutrient stress)
+     * Root architecture (root length, surface area, activity)
+     * Photosynthesis details (carbon fixation rates, efficiency)
+     * Respiration details (energy consumption by plant parts)
+   - Real-world meaning: Like converting a messy pile of daily logs into an organized 
+     spreadsheet where you can easily analyze trends, compare treatments, and identify 
+     optimal growing conditions.
+
+7. calculate_summary_stats()
+   - What it does: Calculates key performance indicators for the entire grow cycle
+   - Metrics calculated:
+     * Total water consumption
+     * Average daily consumption
+     * Tank volume changes
+     * Temperature extremes
+     * Water use efficiency
+   - Real-world meaning: Like calculating your farm's efficiency report card - how much 
+     water did you use per kilogram of crop produced? What were the temperature extremes? 
+     How efficiently did your system operate?
+
+8. calculate_dynamic_dry_matter_content()
+   - What it does: Calculates what percentage of the plant is dry matter vs. water
+   - Factors considered:
+     * Plant age (young plants have more water)
+     * Growth stage (different stages accumulate water differently)
+     * Environmental stress (stress increases dry matter concentration)
+     * Plant part (leaves vs stems vs roots have different water content)
+     * Growth rate (fast growth = more water content)
+   - Equation: final_dry_matter = base × development × stage × stress × growth_rate × part_adjustment
+   - Real-world meaning: Like knowing that fresh lettuce is about 95% water and 5% dry matter, 
+     but this ratio changes based on growing conditions. Young, fast-growing lettuce under 
+     ideal conditions might be 97% water, while stressed, mature lettuce might be 90% water.
+
+SIMULATION DATA ORGANIZATION:
+
+The simulation tracks over 100 different variables organized into functional groups:
+
+**Environmental Monitoring:**
+- Air temperature, humidity, CO2 levels
+- Solar radiation and light conditions
+- VPD (Vapor Pressure Deficit) - the "thirst" of the air
+
+**Plant Development:**
+- Growth stages (V1, V2, V3... through harvest)
+- Leaf number and size
+- Plant height and biomass accumulation
+- Root development and architecture
+
+**Physiological Processes:**
+- Photosynthesis rates and efficiency
+- Respiration (energy consumption)
+- Transpiration (water loss through leaves)
+- Nutrient uptake rates
+
+**Solution Chemistry:**
+- pH levels and automatic control
+- EC (electrical conductivity) - nutrient concentration
+- Individual nutrient concentrations (N, P, K, Ca, Mg, etc.)
+- Buffer capacity and chemical changes
+
+**Stress Monitoring:**
+- Temperature stress (heat and cold)
+- Water stress (drought conditions)
+- Nutrient stress (deficiencies)
+- Integrated stress interactions
+
+**System Performance:**
+- Water consumption and efficiency
+- Tank level changes
+- Flow rates and circulation
+- Energy costs for environmental control
+
+PRACTICAL APPLICATIONS:
+
+For Hydroponic Growers:
+1. **Performance Tracking**: Monitor daily plant growth and system efficiency
+2. **Problem Diagnosis**: Identify stress factors and their impacts on growth
+3. **Optimization**: Compare different growing conditions to find optimal settings
+4. **Yield Prediction**: Predict harvest timing and expected yields
+5. **Resource Management**: Track water and nutrient consumption
+6. **Quality Control**: Monitor factors affecting crop quality
+
+For Researchers:
+1. **Experiment Design**: Set up controlled experiments with different treatments
+2. **Data Analysis**: Export data to spreadsheets for statistical analysis
+3. **Model Validation**: Compare simulation results with real measurements
+4. **Parameter Calibration**: Adjust model parameters based on experimental data
+5. **Publication**: Generate comprehensive datasets for scientific papers
+
+For System Designers:
+1. **Sizing Systems**: Determine optimal tank size, pump capacity, growing area
+2. **Performance Prediction**: Predict how systems will perform under different conditions
+3. **Cost Analysis**: Calculate operational costs for water, nutrients, energy
+4. **Automation Design**: Design control systems based on plant response patterns
+5. **Scale-up Planning**: Use small-scale data to design larger commercial systems
+
+DATA EXPORT AND ANALYSIS:
+
+The system exports data with intelligent column organization:
+- **Grouped by function**: Related measurements are grouped together
+- **Standardized units**: Consistent units throughout (mg/L, cm, g, etc.)
+- **Time series**: Daily progression from planting to harvest
+- **Treatment comparison**: Multiple treatments can be compared side-by-side
+- **Statistical ready**: Data formatted for statistical analysis software
+
+BIOLOGICAL ACCURACY:
+
+The simulation captures realistic plant responses:
+- **Dry matter content**: Lettuce typically 4-6% dry matter, varies with conditions
+- **Growth patterns**: Follows real lettuce development from seedling to harvest
+- **Stress responses**: Models how plants actually respond to environmental stress
+- **Nutrient dynamics**: Based on real nutrient uptake kinetics and plant physiology
+- **Water use**: Reflects actual transpiration patterns and water use efficiency
+
+KEY CONCEPTS FOR NON-CODERS:
+
+Data Structure: The organized way information is stored in the computer, like filing 
+cabinets with specific folders for different types of information.
+
+Metadata: Information about information - like writing the date, location, and 
+experimental conditions on a research notebook page.
+
+Time Series Data: Information collected over time, like daily temperature readings 
+or weekly plant measurements, that shows how things change.
+
+Data Validation: Checking that all required information is present and makes sense, 
+like proofreading a form before submitting it.
+
+Export Format: Converting computer data into formats (like spreadsheets) that 
+humans can easily read and analyze.
+
+Dynamic Calculation: Values that change based on current conditions rather than 
+being fixed constants, like how your car's fuel efficiency changes with driving 
+conditions.
+
+This hydroponic system data structure provides a comprehensive framework for 
+recording, analyzing, and understanding every aspect of plant growth in controlled 
+environment agriculture, enabling precise management and optimization of growing 
+conditions for maximum productivity and resource efficiency.
+"""
