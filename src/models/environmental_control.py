@@ -223,18 +223,6 @@ class EnvironmentalControlSystem:
                 
                 self.pid_params[control_type][param] = float(value)
     
-    def calculate_vpd(self, temperature: float, relative_humidity: float) -> float:
-        """
-        Calculate vapor pressure deficit using centralized utility.
-        
-        Args:
-            temperature: Air temperature (°C)
-            relative_humidity: Relative humidity (%)
-            
-        Returns:
-            VPD in kPa
-        """
-        return calculate_vpd(temperature, relative_humidity)
     
     def calculate_optimal_humidity(self, temperature: float, target_vpd: float) -> float:
         """
@@ -806,7 +794,7 @@ class EnvironmentalControlSystem:
         light_on = light_schedule.get('light_on', True)
         
         # Calculate current VPD
-        current_vpd = self.calculate_vpd(temp, rh)
+        current_vpd = calculate_vpd(temp, rh)
         
         # Calculate optimal humidity for target VPD
         optimal_rh = self.calculate_optimal_humidity(temp, self.setpoints.target_vpd)

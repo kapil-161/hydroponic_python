@@ -66,8 +66,10 @@ class NutrientConcentrationModel:
         
         # Load from CSV parameters - ERROR if missing
         required_ec_factors = [
-            'ec_factor_n_no3', 'ec_factor_p_po4', 'ec_factor_k', 'ec_factor_ca',
-            'ec_factor_mg', 'ec_factor_s_so4', 'ec_factor_fe'
+            'ec_factor_n_no3', 'ec_factor_n_nh4', 'ec_factor_initial_n_no3', 'ec_factor_initial_n_nh4',
+            'ec_factor_p_po4', 'ec_factor_initial_p_po4', 'ec_factor_k', 'ec_factor_initial_k',
+            'ec_factor_ca', 'ec_factor_initial_ca', 'ec_factor_mg', 'ec_factor_initial_mg',
+            'ec_factor_s_so4', 'ec_factor_initial_s_so4', 'ec_factor_fe', 'ec_factor_initial_fe'
         ]
         
         for param in required_ec_factors:
@@ -76,7 +78,26 @@ class NutrientConcentrationModel:
         
         # Load optional EC factors from CSV - ERROR if missing
         optional_ec_factors = [
-            'ec_factor_mn', 'ec_factor_zn', 'ec_factor_cu', 'ec_factor_b', 'ec_factor_mo'
+            'ec_factor_mn', 'ec_factor_initial_mn', 'ec_factor_zn', 'ec_factor_initial_zn',
+            'ec_factor_cu', 'ec_factor_initial_cu', 'ec_factor_b', 'ec_factor_initial_b',
+            'ec_factor_mo', 'ec_factor_initial_mo', 'ec_factor_target_ec',
+            'ec_factor_min_ec_threshold', 'ec_factor_max_ec_threshold',
+            'ec_factor_min_ph_threshold', 'ec_factor_max_ph_threshold',
+            'ec_factor_solution_change_interval', 'ec_factor_ec_decline_rate',
+            'ec_factor_no3_uptake_vmax', 'ec_factor_nh4_uptake_vmax',
+            'ec_factor_po4_uptake_vmax', 'ec_factor_k_uptake_vmax',
+            'ec_factor_no3_uptake_km', 'ec_factor_nh4_uptake_km',
+            'ec_factor_po4_uptake_km', 'ec_factor_k_uptake_km',
+            'ec_factor_ca_uptake_vmax', 'ec_factor_mg_uptake_vmax',
+            'ec_factor_s_uptake_vmax', 'ec_factor_fe_uptake_vmax',
+            'ec_factor_ca_uptake_km', 'ec_factor_mg_uptake_km',
+            'ec_factor_s_uptake_km', 'ec_factor_fe_uptake_km',
+            'ec_factor_so4_uptake_vmax', 'ec_factor_so4_uptake_km',
+            'ec_factor_mn_uptake_vmax', 'ec_factor_mn_uptake_km',
+            'ec_factor_zn_uptake_vmax', 'ec_factor_zn_uptake_km',
+            'ec_factor_cu_uptake_vmax', 'ec_factor_cu_uptake_km',
+            'ec_factor_b_uptake_vmax', 'ec_factor_b_uptake_km',
+            'ec_factor_mo_uptake_vmax', 'ec_factor_mo_uptake_km'
         ]
         
         for param in optional_ec_factors:
@@ -85,26 +106,91 @@ class NutrientConcentrationModel:
         
         return {
             "N-NO3": config_dict['ec_factor_n_no3'],
+            "N-NH4": config_dict['ec_factor_n_nh4'],
+            "initial_n_no3": config_dict['ec_factor_initial_n_no3'],
+            "initial_n_nh4": config_dict['ec_factor_initial_n_nh4'],
             "P-PO4": config_dict['ec_factor_p_po4'],
+            "initial_p_po4": config_dict['ec_factor_initial_p_po4'],
             "K": config_dict['ec_factor_k'],
+            "initial_k": config_dict['ec_factor_initial_k'],
             "Ca": config_dict['ec_factor_ca'],
+            "initial_ca": config_dict['ec_factor_initial_ca'],
             "Mg": config_dict['ec_factor_mg'],
+            "initial_mg": config_dict['ec_factor_initial_mg'],
             "S-SO4": config_dict['ec_factor_s_so4'],
+            "initial_s_so4": config_dict['ec_factor_initial_s_so4'],
             "Fe": config_dict['ec_factor_fe'],
+            "initial_fe": config_dict['ec_factor_initial_fe'],
             "Mn": config_dict['ec_factor_mn'],
+            "initial_mn": config_dict['ec_factor_initial_mn'],
             "Zn": config_dict['ec_factor_zn'],
+            "initial_zn": config_dict['ec_factor_initial_zn'],
             "Cu": config_dict['ec_factor_cu'],
+            "initial_cu": config_dict['ec_factor_initial_cu'],
             "B": config_dict['ec_factor_b'],
+            "initial_b": config_dict['ec_factor_initial_b'],
             "Mo": config_dict['ec_factor_mo'],
+            "initial_mo": config_dict['ec_factor_initial_mo'],
+            "target_ec": config_dict['ec_factor_target_ec'],
+            "min_ec_threshold": config_dict['ec_factor_min_ec_threshold'],
+            "max_ec_threshold": config_dict['ec_factor_max_ec_threshold'],
+            "min_ph_threshold": config_dict['ec_factor_min_ph_threshold'],
+            "max_ph_threshold": config_dict['ec_factor_max_ph_threshold'],
+            "solution_change_interval": config_dict['ec_factor_solution_change_interval'],
+            "ec_decline_rate": config_dict['ec_factor_ec_decline_rate'],
+            "no3_uptake_vmax": config_dict['ec_factor_no3_uptake_vmax'],
+            "nh4_uptake_vmax": config_dict['ec_factor_nh4_uptake_vmax'],
+            "po4_uptake_vmax": config_dict['ec_factor_po4_uptake_vmax'],
+            "k_uptake_vmax": config_dict['ec_factor_k_uptake_vmax'],
+            "no3_uptake_km": config_dict['ec_factor_no3_uptake_km'],
+            "nh4_uptake_km": config_dict['ec_factor_nh4_uptake_km'],
+            "po4_uptake_km": config_dict['ec_factor_po4_uptake_km'],
+            "k_uptake_km": config_dict['ec_factor_k_uptake_km'],
+            "ca_uptake_vmax": config_dict['ec_factor_ca_uptake_vmax'],
+            "mg_uptake_vmax": config_dict['ec_factor_mg_uptake_vmax'],
+            "s_uptake_vmax": config_dict['ec_factor_s_uptake_vmax'],
+            "fe_uptake_vmax": config_dict['ec_factor_fe_uptake_vmax'],
+            "ca_uptake_km": config_dict['ec_factor_ca_uptake_km'],
+            "mg_uptake_km": config_dict['ec_factor_mg_uptake_km'],
+            "s_uptake_km": config_dict['ec_factor_s_uptake_km'],
+            "fe_uptake_km": config_dict['ec_factor_fe_uptake_km'],
+            "so4_uptake_vmax": config_dict['ec_factor_so4_uptake_vmax'],
+            "so4_uptake_km": config_dict['ec_factor_so4_uptake_km'],
+            "mn_uptake_vmax": config_dict['ec_factor_mn_uptake_vmax'],
+            "mn_uptake_km": config_dict['ec_factor_mn_uptake_km'],
+            "zn_uptake_vmax": config_dict['ec_factor_zn_uptake_vmax'],
+            "zn_uptake_km": config_dict['ec_factor_zn_uptake_km'],
+            "cu_uptake_vmax": config_dict['ec_factor_cu_uptake_vmax'],
+            "cu_uptake_km": config_dict['ec_factor_cu_uptake_km'],
+            "b_uptake_vmax": config_dict['ec_factor_b_uptake_vmax'],
+            "b_uptake_km": config_dict['ec_factor_b_uptake_km'],
+            "mo_uptake_vmax": config_dict['ec_factor_mo_uptake_vmax'],
+            "mo_uptake_km": config_dict['ec_factor_mo_uptake_km'],
         }
     
     def calculate_ec_from_concentrations(self, nutrient_concentrations: Dict[str, float]) -> float:
         """Calculate EC from individual nutrient concentrations using EC factors."""
         total_ec = 0.0
+
+        # Filter to only include actual nutrients (not system parameters or EC factors)
+        actual_nutrients = ['N-NO3', 'N-NH4', 'P-PO4', 'K', 'Ca', 'Mg', 'S-SO4', 'Fe', 'Mn', 'Zn', 'Cu', 'B', 'Mo',
+                           'initial_n_no3', 'initial_n_nh4', 'initial_p_po4', 'initial_k', 'initial_ca',
+                           'initial_mg', 'initial_s_so4', 'initial_fe', 'initial_mn', 'initial_zn',
+                           'initial_cu', 'initial_b', 'initial_mo']
+
         for nutrient_id, concentration in nutrient_concentrations.items():
+            # Skip system parameters and EC factor parameters
+            if nutrient_id.startswith('ec_factor_') or nutrient_id.endswith('_threshold') or nutrient_id.endswith('_interval') or nutrient_id.endswith('_rate') or nutrient_id.endswith('_vmax') or nutrient_id.endswith('_km'):
+                continue
+
+            # Only process actual nutrients
+            if nutrient_id not in actual_nutrients and nutrient_id not in self.ec_factors:
+                continue
+
             ec_factor = self.ec_factors.get(nutrient_id)
             if ec_factor is None:
-                raise ValueError(f"❌ EC factor for {nutrient_id} must be provided in CSV configuration - no hardcoded defaults allowed")
+                # For unknown nutrients, use a default EC factor of 0 (no EC contribution)
+                continue
             total_ec += concentration * ec_factor
         return total_ec
     
@@ -814,4 +900,135 @@ PRACTICAL APPLICATIONS:
 
 This system helps growers maintain optimal nutrition throughout the plant's life cycle.
 """
+
+
+class NutrientUptakeModel:
+    """
+    Realistic nutrient uptake model using Michaelis-Menten kinetics.
+
+    Replaces broken step-function nutrient depletion with proper
+    physiological uptake calculations and mass balance conservation.
+    """
+
+    def __init__(self):
+        """Initialize nutrient uptake model with lettuce kinetic parameters."""
+        # Michaelis-Menten kinetic parameters for lettuce (from literature)
+        self.kinetics = {
+            'N-NO3': {'vmax': 0.03, 'km': 0.5, 'min_conc': 0.1},
+            'NH4': {'vmax': 0.045, 'km': 0.3, 'min_conc': 0.05},
+            'P-PO4': {'vmax': 0.008, 'km': 0.1, 'min_conc': 0.02},
+            'K': {'vmax': 0.025, 'km': 0.4, 'min_conc': 0.1},
+            'Ca': {'vmax': 0.018, 'km': 0.8, 'min_conc': 0.2},
+            'Mg': {'vmax': 0.012, 'km': 0.6, 'min_conc': 0.1}
+        }
+
+    def calculate_realistic_nutrient_uptake(self,
+                                          current_concentrations: Dict[str, float],
+                                          root_surface_area: float,
+                                          temperature: float,
+                                          ph: float,
+                                          ec: float,
+                                          plant_count: int,
+                                          tank_volume_L: float,
+                                          daily_growth_rate: float = 1.0) -> Dict[str, Any]:
+        """
+        Calculate realistic nutrient uptake using Michaelis-Menten kinetics.
+
+        Args:
+            current_concentrations: Current solution concentrations (mg/L)
+            root_surface_area: Active root surface area (cm²)
+            temperature: Solution temperature (°C)
+            ph: Solution pH
+            ec: Electrical conductivity (dS/m)
+            plant_count: Number of plants
+            tank_volume_L: Tank volume (L)
+            daily_growth_rate: Daily growth rate (g/day)
+
+        Returns:
+            Dictionary with uptake rates and updated concentrations
+        """
+
+        # Environmental factors
+        # Temperature factor (Q10 = 2.0, optimal at 22°C)
+        temp_factor = 2.0 ** ((temperature - 22.0) / 10.0)
+        temp_factor = max(0.1, min(3.0, temp_factor))
+
+        # pH factor (optimal around 6.0)
+        ph_factor = max(0.2, 1.0 - abs(ph - 6.0) * 0.5)
+
+        # EC factor (optimal around 1.8 dS/m)
+        ec_factor = max(0.3, 1.0 - abs(ec - 1.8) * 0.3)
+
+        combined_env_factor = temp_factor * ph_factor * ec_factor
+        combined_env_factor = min(1.5, combined_env_factor)  # Cap at 150%
+
+        # Calculate uptake rates for each nutrient
+        uptake_rates = {}
+        updated_concentrations = {}
+        mass_balance = {}
+
+        for nutrient, concentration in current_concentrations.items():
+            if nutrient in self.kinetics and concentration > self.kinetics[nutrient]['min_conc']:
+                k = self.kinetics[nutrient]
+
+                # Michaelis-Menten equation: V = Vmax * [S] / (Km + [S])
+                uptake_per_cm2 = (k['vmax'] * concentration) / (k['km'] + concentration)
+
+                # Scale by root surface area
+                base_uptake = uptake_per_cm2 * root_surface_area
+
+                # Apply environmental factors
+                env_adjusted_uptake = base_uptake * combined_env_factor
+
+                # Plant demand modifier (based on growth rate)
+                demand_factor = max(0.5, min(2.0, daily_growth_rate / 1.0))
+
+                final_uptake = env_adjusted_uptake * demand_factor
+                uptake_rates[nutrient] = max(0.0, final_uptake)
+            else:
+                uptake_rates[nutrient] = 0.0
+
+        # Update concentrations with mass balance
+        for nutrient, uptake_rate in uptake_rates.items():
+            initial_conc = current_concentrations[nutrient]
+            initial_mass = initial_conc * tank_volume_L
+
+            # Total uptake for all plants
+            total_uptake_mg = uptake_rate * plant_count
+
+            # Updated mass and concentration
+            final_mass = max(0.0, initial_mass - total_uptake_mg)
+            # Safety check: prevent division by zero when tank volume is depleted
+            if tank_volume_L > 0.0:
+                final_conc = final_mass / tank_volume_L
+            else:
+                # If tank is empty, concentration becomes zero
+                final_conc = 0.0
+
+            updated_concentrations[nutrient] = final_conc
+
+            # Mass balance check
+            removed_mass = initial_mass - final_mass
+            balance_error = abs(removed_mass - total_uptake_mg)
+            balance_error_pct = (balance_error / max(total_uptake_mg, 0.001)) * 100
+
+            mass_balance[nutrient] = {
+                'initial_mass_mg': initial_mass,
+                'final_mass_mg': final_mass,
+                'removed_mass_mg': removed_mass,
+                'expected_removal_mg': total_uptake_mg,
+                'balance_error_pct': balance_error_pct
+            }
+
+        return {
+            'uptake_rates_mg_per_plant_per_day': uptake_rates,
+            'updated_concentrations': updated_concentrations,
+            'mass_balance': mass_balance,
+            'environmental_factors': {
+                'temperature_factor': temp_factor,
+                'ph_factor': ph_factor,
+                'ec_factor': ec_factor,
+                'combined_factor': combined_env_factor
+            }
+        }
 

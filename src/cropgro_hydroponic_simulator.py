@@ -26,6 +26,7 @@ import logging
 # Import utilities
 from .utils.temperature_utils import calculate_vpd, calculate_ph_effect, calculate_q10_temperature_factor, calculate_thermal_time
 from .utils.hourly_weather import create_hourly_weather_interpolator
+from .utils.results_display_utility import create_lettuce_results_display_utility
 
 # Import all CROPGRO models
 from .models.genetic_parameters import (
@@ -39,9 +40,9 @@ from .models.respiration_model import create_lettuce_respiration_model, BiomassP
 from .models.senescence_model import create_lettuce_senescence_model
 from .models.canopy_architecture import create_lettuce_canopy_model, LightEnvironment
 from .models.nitrogen_balance import create_lettuce_nitrogen_balance_model
-from .models.nutrient_models import create_lettuce_nutrient_mobility_model
+from .models.nutrient_models import create_lettuce_nutrient_mobility_model, NutrientUptakeModel
 from .models.stress_models import create_lettuce_integrated_stress_model
-from .models.stress_models import create_lettuce_temperature_stress_model
+from .models.stress_models import create_lettuce_temperature_stress_model, UnifiedStressCalculator
 from .models.root_system_model import create_enhanced_root_uptake_model, HydroponicSystemType
 from .models.root_zone_temperature import create_lettuce_rzt_model
 from .models.ph_model import create_lettuce_ph_model
@@ -49,6 +50,8 @@ from .models.environmental_control import create_lettuce_environmental_control_s
 from .models.photosynthesis_model import create_lettuce_photosynthesis_model
 from .models.nutrient_models import NutrientConcentrationModel
 from .models.leaf_development import create_lettuce_leaf_development_model
+from .models.water_uptake_model import create_lettuce_water_uptake_model
+from .models.biomass_allocation_model import create_lettuce_biomass_allocation_model
 from .data.hydroponic_system import HydroInputData, SimulationResults, DailyResults
 # No longer importing config loader - using CSV data only
 # WeatherGenerator removed - weather data must come from CSV files
@@ -306,18 +309,42 @@ class CROPGROHydroponicSimulator:
         # Load root zone temperature model using CSV configuration
         self.rzt_model = create_lettuce_rzt_model(self.system_config)
         
-        # 13. pH MODEL  
+        # 13. pH MODEL
         logger.info("Initializing comprehensive pH model...")
         # Load pH model with buffer chemistry using CSV configuration
         self.ph_model = create_lettuce_ph_model(self.system_config)
-        
+
+        # 14. WATER UPTAKE MODEL
+        logger.info("Initializing water uptake model...")
+        # Load water uptake model using CSV configuration
+        self.water_uptake_model = create_lettuce_water_uptake_model(self.system_config)
+
+        # 15. BIOMASS ALLOCATION MODEL
+        logger.info("Initializing biomass allocation model...")
+        # Load biomass allocation model using CSV configuration
+        self.biomass_allocation_model = create_lettuce_biomass_allocation_model(self.system_config)
+
+        # 16. NUTRIENT UPTAKE MODEL
+        logger.info("Initializing nutrient uptake model...")
+        self.nutrient_uptake_model = NutrientUptakeModel()
+
+        # 17. UNIFIED STRESS CALCULATOR
+        logger.info("Initializing unified stress calculator...")
+        self.unified_stress_calculator = UnifiedStressCalculator(
+            self.system_config, self.params, self.temperature_stress, self.nitrogen_model
+        )
+
+        # 18. RESULTS DISPLAY UTILITY
+        logger.info("Initializing results display utility...")
+        self.results_display_utility = create_lettuce_results_display_utility(self.system_config)
+
         # Initialize state variables
         self._initialize_plant_state()
         
         logger.info("CROPGRO Hydroponic Simulator initialized successfully!")
         logger.info(f"Enabled models: Genetic Parameters, Phenology, Respiration, Senescence, "
                    f"Canopy Architecture, Nitrogen Balance, Nutrient Mobility, Stress Models, "
-                   f"Root Architecture, Root Zone Temperature, Environmental Control")
+                   f"Root Architecture, Root Zone Temperature, Water Uptake, Biomass Allocation, Nutrient Uptake, Environmental Control")
 
     def _get_required_param(self, param_dict: dict, param_name: str, param_source: str) -> any:
         """Get a required parameter with clear error message if missing."""
@@ -1011,7 +1038,7 @@ class CROPGROHydroponicSimulator:
         )
             
         # Calculate VPD from actual temperature and humidity
-        actual_vpd = self._calculate_vpd(actual_temperature, actual_humidity)
+        actual_vpd = calculate_vpd(actual_temperature, actual_humidity)
         # Cache VPD for water model
         self._last_vpd = actual_vpd
         
@@ -1107,261 +1134,29 @@ class CROPGROHydroponicSimulator:
         }
         return stage_factors.get(growth_stage, 1.0)
     
-    def _calculate_unified_stress_factors(self, env_conditions: Dict[str, Any], 
-                                        nutrient_concentrations: Dict[str, float], 
+    def _calculate_unified_stress_factors(self, env_conditions: Dict[str, Any],
+                                        nutrient_concentrations: Dict[str, float],
                                         plant_state: Dict[str, Any], day: int = 1) -> Dict[str, Any]:
         """
-        Centralized stress calculation function - single source of truth for ALL stress factors.
-        
-        This function eliminates redundant calculations and provides consistent stress factors
-        used throughout the simulation. All stress factors are returned as multiplication 
-        factors where 1.0 = optimal conditions, 0.0 = severe stress.
-        
+        Delegate to the unified stress calculator for centralized stress calculation.
+
         Args:
             env_conditions: Environmental conditions from environment step
             nutrient_concentrations: Current nutrient concentrations
             plant_state: Current plant physiological state
-            
+            day: Current simulation day
+
         Returns:
             Dict containing all stress factors and supporting data
         """
-        
-        # Extract environmental variables
-        actual_temperature = env_conditions['actual_temperature']
-        actual_humidity = env_conditions['actual_humidity']
-        actual_vpd = env_conditions['actual_vpd']
-        solar_radiation = env_conditions['solar_radiation']
-        
-        # === CALCULATE SUPPORTING VALUES ONCE ===
-        
-        # Calculate EC dynamically from nutrient concentrations (not static from CSV)
-        ec_current = self._calculate_ec(nutrient_concentrations)
-        
-        # Calculate solution temperature once
-        solution_temperature = self._calculate_solution_temperature(
-            air_temp=actual_temperature,
-            solar_radiation=solar_radiation,
-            tank_volume=plant_state.get('tank_volume', 1000.0),
-            day=plant_state.get('day', 1)
+        return self.unified_stress_calculator.calculate_unified_stress_factors(
+            env_conditions=env_conditions,
+            nutrient_concentrations=nutrient_concentrations,
+            plant_state=plant_state,
+            day=day,
+            ec_calculator=self._calculate_ec,
+            solution_temp_calculator=self._calculate_solution_temperature
         )
-        
-        # === STRESS FACTOR CALCULATIONS ===
-        
-        # 1. TEMPERATURE STRESS (both air and root zone)
-        temp_stress_response = self.temperature_stress.daily_update(actual_temperature)
-        temperature_factor = temp_stress_response.process_factors.overall  # Factor (1.0 = optimal)
-        
-        # Root zone temperature stress
-        root_temp_deviation = abs(solution_temperature - self.params.optimal_root_temp)
-        if root_temp_deviation > self.params.root_temp_tolerance:
-            root_temp_factor = max(0.0, 1.0 - (root_temp_deviation - self.params.root_temp_tolerance) * self.params.root_temp_stress_factor)
-        else:
-            root_temp_factor = 1.0
-        
-        # Combined temperature factor (most limiting)
-        combined_temp_factor = min(temperature_factor, root_temp_factor)
-        
-        # 2. WATER STRESS (optimized for well-managed hydroponic systems)
-        # In hydroponic systems, water is abundant and well-controlled
-        # Main water stress comes from VPD (vapor pressure deficit) effects
-        
-        # Hydroponic water stress - primarily VPD-based (optimized for hydroponics)
-        # In hydroponic systems, water is abundant, so stress mainly from atmospheric demand
-        # Use dynamic VPD parameters from environment CSV
-        env_params = getattr(self.system_config, 'environment_parameters', {})
-        optimal_vpd_min = env_params.get('optimal_vpd_min', self.params.optimal_vpd_min)  # CSV or fallback
-        optimal_vpd_max = env_params.get('optimal_vpd_max', self.params.optimal_vpd_max)  # CSV or fallback
-        
-        # Use dynamic stress parameters from stress CSV
-        stress_params = getattr(self.system_config, 'stress_parameters', {})
-        vpd_stress_low_factor = stress_params.get('vpd_stress_low_factor', 0.15)  # CSV or fallback
-        vpd_stress_high_factor = stress_params.get('vpd_stress_high_factor', 0.25)  # CSV or fallback
-        
-        if optimal_vpd_min <= actual_vpd <= optimal_vpd_max:
-            water_stress_level = 0.0  # No stress in optimal range
-        elif actual_vpd < optimal_vpd_min:
-            # Low VPD stress (poor transpiration) - use dynamic factor
-            water_stress_level = min(0.2, (optimal_vpd_min - actual_vpd) * vpd_stress_low_factor)
-        else:
-            # High VPD stress (excessive water demand) - use dynamic factor 
-            water_stress_level = min(0.4, (actual_vpd - optimal_vpd_max) * vpd_stress_high_factor)
-        
-        # Debug: Print water stress calculation for troubleshooting
-        # print(f"DEBUG: VPD={actual_vpd:.2f}, range=[{optimal_vpd_min}-{optimal_vpd_max}], water_stress={water_stress_level:.3f}")
-        
-        water_factor = max(0.0, 1.0 - water_stress_level)
-        
-        # 3. LIGHT STRESS (optimized for hydroponic LED systems)
-        # In controlled environment hydroponics, light is usually adequate
-        # Optimal light intensity must be provided in CSV configuration
-        optimal_light = env_params.get('optimal_light_intensity')
-        if optimal_light is None:
-            raise ValueError("❌ 'optimal_light_intensity' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
-        light_factor = min(1.0, max(0.0, float(solar_radiation) / optimal_light))
-        
-        # 4. NITROGEN STRESS - Use sophisticated nitrogen balance model for accurate calculation
-        # The nitrogen balance model calculates stress based on internal plant nitrogen status
-        try:
-            # Use sophisticated nitrogen balance model for accurate internal nitrogen stress
-            nitrogen_stress_level = self.nitrogen_model.calculate_nitrogen_stress_level()
-        except (AttributeError, TypeError):
-            # Fallback to simple solution-based calculation if nitrogen model not available
-            n_no3_conc = nutrient_concentrations.get('N-NO3', 0.0)  # mg/L
-            
-            # Nitrogen stress calculation using CSV parameters
-            nitrogen_params = getattr(self.system_config, 'nitrogen_parameters', {})
-            optimal_n_min = nitrogen_params.get('optimal_n_min')
-            optimal_n_max = nitrogen_params.get('optimal_n_max')
-            severe_deficiency = nitrogen_params.get('severe_deficiency_threshold')
-            nitrogen_stress_factor = nitrogen_params.get('nitrogen_stress_factor')
-            
-            if optimal_n_min is None:
-                raise ValueError("❌ 'optimal_n_min' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
-            if optimal_n_max is None:
-                raise ValueError("❌ 'optimal_n_max' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
-            if severe_deficiency is None:
-                raise ValueError("❌ 'severe_deficiency_threshold' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
-            if nitrogen_stress_factor is None:
-                raise ValueError("❌ 'nitrogen_stress_factor' parameter must be provided in nitrogen_parameters CSV - no hardcoded defaults allowed")
-            
-            if n_no3_conc < severe_deficiency:
-                nitrogen_stress_level = nitrogen_stress_factor
-            elif n_no3_conc < optimal_n_min:
-                nitrogen_stress_level = nitrogen_stress_factor * (optimal_n_min - n_no3_conc) / (optimal_n_min - severe_deficiency)
-            elif n_no3_conc <= optimal_n_max:
-                nitrogen_stress_level = 0.0
-            else:
-                excess_stress = min(0.3, (n_no3_conc - optimal_n_max) / 1000.0)
-                nitrogen_stress_level = excess_stress
-        
-        nitrogen_factor = max(0.0, 1.0 - nitrogen_stress_level)
-        
-        # 5. SALINITY STRESS (EC-based) - use dynamic EC parameters from environment CSV
-        env_params = getattr(self.system_config, 'environment_parameters', {})
-        optimal_ec = env_params.get('optimal_ec')
-        max_ec = env_params.get('max_ec')
-        min_ec = env_params.get('min_ec')
-        
-        if optimal_ec is None:
-            raise ValueError("❌ 'optimal_ec' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
-        if max_ec is None:
-            raise ValueError("❌ 'max_ec' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
-        if min_ec is None:
-            raise ValueError("❌ 'min_ec' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
-        
-        # Use dynamic stress parameters from stress CSV
-        ec_stress_high_factor = stress_params.get('ec_stress_high_factor')
-        ec_stress_low_factor = stress_params.get('ec_stress_low_factor')
-        
-        if ec_stress_high_factor is None:
-            raise ValueError("❌ 'ec_stress_high_factor' parameter must be provided in stress_parameters CSV - no hardcoded defaults allowed")
-        if ec_stress_low_factor is None:
-            raise ValueError("❌ 'ec_stress_low_factor' parameter must be provided in stress_parameters CSV - no hardcoded defaults allowed")
-        
-        if ec_current > max_ec:
-            # High EC stress - use dynamic factor
-            salinity_stress_level = (ec_current - max_ec) * ec_stress_high_factor
-            salinity_factor = max(0.0, 1.0 - salinity_stress_level)
-        elif ec_current < min_ec:
-            # Low EC stress - use dynamic factor
-            salinity_stress_level = (min_ec - ec_current) * ec_stress_low_factor
-            salinity_factor = max(0.0, 1.0 - salinity_stress_level)
-        else:
-            salinity_factor = 1.0
-        
-        # 6. pH STRESS
-        ph = plant_state.get('ph', None)
-        if ph is None:
-            raise ValueError("Plant pH must be provided in CSV configuration")
-        ph_factor = calculate_ph_effect(ph)
-        
-        # 7. OXYGEN STRESS (minimal in hydroponics)
-        # Oxygen factor must be provided in CSV configuration
-        oxygen_factor = env_params.get('oxygen_factor')
-        if oxygen_factor is None:
-            raise ValueError("❌ 'oxygen_factor' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
-        
-        # === CALCULATE COMBINED STRESS METRICS ===
-        
-        # Overall multiplicative stress factor
-        overall_stress_factor = (
-            combined_temp_factor * 
-            water_factor * 
-            light_factor * 
-            nitrogen_factor * 
-            salinity_factor * 
-            ph_factor * 
-            oxygen_factor
-        )
-        
-        # Stress levels (for models that expect stress levels instead of factors)
-        # Add some realistic stress variation based on conditions
-        temp_stress = max(0.0, 1.0 - combined_temp_factor)
-        water_stress = max(0.0, 1.0 - water_factor)
-        light_stress = max(0.0, 1.0 - light_factor)
-        nitrogen_stress = max(0.0, 1.0 - nitrogen_factor)
-        salinity_stress = max(0.0, 1.0 - salinity_factor)
-        ph_stress = max(0.0, 1.0 - ph_factor)
-        oxygen_stress = max(0.0, 1.0 - oxygen_factor)
-        
-        # Add some dynamic stress based on plant development and environmental conditions
-        import math
-        day_variation = math.sin(day * 0.1) * 0.1  # Daily stress variation
-        
-        # Nitrogen stress increases as plants grow and demand more nutrients
-        growth_stage_factor = plant_state.get('growth_stage', 'V4')
-        if growth_stage_factor in ['V11+', 'HI', 'HD', 'HM']:
-            nitrogen_stress += 0.05  # Higher nitrogen demand in later stages
-        
-        # Temperature stress varies with daily temperature fluctuations
-        optimal_temperature = env_params.get('optimal_temperature')
-        if optimal_temperature is None:
-            raise ValueError("❌ 'optimal_temperature' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
-        temp_deviation = abs(env_conditions['actual_temperature'] - optimal_temperature)
-        temp_stress += min(0.1, temp_deviation * 0.01)
-        
-        # Water stress increases with VPD
-        optimal_vpd = env_params.get('optimal_vpd')
-        if optimal_vpd is None:
-            raise ValueError("❌ 'optimal_vpd' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
-        vpd_stress = max(0.0, (env_conditions['actual_vpd'] - optimal_vpd) * 0.1)
-        water_stress += min(0.1, vpd_stress)
-        
-        stress_levels = {
-            'temperature': min(1.0, temp_stress + day_variation),
-            'water': min(1.0, water_stress + day_variation * 0.5),
-            'light': min(1.0, light_stress + day_variation * 0.3),
-            'nitrogen': min(1.0, nitrogen_stress + day_variation * 0.2),
-            'salinity': min(1.0, salinity_stress + day_variation * 0.1),
-            'ph': min(1.0, ph_stress + day_variation * 0.1),
-            'oxygen': min(1.0, oxygen_stress + day_variation * 0.1)
-        }
-        
-        return {
-            # STRESS FACTORS (1.0 = optimal, 0.0 = severe stress)
-            'temperature_factor': combined_temp_factor,
-            'air_temp_factor': temperature_factor,
-            'root_temp_factor': root_temp_factor,
-            'water_factor': water_factor,
-            'light_factor': light_factor,
-            'nitrogen_factor': nitrogen_factor,
-            'salinity_factor': salinity_factor,
-            'ph_factor': ph_factor,
-            'oxygen_factor': oxygen_factor,
-            'overall_stress_factor': overall_stress_factor,
-            
-            # STRESS LEVELS (0.0 = optimal, 1.0 = severe stress)
-            'stress_levels': stress_levels,
-            
-            # DETAILED RESPONSES
-            'temp_stress_response': temp_stress_response,
-            
-            # SUPPORTING CALCULATIONS (calculated once, reused everywhere)
-            'ec_current': ec_current,
-            'solution_temperature': solution_temperature,
-            'water_stress_level': water_stress_level,
-            'nitrogen_stress_level': nitrogen_stress_level
-        }
     
     def _calculate_carbon_driven_growth(self, env_conditions: Dict[str, Any], 
                                       stress_factors: Dict[str, float],
@@ -1464,98 +1259,21 @@ class CROPGROHydroponicSimulator:
         9. Update State: Update all state variables for the next day
         """
         
-        # === STEP 1: ENVIRONMENT ===
-        # Calculate all environmental conditions first
-        env_conditions = self._calculate_environmental_conditions(temperature, humidity, solar_radiation, day)
-        # Use solar radiation ONLY from CSV config - no fallbacks
-        env_conditions['solar_radiation'] = getattr(self.system_config, 'solar_radiation', solar_radiation)
-
-        
-        # === STEP 2: PHENOLOGY ===
-        # Update the plant's developmental stage based on temperature and daylength
-        phenology_response = self.phenology_model.daily_update(
-            temperature=env_conditions['actual_temperature'],
-            daylength=daylength,
-            water_stress=0.0,  # We'll calculate this in the next step
-            temperature_stress=1.0  # We'll calculate this in the next step
+        # === STEP 1 & 2: ENVIRONMENT AND PHENOLOGY ===
+        env_conditions, phenology_response, stage_props = self._setup_daily_environment_and_phenology(
+            temperature, humidity, solar_radiation, daylength, day
         )
 
-        
-        stage_props = self.phenology_model.get_stage_properties()
-        self.accumulated_gdd = stage_props['total_thermal_time']
-        
         # === STEP 3: STRESS ===
-        # Calculate all stress factors based on environment and plant state (SINGLE SOURCE OF TRUTH)
-        plant_state = {
-            'day': day,
-            'ph': ph,
-            'tank_volume': previous_tank_volume,
-            'total_biomass': sum(pool.dry_mass for pool in self.biomass_pools),
-            'lai': self.current_lai
-        }
-        
-        stress_factors = self._calculate_unified_stress_factors(
-            env_conditions=env_conditions,
-            nutrient_concentrations=nutrient_concentrations,
-            plant_state=plant_state,
-            day=day
+        stress_factors, cultivar_performance = self._setup_daily_stress_calculation(
+            env_conditions, nutrient_concentrations, ph, previous_tank_volume, day
         )
         
-        # Get cultivar performance based on stress factors
-        cultivar_performance = self.ge_model.predict_cultivar_performance(
-            self.current_cultivar, stress_factors
+        # === STEP 4 & 5: CANOPY ARCHITECTURE AND PHOTOSYNTHESIS ===
+        canopy_response, canopy_photosynthesis = self._calculate_daily_canopy_and_photosynthesis(
+            env_conditions, stress_factors, nutrient_concentrations,
+            temperature, humidity, solar_radiation, daylength, day, weather
         )
-        
-        # === STEP 4: CANOPY ARCHITECTURE UPDATE ===
-        # Update canopy architecture before photosynthesis calculation to get sunlit/shaded LAI
-        canopy_response = self.canopy_model.daily_update(
-            total_lai=self.current_lai,
-            canopy_height=self.canopy_height,
-            light_env=env_conditions['light_environment'],
-            air_temperature=env_conditions['actual_temperature'],
-            co2_concentration=env_conditions['actual_co2']
-        )
-        
-        # === STEP 5: DSSAT-STYLE HOURLY INTEGRATION ===
-        # Run internal hourly loop for key processes (photosynthesis, nutrient uptake)
-        # Use actual weather data if available, otherwise fall back to approximations
-        if weather and hasattr(weather, 'temp_min') and hasattr(weather, 'temp_max'):
-            temp_min = weather.temp_min
-            temp_max = weather.temp_max
-        else:
-            temp_min = temperature - 3.0  # Fallback approximation
-            temp_max = temperature + 3.0  # Fallback approximation
-            
-        daily_integrated_results = self._run_hourly_integration(
-            day=day,
-            daily_weather_data={
-                'temp_avg': temperature,
-                'temp_min': temp_min,
-                'temp_max': temp_max,
-                'rel_humidity': humidity,
-                'solar_radiation': solar_radiation
-            },
-            env_conditions=env_conditions,
-            stress_factors=stress_factors,
-            nutrient_concentrations=nutrient_concentrations,
-            daylength=daylength,
-            canopy_response=canopy_response  # Pass canopy response to hourly integration
-        )
-        
-        # Extract hourly-integrated results
-        detailed_photosynthesis = daily_integrated_results['total_daily_photosynthesis']
-        hourly_diagnostics = daily_integrated_results['hourly_diagnostics']
-        
-        
-        # Apply stress effects to photosynthesis (use overall stress factor from centralized calculation)
-        canopy_photosynthesis = (
-            detailed_photosynthesis *
-            stress_factors['overall_stress_factor'] *  # Single stress application
-            self.cultivar_profile.genetic_coefficients.PHOTOSYNTHETIC_CAPACITY
-        )
-        
-        # Photosynthesis is calculated correctly for the canopy LAI
-        # Keep full photosynthesis value for proper carbon balance
         
         # === STEP 5: RESPIRATION ===
         # Calculate maintenance respiration based on current biomass and temperature
@@ -1875,9 +1593,9 @@ class CROPGROHydroponicSimulator:
         
         # FIXED: Calculate realistic water uptake using proper SPAC-based transpiration
         total_biomass = sum(pool.dry_mass for pool in self.biomass_pools)
-        water_results = self._calculate_realistic_water_uptake(
+        water_results = self.water_uptake_model.calculate_realistic_water_uptake(
             temperature=env_conditions['actual_temperature'],
-            humidity=env_conditions['actual_humidity'], 
+            humidity=env_conditions['actual_humidity'],
             solar_radiation=solar_radiation,
             lai=self.current_lai,
             total_biomass=total_biomass,
@@ -1891,19 +1609,27 @@ class CROPGROHydroponicSimulator:
         
         # Update system water usage with realistic values
         system_water_use_l = water_results['total_water_uptake_L'] * self.plant_count
-        vpd_calculated = self._calculate_vpd(
-            env_conditions['actual_temperature'], 
+        vpd_calculated = calculate_vpd(
+            env_conditions['actual_temperature'],
             env_conditions['actual_humidity']
         )
         
         # Calculate water uptake and update tank volume
-        water_uptake_l = self._calculate_water_uptake(
-            canopy_response.light_interception_fraction,
-            env_conditions['actual_temperature'],
-            env_conditions['actual_humidity'],
-            solar_radiation,
-            env_conditions['actual_vpd'],
-            self.current_lai
+        # Get current stress factors for hydraulic model
+        current_stress_factors = getattr(self, '_current_stress_factors', {})
+        stem_biomass = self.biomass_pools[1].dry_mass if len(self.biomass_pools) > 1 else 1.0
+        solution_ec = getattr(self.system_config, 'solution_ec', 1.5)
+
+        water_uptake_l = self.water_uptake_model.calculate_hydraulic_water_uptake(
+            light_interception=canopy_response.light_interception_fraction,
+            temperature=env_conditions['actual_temperature'],
+            humidity=env_conditions['actual_humidity'],
+            solar_radiation=solar_radiation,
+            vpd=env_conditions['actual_vpd'],
+            lai=self.current_lai,
+            stem_biomass=stem_biomass,
+            solution_ec=solution_ec,
+            stress_factors=current_stress_factors
         )
         system_water_use_l = water_uptake_l * self.system_area
         # Maintain minimum tank volume (10% of original capacity) for system functionality
@@ -2391,7 +2117,148 @@ class CROPGROHydroponicSimulator:
         cropgro_result.environmental_cost = control_effort * 0.01  # Cost per unit control effort
         
         return cropgro_result
-    
+
+    def _setup_daily_environment_and_phenology(self, temperature: float, humidity: float,
+                                              solar_radiation: float, daylength: float, day: int) -> Tuple[Dict[str, Any], Any, Dict[str, Any]]:
+        """
+        Setup environment conditions and update phenology for daily simulation step.
+
+        Args:
+            temperature: Air temperature (°C)
+            humidity: Relative humidity (%)
+            solar_radiation: Solar radiation (W/m²)
+            daylength: Day length (hours)
+            day: Current simulation day
+
+        Returns:
+            Tuple of (env_conditions, phenology_response, stage_props)
+        """
+        # Calculate all environmental conditions first
+        env_conditions = self._calculate_environmental_conditions(temperature, humidity, solar_radiation, day)
+        # Use solar radiation ONLY from CSV config - no fallbacks
+        env_conditions['solar_radiation'] = getattr(self.system_config, 'solar_radiation', solar_radiation)
+
+        # Update the plant's developmental stage based on temperature and daylength
+        phenology_response = self.phenology_model.daily_update(
+            temperature=env_conditions['actual_temperature'],
+            daylength=daylength,
+            water_stress=0.0,  # We'll calculate this in the next step
+            temperature_stress=1.0  # We'll calculate this in the next step
+        )
+
+        stage_props = self.phenology_model.get_stage_properties()
+        self.accumulated_gdd = stage_props['total_thermal_time']
+
+        return env_conditions, phenology_response, stage_props
+
+    def _setup_daily_stress_calculation(self, env_conditions: Dict[str, Any],
+                                       nutrient_concentrations: Dict[str, float],
+                                       ph: float, previous_tank_volume: float, day: int) -> Tuple[Dict[str, Any], Any]:
+        """
+        Calculate stress factors and cultivar performance for daily simulation step.
+
+        Args:
+            env_conditions: Environmental conditions
+            nutrient_concentrations: Current nutrient concentrations
+            ph: Solution pH
+            previous_tank_volume: Previous tank volume
+            day: Current simulation day
+
+        Returns:
+            Tuple of (stress_factors, cultivar_performance)
+        """
+        # Calculate all stress factors based on environment and plant state (SINGLE SOURCE OF TRUTH)
+        plant_state = {
+            'day': day,
+            'ph': ph,
+            'tank_volume': previous_tank_volume,
+            'total_biomass': sum(pool.dry_mass for pool in self.biomass_pools),
+            'lai': self.current_lai
+        }
+
+        stress_factors = self._calculate_unified_stress_factors(
+            env_conditions=env_conditions,
+            nutrient_concentrations=nutrient_concentrations,
+            plant_state=plant_state,
+            day=day
+        )
+
+        # Get cultivar performance based on stress factors
+        cultivar_performance = self.ge_model.predict_cultivar_performance(
+            self.current_cultivar, stress_factors
+        )
+
+        return stress_factors, cultivar_performance
+
+    def _calculate_daily_canopy_and_photosynthesis(self, env_conditions: Dict[str, Any],
+                                                  stress_factors: Dict[str, Any],
+                                                  nutrient_concentrations: Dict[str, float],
+                                                  temperature: float, humidity: float,
+                                                  solar_radiation: float, daylength: float,
+                                                  day: int, weather=None) -> Tuple[Any, float]:
+        """
+        Calculate canopy architecture and photosynthesis for daily simulation step.
+
+        Args:
+            env_conditions: Environmental conditions
+            stress_factors: Calculated stress factors
+            nutrient_concentrations: Current nutrient concentrations
+            temperature: Air temperature (°C)
+            humidity: Relative humidity (%)
+            solar_radiation: Solar radiation (W/m²)
+            daylength: Day length (hours)
+            day: Current simulation day
+            weather: Weather data object (optional)
+
+        Returns:
+            Tuple of (canopy_response, canopy_photosynthesis)
+        """
+        # Update canopy architecture before photosynthesis calculation to get sunlit/shaded LAI
+        canopy_response = self.canopy_model.daily_update(
+            total_lai=self.current_lai,
+            canopy_height=self.canopy_height,
+            light_env=env_conditions['light_environment'],
+            air_temperature=env_conditions['actual_temperature'],
+            co2_concentration=env_conditions['actual_co2']
+        )
+
+        # Run internal hourly loop for key processes (photosynthesis, nutrient uptake)
+        # Use actual weather data if available, otherwise fall back to approximations
+        if weather and hasattr(weather, 'temp_min') and hasattr(weather, 'temp_max'):
+            temp_min = weather.temp_min
+            temp_max = weather.temp_max
+        else:
+            temp_min = temperature - 3.0  # Fallback approximation
+            temp_max = temperature + 3.0  # Fallback approximation
+
+        daily_integrated_results = self._run_hourly_integration(
+            day=day,
+            daily_weather_data={
+                'temp_avg': temperature,
+                'temp_min': temp_min,
+                'temp_max': temp_max,
+                'rel_humidity': humidity,
+                'solar_radiation': solar_radiation
+            },
+            env_conditions=env_conditions,
+            stress_factors=stress_factors,
+            nutrient_concentrations=nutrient_concentrations,
+            daylength=daylength,
+            canopy_response=canopy_response  # Pass canopy response to hourly integration
+        )
+
+        # Extract hourly-integrated results
+        detailed_photosynthesis = daily_integrated_results['total_daily_photosynthesis']
+
+        # Apply stress effects to photosynthesis (use overall stress factor from centralized calculation)
+        canopy_photosynthesis = (
+            detailed_photosynthesis *
+            stress_factors['overall_stress_factor'] *  # Single stress application
+            self.cultivar_profile.genetic_coefficients.PHOTOSYNTHETIC_CAPACITY
+        )
+
+        return canopy_response, canopy_photosynthesis
+
     def _prepare_senescence_data(self) -> Dict[int, Dict]:
         """Prepare senescence data from current biomass pools"""
         # Get nutrient parameters from CSV configuration
@@ -2415,114 +2282,18 @@ class CROPGROHydroponicSimulator:
         return cohort_data
     
     def _calculate_ec(self, concentrations: Dict[str, float]) -> float:
-        """Calculate electrical conductivity (dS/m) from major ions.
-        Uses the sophisticated nutrient model calculation to avoid duplication.
-        """
-        # Use the sophisticated EC calculation from nutrient model
-        if hasattr(self, 'nutrient_mobility_model') and self.nutrient_mobility_model:
-            try:
-                return self.nutrient_mobility_model.calculate_ec_from_concentrations(concentrations)
-            except Exception:
-                # Fallback to simple calculation if sophisticated model fails
-                pass
-        
-        # Fallback: Simple calculation using CSV parameters
-        nutrient_params = getattr(self.system_config, 'nutrient_parameters', {})
-        factors = {
-            'N-NO3': nutrient_params.get('ec_factor_n_no3'),
-            'P-PO4': nutrient_params.get('ec_factor_p_po4'),
-            'K': nutrient_params.get('ec_factor_k'),
-            'Ca': nutrient_params.get('ec_factor_ca'),
-            'Mg': nutrient_params.get('ec_factor_mg'),
-        }
-        
-        # Validate that all EC factors are provided
-        for ion, factor in factors.items():
-            if factor is None:
-                raise ValueError(f"❌ 'ec_factor_{ion.lower()}' parameter must be provided in nutrient_parameters CSV - no hardcoded defaults allowed")
-        
-        ec = 0.0
-        for ion, conc in concentrations.items():
-            coeff = factors.get(ion, nutrient_params.get('ec_factor_default', 0.0006))
-            if coeff is None:
-                raise ValueError(f"❌ 'ec_factor_default' parameter must be provided in nutrient_parameters CSV - no hardcoded defaults allowed")
-            ec += coeff * conc
-        
-        min_ec = nutrient_params.get('min_ec_limit')
-        max_ec = nutrient_params.get('max_ec_limit')
-        if min_ec is None:
-            raise ValueError("❌ 'min_ec_limit' parameter must be provided in nutrient_parameters CSV - no hardcoded defaults allowed")
-        if max_ec is None:
-            raise ValueError("❌ 'max_ec_limit' parameter must be provided in nutrient_parameters CSV - no hardcoded defaults allowed")
-        
-        return max(min_ec, min(max_ec, ec))
+        """Calculate electrical conductivity using nutrient concentration model."""
+        if not hasattr(self, 'nutrient_concentration_model') or not self.nutrient_concentration_model:
+            raise ValueError("❌ Nutrient concentration model must be initialized to calculate EC")
+
+        return self.nutrient_concentration_model.calculate_ec_from_concentrations(concentrations)
     
-    def _calculate_vpd(self, temp: float, rel_humidity: float) -> float:
-        """Calculate vapor pressure deficit using centralized utility"""
-        return calculate_vpd(temp, rel_humidity)
     
-    def _calculate_eto_reference(self, temperature: float, humidity: float, solar_radiation: float) -> float:
-        """Calculate reference evapotranspiration using Penman-Monteith equation"""
-        # Simplified Penman-Monteith for daily ETo (mm/day)
-        delta = 4098 * (0.6108 * np.exp(17.27 * temperature / (temperature + 237.3))) / ((temperature + 237.3) ** 2)
-        
-        # Get parameters from CSV configuration
-        env_params = getattr(self.system_config, 'environment_parameters', {})
-        gamma = env_params.get('psychrometric_constant')
-        u2 = env_params.get('wind_speed_2m')
-        
-        if gamma is None:
-            raise ValueError("❌ 'psychrometric_constant' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
-        if u2 is None:
-            raise ValueError("❌ 'wind_speed_2m' parameter must be provided in environment_parameters CSV - no hardcoded defaults allowed")
-        
-        vpd = self._calculate_vpd(temperature, humidity)
-        
-        # Simplified calculation
-        radiation_term = 0.408 * delta * (solar_radiation * 0.8)  # Net radiation approximation
-        aerodynamic_term = gamma * 900 / (temperature + 273) * u2 * vpd
-        
-        eto = (radiation_term + aerodynamic_term) / (delta + gamma * (1 + 0.34 * u2))
-        return max(0.5, min(8.0, eto))  # Reasonable bounds for hydroponic systems
     
-    def _calculate_etc_prime(self, light_interception: float, temperature: float, humidity: float, solar_radiation: float) -> float:
-        """Calculate crop evapotranspiration adjusted for canopy development"""
-        eto = self._calculate_eto_reference(temperature, humidity, solar_radiation)
-        
-        # Crop coefficient must be provided in CSV configuration
-        crop_params = getattr(self.system_config, 'crop_parameters', {})
-        base_kc = crop_params.get('base_crop_coefficient')
-        kc_factor = crop_params.get('kc_light_interception_factor')
-        
-        if base_kc is None:
-            raise ValueError("❌ 'base_crop_coefficient' parameter must be provided in crop_parameters CSV - no hardcoded defaults allowed")
-        if kc_factor is None:
-            raise ValueError("❌ 'kc_light_interception_factor' parameter must be provided in crop_parameters CSV - no hardcoded defaults allowed")
-        
-        kc = base_kc + (kc_factor * light_interception)  # Crop coefficient based on canopy coverage
-        return eto * kc
     
-    def _calculate_etc_prime_with_eto(self, light_interception: float, eto_ref: float) -> float:
-        """Calculate crop evapotranspiration using pre-calculated ETO to avoid repetition"""
-        kc = 0.7 + (0.4 * light_interception)  # Crop coefficient based on canopy coverage
-        return eto_ref * kc
     
-    def _calculate_transpiration(self, light_interception: float, temperature: float, vpd: float, humidity: float, solar_radiation: float) -> float:
-        """Calculate actual transpiration based on canopy and environmental factors"""
-        base_transpiration = self._calculate_etc_prime(light_interception, temperature, humidity, solar_radiation)
-        
-        # VPD effect: higher VPD increases transpiration
-        vpd_factor = min(1.5, 0.8 + (vpd / 2.0))
-        
-        # LAI effect: transpiration should scale with leaf area
-        lai_factor = min(1.0, self.current_lai / 2.0)  # Transpiration saturates around LAI=2 for lettuce
-        
-        # Stomatal coupling: transpiration linked to photosynthetic activity
-        stomatal_conductance_factor = light_interception * lai_factor
-        
-        return base_transpiration * vpd_factor * stomatal_conductance_factor
     
-    def _calculate_realistic_nutrient_uptake(self, 
+    def _calculate_realistic_nutrient_uptake(self,
                                            current_concentrations: Dict[str, float],
                                            root_surface_area: float,
                                            temperature: float,
@@ -2531,422 +2302,22 @@ class CROPGROHydroponicSimulator:
                                            plant_count: int,
                                            tank_volume_L: float,
                                            daily_growth_rate: float = 1.0) -> Dict[str, Any]:
-        """
-        FIXED: Calculate realistic nutrient uptake using Michaelis-Menten kinetics.
-        
-        This replaces the broken step-function nutrient depletion with proper
-        physiological uptake calculations and mass balance conservation.
-        
-        Args:
-            current_concentrations: Current solution concentrations (mg/L)
-            root_surface_area: Active root surface area (cm²)
-            temperature: Solution temperature (°C)
-            ph: Solution pH
-            ec: Electrical conductivity (dS/m)
-            plant_count: Number of plants
-            tank_volume_L: Tank volume (L)
-            daily_growth_rate: Daily growth rate (g/day)
-            
-        Returns:
-            Dictionary with uptake rates and updated concentrations
-        """
-        
-        # Michaelis-Menten kinetic parameters for lettuce (from literature)
-        kinetics = {
-            'N-NO3': {'vmax': 0.03, 'km': 0.5, 'min_conc': 0.1},
-            'NH4': {'vmax': 0.045, 'km': 0.3, 'min_conc': 0.05},
-            'P-PO4': {'vmax': 0.008, 'km': 0.1, 'min_conc': 0.02},
-            'K': {'vmax': 0.025, 'km': 0.4, 'min_conc': 0.1},
-            'Ca': {'vmax': 0.018, 'km': 0.8, 'min_conc': 0.2},
-            'Mg': {'vmax': 0.012, 'km': 0.6, 'min_conc': 0.1}
-        }
-        
-        # Environmental factors
-        # Temperature factor (Q10 = 2.0, optimal at 22°C)
-        temp_factor = 2.0 ** ((temperature - 22.0) / 10.0)
-        temp_factor = max(0.1, min(3.0, temp_factor))
-        
-        # pH factor (optimal around 6.0)
-        ph_factor = max(0.2, 1.0 - abs(ph - 6.0) * 0.5)
-        
-        # EC factor (optimal around 1.8 dS/m)
-        ec_factor = max(0.3, 1.0 - abs(ec - 1.8) * 0.3)
-        
-        combined_env_factor = temp_factor * ph_factor * ec_factor
-        combined_env_factor = min(1.5, combined_env_factor)  # Cap at 150%
-        
-        # Calculate uptake rates for each nutrient
-        uptake_rates = {}
-        updated_concentrations = {}
-        mass_balance = {}
-        
-        for nutrient, concentration in current_concentrations.items():
-            if nutrient in kinetics and concentration > kinetics[nutrient]['min_conc']:
-                k = kinetics[nutrient]
-                
-                # Michaelis-Menten equation: V = Vmax * [S] / (Km + [S])
-                uptake_per_cm2 = (k['vmax'] * concentration) / (k['km'] + concentration)
-                
-                # Scale by root surface area
-                base_uptake = uptake_per_cm2 * root_surface_area
-                
-                # Apply environmental factors
-                env_adjusted_uptake = base_uptake * combined_env_factor
-                
-                # Plant demand modifier (based on growth rate)
-                demand_factor = max(0.5, min(2.0, daily_growth_rate / 1.0))
-                
-                final_uptake = env_adjusted_uptake * demand_factor
-                uptake_rates[nutrient] = max(0.0, final_uptake)
-            else:
-                uptake_rates[nutrient] = 0.0
-        
-        # Update concentrations with mass balance
-        for nutrient, uptake_rate in uptake_rates.items():
-            initial_conc = current_concentrations[nutrient]
-            initial_mass = initial_conc * tank_volume_L
-            
-            # Total uptake for all plants
-            total_uptake_mg = uptake_rate * plant_count
-            
-            # Updated mass and concentration
-            final_mass = max(0.0, initial_mass - total_uptake_mg)
-            # Safety check: prevent division by zero when tank volume is depleted
-            if tank_volume_L > 0.0:
-                final_conc = final_mass / tank_volume_L
-            else:
-                # If tank is empty, concentration becomes zero
-                final_conc = 0.0
-            
-            updated_concentrations[nutrient] = final_conc
-            
-            # Mass balance check
-            removed_mass = initial_mass - final_mass
-            balance_error = abs(removed_mass - total_uptake_mg)
-            balance_error_pct = (balance_error / max(total_uptake_mg, 0.001)) * 100
-            
-            mass_balance[nutrient] = {
-                'initial_mass_mg': initial_mass,
-                'final_mass_mg': final_mass,
-                'removed_mass_mg': removed_mass,
-                'expected_removal_mg': total_uptake_mg,
-                'balance_error_pct': balance_error_pct
-            }
-        
-        return {
-            'uptake_rates_mg_per_plant_per_day': uptake_rates,
-            'updated_concentrations': updated_concentrations,
-            'mass_balance': mass_balance,
-            'environmental_factors': {
-                'temperature_factor': temp_factor,
-                'ph_factor': ph_factor,
-                'ec_factor': ec_factor,
-                'combined_factor': combined_env_factor
-            }
-        }
+        """Calculate nutrient uptake using nutrient uptake model."""
+        return self.nutrient_uptake_model.calculate_realistic_nutrient_uptake(
+            current_concentrations, root_surface_area, temperature, ph, ec,
+            plant_count, tank_volume_L, daily_growth_rate
+        )
     
-    def _calculate_realistic_water_uptake(self, temperature: float, humidity: float, solar_radiation: float, lai: float, total_biomass: float, growth_stage: str = "vegetative") -> Dict[str, float]:
-        """
-        FIXED: Calculate realistic water uptake using proper SPAC-based transpiration.
-        
-        This replaces the broken water calculations with physiologically accurate
-        Penman-Monteith evapotranspiration and plant demand scaling.
-        
-        Args:
-            temperature: Air temperature (°C)
-            humidity: Relative humidity (%)
-            solar_radiation: Solar radiation (MJ/m²/day) 
-            lai: Leaf Area Index
-            total_biomass: Plant biomass (g)
-            growth_stage: Growth stage string
-            
-        Returns:
-            Dictionary with water uptake components
-        """
-        
-        # 1. Calculate VPD from temperature and humidity
-        es = 0.6108 * math.exp(17.27 * temperature / (temperature + 237.3))
-        ea = es * (humidity / 100.0)
-        vpd = max(0.1, es - ea)  # Ensure positive VPD
-        
-        # 2. Reference evapotranspiration (Penman-Monteith simplified)
-        wind_speed = 2.0  # m/s default
-        psychrometric_constant = 0.665  # kPa/°C
-        
-        # Slope of saturation vapor pressure curve
-        delta = 4098 * es / ((temperature + 237.3) ** 2)
-        
-        # Net radiation (simplified)
-        net_radiation = solar_radiation * 0.77 - 2.0  # MJ/m²/day
-        
-        # Penman-Monteith equation (mm/day)
-        numerator = 0.408 * delta * net_radiation + psychrometric_constant * 900 / (temperature + 273) * wind_speed * vpd
-        denominator = delta + psychrometric_constant * (1 + 0.34 * wind_speed)
-        
-        et0_mm = max(0.1, numerator / denominator)
-        
-        # 3. Crop coefficient based on LAI and growth stage
-        base_kc = 0.8  # Lettuce base crop coefficient
-        lai_factor = min(1.0, lai / 3.0) if lai > 0.1 else 0.1
-        
-        stage_factors = {
-            "vegetative": 1.0,
-            "head_formation": 1.1,
-            "mature": 0.9
-        }
-        stage_factor = stage_factors.get(growth_stage, 1.0)
-        
-        kc = base_kc * lai_factor * stage_factor
-        
-        # 4. Environmental factors
-        temp_factor = 1.0
-        if temperature < 15 or temperature > 30:
-            temp_factor = max(0.3, 1.0 - abs(temperature - 22.5) * 0.02)
-            
-        vpd_factor = 1.0
-        if vpd < 0.4 or vpd > 1.5:
-            vpd_factor = max(0.5, 1.0 - abs(vpd - 0.8) * 0.3)
-            
-        environmental_factor = temp_factor * vpd_factor
-        
-        # 5. Crop evapotranspiration
-        etc_mm = et0_mm * kc * environmental_factor
-        
-        # 6. Scale by actual canopy coverage (LAI-based)
-        coverage_factor = min(1.0, lai / 2.0) if lai > 0 else 0.01
-        transpiration_mm = etc_mm * coverage_factor
-        
-        # 7. Convert to L/day (assuming 1 m² per plant)
-        transpiration_L = transpiration_mm / 1000.0  # mm to m water depth
-        
-        # 8. Add metabolic water demand
-        metabolic_water_L = total_biomass * 0.002  # 2 mL per gram biomass
-        
-        # 9. Total water uptake
-        total_water_uptake_L = transpiration_L + metabolic_water_L
-        
-        # 10. Water use efficiency (L/kg) - Water used per unit biomass
-        if total_biomass > 0:
-            wue_L_per_kg = total_water_uptake_L / (total_biomass / 1000.0)  # L/kg
-        else:
-            wue_L_per_kg = 0.0
-            
-        return {
-            'et0_mm': et0_mm,
-            'kc': kc,
-            'etc_mm': etc_mm,
-            'transpiration_mm': transpiration_mm,
-            'transpiration_L': transpiration_L,
-            'metabolic_water_L': metabolic_water_L,
-            'total_water_uptake_L': total_water_uptake_L,
-            'water_use_efficiency_L_kg': wue_L_per_kg,
-            'vpd_kpa': vpd,
-            'environmental_factor': environmental_factor
-        }
     
-    def _calculate_water_uptake(self, light_interception: float, temperature: float, humidity: float, solar_radiation: float, vpd: float, lai: float) -> float:
-        """
-        Calculate water uptake using plant hydraulic model.
-        
-        Water transport follows the Soil-Plant-Atmosphere Continuum (SPAC):
-        Water flow = (ΨSolution - ΨLeaf) / Resistance
-        
-        Where:
-        - ΨSolution = solution water potential (near 0 in hydroponics)
-        - ΨLeaf = leaf water potential (driven by transpiration)
-        - Resistance = root + xylem + leaf hydraulic resistances
-        """
-        
-        # 1. CALCULATE LEAF WATER POTENTIAL
-        # Leaf water potential drops with increasing transpiration demand
-        transpiration_demand = self._calculate_transpiration(light_interception, temperature, vpd, humidity, solar_radiation)
-        
-        # Leaf water potential (MPa) - becomes more negative with higher transpiration
-        # Lettuce: -0.2 to -1.5 MPa typical range
-        base_leaf_potential = -0.3  # MPa at minimal transpiration
-        transpiration_effect = -0.08 * transpiration_demand  # -0.08 MPa per mm/day transpiration
-        leaf_water_potential = base_leaf_potential + transpiration_effect
-        
-        # Osmotic adjustment under stress (plants can adjust solute concentration)
-        stress_factors = getattr(self, '_current_stress_factors', {})
-        osmotic_adjustment = self._calculate_osmotic_adjustment(stress_factors)
-        adjusted_leaf_potential = leaf_water_potential + osmotic_adjustment
-        
-        # 2. SOLUTION WATER POTENTIAL
-        # Hydroponic solution potential depends on salt concentration (EC)
-        current_ec = getattr(self.system_config, 'solution_ec', None)  # Must be set from CSV
-        if current_ec is None:
-            raise ValueError("Solution EC must be provided in CSV configuration")
-        # Water potential (MPa) = -0.036 × EC(dS/m) for typical nutrient solutions
-        solution_water_potential = -0.036 * current_ec
-        
-        # 3. HYDRAULIC CONDUCTANCES
-        # Total plant hydraulic conductance depends on root surface area and xylem development
-        
-        # Root hydraulic conductance (L/day/MPa/m²)
-        # Higher root surface area = higher conductance
-        root_surface_area_factor = min(2.0, lai / 2.0)  # Proxy for root development
-        
-        # Root conductance parameters must be provided in CSV configuration
-        root_params = getattr(self.system_config, 'root_system_parameters', {})
-        base_root_conductance = root_params.get('base_root_conductance')
-        root_scaling_factor = root_params.get('root_conductance_scaling_factor')
-        
-        if base_root_conductance is None:
-            raise ValueError("❌ 'base_root_conductance' parameter must be provided in root_system_parameters CSV - no hardcoded defaults allowed")
-        if root_scaling_factor is None:
-            raise ValueError("❌ 'root_conductance_scaling_factor' parameter must be provided in root_system_parameters CSV - no hardcoded defaults allowed")
-        
-        root_conductance = base_root_conductance * root_surface_area_factor
-        
-        # Xylem hydraulic conductance (limited by stem cross-sectional area)  
-        stem_biomass = self.biomass_pools[1].dry_mass if len(self.biomass_pools) > 1 else 1.0
-        
-        base_xylem_conductance = root_params.get('base_xylem_conductance')
-        xylem_scaling_factor = root_params.get('xylem_conductance_scaling_factor')
-        
-        if base_xylem_conductance is None:
-            raise ValueError("❌ 'base_xylem_conductance' parameter must be provided in root_system_parameters CSV - no hardcoded defaults allowed")
-        if xylem_scaling_factor is None:
-            raise ValueError("❌ 'xylem_conductance_scaling_factor' parameter must be provided in root_system_parameters CSV - no hardcoded defaults allowed")
-        
-        xylem_conductance = base_xylem_conductance * math.sqrt(stem_biomass / xylem_scaling_factor)  # Scales with stem development
-        
-        # Series resistances: 1/Total = 1/Root + 1/Xylem
-        total_conductance = 1.0 / (1.0/root_conductance + 1.0/xylem_conductance)
-        
-        # 4. WATER FLOW CALCULATION
-        # Darcy's law: Flow = Conductance × ΔΨ
-        water_potential_gradient = solution_water_potential - adjusted_leaf_potential  # Always positive for uptake
-        
-        # Hydraulic flow (L/m²/day)
-        hydraulic_water_uptake = total_conductance * water_potential_gradient
-        
-        # 5. METABOLIC WATER DEMAND
-        # Additional water for cell metabolism and growth
-        metabolic_water = lai * self.params.metabolic_water_per_lai
-        
-        # 6. CAVITATION AND XYLEM FAILURE
-        # Xylem cavitation occurs at very negative water potentials
-        cavitation_threshold = root_params.get('cavitation_threshold')
-        if cavitation_threshold is None:
-            raise ValueError("❌ 'cavitation_threshold' parameter must be provided in root_system_parameters CSV - no hardcoded defaults allowed")
-        
-        if adjusted_leaf_potential < cavitation_threshold:
-            cavitation_factor = max(0.1, 1.0 + (adjusted_leaf_potential - cavitation_threshold) / 1.0)
-            hydraulic_water_uptake *= cavitation_factor
-        
-        # Total water uptake limited by hydraulic capacity and plant physiology
-        total_uptake = max(0.1, hydraulic_water_uptake + metabolic_water)
-        
-        # Plants can uptake more water than immediate transpiration demand for:
-        # 1. Water storage in tissues (especially in stems and roots)
-        # 2. Metabolic processes (cell expansion, biochemical reactions)
-        # 3. Maintaining turgor pressure
-        # Therefore, no artificial cap based on transpiration demand
-        return total_uptake
     
-    def _calculate_osmotic_adjustment(self, stress_factors: Dict[str, Any]) -> float:
-        """
-        Calculate osmotic adjustment under stress conditions.
-        Plants can accumulate solutes to maintain turgor under water stress.
-        """
-        water_stress = stress_factors.get('water_stress_level', 0.0)
-        salt_stress = stress_factors.get('salinity_stress', 0.0)
-        
-        # Maximum osmotic adjustment must be provided in CSV configuration
-        stress_params = getattr(self.system_config, 'stress_parameters', {})
-        max_adjustment = stress_params.get('max_osmotic_adjustment')
-        salt_stress_factor = stress_params.get('salt_stress_osmotic_factor')
-        
-        if max_adjustment is None:
-            raise ValueError("❌ 'max_osmotic_adjustment' parameter must be provided in stress_parameters CSV - no hardcoded defaults allowed")
-        if salt_stress_factor is None:
-            raise ValueError("❌ 'salt_stress_osmotic_factor' parameter must be provided in stress_parameters CSV - no hardcoded defaults allowed")
-        
-        # Osmotic adjustment increases with stress
-        adjustment = max_adjustment * (water_stress + salt_stress * salt_stress_factor)
-        
-        return min(max_adjustment, adjustment)
 
-    def _calculate_functional_balance_allocation(self, stress_factors: Dict[str, Any], 
-                                               stage_props: Dict[str, Any], 
+    def _calculate_functional_balance_allocation(self, stress_factors: Dict[str, Any],
+                                               stage_props: Dict[str, Any],
                                                env_conditions: Dict[str, Any]) -> Dict[str, float]:
-        """
-        Calculate biomass allocation using functional balance theory.
-        
-        Plants allocate biomass to overcome the most limiting resource:
-        - Light limitation → more leaves (increase light capture)
-        - Nitrogen limitation → more roots (increase N uptake) 
-        - Water limitation → more roots (increase water uptake)
-        - Developmental stage → sink strength effects
-        """
-        # Base allocation fractions (structural minimum)
-        if stage_props['is_vegetative']:
-            base_fractions = {
-                'leaves': self.params.vegetative_leaf_allocation,
-                'stems': self.params.vegetative_stem_allocation, 
-                'roots': self.params.vegetative_root_allocation
-            }
-        else:
-            base_fractions = {
-                'leaves': self.params.reproductive_leaf_allocation,
-                'stems': self.params.reproductive_stem_allocation,
-                'roots': self.params.reproductive_root_allocation
-            }
-        
-        # Resource limitation factors (0 = severe limitation, 1 = no limitation)
-        light_limitation = 1.0 - env_conditions.get('light_stress', 0.0)
-        nitrogen_limitation = stress_factors.get('nitrogen_stress_level', 0.0)  # Higher = more stressed
-        water_limitation = stress_factors.get('water_stress_level', 0.0)
-        
-        # Natural functional balance - unlimited cellular response
-        # Light limitation drives natural leaf allocation
-        light_response = max(0.0, (1.0 - light_limitation) * 1.0)  # Natural unlimited response
-        
-        # Nitrogen limitation drives natural root allocation  
-        nitrogen_response = max(0.0, nitrogen_limitation * 1.0)  # Natural unlimited response
-        
-        # Water limitation drives natural root allocation
-        water_response = max(0.0, water_limitation * 1.0)  # Natural unlimited response
-        
-        # Root:shoot functional balance
-        root_demand = nitrogen_response + water_response
-        shoot_demand = light_response
-        
-        # Natural cellular allocation - no artificial caps
-        total_root_shift = root_demand  # Natural response to resource limitation
-        total_leaf_shift = shoot_demand  # Natural response to light needs
-        
-        # Apply shifts while maintaining mass balance
-        adjusted_fractions = base_fractions.copy()
-        
-        # Increase roots in response to nutrient/water limitation
-        if total_root_shift > 0:
-            adjusted_fractions['roots'] += total_root_shift
-            # Reduce leaves and stems proportionally
-            reduction_factor = total_root_shift / (base_fractions['leaves'] + base_fractions['stems'])
-            adjusted_fractions['leaves'] -= base_fractions['leaves'] * reduction_factor
-            adjusted_fractions['stems'] -= base_fractions['stems'] * reduction_factor
-        
-        # Increase leaves in response to light limitation
-        if total_leaf_shift > 0:
-            adjusted_fractions['leaves'] += total_leaf_shift
-            # Reduce roots and stems proportionally  
-            reduction_factor = total_leaf_shift / (base_fractions['roots'] + base_fractions['stems'])
-            adjusted_fractions['roots'] -= base_fractions['roots'] * reduction_factor
-            adjusted_fractions['stems'] -= base_fractions['stems'] * reduction_factor
-        
-        # Ensure all fractions are positive and sum to 1.0
-        for organ in adjusted_fractions:
-            adjusted_fractions[organ] = max(0.05, adjusted_fractions[organ])  # Minimum 5%
-            
-        # Normalize to sum to 1.0
-        total = sum(adjusted_fractions.values())
-        for organ in adjusted_fractions:
-            adjusted_fractions[organ] /= total
-            
-        return adjusted_fractions
+        """Calculate biomass allocation using biomass allocation model."""
+        return self.biomass_allocation_model.calculate_functional_balance_allocation(
+            stress_factors, stage_props, env_conditions
+        )
 
     def _calculate_solution_temperature(self, air_temp: float, solar_radiation: float, tank_volume: float, day: int) -> float:
         """Calculate hydroponic solution temperature with simple thermal mass and solar gain model."""
@@ -3125,301 +2496,16 @@ class CROPGROHydroponicSimulator:
         }
     
     def display_detailed_results(self, daily_result) -> str:
-        """Display comprehensive CROPGRO results for a single day with clear per-plant vs per-system categorization"""
-        output = []
-        
-        # Header with day and stage
-        growth_stage = getattr(daily_result, 'growth_stage', 'N/A')
-        day = getattr(daily_result, 'day', 0)
-        output.append(f"\n{'='*80}")
-        output.append(f"🌱 DAY {day:2d} - {growth_stage:>15} - CROPGRO HYDROPONIC SIMULATION")
-        output.append(f"{'='*80}")
-        
-        # 1. QUICK SUMMARY (Key metrics at a glance)
-        output.append(f"\n📊 QUICK SUMMARY:")
-        total_biomass = getattr(daily_result, 'total_biomass', None)
-        daily_growth = getattr(daily_result, 'daily_growth_rate', None)
-        lai = getattr(daily_result, 'lai', None)
-        plant_height = getattr(daily_result, 'plant_height_cm', None)
-        
-        if total_biomass is not None and daily_growth is not None and lai is not None and plant_height is not None:
-            output.append(f"  🎯 Per Plant: {total_biomass:6.2f} g biomass | {daily_growth:5.3f} g/day growth | {plant_height:5.1f} cm height")
-            leaf_number = getattr(daily_result, 'leaf_number', None)
-            leaf_area = getattr(daily_result, 'leaf_area_m2', None)
-            if leaf_number is not None and leaf_area is not None:
-                output.append(f"  🌿 Canopy: LAI {lai:5.3f} | {leaf_number:2d} leaves | {leaf_area*10000:5.1f} cm² leaf area")
-            else:
-                output.append(f"  🌿 Canopy: LAI {lai:5.3f} | Leaf data not available")
-        else:
-            output.append(f"  🎯 Per Plant: Biomass data not available")
-        
-        # 2. PER-PLANT BIOMASS BREAKDOWN (Individual plant values)
-        output.append(f"\n⚖️  PER-PLANT BIOMASS (Individual Plant Values):")
-        output.append(f"  {'Component':<15} {'Dry Weight (g)':<15} {'Fresh Weight (g)':<15} {'Growth Rate (g/day)':<20}")
-        output.append(f"  {'-'*15} {'-'*15} {'-'*15} {'-'*20}")
-        
-        # Get all biomass values without fallbacks
-        shoot_fresh = getattr(daily_result, 'shoot_fresh_weight', None)
-        leaf_dry = getattr(daily_result, 'leaf_dry_weight', None)
-        leaf_fresh = getattr(daily_result, 'leaf_fresh_weight', None)
-        leaf_growth = getattr(daily_result, 'leaf_growth_rate', None)
-        stem_dry = getattr(daily_result, 'stem_dry_weight', None)
-        stem_fresh = getattr(daily_result, 'stem_fresh_weight', None)
-        stem_growth = getattr(daily_result, 'stem_growth_rate', None)
-        root_dry = getattr(daily_result, 'root_dry_weight', None)
-        root_fresh = getattr(daily_result, 'root_fresh_weight', None)
-        root_growth = getattr(daily_result, 'root_growth_rate', None)
-        
-        if total_biomass is not None:
-            output.append(f"  {'Total':<15} {total_biomass:<15.2f} {shoot_fresh if shoot_fresh is not None else 'N/A':<15} {daily_growth if daily_growth is not None else 'N/A':<20}")
-        else:
-            output.append(f"  {'Total':<15} {'N/A':<15} {'N/A':<15} {'N/A':<20}")
-            
-        if leaf_dry is not None:
-            output.append(f"  {'Leaves':<15} {leaf_dry:<15.2f} {leaf_fresh if leaf_fresh is not None else 'N/A':<15} {leaf_growth if leaf_growth is not None else 'N/A':<20}")
-        else:
-            output.append(f"  {'Leaves':<15} {'N/A':<15} {'N/A':<15} {'N/A':<20}")
-            
-        if stem_dry is not None:
-            output.append(f"  {'Stems':<15} {stem_dry:<15.2f} {stem_fresh if stem_fresh is not None else 'N/A':<15} {stem_growth if stem_growth is not None else 'N/A':<20}")
-        else:
-            output.append(f"  {'Stems':<15} {'N/A':<15} {'N/A':<15} {'N/A':<20}")
-            
-        if root_dry is not None:
-            output.append(f"  {'Roots':<15} {root_dry:<15.2f} {root_fresh if root_fresh is not None else 'N/A':<15} {root_growth if root_growth is not None else 'N/A':<20}")
-        else:
-            output.append(f"  {'Roots':<15} {'N/A':<15} {'N/A':<15} {'N/A':<20}")
-        
-        # 3. PER-SYSTEM TOTALS (System-wide values)
-        plant_count = getattr(daily_result, 'plant_count', None)
-        system_area = getattr(daily_result, 'system_area_m2', None)
-        
-        if plant_count is not None and system_area is not None and total_biomass is not None:
-            system_biomass = total_biomass * plant_count
-            system_yield = system_biomass / system_area
-            
-            output.append(f"\n🏭 PER-SYSTEM TOTALS ({plant_count} Plants × {system_area} m²):")
-            output.append(f"  {'Metric':<25} {'Per Plant':<15} {'Total System':<15} {'Per m²':<15}")
-            output.append(f"  {'-'*25} {'-'*15} {'-'*15} {'-'*15}")
-            output.append(f"  {'Biomass':<25} {total_biomass:<15.2f} g {system_biomass:<15.1f} g {system_yield:<15.1f} g/m²")
-            
-            if daily_growth is not None:
-                output.append(f"  {'Daily Growth':<25} {daily_growth:<15.3f} g/day {(daily_growth * plant_count):<15.2f} g/day {(daily_growth * plant_count / system_area):<15.2f} g/m²/day")
-            else:
-                output.append(f"  {'Daily Growth':<25} {'N/A':<15} {'N/A':<15} {'N/A':<15}")
-                
-            if leaf_area is not None:
-                output.append(f"  {'Leaf Area':<25} {leaf_area*10000:<15.1f} cm² {(leaf_area * plant_count * 10000):<15.0f} cm² {lai:<15.3f} LAI")
-            else:
-                output.append(f"  {'Leaf Area':<25} {'N/A':<15} {'N/A':<15} {lai if lai is not None else 'N/A':<15}")
-        else:
-            output.append(f"\n🏭 PER-SYSTEM TOTALS: System configuration data not available")
-        
-        # 4. CARBON BALANCE (Per plant physiology)
-        output.append(f"\n🔄 CARBON BALANCE (Per Plant):")
-        net_assimilation = getattr(daily_result, 'net_assimilation', None)
-        photosynthesis = getattr(daily_result, 'photosynthesis_rate', None)
-        respiration = getattr(daily_result, 'respiration_rate', None)
-        maint_resp = getattr(daily_result, 'maintenance_respiration', None)
-        growth_resp = getattr(daily_result, 'growth_respiration', None)
-        
-        if all(v is not None for v in [net_assimilation, photosynthesis, respiration, maint_resp, growth_resp]):
-            output.append(f"  {'Process':<20} {'Rate (g/day)':<15} {'Balance':<15}")
-            output.append(f"  {'-'*20} {'-'*15} {'-'*15}")
-            output.append(f"  {'Photosynthesis':<20} {photosynthesis:<15.4f} {'→':<15}")
-            output.append(f"  {'Maintenance Resp.':<20} {maint_resp:<15.4f} {'←':<15}")
-            output.append(f"  {'Growth Resp.':<20} {growth_resp:<15.4f} {'←':<15}")
-            output.append(f"  {'Total Respiration':<20} {respiration:<15.4f} {'←':<15}")
-            output.append(f"  {'NET ASSIMILATION':<20} {net_assimilation:<15.4f} {'=':<15}")
-        else:
-            output.append(f"  Carbon balance data not available")
-        
-        # 5. NUTRIENT STATUS (System-wide concentrations)
-        output.append(f"\n💧 NUTRIENT SOLUTION STATUS (System-wide):")
-        output.append(f"  {'Nutrient':<10} {'Concentration':<15} {'Uptake (mg/day)':<20} {'Status':<15}")
-        output.append(f"  {'-'*10} {'-'*15} {'-'*20} {'-'*15}")
-        
-        nutrients = [
-            ('N-NO₃', getattr(daily_result, 'n_no3_mg_l', None), getattr(daily_result, 'nitrogen_uptake_mg', None)),
-            ('P-PO₄', getattr(daily_result, 'p_po4_mg_l', None), getattr(daily_result, 'phosphorus_uptake_mg', None)),
-            ('K', getattr(daily_result, 'k_mg_l', None), getattr(daily_result, 'k_uptake_rate', None)),
-            ('Ca', getattr(daily_result, 'ca_mg_l', None), getattr(daily_result, 'ca_uptake_rate', None)),
-            ('Mg', getattr(daily_result, 'mg_mg_l', None), getattr(daily_result, 'mg_uptake_rate', None))
-        ]
-        
-        for name, conc, uptake in nutrients:
-            if conc is not None:
-                status = "🟢 Optimal" if conc > 50 else "🟡 Low" if conc > 20 else "🔴 Critical"
-                uptake_str = f"{uptake:.2f}" if uptake is not None else "N/A"
-                output.append(f"  {name:<10} {conc:<15.1f} mg/L {uptake_str:<20} {status:<15}")
-            else:
-                output.append(f"  {name:<10} {'N/A':<15} {'N/A':<20} {'Data Missing':<15}")
-        
-        # System parameters without fallbacks
-        ec = getattr(daily_result, 'ec', None)
-        ph = getattr(daily_result, 'solution_ph', None)
-        volume = getattr(daily_result, 'tank_volume_l', None)
-        
-        if ec is not None:
-            status = "🟢 Optimal" if ec > 1.0 else "🔴 Low"
-            output.append(f"  {'EC':<10} {ec:<15.2f} dS/m {'':<20} {status:<15}")
-        else:
-            output.append(f"  {'EC':<10} {'N/A':<15} {'':<20} {'Data Missing':<15}")
-            
-        if ph is not None:
-            status = "🟢 Optimal" if 5.5 <= ph <= 6.5 else "🟡 Off-target"
-            output.append(f"  {'pH':<10} {ph:<15.2f} {'':<20} {status:<15}")
-        else:
-            output.append(f"  {'pH':<10} {'N/A':<15} {'':<20} {'Data Missing':<15}")
-            
-        if volume is not None:
-            output.append(f"  {'Volume':<10} {volume:<15.0f} L {'':<20} {'🟢 Adequate':<15}")
-        else:
-            output.append(f"  {'Volume':<10} {'N/A':<15} {'':<20} {'Data Missing':<15}")
-        
-        # 6. ENVIRONMENTAL CONDITIONS (System-wide)
-        output.append(f"\n🌡️  ENVIRONMENTAL CONDITIONS (System-wide):")
-        output.append(f"  {'Parameter':<20} {'Value':<15} {'Target':<15} {'Status':<15}")
-        output.append(f"  {'-'*20} {'-'*15} {'-'*15} {'-'*15}")
-        
-        temp = getattr(daily_result, 'temp_c', None)
-        humidity = getattr(daily_result, 'humidity', None)
-        co2 = getattr(daily_result, 'co2_umol_mol', None)
-        vpd = getattr(daily_result, 'vpd_kpa', None)
-        
-        if temp is not None:
-            temp_status = "🟢 Optimal" if 20 <= temp <= 28 else "🟡 Warm" if temp > 28 else "🟡 Cool"
-            output.append(f"  {'Temperature':<20} {temp:<15.1f}°C {'20-28°C':<15} {temp_status:<15}")
-        else:
-            output.append(f"  {'Temperature':<20} {'N/A':<15} {'20-28°C':<15} {'Data Missing':<15}")
-            
-        if humidity is not None:
-            humidity_status = "🟢 Optimal" if 50 <= humidity <= 80 else "🟡 Low" if humidity < 50 else "🟡 High"
-            output.append(f"  {'Humidity':<20} {humidity:<15.1f}% {'50-80%':<15} {humidity_status:<15}")
-        else:
-            output.append(f"  {'Humidity':<20} {'N/A':<15} {'50-80%':<15} {'Data Missing':<15}")
-            
-        if co2 is not None:
-            co2_status = "🟢 Optimal" if co2 >= 400 else "🟡 Low"
-            output.append(f"  {'CO₂':<20} {co2:<15.0f} ppm {'≥400 ppm':<15} {co2_status:<15}")
-        else:
-            output.append(f"  {'CO₂':<20} {'N/A':<15} {'≥400 ppm':<15} {'Data Missing':<15}")
-            
-        if vpd is not None:
-            vpd_status = "🟢 Optimal" if 0.6 <= vpd <= 1.2 else "🟡 High" if vpd > 1.2 else "🟡 Low"
-            output.append(f"  {'VPD':<20} {vpd:<15.2f} kPa {'0.6-1.2 kPa':<15} {vpd_status:<15}")
-        else:
-            output.append(f"  {'VPD':<20} {'N/A':<15} {'0.6-1.2 kPa':<15} {'Data Missing':<15}")
-        
-        # 7. STRESS FACTORS (Per plant)
-        output.append(f"\n😰 STRESS FACTORS (Per Plant):")
-        output.append(f"  {'Stress Type':<20} {'Level':<15} {'Effect':<15} {'Status':<15}")
-        output.append(f"  {'-'*20} {'-'*15} {'-'*15} {'-'*15}")
-        
-        stresses = [
-            ('Temperature', getattr(daily_result, 'temperature_stress', None), getattr(daily_result, 'temperature_stress_factor', None)),
-            ('Water', getattr(daily_result, 'water_stress', None), getattr(daily_result, 'water_stress_factor', None)),
-            ('Nutrient', getattr(daily_result, 'nutrient_stress', None), getattr(daily_result, 'nutrient_stress_factor', None)),
-            ('Nitrogen', getattr(daily_result, 'nitrogen_stress', None), getattr(daily_result, 'nitrogen_stress_factor', None)),
-            ('Salinity', getattr(daily_result, 'salinity_stress', None), getattr(daily_result, 'salinity_stress_factor', None))
-        ]
-        
-        for name, level, effect in stresses:
-            if level is not None and effect is not None:
-                if level < 0.1:
-                    status = "🟢 None"
-                elif level < 0.3:
-                    status = "🟡 Mild"
-                elif level < 0.6:
-                    status = "🟠 Moderate"
-                else:
-                    status = "🔴 Severe"
-                output.append(f"  {name:<20} {level:<15.3f} {effect:<15.3f} {status:<15}")
-            else:
-                output.append(f"  {name:<20} {'N/A':<15} {'N/A':<15} {'Data Missing':<15}")
-        
-        # 8. DEVELOPMENT PROGRESS (Per plant)
-        output.append(f"\n📅 DEVELOPMENT PROGRESS (Per Plant):")
-        gdd = getattr(daily_result, 'accumulated_gdd', None)
-        thermal_time = getattr(daily_result, 'thermal_time_daily', None)
-        dev_rate = getattr(daily_result, 'development_rate', None)
-        
-        if gdd is not None and thermal_time is not None and dev_rate is not None:
-            # Estimate progress to harvest using CSV configuration
-            phenology_params = getattr(self.system_config, 'phenology_parameters', {})
-            harvest_gdd = phenology_params.get('harvest_gdd')
-            if harvest_gdd is None:
-                raise ValueError("❌ 'harvest_gdd' parameter must be provided in phenology_parameters CSV - no hardcoded defaults allowed")
-            progress = min(100.0, (gdd / harvest_gdd) * 100) if harvest_gdd > 0 else 0.0
-            
-            output.append(f"  • Accumulated GDD: {gdd:6.1f}°C-days (Target: {harvest_gdd:.0f}°C-days)")
-            output.append(f"  • Daily Thermal Time: {thermal_time:6.1f}°C-days")
-            output.append(f"  • Development Rate: {dev_rate:6.4f}")
-            output.append(f"  • Progress to Harvest: {progress:6.1f}%")
-        else:
-            output.append(f"  Development data not available")
-        
-        # 9. EFFICIENCY METRICS (System-wide)
-        output.append(f"\n📊 EFFICIENCY METRICS (System-wide):")
-        water_use = getattr(daily_result, 'water_use_efficiency', None)
-        light_use = getattr(daily_result, 'light_use_efficiency', None)
-        
-        if water_use is not None:
-            output.append(f"  • Water Use Efficiency: {water_use:6.2f} L/kg")
-        else:
-            output.append(f"  • Water Use Efficiency: Data not available")
-            
-        if light_use is not None:
-            output.append(f"  • Light Use Efficiency: {light_use:6.3f} g/MJ")
-        else:
-            output.append(f"  • Light Use Efficiency: Data not available")
-            
-        if daily_growth is not None:
-            n_uptake = getattr(daily_result, 'nitrogen_uptake_mg', None)
-            if n_uptake is not None and n_uptake > 0:
-                n_efficiency = (daily_growth / n_uptake) * 1000
-                output.append(f"  • Nitrogen Use Efficiency: {n_efficiency:6.1f} g biomass/g N")
-            else:
-                output.append(f"  • Nitrogen Use Efficiency: Data not available")
-        else:
-            output.append(f"  • Nitrogen Use Efficiency: Data not available")
-            
-        if system_yield is not None:
-            output.append(f"  • System Yield: {system_yield:6.1f} g/m²")
-        else:
-            output.append(f"  • System Yield: Data not available")
-        
-        # 10. PROJECTIONS (Based on current performance)
-        if day > 1 and daily_growth is not None and daily_growth > 0 and gdd is not None and thermal_time is not None:
-            # Estimate days to harvest using CSV configuration
-            phenology_params = getattr(self.system_config, 'phenology_parameters', {})
-            harvest_gdd = phenology_params.get('harvest_gdd')
-            if harvest_gdd is None:
-                raise ValueError("❌ 'harvest_gdd' parameter must be provided in phenology_parameters CSV - no hardcoded defaults allowed")
-            remaining_gdd = max(0, harvest_gdd - gdd)
-            
-            # Estimate days based on thermal time
-            days_to_harvest = remaining_gdd / thermal_time if thermal_time > 0 else 0
-            projected_yield = total_biomass + (daily_growth * days_to_harvest)
-            
-            if plant_count is not None and system_area is not None:
-                projected_system_yield = projected_yield * plant_count / system_area
-                
-                output.append(f"\n🔮 PROJECTIONS (Based on Current Performance):")
-                output.append(f"  • Days to Harvest: {days_to_harvest:6.1f} days")
-                output.append(f"  • Projected Final Biomass: {projected_yield:6.1f} g/plant")
-                output.append(f"  • Projected System Yield: {projected_system_yield:6.1f} g/m²")
-        
-        # Footer
-        output.append(f"\n{'-'*80}")
-        if plant_count is not None:
-            output.append(f"📋 Note: Biomass values are PER PLANT. Multiply by {plant_count} for total system values.")
-        else:
-            output.append(f"📋 Note: Plant count not available")
-        output.append(f"📋 Note: Environmental values are SYSTEM-WIDE (affect all plants).")
-        output.append(f"{'='*80}")
-        
-        return "\n".join(output)
+        """
+        Delegate to the results display utility for comprehensive result formatting.
+
+        Args:
+            daily_result: Daily simulation results to format
+
+        Returns:
+            Formatted results string with clear per-plant vs per-system categorization
+        """
+        return self.results_display_utility.display_detailed_results(daily_result)
     
     def _update_cultivar_with_dynamic_params(self, genetic_params: dict):
         """Update cultivar profile with dynamic genetic parameters from CSV"""

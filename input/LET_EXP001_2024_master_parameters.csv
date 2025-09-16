@@ -534,19 +534,19 @@ mg_uptake_vmax,0.012,mg_per_cm2_per_day,Maximum Mg uptake rate per root surface 
 mg_uptake_km,0.6,mg_per_L,Michaelis-Menten constant for Mg uptake,nutrient_parameters,Shaul 2002,1.0
 so4_uptake_vmax,0.015,mg_per_cm2_per_day,Maximum SO4 uptake rate per root surface area,nutrient_parameters,Hawkesford 2000,1.0
 so4_uptake_km,0.7,mg_per_L,Michaelis-Menten constant for SO4 uptake,nutrient_parameters,Hawkesford 2000,1.0
-ec_factor_n_no3,0.0064,dS_per_m_per_mg_L,EC contribution factor for NO3-N,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_p_po4,0.0052,dS_per_m_per_mg_L,EC contribution factor for PO4-P,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_k,0.0073,dS_per_m_per_mg_L,EC contribution factor for K,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_ca,0.0050,dS_per_m_per_mg_L,EC contribution factor for Ca,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_mg,0.0082,dS_per_m_per_mg_L,EC contribution factor for Mg,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_n_no3,0.0006,dS_per_m_per_mg_L,EC contribution factor for NO3-N,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_p_po4,0.0005,dS_per_m_per_mg_L,EC contribution factor for PO4-P,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_k,0.0007,dS_per_m_per_mg_L,EC contribution factor for K,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_ca,0.0006,dS_per_m_per_mg_L,EC contribution factor for Ca,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_mg,0.0006,dS_per_m_per_mg_L,EC contribution factor for Mg,nutrient_parameters,Sonneveld & Voogt 2009,1.0
 ec_factor_default,0.0006,dS_per_m_per_mg_L,Default EC contribution factor for other ions,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_s_so4,0.52,dS_per_m_per_mg_per_L,EC factor for SO4-S,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_fe,0.45,dS_per_m_per_mg_per_L,EC factor for Fe,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_mn,0.48,dS_per_m_per_mg_per_L,EC factor for Mn,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_zn,0.50,dS_per_m_per_mg_per_L,EC factor for Zn,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_cu,0.47,dS_per_m_per_mg_per_L,EC factor for Cu,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_b,0.43,dS_per_m_per_mg_per_L,EC factor for B,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_mo,0.55,dS_per_m_per_mg_per_L,EC factor for Mo,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_s_so4,0.0005,dS_per_m_per_mg_per_L,EC factor for SO4-S,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_fe,0.0004,dS_per_m_per_mg_per_L,EC factor for Fe,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_mn,0.0004,dS_per_m_per_mg_per_L,EC factor for Mn,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_zn,0.0004,dS_per_m_per_mg_per_L,EC factor for Zn,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_cu,0.0004,dS_per_m_per_mg_per_L,EC factor for Cu,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_b,0.0004,dS_per_m_per_mg_per_L,EC factor for B,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_mo,0.0005,dS_per_m_per_mg_per_L,EC factor for Mo,nutrient_parameters,Sonneveld & Voogt 2009,1.0
 ec_uptake_high_threshold,1.5,unitless,High EC threshold for uptake stress,nutrient_parameters,Sonneveld & Voogt 2009,1.0
 ec_uptake_low_threshold,0.5,unitless,Low EC threshold for uptake stress,nutrient_parameters,Sonneveld & Voogt 2009,1.0
 ec_uptake_modifier_n_high,0.2,unitless,High EC nitrogen uptake modifier,nutrient_parameters,Sonneveld & Voogt 2009,1.0
@@ -848,3 +848,62 @@ salinity_stress_impact,0.2,fraction,Salinity stress impact weight (higher = more
 oxygen_stress_impact,0.1,fraction,Oxygen stress impact weight (higher = more oxygen stress applied),stress_parameters,Sonneveld & Voogt 2009,1.0
 ph_stress_impact,0.15,fraction,pH stress impact weight (higher = more pH stress applied),stress_parameters,Sonneveld & Voogt 2009,1.0
 initial_root_activity,1.0,fraction,Initial activity factor for new root cohorts,root_system,Sonneveld & Voogt 2009,1.0
+temperature_sensitivity,0.1,1_per_celsius,Temperature sensitivity factor for water uptake,water_parameters,Seginer et al. 1991,1.0
+vpd_sensitivity,0.2,1_per_kPa,VPD sensitivity factor for water uptake,water_parameters,Seginer et al. 1991,1.0
+metabolic_water_per_biomass,0.05,L_per_g,Water requirement per unit biomass,water_parameters,Amthor 2000,1.0
+base_leaf_potential,-0.5,MPa,Base leaf water potential,root_system,Seginer et al. 1991,1.0
+transpiration_potential_factor,0.8,fraction,Transpiration potential factor,root_system,Seginer et al. 1991,1.0
+solution_potential_factor,0.1,fraction,Solution potential factor,root_system,Seginer et al. 1991,1.0
+light_response_factor,0.3,fraction,Response strength to light limitation,allocation_parameters,Seginer et al. 1991,1.0
+nitrogen_response_factor,0.4,fraction,Response strength to nitrogen limitation,allocation_parameters,Seginer et al. 1991,1.0
+water_response_factor,0.2,fraction,Response strength to water limitation,allocation_parameters,Seginer et al. 1991,1.0
+minimum_organ_fraction,0.05,fraction,Minimum allocation to any organ,allocation_parameters,Seginer et al. 1991,1.0
+ec_factor_n_nh4,0.0007,dS_per_m_per_mg_L,EC contribution factor for NH4-N,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_n_no3,0.0006,dS_per_m_per_mg_L,EC contribution factor for initial NO3-N,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_n_nh4,0.0007,dS_per_m_per_mg_L,EC contribution factor for initial NH4-N,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_p_po4,0.0005,dS_per_m_per_mg_L,EC contribution factor for initial PO4-P,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_k,0.0007,dS_per_m_per_mg_L,EC contribution factor for initial K,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_ca,0.0005,dS_per_m_per_mg_L,EC contribution factor for initial Ca,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_mg,0.0008,dS_per_m_per_mg_L,EC contribution factor for initial Mg,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_s_so4,0.0005,dS_per_m_per_mg_per_L,EC factor for initial SO4-S,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_fe,0.0004,dS_per_m_per_mg_per_L,EC factor for initial Fe,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_mn,0.0004,dS_per_m_per_mg_per_L,EC factor for initial Mn,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_zn,0.0004,dS_per_m_per_mg_per_L,EC factor for initial Zn,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_cu,0.0004,dS_per_m_per_mg_per_L,EC factor for initial Cu,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_b,0.0004,dS_per_m_per_mg_per_L,EC factor for initial B,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_mo,0.0004,dS_per_m_per_mg_per_L,EC factor for initial Mo,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_target_ec,1.0,dS_per_m_per_dS_per_m,EC factor for target EC parameter,nutrient_parameters,System parameter,1.0
+ec_factor_min_ec_threshold,1.0,dS_per_m_per_dS_per_m,EC factor for min EC threshold parameter,nutrient_parameters,System parameter,1.0
+ec_factor_max_ec_threshold,1.0,dS_per_m_per_dS_per_m,EC factor for max EC threshold parameter,nutrient_parameters,System parameter,1.0
+ec_factor_min_ph_threshold,0.0,dS_per_m_per_pH,EC factor for min pH threshold parameter,nutrient_parameters,System parameter,1.0
+ec_factor_max_ph_threshold,0.0,dS_per_m_per_pH,EC factor for max pH threshold parameter,nutrient_parameters,System parameter,1.0
+ec_factor_solution_change_interval,0.0,dS_per_m_per_day,EC factor for solution change interval parameter,nutrient_parameters,System parameter,1.0
+ec_factor_ec_decline_rate,0.0,dS_per_m_per_decline_rate,EC factor for EC decline rate parameter,nutrient_parameters,System parameter,1.0
+ec_factor_no3_uptake_vmax,0.0,dS_per_m_per_uptake_rate,EC factor for NO3 uptake Vmax parameter,nutrient_parameters,System parameter,1.0
+ec_factor_nh4_uptake_vmax,0.0,dS_per_m_per_uptake_rate,EC factor for NH4 uptake Vmax parameter,nutrient_parameters,System parameter,1.0
+ec_factor_po4_uptake_vmax,0.0,dS_per_m_per_uptake_rate,EC factor for PO4 uptake Vmax parameter,nutrient_parameters,System parameter,1.0
+ec_factor_k_uptake_vmax,0.0,dS_per_m_per_uptake_rate,EC factor for K uptake Vmax parameter,nutrient_parameters,System parameter,1.0
+ec_factor_no3_uptake_km,0.0,dS_per_m_per_km,EC factor for NO3 uptake Km parameter,nutrient_parameters,System parameter,1.0
+ec_factor_nh4_uptake_km,0.0,dS_per_m_per_km,EC factor for NH4 uptake Km parameter,nutrient_parameters,System parameter,1.0
+ec_factor_po4_uptake_km,0.0,dS_per_m_per_km,EC factor for PO4 uptake Km parameter,nutrient_parameters,System parameter,1.0
+ec_factor_k_uptake_km,0.0,dS_per_m_per_km,EC factor for K uptake Km parameter,nutrient_parameters,System parameter,1.0
+ec_factor_ca_uptake_vmax,0.0,dS_per_m_per_uptake_rate,EC factor for Ca uptake Vmax parameter,nutrient_parameters,System parameter,1.0
+ec_factor_mg_uptake_vmax,0.0,dS_per_m_per_uptake_rate,EC factor for Mg uptake Vmax parameter,nutrient_parameters,System parameter,1.0
+ec_factor_s_uptake_vmax,0.0,dS_per_m_per_uptake_rate,EC factor for S uptake Vmax parameter,nutrient_parameters,System parameter,1.0
+ec_factor_fe_uptake_vmax,0.0,dS_per_m_per_uptake_rate,EC factor for Fe uptake Vmax parameter,nutrient_parameters,System parameter,1.0
+ec_factor_ca_uptake_km,0.0,dS_per_m_per_km,EC factor for Ca uptake Km parameter,nutrient_parameters,System parameter,1.0
+ec_factor_mg_uptake_km,0.0,dS_per_m_per_km,EC factor for Mg uptake Km parameter,nutrient_parameters,System parameter,1.0
+ec_factor_s_uptake_km,0.0,dS_per_m_per_km,EC factor for S uptake Km parameter,nutrient_parameters,System parameter,1.0
+ec_factor_fe_uptake_km,0.0,dS_per_m_per_km,EC factor for Fe uptake Km parameter,nutrient_parameters,System parameter,1.0
+ec_factor_so4_uptake_vmax,0.0,dS_per_m_per_uptake_rate,EC factor for SO4 uptake Vmax parameter,nutrient_parameters,System parameter,1.0
+ec_factor_so4_uptake_km,0.0,dS_per_m_per_km,EC factor for SO4 uptake Km parameter,nutrient_parameters,System parameter,1.0
+ec_factor_mn_uptake_vmax,0.0,dS_per_m_per_uptake_rate,EC factor for Mn uptake Vmax parameter,nutrient_parameters,System parameter,1.0
+ec_factor_mn_uptake_km,0.0,dS_per_m_per_km,EC factor for Mn uptake Km parameter,nutrient_parameters,System parameter,1.0
+ec_factor_zn_uptake_vmax,0.0,dS_per_m_per_uptake_rate,EC factor for Zn uptake Vmax parameter,nutrient_parameters,System parameter,1.0
+ec_factor_zn_uptake_km,0.0,dS_per_m_per_km,EC factor for Zn uptake Km parameter,nutrient_parameters,System parameter,1.0
+ec_factor_cu_uptake_vmax,0.0,dS_per_m_per_uptake_rate,EC factor for Cu uptake Vmax parameter,nutrient_parameters,System parameter,1.0
+ec_factor_cu_uptake_km,0.0,dS_per_m_per_km,EC factor for Cu uptake Km parameter,nutrient_parameters,System parameter,1.0
+ec_factor_b_uptake_vmax,0.0,dS_per_m_per_uptake_rate,EC factor for B uptake Vmax parameter,nutrient_parameters,System parameter,1.0
+ec_factor_b_uptake_km,0.0,dS_per_m_per_km,EC factor for B uptake Km parameter,nutrient_parameters,System parameter,1.0
+ec_factor_mo_uptake_vmax,0.0,dS_per_m_per_uptake_rate,EC factor for Mo uptake Vmax parameter,nutrient_parameters,System parameter,1.0
+ec_factor_mo_uptake_km,0.0,dS_per_m_per_km,EC factor for Mo uptake Km parameter,nutrient_parameters,System parameter,1.0

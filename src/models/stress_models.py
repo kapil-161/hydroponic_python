@@ -1179,3 +1179,251 @@ even under changing conditions, leading to more resilient and productive hydropo
 crop production.
 """
 
+
+class UnifiedStressCalculator:
+    """
+    Centralized stress calculation - single source of truth for ALL stress factors.
+
+    Eliminates redundant calculations and provides consistent stress factors
+    used throughout the simulation.
+    """
+
+    def __init__(self, system_config, params, temperature_stress, nitrogen_model):
+        """Initialize unified stress calculator with required models and config."""
+        self.system_config = system_config
+        self.params = params
+        self.temperature_stress = temperature_stress
+        self.nitrogen_model = nitrogen_model
+
+    def calculate_unified_stress_factors(self,
+                                       env_conditions: Dict[str, Any],
+                                       nutrient_concentrations: Dict[str, float],
+                                       plant_state: Dict[str, Any],
+                                       day: int = 1,
+                                       ec_calculator=None,
+                                       solution_temp_calculator=None) -> Dict[str, Any]:
+        """
+        Centralized stress calculation function.
+
+        All stress factors are returned as multiplication factors where
+        1.0 = optimal conditions, 0.0 = severe stress.
+
+        Args:
+            env_conditions: Environmental conditions from environment step
+            nutrient_concentrations: Current nutrient concentrations
+            plant_state: Current plant physiological state
+            day: Current simulation day
+            ec_calculator: Function to calculate EC from concentrations
+            solution_temp_calculator: Function to calculate solution temperature
+
+        Returns:
+            Dict containing all stress factors and supporting data
+        """
+        from ..utils.temperature_utils import calculate_ph_effect
+
+        # Extract environmental variables
+        actual_temperature = env_conditions['actual_temperature']
+        actual_humidity = env_conditions['actual_humidity']
+        actual_vpd = env_conditions['actual_vpd']
+        solar_radiation = env_conditions['solar_radiation']
+
+        # === CALCULATE SUPPORTING VALUES ONCE ===
+
+        # Calculate EC dynamically from nutrient concentrations
+        if ec_calculator:
+            ec_current = ec_calculator(nutrient_concentrations)
+        else:
+            raise ValueError("EC calculator function must be provided")
+
+        # Calculate solution temperature once
+        if solution_temp_calculator:
+            solution_temperature = solution_temp_calculator(
+                air_temp=actual_temperature,
+                solar_radiation=solar_radiation,
+                tank_volume=plant_state.get('tank_volume', 1000.0),
+                day=plant_state.get('day', 1)
+            )
+        else:
+            solution_temperature = actual_temperature  # Fallback
+
+        # === STRESS FACTOR CALCULATIONS ===
+
+        # 1. TEMPERATURE STRESS (both air and root zone)
+        temp_stress_response = self.temperature_stress.daily_update(actual_temperature)
+        temperature_factor = temp_stress_response.process_factors.overall
+
+        # Root zone temperature stress
+        root_temp_deviation = abs(solution_temperature - self.params.optimal_root_temp)
+        if root_temp_deviation > self.params.root_temp_tolerance:
+            root_temp_factor = max(0.0, 1.0 - (root_temp_deviation - self.params.root_temp_tolerance) * self.params.root_temp_stress_factor)
+        else:
+            root_temp_factor = 1.0
+
+        # Combined temperature factor (most limiting)
+        combined_temp_factor = min(temperature_factor, root_temp_factor)
+
+        # 2. WATER STRESS (VPD-based for hydroponics)
+        env_params = getattr(self.system_config, 'environment_parameters', {})
+        optimal_vpd_min = env_params.get('optimal_vpd_min', self.params.optimal_vpd_min)
+        optimal_vpd_max = env_params.get('optimal_vpd_max', self.params.optimal_vpd_max)
+
+        stress_params = getattr(self.system_config, 'stress_parameters', {})
+        vpd_stress_low_factor = stress_params.get('vpd_stress_low_factor', 0.15)
+        vpd_stress_high_factor = stress_params.get('vpd_stress_high_factor', 0.25)
+
+        if optimal_vpd_min <= actual_vpd <= optimal_vpd_max:
+            water_stress_level = 0.0
+        elif actual_vpd < optimal_vpd_min:
+            water_stress_level = min(0.2, (optimal_vpd_min - actual_vpd) * vpd_stress_low_factor)
+        else:
+            water_stress_level = min(0.4, (actual_vpd - optimal_vpd_max) * vpd_stress_high_factor)
+
+        water_factor = max(0.0, 1.0 - water_stress_level)
+
+        # 3. LIGHT STRESS
+        optimal_light = env_params.get('optimal_light_intensity')
+        if optimal_light is None:
+            raise ValueError("❌ 'optimal_light_intensity' parameter must be provided in environment_parameters CSV")
+        light_factor = min(1.0, max(0.0, float(solar_radiation) / optimal_light))
+
+        # 4. NITROGEN STRESS
+        try:
+            nitrogen_stress_level = self.nitrogen_model.calculate_nitrogen_stress_level()
+        except (AttributeError, TypeError):
+            # Fallback calculation
+            n_no3_conc = nutrient_concentrations.get('N-NO3', 0.0)
+            nitrogen_params = getattr(self.system_config, 'nitrogen_parameters', {})
+            optimal_n_min = nitrogen_params.get('optimal_n_min')
+            optimal_n_max = nitrogen_params.get('optimal_n_max')
+            severe_deficiency = nitrogen_params.get('severe_deficiency_threshold')
+            nitrogen_stress_factor = nitrogen_params.get('nitrogen_stress_factor')
+
+            if None in [optimal_n_min, optimal_n_max, severe_deficiency, nitrogen_stress_factor]:
+                raise ValueError("❌ Nitrogen parameters must be provided in CSV configuration")
+
+            if n_no3_conc < severe_deficiency:
+                nitrogen_stress_level = nitrogen_stress_factor
+            elif n_no3_conc < optimal_n_min:
+                nitrogen_stress_level = nitrogen_stress_factor * (optimal_n_min - n_no3_conc) / (optimal_n_min - severe_deficiency)
+            elif n_no3_conc <= optimal_n_max:
+                nitrogen_stress_level = 0.0
+            else:
+                excess_stress = min(0.3, (n_no3_conc - optimal_n_max) / 1000.0)
+                nitrogen_stress_level = excess_stress
+
+        nitrogen_factor = max(0.0, 1.0 - nitrogen_stress_level)
+
+        # 5. SALINITY STRESS (EC-based)
+        optimal_ec = env_params.get('optimal_ec')
+        max_ec = env_params.get('max_ec')
+        min_ec = env_params.get('min_ec')
+
+        if None in [optimal_ec, max_ec, min_ec]:
+            raise ValueError("❌ EC parameters must be provided in environment_parameters CSV")
+
+        ec_stress_high_factor = stress_params.get('ec_stress_high_factor')
+        ec_stress_low_factor = stress_params.get('ec_stress_low_factor')
+
+        if None in [ec_stress_high_factor, ec_stress_low_factor]:
+            raise ValueError("❌ EC stress factors must be provided in stress_parameters CSV")
+
+        if ec_current > max_ec:
+            salinity_stress_level = (ec_current - max_ec) * ec_stress_high_factor
+            salinity_factor = max(0.0, 1.0 - salinity_stress_level)
+        elif ec_current < min_ec:
+            salinity_stress_level = (min_ec - ec_current) * ec_stress_low_factor
+            salinity_factor = max(0.0, 1.0 - salinity_stress_level)
+        else:
+            salinity_factor = 1.0
+
+        # 6. pH STRESS
+        ph = plant_state.get('ph', None)
+        if ph is None:
+            raise ValueError("Plant pH must be provided in plant state")
+        ph_factor = calculate_ph_effect(ph)
+
+        # 7. OXYGEN STRESS
+        oxygen_factor = env_params.get('oxygen_factor')
+        if oxygen_factor is None:
+            raise ValueError("❌ 'oxygen_factor' parameter must be provided in environment_parameters CSV")
+
+        # === CALCULATE COMBINED STRESS METRICS ===
+
+        # Overall multiplicative stress factor
+        overall_stress_factor = (
+            combined_temp_factor *
+            water_factor *
+            light_factor *
+            nitrogen_factor *
+            salinity_factor *
+            ph_factor *
+            oxygen_factor
+        )
+
+        # Stress levels (for models that expect stress levels instead of factors)
+        temp_stress = max(0.0, 1.0 - combined_temp_factor)
+        water_stress = max(0.0, 1.0 - water_factor)
+        light_stress = max(0.0, 1.0 - light_factor)
+        nitrogen_stress = max(0.0, 1.0 - nitrogen_factor)
+        salinity_stress = max(0.0, 1.0 - salinity_factor)
+        ph_stress = max(0.0, 1.0 - ph_factor)
+        oxygen_stress = max(0.0, 1.0 - oxygen_factor)
+
+        # Add dynamic stress variations
+        day_variation = math.sin(day * 0.1) * 0.1
+
+        # Growth stage effects
+        growth_stage_factor = plant_state.get('growth_stage', 'V4')
+        if growth_stage_factor in ['V11+', 'HI', 'HD', 'HM']:
+            nitrogen_stress += 0.05
+
+        # Temperature variations
+        optimal_temperature = env_params.get('optimal_temperature')
+        if optimal_temperature is None:
+            raise ValueError("❌ 'optimal_temperature' parameter must be provided in environment_parameters CSV")
+        temp_deviation = abs(env_conditions['actual_temperature'] - optimal_temperature)
+        temp_stress += min(0.1, temp_deviation * 0.01)
+
+        # VPD variations
+        optimal_vpd = env_params.get('optimal_vpd')
+        if optimal_vpd is None:
+            raise ValueError("❌ 'optimal_vpd' parameter must be provided in environment_parameters CSV")
+        vpd_stress = max(0.0, (env_conditions['actual_vpd'] - optimal_vpd) * 0.1)
+        water_stress += min(0.1, vpd_stress)
+
+        stress_levels = {
+            'temperature': min(1.0, temp_stress + day_variation),
+            'water': min(1.0, water_stress + day_variation * 0.5),
+            'light': min(1.0, light_stress + day_variation * 0.3),
+            'nitrogen': min(1.0, nitrogen_stress + day_variation * 0.2),
+            'salinity': min(1.0, salinity_stress + day_variation * 0.1),
+            'ph': min(1.0, ph_stress + day_variation * 0.1),
+            'oxygen': min(1.0, oxygen_stress + day_variation * 0.1)
+        }
+
+        return {
+            # STRESS FACTORS (1.0 = optimal, 0.0 = severe stress)
+            'temperature_factor': combined_temp_factor,
+            'air_temp_factor': temperature_factor,
+            'root_temp_factor': root_temp_factor,
+            'water_factor': water_factor,
+            'light_factor': light_factor,
+            'nitrogen_factor': nitrogen_factor,
+            'salinity_factor': salinity_factor,
+            'ph_factor': ph_factor,
+            'oxygen_factor': oxygen_factor,
+            'overall_stress_factor': overall_stress_factor,
+
+            # STRESS LEVELS (0.0 = optimal, 1.0 = severe stress)
+            'stress_levels': stress_levels,
+
+            # DETAILED RESPONSES
+            'temp_stress_response': temp_stress_response,
+
+            # SUPPORTING CALCULATIONS
+            'ec_current': ec_current,
+            'solution_temperature': solution_temperature,
+            'water_stress_level': water_stress_level,
+            'nitrogen_stress_level': nitrogen_stress_level
+        }
+

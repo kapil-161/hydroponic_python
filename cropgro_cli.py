@@ -173,7 +173,96 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 if 'number_of_plants' in sys_params:
                     system_config.n_plants = sys_params['number_of_plants']
                     print(f"✓ Number of plants loaded: {sys_params['number_of_plants']}")
-            
+
+            # MAP PARAMETERS: Fix parameter category mismatches between CSV and model expectations
+            if 'environment' in parameter_categories and 'essential_environmental_response' in parameter_categories:
+                parameter_categories['environment'].update(parameter_categories['essential_environmental_response'])
+                setattr(system_config, 'environment', parameter_categories['environment'])
+
+            # MAP PARAMETERS: Fix parameter category mismatches between CSV and model expectations
+            if 'environment' in parameter_categories:
+                env_params = parameter_categories['environment']
+                water_params = parameter_categories.get('water_parameters', {})
+
+                # Move parameters from environment to water_parameters category
+                if 'water_parameters' not in parameter_categories:
+                    parameter_categories['water_parameters'] = {}
+
+                env_to_water_params = ['psychrometric_constant', 'optimal_temperature', 'optimal_temperature_min', 'optimal_temperature_max']
+                for param in env_to_water_params:
+                    if param in env_params:
+                        parameter_categories['water_parameters'][param] = env_params[param]
+
+                # Move VPD parameters from stress_parameters to water_parameters category
+                if 'stress_parameters' in parameter_categories:
+                    stress_params = parameter_categories['stress_parameters']
+                    stress_to_water_params = ['optimal_vpd_min', 'optimal_vpd_max']
+                    for param in stress_to_water_params:
+                        if param in stress_params:
+                            parameter_categories['water_parameters'][param] = stress_params[param]
+
+                # Move metabolic water parameters from model_constants to water_parameters category
+                if 'model_constants' in parameter_categories:
+                    model_constants = parameter_categories['model_constants']
+                    constants_to_water_params = ['metabolic_water_per_lai']
+                    for param in constants_to_water_params:
+                        if param in model_constants:
+                            parameter_categories['water_parameters'][param] = model_constants[param]
+
+                    # Move allocation parameters from model_constants to allocation_parameters category
+                    if 'allocation_parameters' not in parameter_categories:
+                        parameter_categories['allocation_parameters'] = {}
+                    constants_to_allocation_params = ['vegetative_leaf_allocation', 'vegetative_stem_allocation', 'vegetative_root_allocation',
+                                                      'reproductive_leaf_allocation', 'reproductive_stem_allocation', 'reproductive_root_allocation']
+                    for param in constants_to_allocation_params:
+                        if param in model_constants:
+                            parameter_categories['allocation_parameters'][param] = model_constants[param]
+
+                # Move water parameters from 'water' category to 'water_parameters' category
+                if 'water' in parameter_categories:
+                    water_cat_params = parameter_categories['water']
+                    if 'water_parameters' not in parameter_categories:
+                        parameter_categories['water_parameters'] = {}
+                    # Move specific water parameters that the model expects
+                    for param in ['lai_water_demand_factor', 'crop_coefficient', 'water_uptake_sensitivity_low',
+                                  'water_uptake_sensitivity_high', 'water_temp_interaction_factor',
+                                  'water_salinity_interaction_factor', 'water_nutrient_interaction_factor',
+                                  'water_system_stress_factor', 'water_use_efficiency']:
+                        if param in water_cat_params:
+                            parameter_categories['water_parameters'][param] = water_cat_params[param]
+
+                # Add default water uptake parameters that are missing
+                water_defaults = {
+                    'wind_speed': 2.0,  # m/s - typical greenhouse wind speed
+                    'net_radiation_factor': 0.8,  # fraction
+                    'radiation_offset': 0.0,  # MJ/m²/day
+                    'base_crop_coefficient': water_params.get('crop_coefficient', 0.8),
+                    'lai_coefficient_factor': water_params.get('lai_water_demand_factor', 0.5),
+                    'vegetative_stage_factor': 1.0,
+                    'head_formation_stage_factor': 1.2,
+                    'mature_stage_factor': 0.8,
+                    'water_stress_threshold_low': water_params.get('water_uptake_sensitivity_low', 0.3),
+                    'water_stress_threshold_high': water_params.get('water_uptake_sensitivity_high', 0.8),
+                    'max_water_uptake_rate': 0.1,  # L/plant/day
+                    'temperature_response_factor': water_params.get('water_temp_interaction_factor', 0.1),
+                    'salinity_response_factor': water_params.get('water_salinity_interaction_factor', 0.3),
+                    'nutrient_coupling_factor': water_params.get('water_nutrient_interaction_factor', 0.2),
+                    'root_zone_coupling_factor': 0.5,
+                    'system_stress_factor': water_params.get('water_system_stress_factor', 0.5),
+                    'water_use_efficiency': water_params.get('water_use_efficiency', 0.1)
+                }
+
+                for param_name, default_value in water_defaults.items():
+                    if param_name not in parameter_categories['water_parameters']:
+                        parameter_categories['water_parameters'][param_name] = default_value
+
+                # Update system_config with modified water_parameters
+                setattr(system_config, 'water_parameters', parameter_categories['water_parameters'])
+
+                # Update system_config with allocation_parameters if it exists
+                if 'allocation_parameters' in parameter_categories:
+                    setattr(system_config, 'allocation_parameters', parameter_categories['allocation_parameters'])
+
             print(f"📊 Successfully loaded {len(params_loaded)} parameters from master file")
             print(f"📋 Categories loaded: {list(parameter_categories.keys())}")
             
@@ -515,67 +604,9 @@ def main():
 
     # Handle help output option
     if args.help_output:
-        print("""
-🌱 CROPGRO HYDROPONIC SIMULATOR - OUTPUT OPTIONS HELP
-========================================================
-
-📊 OUTPUT FORMATS:
-
-1. DEFAULT OUTPUT (no flags):
-   • Shows basic simulation completion message
-   • Auto-saves results to CSV file
-   • Minimal console output
-
-2. --print-daily:
-   • Shows detailed daily results for each day
-   • Includes per-plant vs per-system categorization
-   • Shows carbon balance, nutrient status, stress factors
-   • Best for debugging and detailed analysis
-
-3. --summary-only:
-   • Shows only the final summary table
-   • No daily details
-   • Quick overview of final results
-   • Good for batch processing
-
-4. --print-summary:
-   • Shows basic summary statistics
-   • Minimal formatting
-   • Good for scripting and automation
-
-5. --daily-csv:
-   • Auto-saves detailed CSV with timestamp
-   • Useful for data analysis and plotting
-
-6. --output-csv <path>:
-   • Saves results to specified CSV path
-   • Custom file location
-
-7. --output-json <path>:
-   • Saves full results to JSON format
-   • Includes all simulation data
-   • Good for programmatic access
-
-📋 PER-PLANT vs PER-SYSTEM VALUES:
-
-• PER-PLANT: Individual plant biomass, growth rates, stress levels
-• PER-SYSTEM: Total system biomass, environmental conditions, nutrient concentrations
-• System yield = Total system biomass ÷ System area (g/m²)
-
-🔍 EXAMPLE USAGE:
-
-# Quick simulation with auto-save
-python3 cropgro_cli.py --days 30 --cultivar LET_EXP001_2024
-
-# Detailed daily output
-python3 cropgro_cli.py --days 30 --cultivar LET_EXP001_2024 --print-daily
-
-# Summary only (no daily details)
-python3 cropgro_cli.py --days 30 --cultivar LET_EXP001_2024 --summary-only
-
-# Save to custom location
-python3 cropgro_cli.py --days 30 --cultivar LET_EXP001_2024 --output-csv my_results.csv
-        """)
+        print("CROPGRO HYDROPONIC SIMULATOR - OUTPUT OPTIONS HELP")
+        print("=" * 50)
+        print("Use --help for argument help or check documentation")
         return
 
     try:
@@ -583,7 +614,7 @@ python3 cropgro_cli.py --days 30 --cultivar LET_EXP001_2024 --output-csv my_resu
 
         # CRITICAL FIX: Check if simulation failed (returned None or None, None)
         if simulation_result is None or (isinstance(simulation_result, tuple) and simulation_result[0] is None):
-            print("❌ Simulation failed - cannot generate outputs. Please fix the errors above and try again.")
+            print("ERROR: Simulation failed - cannot generate outputs. Please fix the errors above and try again.")
             return
         
         # Unpack the results safely

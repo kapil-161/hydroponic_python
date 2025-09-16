@@ -8,6 +8,7 @@ import numpy as np
 from dataclasses import dataclass
 from typing import List, Dict, Tuple
 from ..data.hydroponic_system import WeatherData
+from .temperature_utils import calculate_vpd
 
 
 @dataclass
@@ -84,7 +85,7 @@ class HourlyWeatherInterpolator:
                                                  daily_weather.temp_avg)
             
             # Calculate VPD from temperature and humidity
-            vpd = self._calculate_vpd(temp, humidity)
+            vpd = calculate_vpd(temp, humidity)
             
             # Wind speed (simple diurnal variation)
             wind_speed = self._interpolate_wind_speed(hour, getattr(daily_weather, 'wind_speed', 2.0))
@@ -264,20 +265,6 @@ class HourlyWeatherInterpolator:
         
         return daily_wind * diurnal_factor
     
-    def _calculate_vpd(self, temperature: float, humidity: float) -> float:
-        """
-        Calculate vapor pressure deficit from temperature and humidity.
-        Uses centralized utility function to avoid duplication.
-        
-        Args:
-            temperature: Air temperature (°C)
-            humidity: Relative humidity (%)
-            
-        Returns:
-            VPD in kPa
-        """
-        from ..utils.temperature_utils import calculate_vpd
-        return calculate_vpd(temperature, humidity)
 
 
 def create_hourly_weather_interpolator() -> HourlyWeatherInterpolator:
