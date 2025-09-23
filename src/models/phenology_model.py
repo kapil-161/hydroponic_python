@@ -230,9 +230,25 @@ class ComprehensivePhenologyModel:
             thermal_accumulated = 0.0
             thermal_required = self.params.thermal_requirements["GE_to_VE"]
         else:
-            # Starting from transplant (typically V2-V3 stage with some thermal time accumulated)
-            thermal_accumulated = self.params.thermal_requirements["GE_to_VE"] + self.params.thermal_requirements["VE_to_V1"]
-            thermal_required = self.params.thermal_requirements["V1_to_V2"]
+            # Starting from transplant - calculate accumulated thermal time up to current stage
+            stage_transitions = {
+                LettuceGrowthStage.EMERGENCE: ["GE_to_VE"],
+                LettuceGrowthStage.FIRST_LEAF: ["GE_to_VE", "VE_to_V1"],
+                LettuceGrowthStage.SECOND_LEAF: ["GE_to_VE", "VE_to_V1", "V1_to_V2"],
+                LettuceGrowthStage.THIRD_LEAF: ["GE_to_VE", "VE_to_V1", "V1_to_V2", "V2_to_V3"],
+                LettuceGrowthStage.FOURTH_LEAF: ["GE_to_VE", "VE_to_V1", "V1_to_V2", "V2_to_V3", "V3_to_V4"],
+            }
+
+            # Calculate accumulated thermal time for current stage
+            if initial_stage in stage_transitions:
+                thermal_accumulated = sum(self.params.thermal_requirements[transition]
+                                        for transition in stage_transitions[initial_stage])
+            else:
+                thermal_accumulated = 0.0
+
+            # Get thermal requirement for next stage transition
+            next_stage = self.get_next_stage(initial_stage)
+            thermal_required = self.get_thermal_requirement(initial_stage, next_stage)
             
         self.developmental_state = DevelopmentalState(
             current_stage=initial_stage,

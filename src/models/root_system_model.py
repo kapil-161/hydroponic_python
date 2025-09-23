@@ -934,40 +934,53 @@ class EnhancedRootUptakeModel:
         temp_factor = self.calculate_temperature_factor(temperature)
         flow_factor = self.calculate_flow_factor(flow_rate)
 
+        # Map solution concentration keys to uptake parameter keys
+        nutrient_key_mapping = {
+            'N-NO3': 'NO3',
+            'P-PO4': 'PO4',
+            'K': 'K',
+            'Ca': 'Ca',
+            'Mg': 'Mg',
+            'S-SO4': 'SO4',
+            'N-NH4': 'NH4'
+        }
+
         uptake_rates: Dict[str, float] = {}
-        for nutrient, concentration in solution_concentrations.items():
-            if nutrient in self.uptake_params.base_uptake_rates:
+        for solution_key, concentration in solution_concentrations.items():
+            # Map solution key to uptake parameter key
+            uptake_key = nutrient_key_mapping.get(solution_key, solution_key)
+            if uptake_key in self.uptake_params.base_uptake_rates:
                 
                 # True Michaelis-Menten kinetics: V = Vmax * [S] / (Km + [S])
-                vmax = self.uptake_params.base_uptake_rates[nutrient]  # mg/cm²/day (maximum rate)
-                km = self.uptake_params.michaelis_constants.get(nutrient, 50.0) if self.uptake_params.michaelis_constants else 50.0
-                
+                vmax = self.uptake_params.base_uptake_rates[uptake_key]  # mg/cm²/day (maximum rate)
+                km = self.uptake_params.michaelis_constants.get(uptake_key, 50.0) if self.uptake_params.michaelis_constants else 50.0
+
                 # Michaelis-Menten equation
                 michaelis_rate = (vmax * concentration) / (km + concentration)
-                
+
                 # Competitive inhibition between similar nutrients
-                inhibition_factor = self._calculate_nutrient_competition(nutrient, solution_concentrations)
-                
+                inhibition_factor = self._calculate_nutrient_competition(uptake_key, solution_concentrations)
+
                 # pH effects on nutrient speciation and uptake
                 ph = environmental_conditions.get('ph', None)
                 if ph is None:
                     raise ValueError("pH must be provided in environmental conditions")
-                ph_effect = self._calculate_ph_effect_on_uptake(nutrient, ph)
-                
+                ph_effect = self._calculate_ph_effect_on_uptake(uptake_key, ph)
+
                 # Temperature effects on carrier protein activity (Q10 = 2.5 for transport)
                 transport_temp_effect = temp_factor ** 1.25  # Enhanced temperature sensitivity for transport
-                
+
                 # Root age effect (young roots have higher transporter density)
                 root_age_effect = self._calculate_root_age_effect(architecture_metrics)
-                
+
                 effective_surface_area = self.calculate_effective_surface_area(architecture_metrics)
-                
+
                 # Final uptake rate with all biological factors
                 uptake_rate = (
-                    effective_surface_area * michaelis_rate * inhibition_factor * 
+                    effective_surface_area * michaelis_rate * inhibition_factor *
                     ph_effect * transport_temp_effect * flow_factor * avg_activity * root_age_effect
                 )
-                uptake_rates[f'{nutrient}_uptake_rate'] = uptake_rate
+                uptake_rates[f'{uptake_key}_uptake_rate'] = uptake_rate
 
         total_uptake = sum(uptake_rates.values())
         return {

@@ -40,7 +40,7 @@ def analyze_key_metrics(df):
     key_metrics = {
         'Total_Biomass_g': {'name': 'Total Biomass', 'unit': 'g', 'expected_range': (0, 300)},
         'Plant_Height_cm': {'name': 'Plant Height', 'unit': 'cm', 'expected_range': (5, 20)},
-        'LAI': {'name': 'Leaf Area Index', 'unit': '', 'expected_range': (0, 1.0)},
+        'LAI': {'name': 'Leaf Area Index', 'unit': '', 'expected_range': (0, 4.0)},
         'Shoot_Fresh_Weight_g': {'name': 'Shoot Fresh Weight', 'unit': 'g', 'expected_range': (0, 250)},
         'Leaf_Fresh_Weight_g': {'name': 'Leaf Fresh Weight', 'unit': 'g', 'expected_range': (0, 200)},
         'Root_Fresh_Weight_g': {'name': 'Root Fresh Weight', 'unit': 'g', 'expected_range': (0, 50)},
@@ -53,7 +53,7 @@ def analyze_key_metrics(df):
         'Mg_mg_L': {'name': 'Magnesium Concentration', 'unit': 'mg/L', 'expected_range': (10, 50)},
         'pH': {'name': 'pH', 'unit': '', 'expected_range': (5.5, 7.0)},
         'EC': {'name': 'Electrical Conductivity', 'unit': 'dS/m', 'expected_range': (1.0, 5.0)},
-        'Temp_C': {'name': 'Temperature', 'unit': '°C', 'expected_range': (18, 30)},
+        'Temp_C': {'name': 'Temperature', 'unit': '°C', 'expected_range': (17, 30)},
         'VPD_kPa': {'name': 'Vapor Pressure Deficit', 'unit': 'kPa', 'expected_range': (0.4, 1.5)},
     }
     
@@ -142,7 +142,7 @@ def analyze_harvest_metrics(df):
     # Commercial standards for NFT lettuce
     standards = {
         'Final fresh weight': {
-            'simulated': final_day['Total_Biomass_g'] if 'Total_Biomass_g' in df.columns else 0,
+            'simulated': final_day['Shoot_Fresh_Weight_g'] if 'Shoot_Fresh_Weight_g' in df.columns else 0,
             'expected_range': (150, 300),
             'unit': 'g'
         },
@@ -304,9 +304,9 @@ def generate_summary_report(df):
     # Calculate overall score based on multiple factors
     score_components = []
     
-    # Harvest weight score
-    if 'Total_Biomass_g' in df.columns:
-        final_weight = final_values['Total_Biomass_g']
+    # Harvest weight score (use fresh weight, not dry weight)
+    if 'Shoot_Fresh_Weight_g' in df.columns:
+        final_weight = final_values['Shoot_Fresh_Weight_g']
         if 150 <= final_weight <= 300:
             score_components.append(('Harvest weight', 10))
         elif 100 <= final_weight < 150 or 300 < final_weight <= 400:

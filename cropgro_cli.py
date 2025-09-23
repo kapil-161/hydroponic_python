@@ -44,7 +44,7 @@ def daily_result_to_dict(dr: Any) -> Dict[str, Any]:
     return data
 
 
-def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: bool, treatment_id: str = None, input_dir: str = 'input') -> Any:
+def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: bool, treatment_id: str = None, input_dir: str = 'input', summary_only: bool = False) -> Any:
     print("🌱 CROPGRO Hydroponic Simulator - CLI Version")
     print("=" * 50)
 
@@ -105,7 +105,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 param_name = row['parameter_name']
                 param_value = row['value']
                 category = row.get('category', 'general')
-                priority = row.get('priority', 1)
+                # priority = row.get('priority', 1)  # Not used currently
                 
                 # Convert to appropriate type
                 try:
@@ -356,16 +356,12 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
         
         # VALIDATE: Weather data dates must match experiment dates
         # Get experiment dates from parameters
-        sowing_date_str = None
         transplanting_date_str = None
-        harvest_date_str = None
-        
+
         # Extract dates from system config experiment settings
         if hasattr(system_config, 'experiment_settings'):
             experiment_settings = system_config.experiment_settings
-            sowing_date_str = experiment_settings.get('sowing_date')
-            transplanting_date_str = experiment_settings.get('transplanting_date') 
-            harvest_date_str = experiment_settings.get('harvest_date')
+            transplanting_date_str = experiment_settings.get('transplanting_date')
         
         if transplanting_date_str and weather_list:
             from datetime import datetime
@@ -424,7 +420,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
     # treatment_id parameter is passed directly to the function
     results = simulator.run_simulation(input_data, max_days=days, target_maturity='harvest', treatment_id=treatment_id)
 
-    if print_daily and not args.summary_only:
+    if print_daily and not summary_only:
         for dr in results.daily_results:
             print(simulator.display_detailed_results(dr))
 
@@ -545,32 +541,190 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
         print(f"  • Integrated Stress: {final_stress:.3f} {stress_status}")
     else:
         print(f"  • Integrated Stress: Data not available")
-    
-    # Show projections if growth is positive
-    if avg_daily_growth is not None and avg_daily_growth > 0:
-        # Estimate days to harvest (assuming ~800 GDD for lettuce)
+
+    # Show nutrient demand and uptake summary
+    print(f"\n💧 NUTRIENT DEMAND & UPTAKE SUMMARY:")
+
+    # Calculate cumulative values if available
+    total_n_uptake = 0.0
+    total_p_uptake = 0.0
+    total_k_uptake = 0.0
+    final_n_demand = 0.0
+    final_n_concentration = 0.0
+
+    for daily_res in results.daily_results:
+        n_daily = getattr(daily_res, 'nitrogen_uptake_mg', 0.0)
+        p_daily = getattr(daily_res, 'phosphorus_uptake_mg', 0.0)
+        k_daily = getattr(daily_res, 'potassium_remobilization', 0.0)
+
+        if n_daily is not None and not isinstance(n_daily, str):
+            total_n_uptake += float(n_daily)
+        if p_daily is not None and not isinstance(p_daily, str):
+            total_p_uptake += float(p_daily)
+        if k_daily is not None and not isinstance(k_daily, str):
+            total_k_uptake += float(k_daily)
+
+    # Get final demand and concentration values
+    final_n_demand = getattr(final_result, 'nitrogen_demand_mg', 0.0)
+    final_n_concentration = getattr(final_result, 'leaf_nitrogen_conc', 0.0)
+
+    print(f"  {'Metric':<20} {'Total System':<15} {'Per Plant':<15} {'Final Status':<15}")
+    print(f"  {'-'*20} {'-'*15} {'-'*15} {'-'*15}")
+
+    # Show uptake if any occurred, otherwise show demand
+    if total_n_uptake > 0:
+        print(f"  {'N Uptake (actual)':<20} {total_n_uptake*plant_count:<15.1f} mg {total_n_uptake:<15.2f} mg {total_n_uptake/total_days:<15.3f} mg/day")
+    else:
+        print(f"  {'N Demand (current)':<20} {final_n_demand*plant_count:<15.1f} mg {final_n_demand:<15.2f} mg {'--':<15}")
+
+    if total_p_uptake > 0:
+        print(f"  {'P Uptake (actual)':<20} {total_p_uptake*plant_count:<15.1f} mg {total_p_uptake:<15.2f} mg {total_p_uptake/total_days:<15.3f} mg/day")
+    else:
+        print(f"  {'P Status':<20} {'Sufficient':<15} {'--':<15} {'--':<15}")
+
+    if total_k_uptake > 0:
+        print(f"  {'K Remobilization':<20} {total_k_uptake*plant_count:<15.1f} mg {total_k_uptake:<15.2f} mg {total_k_uptake/total_days:<15.3f} mg/day")
+    else:
+        print(f"  {'K Status':<20} {'Sufficient':<15} {'--':<15} {'--':<15}")
+
+    # Show tissue concentration
+    if final_n_concentration > 0:
+        print(f"  {'Leaf N Concentration':<20} {final_n_concentration*100:<15.1f} % {'--':<15} {'--':<15}")
+
+    # Show water usage summary
+    print(f"\n🚰 WATER USAGE SUMMARY:")
+    total_water_uptake = 0.0
+    total_transpiration = 0.0
+
+    for daily_res in results.daily_results:
+        water_daily = getattr(daily_res, 'water_uptake_total', 0.0)
+        # Use a scaled transpiration or alternative field - transpiration seems to be in wrong units
+        transp_daily = getattr(daily_res, 'water_uptake_total', 0.0) * 0.8  # Assume 80% of water uptake becomes transpiration
+
+        if water_daily is not None and not isinstance(water_daily, str):
+            total_water_uptake += float(water_daily)
+        if transp_daily is not None and not isinstance(transp_daily, str):
+            total_transpiration += float(transp_daily)
+
+    print(f"  {'Metric':<20} {'Total System':<15} {'Per Plant':<15} {'Daily Avg':<15}")
+    print(f"  {'-'*20} {'-'*15} {'-'*15} {'-'*15}")
+
+    # Convert to more readable units if values are very small
+    if total_water_uptake > 0:
+        if total_water_uptake < 0.001:  # Less than 1 mL per plant
+            water_unit = 'mL'
+            water_mult = 1000
+        else:
+            water_unit = 'L'
+            water_mult = 1
+
+        print(f"  {'Water Uptake':<20} {total_water_uptake*plant_count*water_mult:<15.1f} {water_unit} {total_water_uptake*water_mult:<15.2f} {water_unit} {total_water_uptake*water_mult/total_days:<15.3f} {water_unit}/day")
+
+        # Calculate WUE if biomass data available
+        if total_growth is not None and total_growth > 0:
+            wue = (total_growth * plant_count) / (total_water_uptake * plant_count)
+            print(f"  {'Water Use Efficiency':<20} {wue:<15.1f} g/{water_unit} {'--':<15} {'--':<15}")
+    else:
+        print(f"  {'Water Uptake':<20} {'0.0':<15} L {'0.00':<15} L {'0.000':<15} L/day")
+
+    if total_transpiration > 0:
+        if total_transpiration < 0.001:  # Less than 1 mL per plant
+            transp_unit = 'mL'
+            transp_mult = 1000
+        else:
+            transp_unit = 'L'
+            transp_mult = 1
+
+        print(f"  {'Transpiration':<20} {total_transpiration*plant_count*transp_mult:<15.1f} {transp_unit} {total_transpiration*transp_mult:<15.2f} {transp_unit} {total_transpiration*transp_mult/total_days:<15.3f} {transp_unit}/day")
+    else:
+        print(f"  {'Transpiration':<20} {'0.0':<15} L {'0.00':<15} L {'0.000':<15} L/day")
+
+    # Show detailed plant metrics
+    print(f"\n🌱 PLANT DEVELOPMENT METRICS:")
+    final_height = getattr(final_result, 'canopy_height_cm', None)
+    final_leaf_number = getattr(final_result, 'leaf_number', None)
+    final_root_length = getattr(final_result, 'fine_root_length', None)
+
+    print(f"  {'Metric':<25} {'Final Value':<15} {'Unit':<10}")
+    print(f"  {'-'*25} {'-'*15} {'-'*10}")
+
+    if final_height is not None:
+        print(f"  {'Plant Height':<25} {final_height:<15.1f} {'cm':<10}")
+    else:
+        print(f"  {'Plant Height':<25} {'Data not available':<15} {'--':<10}")
+
+    if final_leaf_number is not None:
+        print(f"  {'Leaf Number':<25} {final_leaf_number:<15.0f} {'leaves':<10}")
+    else:
+        print(f"  {'Leaf Number':<25} {'Data not available':<15} {'--':<10}")
+
+    if final_root_length is not None:
+        print(f"  {'Root Length':<25} {final_root_length:<15.1f} {'cm':<10}")
+    else:
+        print(f"  {'Root Length':<25} {'Data not available':<15} {'--':<10}")
+
+    if final_lai is not None:
+        print(f"  {'Leaf Area Index':<25} {final_lai:<15.3f} {'m²/m²':<10}")
+    else:
+        print(f"  {'Leaf Area Index':<25} {'Data not available':<15} {'--':<10}")
+
+    # Show photosynthesis and respiration summary
+    print(f"\n☀️ PHOTOSYNTHESIS & RESPIRATION:")
+    total_photosynthesis = 0.0
+    total_respiration = 0.0
+
+    for daily_res in results.daily_results:
+        photo_daily = getattr(daily_res, 'net_assimilation', 0.0)
+        resp_daily = getattr(daily_res, 'respiration_rate', 0.0)
+
+        if photo_daily and not isinstance(photo_daily, str):
+            total_photosynthesis += float(photo_daily)
+        if resp_daily and not isinstance(resp_daily, str):
+            total_respiration += float(resp_daily)
+
+    print(f"  {'Process':<20} {'Total':<15} {'Daily Avg':<15} {'Unit':<15}")
+    print(f"  {'-'*20} {'-'*15} {'-'*15} {'-'*15}")
+
+    print(f"  {'Net Assimilation':<20} {total_photosynthesis:<15.2f} {total_photosynthesis/total_days:<15.3f} {'g CO₂/plant':<15}")
+    print(f"  {'Respiration':<20} {total_respiration:<15.2f} {total_respiration/total_days:<15.3f} {'g CO₂/plant':<15}")
+
+    # Calculate net carbon balance
+    net_carbon = total_photosynthesis - total_respiration
+    print(f"  {'Net C Balance':<20} {net_carbon:<15.2f} {net_carbon/total_days:<15.3f} {'g CO₂/plant':<15}")
+
+    # Show harvest status and projections
+    print(f"\n🔮 HARVEST STATUS:")
+
+    # Check if harvest maturity has been reached
+    if final_stage in ['HM', 'HARVEST_MATURITY', 'HARVEST', 'MATURE']:
+        print(f"  • ✅ Harvest Maturity Reached!")
+        print(f"  • Final Harvest Biomass: {final_biomass:.1f} g/plant")
+        print(f"  • Final System Yield: {(final_biomass * plant_count / system_area):.1f} g/m²")
+        print(f"  • Growth Duration: {total_days} days")
+    elif avg_daily_growth is not None and avg_daily_growth > 0:
+        # Estimate days to harvest for plants still growing
         final_gdd = getattr(final_result, 'accumulated_gdd', None)
         if final_gdd is not None:
-            harvest_gdd = 800.0
+            harvest_gdd = 520.0  # Updated to correct GDD for lettuce harvest
             remaining_gdd = max(0, harvest_gdd - final_gdd)
-            
+
             # Estimate days based on thermal time
             avg_thermal_time = getattr(final_result, 'thermal_time_daily', None)
-            if avg_thermal_time is not None and avg_thermal_time > 0:
+            if avg_thermal_time is not None and avg_thermal_time > 0 and remaining_gdd > 0:
                 days_to_harvest = remaining_gdd / avg_thermal_time
                 projected_final_biomass = final_biomass + (avg_daily_growth * days_to_harvest)
                 projected_system_yield = projected_final_biomass * plant_count / system_area
-                
-                print(f"\n🔮 HARVEST PROJECTIONS:")
+
                 print(f"  • Days to Harvest: {days_to_harvest:.1f} days")
-                print(f"  • Projected Final Biomass: {projected_final_biomass.real if isinstance(projected_final_biomass, complex) else projected_final_biomass:.1f} g/plant")
-                print(f"  • Projected System Yield: {projected_system_yield.real if isinstance(projected_system_yield, complex) else projected_system_yield:.1f} g/m²")
+                print(f"  • Projected Final Biomass: {projected_final_biomass:.1f} g/plant")
+                print(f"  • Projected System Yield: {projected_system_yield:.1f} g/m²")
             else:
-                print(f"\n🔮 HARVEST PROJECTIONS:")
-                print(f"  • Thermal time data not available for projections")
+                print(f"  • Plant approaching harvest maturity")
+                print(f"  • Current Biomass: {final_biomass:.1f} g/plant")
         else:
-            print(f"\n🔮 HARVEST PROJECTIONS:")
-            print(f"  • GDD data not available for projections")
+            print(f"  • Growth data insufficient for projections")
+    else:
+        print(f"  • Growth data not available for projections")
     
     print(f"\n{'-'*80}")
     print(f"📋 Note: All biomass values shown are PER PLANT. Multiply by {plant_count} for total system values.")
@@ -613,7 +767,7 @@ def main():
         return
 
     try:
-        simulation_result = run_simulation(args.days, args.cultivar, args.system, args.print_daily, args.treatment_id, args.input_dir)
+        simulation_result = run_simulation(args.days, args.cultivar, args.system, args.print_daily, args.treatment_id, args.input_dir, args.summary_only)
 
         # CRITICAL FIX: Check if simulation failed (returned None or None, None)
         if simulation_result is None or (isinstance(simulation_result, tuple) and simulation_result[0] is None):

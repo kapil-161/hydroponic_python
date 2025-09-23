@@ -360,7 +360,7 @@ class CROPGROHydroponicSimulator:
             'dry_matter_content': 0.05,
             'leaf_area_m2': 0.0001,
             'root_length': 5.0,
-            'root_surface_area': 0.001,
+            'root_surface_area': 1.5,  # cm² - realistic initial value for transplant
             'photosynthesis_rate': 0.0,
             'respiration_rate': 0.0,
             'transpiration_rate': 0.0,
@@ -502,7 +502,7 @@ class CROPGROHydroponicSimulator:
                 temp_avg=plant_state['air_temperature'],
                 solar_radiation=plant_state['solar_radiation'],
                 vpd=plant_state['vpd'],
-                water_use_efficiency=plant_state['water_uptake_rate'] / max(0.001, plant_state['total_biomass'] / 1000.0),  # L/kg biomass
+                water_use_efficiency=plant_state['water_uptake_rate'] / max(0.001, plant_state['total_biomass'] / 1000.0),  # L/kg biomass (water_uptake_rate in L/day, biomass in g)
                 ph=plant_state['ph'],
                 ec=plant_state['ec'],
                 rzt=plant_state['root_zone_temp'],
@@ -584,7 +584,7 @@ class CROPGROHydroponicSimulator:
                 fine_root_length=plant_state.get('fine_root_length', plant_state['root_length'] * 0.8),
                 coarse_root_length=plant_state.get('coarse_root_length', plant_state['root_length'] * 0.2),
                 # Nitrogen dynamics detailed
-                nitrogen_uptake_mg=plant_state['nutrient_uptake'].get('N', 0) * 1000,
+                nitrogen_uptake_mg=plant_state['nutrient_uptake'].get('N-NO3', 0),
                 nitrogen_demand_mg=plant_state['total_biomass'] * 0.04 * 1000,
                 nitrogen_stress_factor=plant_state['nutrient_stress'],
                 leaf_nitrogen_conc=0.04,
@@ -597,7 +597,7 @@ class CROPGROHydroponicSimulator:
                 n_remobilization=0.0,
                 n_critical_conc=0.03,
                 # Phosphorus dynamics
-                phosphorus_uptake_mg=plant_state['nutrient_uptake'].get('P', 0) * 1000,
+                phosphorus_uptake_mg=plant_state['nutrient_uptake'].get('P-PO4', 0),
                 phosphorus_remobilization=0.0,
                 potassium_remobilization=0.0,
                 # Senescence - Enhanced with comprehensive senescence model
@@ -674,7 +674,7 @@ class CROPGROHydroponicSimulator:
             current_day += 1
             
             # Check for harvest maturity
-            if target_maturity == 'harvest' and plant_state['growth_stage'] in ['HARVEST', 'MATURE']:
+            if target_maturity == 'harvest' and plant_state['growth_stage'] in ['HM', 'HARVEST_MATURITY', 'HARVEST', 'MATURE']:
                 logger.info(f"Harvest maturity reached at day {current_day}")
                 break
         
@@ -1062,7 +1062,7 @@ class CROPGROHydroponicSimulator:
         """Update plant architecture based on biomass allocation."""
         # Update plant height based on stem biomass
         base_height = 2.0  # cm
-        height_growth = plant_state['stem_biomass'] * 0.2  # cm per g stem biomass
+        height_growth = plant_state['stem_biomass'] * 2.0  # cm per g stem biomass (increased from 0.2)
         plant_state['plant_height'] = base_height + height_growth
         
         # Update root length based on root biomass
@@ -1070,9 +1070,18 @@ class CROPGROHydroponicSimulator:
         root_growth = plant_state['root_biomass'] * 0.5  # cm per g root biomass
         plant_state['root_length'] = base_root_length + root_growth
         
-        # Update root surface area
-        avg_root_diameter_cm = 0.05  # cm
+        # Update root surface area with proper calculation
+        avg_root_diameter_cm = 0.02  # cm - realistic fine root diameter
+        # Surface area = π * diameter * length
         plant_state['root_surface_area'] = plant_state['root_length'] * 3.14159 * avg_root_diameter_cm
+
+        # Ensure minimum realistic surface area based on plant size
+        min_surface_area = plant_state['total_biomass'] * 100  # 100 cm²/g biomass ratio (more realistic)
+        plant_state['root_surface_area'] = max(plant_state['root_surface_area'], min_surface_area)
+
+        # Additional check - ensure minimum absolute value for seedlings
+        absolute_minimum = 25.0  # cm² minimum for any plant
+        plant_state['root_surface_area'] = max(plant_state['root_surface_area'], absolute_minimum)
         
         return plant_state
     
@@ -1106,9 +1115,9 @@ class CROPGROHydroponicSimulator:
 
         # Update leaf number based on stage
         stage_leaf_map = {
-            'GERMINATION': 2, 'COTYLEDON': 2, 'FIRST_LEAF': 2, 'SECOND_LEAF': 3,
-            'THIRD_LEAF': 4, 'V4': 6, 'V5': 8, 'V6': 10, 'V7': 12, 'V8': 14,
-            'V9': 16, 'V10': 18, 'V11+': 20, 'HI': 22, 'HD': 24, 'HM': 26
+            'GE': 2, 'VE': 2, 'V1': 2, 'V2': 3, 'V3': 4, 'V4': 6, 'V5': 8,
+            'V6': 10, 'V7': 12, 'V8': 14, 'V9': 16, 'V10': 18, 'V11+': 20,
+            'HI': 22, 'HD': 24, 'HM': 26
         }
         plant_state['leaf_number'] = stage_leaf_map.get(plant_state['growth_stage'], 16)
 
@@ -2929,8 +2938,13 @@ class CROPGROHydroponicSimulator:
                 solution_concentrations=plant_state['nutrient_concentrations']
             )
             
-            # Update plant state with root results
-            plant_state['root_surface_area'] = root_result['total_root_surface_area']
+            # Update plant state with root results (with minimum check)
+            calculated_surface_area = root_result['total_root_surface_area']
+            # Ensure root model results are realistic
+            min_surface_area = plant_state['total_biomass'] * 100  # 100 cm²/g biomass ratio
+            absolute_minimum = 25.0  # cm² minimum for any plant
+            final_surface_area = max(calculated_surface_area, min_surface_area, absolute_minimum)
+            plant_state['root_surface_area'] = final_surface_area
             plant_state['root_length'] = root_result['total_root_length']
             plant_state['fine_root_length'] = root_result['fine_root_length']
             plant_state['coarse_root_length'] = root_result['coarse_root_length']
@@ -2944,7 +2958,7 @@ class CROPGROHydroponicSimulator:
                     environmental_conditions=environmental_conditions,
                     solution_concentrations=plant_state['nutrient_concentrations']
                 )
-                
+
                 # Update nutrient uptake rates
                 plant_state['nutrient_uptake'] = {
                     'N-NO3': nutrient_uptake_result.get('NO3_uptake_rate', 0.0),

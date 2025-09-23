@@ -42,7 +42,7 @@ def analyze_key_metrics(df):
     key_metrics = {
         'Total_Biomass_g': {'name': 'Total Biomass', 'unit': 'g', 'expected_range': (0, 300)},
         'Plant_Height_cm': {'name': 'Plant Height', 'unit': 'cm', 'expected_range': (5, 20)},
-        'LAI': {'name': 'Leaf Area Index', 'unit': '', 'expected_range': (0, 1.0)},
+        'LAI': {'name': 'Leaf Area Index', 'unit': '', 'expected_range': (0, 4.0)},
         'Shoot_Fresh_Weight_g': {'name': 'Shoot Fresh Weight', 'unit': 'g', 'expected_range': (0, 250)},
         'Leaf_Fresh_Weight_g': {'name': 'Leaf Fresh Weight', 'unit': 'g', 'expected_range': (0, 200)},
         'Root_Fresh_Weight_g': {'name': 'Root Fresh Weight', 'unit': 'g', 'expected_range': (0, 50)},

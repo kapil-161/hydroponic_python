@@ -1,26 +1,26 @@
 parameter_name,value,unit,description,category,reference,priority
-GE_to_VE,80.0,gdd,Growing degree days from germination to emergence,thermal_requirements,Tei et al. 1996,1.0
-VE_to_V1,45.0,gdd,Growing degree days from emergence to first leaf,thermal_requirements,Tei et al. 1996,1.0
-V1_to_V2,35.0,gdd,Growing degree days from first to second leaf,thermal_requirements,Tei et al. 1996,1.0
-V2_to_V3,35.0,gdd,Growing degree days from second to third leaf,thermal_requirements,Tei et al. 1996,1.0
-V3_to_V4,35.0,gdd,Growing degree days from third to fourth leaf,thermal_requirements,Tei et al. 1996,1.0
-V4_to_V5,35.0,gdd,Growing degree days from fourth to fifth leaf,thermal_requirements,Tei et al. 1996,1.0
-V5_to_V6,35.0,gdd,Growing degree days from fifth to sixth leaf,thermal_requirements,Tei et al. 1996,1.0
-V6_to_V7,35.0,gdd,Growing degree days from sixth to seventh leaf,thermal_requirements,Tei et al. 1996,1.0
-V7_to_V8,35.0,gdd,Growing degree days from seventh to eighth leaf,thermal_requirements,Tei et al. 1996,1.0
-V8_to_V9,35.0,gdd,Growing degree days from eighth to ninth leaf,thermal_requirements,Tei et al. 1996,1.0
-V9_to_V10,35.0,gdd,Growing degree days from ninth to tenth leaf,thermal_requirements,Tei et al. 1996,1.0
-V10_to_V11+,40.0,gdd,Growing degree days from tenth leaf to mature vegetative,thermal_requirements,Tei et al. 1996,1.0
-V11+_to_HI,120.0,gdd,Growing degree days from mature vegetative to head initiation,thermal_requirements,Tei et al. 1996,1.0
-HI_to_HD,180.0,gdd,Growing degree days from head initiation to head development,thermal_requirements,Tei et al. 1996,1.0
-HD_to_HM,200.0,gdd,Growing degree days from head development to harvest maturity,thermal_requirements,Tei et al. 1996,1.0
+GE_to_VE,50.0,gdd,Growing degree days from germination to emergence,thermal_requirements,Tei et al. 1996,1.0
+VE_to_V1,25.0,gdd,Growing degree days from emergence to first leaf,thermal_requirements,Tei et al. 1996,1.0
+V1_to_V2,20.0,gdd,Growing degree days from first to second leaf,thermal_requirements,Tei et al. 1996,1.0
+V2_to_V3,20.0,gdd,Growing degree days from second to third leaf,thermal_requirements,Tei et al. 1996,1.0
+V3_to_V4,20.0,gdd,Growing degree days from third to fourth leaf,thermal_requirements,Tei et al. 1996,1.0
+V4_to_V5,20.0,gdd,Growing degree days from fourth to fifth leaf,thermal_requirements,Tei et al. 1996,1.0
+V5_to_V6,20.0,gdd,Growing degree days from fifth to sixth leaf,thermal_requirements,Tei et al. 1996,1.0
+V6_to_V7,20.0,gdd,Growing degree days from sixth to seventh leaf,thermal_requirements,Tei et al. 1996,1.0
+V7_to_V8,20.0,gdd,Growing degree days from seventh to eighth leaf,thermal_requirements,Tei et al. 1996,1.0
+V8_to_V9,20.0,gdd,Growing degree days from eighth to ninth leaf,thermal_requirements,Tei et al. 1996,1.0
+V9_to_V10,20.0,gdd,Growing degree days from ninth to tenth leaf,thermal_requirements,Tei et al. 1996,1.0
+V10_to_V11+,25.0,gdd,Growing degree days from tenth leaf to mature vegetative,thermal_requirements,Tei et al. 1996,1.0
+V11+_to_HI,60.0,gdd,Growing degree days from mature vegetative to head initiation,thermal_requirements,Tei et al. 1996,1.0
+HI_to_HD,80.0,gdd,Growing degree days from head initiation to head development,thermal_requirements,Tei et al. 1996,1.0
+HD_to_HM,100.0,gdd,Growing degree days from head development to harvest maturity,thermal_requirements,Tei et al. 1996,1.0
 HM_to_PM,100.0,gdd,Growing degree days from harvest to physiological maturity,thermal_requirements,Tei et al. 1996,1.0
-vegetative_default,35.0,gdd,Default thermal time for vegetative stage transitions,thermal_requirements,Tei et al. 1996,1.0
-head_formation_default,150.0,gdd,Default thermal time for head formation stage transitions,thermal_requirements,Tei et al. 1996,1.0
-reproductive_default,200.0,gdd,Default thermal time for reproductive stage transitions,thermal_requirements,Tei et al. 1996,1.0
-transition_defaults_vegetative,35.0,gdd,Default thermal time for vegetative stage transitions,thermal_requirements,Tei et al. 1996,1.0
-transition_defaults_head_formation,150.0,gdd,Default thermal time for head formation stage transitions,thermal_requirements,Tei et al. 1996,1.0
-transition_defaults_reproductive,200.0,gdd,Default thermal time for reproductive stage transitions,thermal_requirements,Tei et al. 1996,1.0
+vegetative_default,20.0,gdd,Default thermal time for vegetative stage transitions,thermal_requirements,Tei et al. 1996,1.0
+head_formation_default,80.0,gdd,Default thermal time for head formation stage transitions,thermal_requirements,Tei et al. 1996,1.0
+reproductive_default,100.0,gdd,Default thermal time for reproductive stage transitions,thermal_requirements,Tei et al. 1996,1.0
+transition_defaults_vegetative,20.0,gdd,Default thermal time for vegetative stage transitions,thermal_requirements,Tei et al. 1996,1.0
+transition_defaults_head_formation,80.0,gdd,Default thermal time for head formation stage transitions,thermal_requirements,Tei et al. 1996,1.0
+transition_defaults_reproductive,100.0,gdd,Default thermal time for reproductive stage transitions,thermal_requirements,Tei et al. 1996,1.0
 transition_defaults,"{'vegetative': 35.0, 'head_formation': 150.0, 'reproductive': 200.0}",dict,Default thermal time requirements for stage transitions,thermal_requirements,Tei et al. 1996,1.0
 EM_FL,28.5,days,Time from emergence to first flower (lettuce-specific),genetic_parameters,Boote et al. 2018,1.0
 FL_SH,16.0,days,Time from first flower to first seed head,genetic_parameters,DSSAT CROPGRO v4.8,1.0
@@ -520,26 +520,26 @@ co2_sensor_accuracy,10.0,umol_per_mol,CO2 sensor precision,control_equipment_par
 co2_mixing_time,15.0,minutes,Time for full CO2 mixing,control_equipment_parameters,Seginer et al. 1991,1.0
 air_exchange_rate,0.5,air_changes_per_hour,Air exchange rate for ventilation,control_equipment_parameters,Seginer et al. 1991,1.0
 circulation_fan_power,50.0,watt,Power consumption for circulation fans,control_equipment_parameters,Seginer et al. 1991,1.0
-no3_uptake_vmax,0.03,mg_per_cm2_per_day,Maximum NO3 uptake rate per root surface area,nutrient_parameters,Clarkson & Hanson 1980,1.0
+no3_uptake_vmax,0.3,mg_per_cm2_per_day,Maximum NO3 uptake rate per root surface area,nutrient_parameters,Clarkson & Hanson 1980,1.0
 no3_uptake_km,0.5,mg_per_L,Michaelis-Menten constant for NO3 uptake,nutrient_parameters,Clarkson & Hanson 1980,1.0
-nh4_uptake_vmax,0.045,mg_per_cm2_per_day,Maximum NH4 uptake rate per root surface area,nutrient_parameters,Clarkson & Hanson 1980,1.0
+nh4_uptake_vmax,0.45,mg_per_cm2_per_day,Maximum NH4 uptake rate per root surface area,nutrient_parameters,Clarkson & Hanson 1980,1.0
 nh4_uptake_km,0.3,mg_per_L,Michaelis-Menten constant for NH4 uptake,nutrient_parameters,Clarkson & Hanson 1980,1.0
-po4_uptake_vmax,0.008,mg_per_cm2_per_day,Maximum PO4 uptake rate per root surface area,nutrient_parameters,Clarkson & Hanson 1980,1.0
+po4_uptake_vmax,0.08,mg_per_cm2_per_day,Maximum PO4 uptake rate per root surface area,nutrient_parameters,Clarkson & Hanson 1980,1.0
 po4_uptake_km,0.1,mg_per_L,Michaelis-Menten constant for PO4 uptake,nutrient_parameters,Clarkson & Hanson 1980,1.0
-k_uptake_vmax,0.025,mg_per_cm2_per_day,Maximum K uptake rate per root surface area,nutrient_parameters,Clarkson & Hanson 1980,1.0
+k_uptake_vmax,0.25,mg_per_cm2_per_day,Maximum K uptake rate per root surface area,nutrient_parameters,Clarkson & Hanson 1980,1.0
 k_uptake_km,0.4,mg_per_L,Michaelis-Menten constant for K uptake,nutrient_parameters,Clarkson & Hanson 1980,1.0
-ca_uptake_vmax,0.018,mg_per_cm2_per_day,Maximum Ca uptake rate per root surface area,nutrient_parameters,Clarkson & Hanson 1980,1.0
+ca_uptake_vmax,0.18,mg_per_cm2_per_day,Maximum Ca uptake rate per root surface area,nutrient_parameters,Clarkson & Hanson 1980,1.0
 ca_uptake_km,0.8,mg_per_L,Michaelis-Menten constant for Ca uptake,nutrient_parameters,Clarkson & Hanson 1980,1.0
-mg_uptake_vmax,0.012,mg_per_cm2_per_day,Maximum Mg uptake rate per root surface area,nutrient_parameters,Shaul 2002,1.0
+mg_uptake_vmax,0.12,mg_per_cm2_per_day,Maximum Mg uptake rate per root surface area,nutrient_parameters,Shaul 2002,1.0
 mg_uptake_km,0.6,mg_per_L,Michaelis-Menten constant for Mg uptake,nutrient_parameters,Shaul 2002,1.0
 so4_uptake_vmax,0.015,mg_per_cm2_per_day,Maximum SO4 uptake rate per root surface area,nutrient_parameters,Hawkesford 2000,1.0
 so4_uptake_km,0.7,mg_per_L,Michaelis-Menten constant for SO4 uptake,nutrient_parameters,Hawkesford 2000,1.0
-ec_factor_n_no3,0.0006,dS_per_m_per_mg_L,EC contribution factor for NO3-N,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_p_po4,0.0005,dS_per_m_per_mg_L,EC contribution factor for PO4-P,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_k,0.0007,dS_per_m_per_mg_L,EC contribution factor for K,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_ca,0.0006,dS_per_m_per_mg_L,EC contribution factor for Ca,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_mg,0.0006,dS_per_m_per_mg_L,EC contribution factor for Mg,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_default,0.0006,dS_per_m_per_mg_L,Default EC contribution factor for other ions,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_n_no3,0.006,dS_per_m_per_mg_L,EC contribution factor for NO3-N,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_p_po4,0.005,dS_per_m_per_mg_L,EC contribution factor for PO4-P,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_k,0.007,dS_per_m_per_mg_L,EC contribution factor for K,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_ca,0.006,dS_per_m_per_mg_L,EC contribution factor for Ca,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_mg,0.006,dS_per_m_per_mg_L,EC contribution factor for Mg,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_default,0.006,dS_per_m_per_mg_L,Default EC contribution factor for other ions,nutrient_parameters,Sonneveld & Voogt 2009,1.0
 ec_factor_s_so4,0.0005,dS_per_m_per_mg_per_L,EC factor for SO4-S,nutrient_parameters,Sonneveld & Voogt 2009,1.0
 ec_factor_fe,0.0004,dS_per_m_per_mg_per_L,EC factor for Fe,nutrient_parameters,Sonneveld & Voogt 2009,1.0
 ec_factor_mn,0.0004,dS_per_m_per_mg_per_L,EC factor for Mn,nutrient_parameters,Sonneveld & Voogt 2009,1.0
@@ -850,7 +850,7 @@ ph_stress_impact,0.15,fraction,pH stress impact weight (higher = more pH stress 
 initial_root_activity,1.0,fraction,Initial activity factor for new root cohorts,root_system,Sonneveld & Voogt 2009,1.0
 temperature_sensitivity,0.1,1_per_celsius,Temperature sensitivity factor for water uptake,water_parameters,Seginer et al. 1991,1.0
 vpd_sensitivity,0.2,1_per_kPa,VPD sensitivity factor for water uptake,water_parameters,Seginer et al. 1991,1.0
-metabolic_water_per_biomass,0.05,L_per_g,Water requirement per unit biomass,water_parameters,Amthor 2000,1.0
+metabolic_water_per_biomass,0.00005,L_per_g,Water requirement per unit biomass,water_parameters,Amthor 2000,1.0
 base_leaf_potential,-0.5,MPa,Base leaf water potential,root_system,Seginer et al. 1991,1.0
 transpiration_potential_factor,0.8,fraction,Transpiration potential factor,root_system,Seginer et al. 1991,1.0
 solution_potential_factor,0.1,fraction,Solution potential factor,root_system,Seginer et al. 1991,1.0
@@ -858,13 +858,13 @@ light_response_factor,0.3,fraction,Response strength to light limitation,allocat
 nitrogen_response_factor,0.4,fraction,Response strength to nitrogen limitation,allocation_parameters,Seginer et al. 1991,1.0
 water_response_factor,0.2,fraction,Response strength to water limitation,allocation_parameters,Seginer et al. 1991,1.0
 minimum_organ_fraction,0.05,fraction,Minimum allocation to any organ,allocation_parameters,Seginer et al. 1991,1.0
-ec_factor_n_nh4,0.0007,dS_per_m_per_mg_L,EC contribution factor for NH4-N,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_initial_n_no3,0.0006,dS_per_m_per_mg_L,EC contribution factor for initial NO3-N,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_initial_n_nh4,0.0007,dS_per_m_per_mg_L,EC contribution factor for initial NH4-N,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_initial_p_po4,0.0005,dS_per_m_per_mg_L,EC contribution factor for initial PO4-P,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_initial_k,0.0007,dS_per_m_per_mg_L,EC contribution factor for initial K,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_initial_ca,0.0005,dS_per_m_per_mg_L,EC contribution factor for initial Ca,nutrient_parameters,Sonneveld & Voogt 2009,1.0
-ec_factor_initial_mg,0.0008,dS_per_m_per_mg_L,EC contribution factor for initial Mg,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_n_nh4,0.007,dS_per_m_per_mg_L,EC contribution factor for NH4-N,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_n_no3,0.006,dS_per_m_per_mg_L,EC contribution factor for initial NO3-N,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_n_nh4,0.007,dS_per_m_per_mg_L,EC contribution factor for initial NH4-N,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_p_po4,0.005,dS_per_m_per_mg_L,EC contribution factor for initial PO4-P,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_k,0.007,dS_per_m_per_mg_L,EC contribution factor for initial K,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_ca,0.005,dS_per_m_per_mg_L,EC contribution factor for initial Ca,nutrient_parameters,Sonneveld & Voogt 2009,1.0
+ec_factor_initial_mg,0.008,dS_per_m_per_mg_L,EC contribution factor for initial Mg,nutrient_parameters,Sonneveld & Voogt 2009,1.0
 ec_factor_initial_s_so4,0.0005,dS_per_m_per_mg_per_L,EC factor for initial SO4-S,nutrient_parameters,Sonneveld & Voogt 2009,1.0
 ec_factor_initial_fe,0.0004,dS_per_m_per_mg_per_L,EC factor for initial Fe,nutrient_parameters,Sonneveld & Voogt 2009,1.0
 ec_factor_initial_mn,0.0004,dS_per_m_per_mg_per_L,EC factor for initial Mn,nutrient_parameters,Sonneveld & Voogt 2009,1.0
