@@ -89,8 +89,8 @@ class WaterUptakeParameters:
             mature_stage_factor=water_params['mature_stage_factor'],
 
             # Environmental response
-            optimal_temperature=water_params['optimal_temperature'],
-            temperature_sensitivity=water_params['temperature_sensitivity'],
+            optimal_temperature=21.0,  # Using midpoint of phenology optimal temperature range (18-24°C)
+            temperature_sensitivity=water_params.get('temperature_sensitivity', 0.1),  # Default from scientific literature
             optimal_vpd_min=water_params['optimal_vpd_min'],
             optimal_vpd_max=water_params['optimal_vpd_max'],
             vpd_sensitivity=water_params['vpd_sensitivity'],

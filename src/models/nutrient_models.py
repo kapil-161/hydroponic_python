@@ -66,10 +66,10 @@ class NutrientConcentrationModel:
         
         # Load from CSV parameters - ERROR if missing
         required_ec_factors = [
-            'ec_factor_n_no3', 'ec_factor_n_nh4', 'ec_factor_initial_n_no3', 'ec_factor_initial_n_nh4',
-            'ec_factor_p_po4', 'ec_factor_initial_p_po4', 'ec_factor_k', 'ec_factor_initial_k',
-            'ec_factor_ca', 'ec_factor_initial_ca', 'ec_factor_mg', 'ec_factor_initial_mg',
-            'ec_factor_s_so4', 'ec_factor_initial_s_so4', 'ec_factor_fe', 'ec_factor_initial_fe'
+            'ec_factor_n_no3', 'ec_factor_n_nh4',
+            'ec_factor_p_po4', 'ec_factor_k',
+            'ec_factor_ca', 'ec_factor_mg',
+            'ec_factor_s_so4', 'ec_factor_fe'
         ]
         
         for param in required_ec_factors:
@@ -78,26 +78,9 @@ class NutrientConcentrationModel:
         
         # Load optional EC factors from CSV - ERROR if missing
         optional_ec_factors = [
-            'ec_factor_mn', 'ec_factor_initial_mn', 'ec_factor_zn', 'ec_factor_initial_zn',
-            'ec_factor_cu', 'ec_factor_initial_cu', 'ec_factor_b', 'ec_factor_initial_b',
-            'ec_factor_mo', 'ec_factor_initial_mo', 'ec_factor_target_ec',
-            'ec_factor_min_ec_threshold', 'ec_factor_max_ec_threshold',
-            'ec_factor_min_ph_threshold', 'ec_factor_max_ph_threshold',
-            'ec_factor_solution_change_interval', 'ec_factor_ec_decline_rate',
-            'ec_factor_no3_uptake_vmax', 'ec_factor_nh4_uptake_vmax',
-            'ec_factor_po4_uptake_vmax', 'ec_factor_k_uptake_vmax',
-            'ec_factor_no3_uptake_km', 'ec_factor_nh4_uptake_km',
-            'ec_factor_po4_uptake_km', 'ec_factor_k_uptake_km',
-            'ec_factor_ca_uptake_vmax', 'ec_factor_mg_uptake_vmax',
-            'ec_factor_s_uptake_vmax', 'ec_factor_fe_uptake_vmax',
-            'ec_factor_ca_uptake_km', 'ec_factor_mg_uptake_km',
-            'ec_factor_s_uptake_km', 'ec_factor_fe_uptake_km',
-            'ec_factor_so4_uptake_vmax', 'ec_factor_so4_uptake_km',
-            'ec_factor_mn_uptake_vmax', 'ec_factor_mn_uptake_km',
-            'ec_factor_zn_uptake_vmax', 'ec_factor_zn_uptake_km',
-            'ec_factor_cu_uptake_vmax', 'ec_factor_cu_uptake_km',
-            'ec_factor_b_uptake_vmax', 'ec_factor_b_uptake_km',
-            'ec_factor_mo_uptake_vmax', 'ec_factor_mo_uptake_km'
+            'ec_factor_mn', 'ec_factor_zn',
+            'ec_factor_cu', 'ec_factor_b',
+            'ec_factor_mo'
         ]
         
         for param in optional_ec_factors:
@@ -107,65 +90,17 @@ class NutrientConcentrationModel:
         return {
             "N-NO3": config_dict['ec_factor_n_no3'],
             "N-NH4": config_dict['ec_factor_n_nh4'],
-            "initial_n_no3": config_dict['ec_factor_initial_n_no3'],
-            "initial_n_nh4": config_dict['ec_factor_initial_n_nh4'],
             "P-PO4": config_dict['ec_factor_p_po4'],
-            "initial_p_po4": config_dict['ec_factor_initial_p_po4'],
             "K": config_dict['ec_factor_k'],
-            "initial_k": config_dict['ec_factor_initial_k'],
             "Ca": config_dict['ec_factor_ca'],
-            "initial_ca": config_dict['ec_factor_initial_ca'],
             "Mg": config_dict['ec_factor_mg'],
-            "initial_mg": config_dict['ec_factor_initial_mg'],
             "S-SO4": config_dict['ec_factor_s_so4'],
-            "initial_s_so4": config_dict['ec_factor_initial_s_so4'],
             "Fe": config_dict['ec_factor_fe'],
-            "initial_fe": config_dict['ec_factor_initial_fe'],
             "Mn": config_dict['ec_factor_mn'],
-            "initial_mn": config_dict['ec_factor_initial_mn'],
             "Zn": config_dict['ec_factor_zn'],
-            "initial_zn": config_dict['ec_factor_initial_zn'],
             "Cu": config_dict['ec_factor_cu'],
-            "initial_cu": config_dict['ec_factor_initial_cu'],
             "B": config_dict['ec_factor_b'],
-            "initial_b": config_dict['ec_factor_initial_b'],
-            "Mo": config_dict['ec_factor_mo'],
-            "initial_mo": config_dict['ec_factor_initial_mo'],
-            "target_ec": config_dict['ec_factor_target_ec'],
-            "min_ec_threshold": config_dict['ec_factor_min_ec_threshold'],
-            "max_ec_threshold": config_dict['ec_factor_max_ec_threshold'],
-            "min_ph_threshold": config_dict['ec_factor_min_ph_threshold'],
-            "max_ph_threshold": config_dict['ec_factor_max_ph_threshold'],
-            "solution_change_interval": config_dict['ec_factor_solution_change_interval'],
-            "ec_decline_rate": config_dict['ec_factor_ec_decline_rate'],
-            "no3_uptake_vmax": config_dict['ec_factor_no3_uptake_vmax'],
-            "nh4_uptake_vmax": config_dict['ec_factor_nh4_uptake_vmax'],
-            "po4_uptake_vmax": config_dict['ec_factor_po4_uptake_vmax'],
-            "k_uptake_vmax": config_dict['ec_factor_k_uptake_vmax'],
-            "no3_uptake_km": config_dict['ec_factor_no3_uptake_km'],
-            "nh4_uptake_km": config_dict['ec_factor_nh4_uptake_km'],
-            "po4_uptake_km": config_dict['ec_factor_po4_uptake_km'],
-            "k_uptake_km": config_dict['ec_factor_k_uptake_km'],
-            "ca_uptake_vmax": config_dict['ec_factor_ca_uptake_vmax'],
-            "mg_uptake_vmax": config_dict['ec_factor_mg_uptake_vmax'],
-            "s_uptake_vmax": config_dict['ec_factor_s_uptake_vmax'],
-            "fe_uptake_vmax": config_dict['ec_factor_fe_uptake_vmax'],
-            "ca_uptake_km": config_dict['ec_factor_ca_uptake_km'],
-            "mg_uptake_km": config_dict['ec_factor_mg_uptake_km'],
-            "s_uptake_km": config_dict['ec_factor_s_uptake_km'],
-            "fe_uptake_km": config_dict['ec_factor_fe_uptake_km'],
-            "so4_uptake_vmax": config_dict['ec_factor_so4_uptake_vmax'],
-            "so4_uptake_km": config_dict['ec_factor_so4_uptake_km'],
-            "mn_uptake_vmax": config_dict['ec_factor_mn_uptake_vmax'],
-            "mn_uptake_km": config_dict['ec_factor_mn_uptake_km'],
-            "zn_uptake_vmax": config_dict['ec_factor_zn_uptake_vmax'],
-            "zn_uptake_km": config_dict['ec_factor_zn_uptake_km'],
-            "cu_uptake_vmax": config_dict['ec_factor_cu_uptake_vmax'],
-            "cu_uptake_km": config_dict['ec_factor_cu_uptake_km'],
-            "b_uptake_vmax": config_dict['ec_factor_b_uptake_vmax'],
-            "b_uptake_km": config_dict['ec_factor_b_uptake_km'],
-            "mo_uptake_vmax": config_dict['ec_factor_mo_uptake_vmax'],
-            "mo_uptake_km": config_dict['ec_factor_mo_uptake_km'],
+            "Mo": config_dict['ec_factor_mo']
         }
     
     def calculate_ec_from_concentrations(self, nutrient_concentrations: Dict[str, float]) -> float:
@@ -173,10 +108,7 @@ class NutrientConcentrationModel:
         total_ec = 0.0
 
         # Filter to only include actual nutrients (not system parameters or EC factors)
-        actual_nutrients = ['N-NO3', 'N-NH4', 'P-PO4', 'K', 'Ca', 'Mg', 'S-SO4', 'Fe', 'Mn', 'Zn', 'Cu', 'B', 'Mo',
-                           'initial_n_no3', 'initial_n_nh4', 'initial_p_po4', 'initial_k', 'initial_ca',
-                           'initial_mg', 'initial_s_so4', 'initial_fe', 'initial_mn', 'initial_zn',
-                           'initial_cu', 'initial_b', 'initial_mo']
+        actual_nutrients = ['N-NO3', 'N-NH4', 'P-PO4', 'K', 'Ca', 'Mg', 'S-SO4', 'Fe', 'Mn', 'Zn', 'Cu', 'B', 'Mo']
 
         for nutrient_id, concentration in nutrient_concentrations.items():
             # Skip system parameters and EC factor parameters

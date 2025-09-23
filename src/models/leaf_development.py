@@ -59,7 +59,7 @@ class LeafParameters:
             'base_phyllochron', 'min_temp', 'opt_temp_min', 'opt_temp_max', 'max_temp',
             'max_leaf_number', 'initial_leaf_number', 'leaf_appearance_rate',
             'max_individual_leaf_area', 'leaf_area_expansion_rate',
-            'water_stress_threshold', 'nitrogen_stress_threshold', 'temperature_stress_sensitivity'
+            'drought_threshold', 'n_stress_threshold', 'temperature_stress_sensitivity'
         ]
         
         missing_params = [p for p in required_params if p not in config_dict]
@@ -82,8 +82,8 @@ class LeafParameters:
             max_individual_leaf_area=float(config_dict['max_individual_leaf_area']),
             leaf_area_expansion_rate=float(config_dict['leaf_area_expansion_rate']),
             specific_leaf_area=float(config_dict['specific_leaf_area']),
-            water_stress_threshold=float(config_dict['water_stress_threshold']),
-            nitrogen_stress_threshold=float(config_dict['nitrogen_stress_threshold']),
+            water_stress_threshold=float(config_dict['drought_threshold']),
+            nitrogen_stress_threshold=float(config_dict['n_stress_threshold']),
             temperature_stress_sensitivity=float(config_dict['temperature_stress_sensitivity'])
         )
 
@@ -373,17 +373,28 @@ def create_lettuce_leaf_development_model(system_config=None) -> LeafDevelopment
     # Get leaf development parameters from CSV data loaded in system_config
     leaf_params = getattr(system_config, 'leaf_development_parameters', None)
     canopy_params = getattr(system_config, 'canopy_parameters', None)
-    
+    phenology_params = getattr(system_config, 'phenology_parameters', None)
+    nitrogen_params = getattr(system_config, 'nitrogen_parameters', None)
+
     if leaf_params is None:
         raise ValueError("❌ leaf_development_parameters missing from CSV - no fallback defaults allowed")
-    
+
     if canopy_params is None:
         raise ValueError("❌ canopy_parameters missing from CSV - no fallback defaults allowed")
-    
+
+    # Copy leaf_params to avoid modifying original
+    leaf_params = leaf_params.copy()
+
     # Get specific_leaf_area from canopy parameters since they share the same value
     if 'specific_leaf_area' not in leaf_params and 'specific_leaf_area' in canopy_params:
-        leaf_params = leaf_params.copy()
         leaf_params['specific_leaf_area'] = canopy_params['specific_leaf_area']
+
+    # Get stress thresholds from their respective parameter categories
+    if phenology_params and 'drought_threshold' in phenology_params:
+        leaf_params['drought_threshold'] = phenology_params['drought_threshold']
+
+    if nitrogen_params and 'n_stress_threshold' in nitrogen_params:
+        leaf_params['n_stress_threshold'] = nitrogen_params['n_stress_threshold']
     
     # Create parameters from CSV config
     parameters = LeafParameters.from_config(leaf_params)

@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 # Import CROPGRO system
 from cropgro_hydroponic_simulator import CROPGROHydroponicSimulator
 from data.hydroponic_system import DefaultConfigurations, HydroInputData, WeatherData
+from src.utils.parameter_tracker import ParameterTracker, TrackedSystemConfig
 # WeatherGenerator removed - weather data must come from CSV files
 
 
@@ -44,7 +45,7 @@ def daily_result_to_dict(dr: Any) -> Dict[str, Any]:
     return data
 
 
-def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: bool, treatment_id: str = None, input_dir: str = 'input', summary_only: bool = False) -> Any:
+def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: bool, treatment_id: str = None, input_dir: str = 'input', summary_only: bool = False, show_parameter_usage: bool = False) -> Any:
     print("🌱 CROPGRO Hydroponic Simulator - CLI Version")
     print("=" * 50)
 
@@ -53,6 +54,12 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
     if system_type and system_type.upper() != 'NFT':
         # Only type affects the engine; keep other fields
         system_config.system_type = system_type.upper()
+    
+    # Initialize parameter tracker if requested
+    parameter_tracker = None
+    if show_parameter_usage:
+        parameter_tracker = ParameterTracker()
+        print("🔍 Parameter usage tracking enabled")
     
     # Load parameters from SINGLE MASTER FILE - NO CONFLICTS ALLOWED
     try:
@@ -269,6 +276,11 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
             print(f"📊 Successfully loaded {len(params_loaded)} parameters from master file")
             print(f"📋 Categories loaded: {list(parameter_categories.keys())}")
             
+            # Register parameters with tracker if enabled
+            if parameter_tracker:
+                parameter_tracker.register_loaded_parameters(parameter_categories)
+                print(f"🔍 Registered {len(parameter_tracker.loaded_parameters)} parameters for usage tracking")
+            
         except Exception as e:
             print(f"❌ Error loading master parameters file: {e}")
             return
@@ -291,6 +303,11 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
             if isinstance(category_data, dict):
                 # Add all parameters from this category to nutrient_params
                 nutrient_params.update(category_data)
+
+    # Wrap system_config with parameter tracker if enabled
+    if parameter_tracker:
+        system_config = TrackedSystemConfig(system_config, parameter_tracker)
+        print("🔍 System config wrapped with parameter tracking")
 
     # Update system_config with dynamic system settings from CSV
     if hasattr(system_config, 'system_settings'):
@@ -419,6 +436,11 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
 
     # treatment_id parameter is passed directly to the function
     results = simulator.run_simulation(input_data, max_days=days, target_maturity='harvest', treatment_id=treatment_id)
+    
+    # Update parameter tracker with simulation days if enabled
+    if parameter_tracker:
+        for i, daily_result in enumerate(results.daily_results):
+            parameter_tracker.set_simulation_day(i + 1)
 
     if print_daily and not summary_only:
         for dr in results.daily_results:
@@ -734,6 +756,10 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
     print(f"✅ Simulation completed successfully!")
     print(f"Duration: {len(results.daily_results)} days")
     print(f"Final stage: {getattr(results.daily_results[-1], 'growth_stage', 'Unknown')}")
+    
+    # Show parameter usage report if enabled
+    if parameter_tracker:
+        parameter_tracker.print_usage_report(detailed=True)
 
     return results, file_prefix
 
@@ -756,6 +782,9 @@ def main():
     # Treatment identifier for batch processing
     parser.add_argument('--treatment-id', type=str, help='Treatment identifier (e.g., T01, T02)')
     parser.add_argument('--input-dir', type=str, default='input', help='Input directory containing CSV configuration files')
+    
+    # Parameter usage tracking
+    parser.add_argument('--show-parameter-usage', action='store_true', help='Show which parameters from CSV are used vs unused during simulation')
 
     args = parser.parse_args()
 
@@ -767,7 +796,7 @@ def main():
         return
 
     try:
-        simulation_result = run_simulation(args.days, args.cultivar, args.system, args.print_daily, args.treatment_id, args.input_dir, args.summary_only)
+        simulation_result = run_simulation(args.days, args.cultivar, args.system, args.print_daily, args.treatment_id, args.input_dir, args.summary_only, args.show_parameter_usage)
 
         # CRITICAL FIX: Check if simulation failed (returned None or None, None)
         if simulation_result is None or (isinstance(simulation_result, tuple) and simulation_result[0] is None):

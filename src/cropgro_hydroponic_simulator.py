@@ -79,19 +79,17 @@ class SimulationParameters:
     optimal_vpd_max: float
     vpd_stress_high_factor: float
     vpd_stress_low_factor: float
-    optimal_ec: float
     ec_stress_high_factor: float
     ec_stress_low_threshold: float
     ec_stress_low_factor: float
-    optimal_root_temp: float
+    phenology_optimal_temperature_min: float
+    phenology_optimal_temperature_max: float
     root_temp_tolerance: float
     root_temp_stress_factor: float
-    optimal_air_temp_max: float
-    optimal_air_temp_min: float
-    air_temp_stress_high_factor: float
-    air_temp_stress_low_factor: float
+    heat_stress_threshold: float
+    cold_stress_threshold: float
     optimal_humidity_min: float
-    humidity_stress_factor: float
+    water_stress_factor: float
     specific_leaf_area_default: float
     metabolic_water_per_lai: float
     reservoir_topup_fraction: float
@@ -156,13 +154,8 @@ class CROPGROHydroponicSimulator:
         """
         Loads simulation parameters from CSV files.
         """
-        stress_params = getattr(self.system_config, 'stress_parameters', {})
-        growth_params = getattr(self.system_config, 'model_constants', {})
-        env_params = getattr(self.system_config, 'environment_parameters', {})
-        canopy_params = getattr(self.system_config, 'canopy_parameters', {})
         water_params = dict(getattr(self.system_config, 'water_parameters', {}))
         nutrient_params = getattr(self.system_config, 'nitrogen_parameters', {})
-        system_params = getattr(self.system_config, 'system_parameters', {})
 
         if water_params:
             water_params_copy = dict(water_params)
@@ -173,7 +166,7 @@ class CROPGROHydroponicSimulator:
         model_constants = getattr(self.system_config, 'model_constants', {})
         stress_parameters = getattr(self.system_config, 'stress_parameters', {})
         environment_parameters = getattr(self.system_config, 'environment_parameters', {})
-        thermal_requirements = getattr(self.system_config, 'thermal_requirements', {})
+        phenology_parameters = getattr(self.system_config, 'phenology_parameters', {})
         canopy_parameters = getattr(self.system_config, 'canopy_parameters', {})
         csv_system_parameters = getattr(self.system_config, 'system_parameters', {})
 
@@ -196,21 +189,19 @@ class CROPGROHydroponicSimulator:
                 optimal_vpd_max=self._get_required_param(stress_parameters, 'optimal_vpd_max', 'stress_parameters CSV'),
                 vpd_stress_high_factor=self._get_required_param(stress_parameters, 'vpd_stress_high_factor', 'stress_parameters CSV'),
                 vpd_stress_low_factor=self._get_required_param(stress_parameters, 'vpd_stress_low_factor', 'stress_parameters CSV'),
-                optimal_ec=self._get_required_param(environment_parameters, 'optimal_ec', 'environment CSV'),
                 ec_stress_high_factor=self._get_required_param(stress_parameters, 'ec_stress_high_factor', 'stress_parameters CSV'),
                 ec_stress_low_threshold=self._get_required_param(stress_parameters, 'ec_stress_low_threshold', 'stress_parameters CSV'),
                 ec_stress_low_factor=self._get_required_param(stress_parameters, 'ec_stress_low_factor', 'stress_parameters CSV'),
-                optimal_root_temp=self._get_required_param(environment_parameters, 'environment_optimal_temperature', 'environment_parameters CSV'),
+                phenology_optimal_temperature_min=self._get_required_param(phenology_parameters, 'phenology_optimal_temperature_min', 'phenology_parameters CSV'),
+                phenology_optimal_temperature_max=self._get_required_param(phenology_parameters, 'phenology_optimal_temperature_max', 'phenology_parameters CSV'),
                 root_temp_tolerance=self._get_required_param(stress_parameters, 'temp_stress_threshold', 'stress_parameters CSV'),
                 root_temp_stress_factor=self._get_required_param(stress_parameters, 'temp_stress_factor', 'stress_parameters CSV'),
-                optimal_air_temp_max=self._get_required_param(environment_parameters, 'optimal_temperature_max', 'environment_parameters CSV'),
-                optimal_air_temp_min=self._get_required_param(environment_parameters, 'optimal_temperature_min', 'environment_parameters CSV'),
-                air_temp_stress_high_factor=self._get_required_param(stress_parameters, 'heat_stress_threshold', 'stress_parameters CSV'),
-                air_temp_stress_low_factor=self._get_required_param(stress_parameters, 'cold_stress_threshold', 'stress_parameters CSV'),
+                heat_stress_threshold=self._get_required_param(phenology_parameters, 'heat_threshold', 'phenology_parameters CSV'),
+                cold_stress_threshold=self._get_required_param(stress_parameters, 'cold_threshold_mild', 'stress_parameters CSV'),
                 optimal_humidity_min=self._get_required_param(environment_parameters, 'min_humidity', 'environment_parameters CSV'),
-                humidity_stress_factor=self._get_required_param(stress_parameters, 'water_stress_factor', 'stress_parameters CSV'),
+                water_stress_factor=self._get_required_param(stress_parameters, 'water_stress_factor', 'stress_parameters CSV'),
                 specific_leaf_area_default=self._get_required_param(canopy_parameters, 'specific_leaf_area', 'canopy_parameters CSV'),
-                metabolic_water_per_lai=self._get_required_param(water_params, 'lai_water_demand_factor', 'water_parameters CSV'),
+                metabolic_water_per_lai=self._get_required_param(water_params, 'metabolic_water_per_lai', 'water_parameters CSV'),
                 reservoir_topup_fraction=self._get_required_param(csv_system_parameters, 'reservoir_topup_fraction', 'system_parameters CSV'),
                 minimal_nitrogen_uptake=self._get_required_param(nutrient_params, 'nitrogen_uptake_efficiency', 'nitrogen_parameters CSV')
             )
@@ -1851,7 +1842,7 @@ class CROPGROHydroponicSimulator:
             # Use EC-based uptake modifiers
             if hasattr(self.mobility_model, 'calculate_ec_based_uptake_modifier'):
                 current_ec = plant_state.get('ec', 1.2)
-                optimal_ec = plant_state.get('optimal_ec', 1.2)
+                optimal_ec = (self.params.optimal_ec_range[0] + self.params.optimal_ec_range[1]) / 2
                 ec_modifiers = self.mobility_model.calculate_ec_based_uptake_modifier(
                     current_ec, optimal_ec
                 )
@@ -1985,7 +1976,7 @@ class CROPGROHydroponicSimulator:
         plant_state['water_stress'] = min(1.0, abs(vpd - optimal_vpd) / optimal_vpd)
         
         # Nutrient stress (based on EC)
-        optimal_ec = 1.5
+        optimal_ec = (self.params.optimal_ec_range[0] + self.params.optimal_ec_range[1]) / 2
         plant_state['nutrient_stress'] = min(1.0, abs(ec - optimal_ec) / optimal_ec)
         
         # Light stress
@@ -3665,7 +3656,7 @@ class CROPGROHydroponicSimulator:
         plant_state['individual_rzt_factors'] = individual_factors
         
         # 8. Update root zone temperature stress
-        optimal_rzt = getattr(self.system_config, 'optimal_root_temp', 22.0)
+        optimal_rzt = (self.params.phenology_optimal_temperature_min + self.params.phenology_optimal_temperature_max) / 2.0
         rzt_deviation = abs(plant_state['root_zone_temp'] - optimal_rzt)
         plant_state['root_temp_stress'] = min(1.0, rzt_deviation / 10.0)  # Stress increases with deviation
         
@@ -3693,7 +3684,7 @@ class CROPGROHydroponicSimulator:
     
     def _calculate_individual_rzt_factors(self, rzt: float) -> dict:
         """Calculate individual RZT factors for different processes."""
-        optimal_rzt = getattr(self.system_config, 'optimal_root_temp', 22.0)
+        optimal_rzt = (self.params.phenology_optimal_temperature_min + self.params.phenology_optimal_temperature_max) / 2.0
         
         # Growth factor (optimal around 22°C)
         growth_factor = 1.0 - abs(rzt - optimal_rzt) * 0.05
@@ -3786,8 +3777,6 @@ class CROPGROHydroponicSimulator:
         total_daily_photosynthesis = 0.0
         total_daily_uptake = {}
         hourly_diagnostics = []
-        
-        canopy_params = getattr(self.system_config, 'canopy_parameters', {})
         
         total_daily_respiration = 0.0
         daily_environmental_control = {'energy_cost': 0.0, 'temperature': 0.0, 'humidity': 0.0, 'co2': 0.0}

@@ -97,9 +97,9 @@ class TemperatureStressParameters:
             heat_damage_threshold=config["heat_damage_threshold"],
             cold_damage_threshold=config["cold_damage_threshold"],
             frost_damage_rate=config["frost_damage_rate"],
-            recovery_rate_heat=config["recovery_rate_heat"],
-            recovery_rate_cold=config["recovery_rate_cold"],
-            stress_memory_duration=int(config["stress_memory_duration"]),
+            recovery_rate_heat=config["heat_recovery_rate"],
+            recovery_rate_cold=config["cold_recovery_rate"],
+            stress_memory_duration=int(config.get("stress_memory_duration", config.get("stress_memory_days", 21))),
             memory_effect_strength=config["memory_effect_strength"],
         )
 
@@ -378,11 +378,12 @@ def create_lettuce_temperature_stress_model(system_config=None) -> TemperatureSt
         # Add stress parameters
         config.update(stress_params)
         
-        # Add environment parameters that affect temperature stress
-        if 'optimal_temperature_min' in environment_params:
-            config['optimal_temp_min'] = environment_params['optimal_temperature_min']
-        if 'optimal_temperature_max' in environment_params:
-            config['optimal_temp_max'] = environment_params['optimal_temperature_max']
+        # Use phenology optimal temperature parameters instead of removed environment parameters
+        phenology_params = getattr(system_config, 'phenology_parameters', {})
+        if 'phenology_optimal_temperature_min' in phenology_params:
+            config['optimal_temp_min'] = phenology_params['phenology_optimal_temperature_min']
+        if 'phenology_optimal_temperature_max' in phenology_params:
+            config['optimal_temp_max'] = phenology_params['phenology_optimal_temperature_max']
             
         # Add thermal requirements if available
         config.update(thermal_params)
@@ -901,18 +902,26 @@ def create_lettuce_integrated_stress_model(system_config=None) -> IntegratedStre
     try:
         # Get parameters from CSV data loaded in system_config
         stress_params = getattr(system_config, 'stress_parameters', {})
-        genetic_stress_weights = getattr(system_config, 'genetic_stress_weights', {})
+        genetic_params = getattr(system_config, 'genetic_parameters', {})
         environment_params = getattr(system_config, 'environment_parameters', {})
-        
+
         # Combine parameters from different CSV files
         config = {}
-        
+
         # Add stress parameters
         config.update(stress_params)
-        
-        # Add genetic stress weights
-        config['genetic_stress_weights'] = genetic_stress_weights
-        
+
+        # Map genetic stress weights to expected format
+        if genetic_params:
+            # Map from *_stress_weight to stress_weight_*
+            config['stress_weight_water'] = genetic_params.get('salinity_stress_weight', 0.2)  # closest to water stress
+            config['stress_weight_temperature'] = genetic_params.get('temperature_stress_weight', 0.5)
+            config['stress_weight_nutrient'] = genetic_params.get('nutrient_stress_weight', 0.25)
+            config['stress_weight_light'] = genetic_params.get('light_stress_weight', 0.15)
+            config['stress_weight_salinity'] = genetic_params.get('salinity_stress_weight', 0.2)
+            config['stress_weight_oxygen'] = 0.1  # Not in genetic params, use default
+            config['stress_weight_ph'] = 0.15  # Not in genetic params, use default
+
         # Add environment parameters that affect stress
         config.update(environment_params)
         
@@ -1253,7 +1262,8 @@ class UnifiedStressCalculator:
         temperature_factor = temp_stress_response.process_factors.overall
 
         # Root zone temperature stress
-        root_temp_deviation = abs(solution_temperature - self.params.optimal_root_temp)
+        optimal_temperature = (self.params.phenology_optimal_temperature_min + self.params.phenology_optimal_temperature_max) / 2.0
+        root_temp_deviation = abs(solution_temperature - optimal_temperature)
         if root_temp_deviation > self.params.root_temp_tolerance:
             root_temp_factor = max(0.0, 1.0 - (root_temp_deviation - self.params.root_temp_tolerance) * self.params.root_temp_stress_factor)
         else:
@@ -1314,12 +1324,16 @@ class UnifiedStressCalculator:
         nitrogen_factor = max(0.0, 1.0 - nitrogen_stress_level)
 
         # 5. SALINITY STRESS (EC-based)
-        optimal_ec = env_params.get('optimal_ec')
+        # Use optimal_ec_range from stress_parameters, calculate optimal_ec as average
+        optimal_ec_min = stress_params.get('optimal_ec_min')
+        optimal_ec_max = stress_params.get('optimal_ec_max')
         max_ec = env_params.get('max_ec')
         min_ec = env_params.get('min_ec')
 
-        if None in [optimal_ec, max_ec, min_ec]:
-            raise ValueError("❌ EC parameters must be provided in environment_parameters CSV")
+        if None in [optimal_ec_min, optimal_ec_max, max_ec, min_ec]:
+            raise ValueError("❌ EC parameters must be provided in environment_parameters and stress_parameters CSV")
+
+        optimal_ec = (optimal_ec_min + optimal_ec_max) / 2
 
         ec_stress_high_factor = stress_params.get('ec_stress_high_factor')
         ec_stress_low_factor = stress_params.get('ec_stress_low_factor')
@@ -1377,17 +1391,17 @@ class UnifiedStressCalculator:
         if growth_stage_factor in ['V11+', 'HI', 'HD', 'HM']:
             nitrogen_stress += 0.05
 
-        # Temperature variations
-        optimal_temperature = env_params.get('optimal_temperature')
-        if optimal_temperature is None:
-            raise ValueError("❌ 'optimal_temperature' parameter must be provided in environment_parameters CSV")
+        # Temperature variations - use phenology optimal temperature range
+        optimal_temp_min = self.params.phenology_optimal_temperature_min
+        optimal_temp_max = self.params.phenology_optimal_temperature_max
+        optimal_temperature = (optimal_temp_min + optimal_temp_max) / 2.0
         temp_deviation = abs(env_conditions['actual_temperature'] - optimal_temperature)
         temp_stress += min(0.1, temp_deviation * 0.01)
 
-        # VPD variations
-        optimal_vpd = env_params.get('optimal_vpd')
-        if optimal_vpd is None:
-            raise ValueError("❌ 'optimal_vpd' parameter must be provided in environment_parameters CSV")
+        # VPD variations - use VPD optimal range from stress parameters
+        optimal_vpd_min = getattr(self.params, 'optimal_vpd_min', 0.5)
+        optimal_vpd_max = getattr(self.params, 'optimal_vpd_max', 1.2)
+        optimal_vpd = (optimal_vpd_min + optimal_vpd_max) / 2.0
         vpd_stress = max(0.0, (env_conditions['actual_vpd'] - optimal_vpd) * 0.1)
         water_stress += min(0.1, vpd_stress)
 

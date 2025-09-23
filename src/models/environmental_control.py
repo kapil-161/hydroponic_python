@@ -91,8 +91,8 @@ class EnvironmentalSetpoints:
             vpd_tolerance=float(config_dict['vpd_tolerance']),
             min_humidity=float(config_dict['min_humidity']),
             max_humidity=float(config_dict['max_humidity']),
-            day_temp=float(config_dict['day_temp']),
-            night_temp=float(config_dict['night_temp']),
+            day_temp=float(config_dict.get('day_temp', 23.0)),  # Default if using weather data
+            night_temp=float(config_dict.get('night_temp', 19.0)),  # Default if using weather data
             temp_tolerance=float(config_dict['temp_tolerance']),
             target_co2=float(config_dict['target_co2']),
             ambient_co2=float(config_dict['ambient_co2']),

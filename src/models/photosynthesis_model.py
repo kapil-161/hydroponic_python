@@ -262,5 +262,16 @@ def create_lettuce_photosynthesis_model(system_config=None) -> PhotosynthesisMod
         available_params = list(photosynthesis_params.keys())
         raise ValueError(f"❌ Missing required photosynthesis parameters in CSV: {missing_params}. Available: {available_params}")
     
+    # Track parameters used in model initialization if tracker is available
+    if hasattr(system_config, '_tracker'):
+        tracker = getattr(system_config, '_tracker', None)
+        if tracker:
+            tracker.track_model_initialization(required_params, "photosynthesis_model")
+            # Track additional parameters used in equations
+            equation_params = ['min_par_threshold', 'enzyme_saturation_lai', 'light_penetration_lai', 
+                             'enzyme_saturation_rate', 'min_enzyme_factor', 'excess_lai_efficiency',
+                             'umol_to_g_carbon_ratio', 'seconds_per_hour', 'hours_per_day']
+            tracker.track_equation_parameters(equation_params, "photosynthesis_calculations")
+    
     parameters = PhotosynthesisParameters.from_config(photosynthesis_params)
     return PhotosynthesisModel(parameters)

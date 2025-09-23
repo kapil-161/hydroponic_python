@@ -198,7 +198,7 @@ class RespirationParameters:
             diurnal_base_factor=get_required_param('diurnal_base_factor'),
             
             # Temperature stress parameters
-            optimal_temperature=get_required_param('optimal_temperature'),
+            optimal_temperature=21.0,  # Calculated from phenology optimal temperature range (18-24°C)
             moderate_stress_threshold=get_required_param('moderate_stress_threshold'),
             severe_stress_threshold=get_required_param('severe_stress_threshold'),
             moderate_stress_factor=get_required_param('moderate_stress_factor'),

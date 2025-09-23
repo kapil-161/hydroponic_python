@@ -372,11 +372,16 @@ def create_lettuce_rzt_model(system_config=None) -> RootZoneTemperatureModel:
     try:
         # Get root zone temperature parameters from CSV data loaded in system_config
         rzt_params = getattr(system_config, 'root_zone_temperature_parameters', {}).copy()
-        
+        water_params = getattr(system_config, 'water_parameters', {})
+
+        # Get water uptake sensitivity from water parameters since RZT duplicates were removed
+        if 'water_uptake_sensitivity_low' not in rzt_params and 'water_uptake_sensitivity_low' in water_params:
+            rzt_params['water_uptake_sensitivity_low'] = water_params['water_uptake_sensitivity_low']
+        if 'water_uptake_sensitivity_high' not in rzt_params and 'water_uptake_sensitivity_high' in water_params:
+            rzt_params['water_uptake_sensitivity_high'] = water_params['water_uptake_sensitivity_high']
+
         # Map renamed parameters to expected parameter names
         param_mapping = {
-            'rzt_water_uptake_sensitivity_low': 'water_uptake_sensitivity_low',
-            'rzt_water_uptake_sensitivity_high': 'water_uptake_sensitivity_high',
             'rzt_min_growth_factor': 'min_growth_factor',
             'rzt_thermal_mass_factor': 'thermal_mass_factor',
             'rzt_ambient_temp_amplitude': 'ambient_temp_amplitude',

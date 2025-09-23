@@ -120,9 +120,9 @@ class SenescenceParameters:
             natural_lifespan_gdd=config_dict['natural_lifespan_gdd'],
             age_senescence_rate=config_dict['age_senescence_rate'],
             
-            # Stress-induced senescence thresholds
-            water_stress_threshold=config_dict['water_stress_threshold'],
-            nitrogen_stress_threshold=config_dict['nitrogen_stress_threshold'],
+            # Stress-induced senescence thresholds - map to consolidated parameters
+            water_stress_threshold=config_dict.get('water_stress_threshold', config_dict.get('drought_threshold', 0.6)),
+            nitrogen_stress_threshold=config_dict.get('nitrogen_stress_threshold', config_dict.get('n_stress_threshold', 0.75)),
             temperature_stress_threshold=config_dict['temperature_stress_threshold'],
             light_stress_threshold=config_dict['light_stress_threshold'],
             
@@ -590,19 +590,23 @@ def create_lettuce_senescence_model(system_config=None) -> AdvancedSenescenceMod
         # Get senescence parameters from CSV data loaded in system_config
         senescence_params = getattr(system_config, 'senescence_parameters', {})
         nitrogen_params = getattr(system_config, 'nitrogen_parameters', {})
-        leaf_params = getattr(system_config, 'leaf_development_parameters', {})
-        
+        phenology_params = getattr(system_config, 'phenology_parameters', {})
+
         # Combine parameters from different CSV files
         config = {}
-        
+
         # Add senescence parameters
         config.update(senescence_params)
-        
-        # Get stress thresholds from leaf development since they share the same values
-        if 'water_stress_threshold' not in config and 'water_stress_threshold' in leaf_params:
-            config['water_stress_threshold'] = leaf_params['water_stress_threshold']
-        if 'nitrogen_stress_threshold' not in config and 'nitrogen_stress_threshold' in leaf_params:
-            config['nitrogen_stress_threshold'] = leaf_params['nitrogen_stress_threshold']
+
+        # Get stress thresholds from their consolidated locations
+        if 'water_stress_threshold' not in config and 'drought_threshold' in phenology_params:
+            config['water_stress_threshold'] = phenology_params['drought_threshold']
+        if 'nitrogen_stress_threshold' not in config and 'n_stress_threshold' in nitrogen_params:
+            config['nitrogen_stress_threshold'] = nitrogen_params['n_stress_threshold']
+        if 'temperature_stress_threshold' not in config and 'heat_threshold' in phenology_params:
+            config['temperature_stress_threshold'] = 0.8  # Use fraction equivalent
+        if 'light_stress_threshold' not in config:
+            config['light_stress_threshold'] = 0.5  # Use default from removed parameter
         
         # Add nitrogen parameters that affect senescence
         if 'senescence_rate' in nitrogen_params:
