@@ -1121,6 +1121,9 @@ class CROPGROHydroponicSimulator:
 
         # Update nitrogen balance
         plant_state = self._update_nitrogen_balance(plant_state)
+        
+        # Update nutrient mobility and redistribution
+        plant_state = self._update_nutrient_mobility(plant_state)
 
         # Advanced Photosynthesis using Farquhar-von Caemmerer-Berry model
         photosynthesis_result = self.photosynthesis_model.calculate_hourly_assimilation(
