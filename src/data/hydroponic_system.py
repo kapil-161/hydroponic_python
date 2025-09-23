@@ -232,8 +232,50 @@ class DailyResults:
     buffer_capacity: float = None
     phosphate_h2po4_mg_L: float = None
     phosphate_hpo4_mg_L: float = None
+    phosphate_po4_mg_L: float = None
     nutrient_precipitation_mg_L: float = None
     solution_ec: float = None
+    
+    # === ADVANCED ROOT ZONE TEMPERATURE PARAMETERS ===
+    rzt_water_factor: float = None
+    rzt_photosynthesis_factor: float = None
+    rzt_root_metabolism_factor: float = None
+    rzt_stress_factor: float = None
+    rzt_optimal_factor: float = None
+    rzt_daily_range: float = None
+    individual_rzt_factors: Dict[str, float] = field(default_factory=dict)
+    root_temp_stress: float = None
+    
+    # === ADVANCED SENESCENCE PARAMETERS ===
+    senesced_area: float = None
+    senesced_biomass: float = None
+    average_senescence_stage: str = None
+    active_senescence_types: List[str] = field(default_factory=list)
+    remobilization_pool: Dict[str, float] = field(default_factory=dict)
+    
+    # === ADVANCED STRESS INTERACTION PARAMETERS ===
+    ph_stress: float = None
+    oxygen_stress: float = None
+    stress_severity: str = None
+    dominant_stresses: List[str] = field(default_factory=list)
+    stress_interactions_active: List[str] = field(default_factory=list)
+    acclimation_active: List[str] = field(default_factory=list)
+    recovery_active: List[str] = field(default_factory=list)
+    total_damage: float = None
+    
+    # === ADVANCED NUTRIENT TRANSPORT PARAMETERS ===
+    nutrient_transport_fluxes: Dict[str, float] = field(default_factory=dict)
+    transport_limitations: List[str] = field(default_factory=list)
+    mobility_efficiency: Dict[str, float] = field(default_factory=dict)
+    nutrient_redistribution: Dict[str, float] = field(default_factory=dict)
+    transport_pool_fractions: Dict[str, float] = field(default_factory=dict)
+    cumulative_redistribution: Dict[str, float] = field(default_factory=dict)
+    
+    # === ADVANCED PH CONTROL PARAMETERS ===
+    henderson_hasselbalch_ph: float = None
+    controlled_ph: float = None
+    acid_dosing_rate: float = None
+    base_dosing_rate: float = None
 
 
 @dataclass
