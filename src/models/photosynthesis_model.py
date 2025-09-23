@@ -169,7 +169,7 @@ class PhotosynthesisModel:
         vpd = max(0.1, es - ea)
 
         # Environmental factors using temperature utilities
-        from utils.temperature_utils import calculate_temperature_stress_factor
+        from src.utils.temperature_utils import calculate_temperature_stress_factor
 
         # Light factor - saturation curve
         f_light = min(1.0, par_umol_m2_s / 2000.0)  # Light saturation at 2000 μmol/m²/s

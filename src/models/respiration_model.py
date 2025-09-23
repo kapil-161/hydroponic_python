@@ -294,7 +294,7 @@ class EnhancedRespirationModel:
         Returns:
             Temperature factor (1.0 at reference temperature)
         """
-        from utils.temperature_utils import calculate_q10_temperature_factor
+        from src.utils.temperature_utils import calculate_q10_temperature_factor
         
         reference_temp = acclimated_temp or self.acclimated_reference_temp
         
@@ -308,7 +308,7 @@ class EnhancedRespirationModel:
         )
         
         # Prevent excessive respiration at very high temperatures
-        from utils.temperature_utils import sanitize_temperature
+        from src.utils.temperature_utils import sanitize_temperature
         temp = sanitize_temperature(temperature)
         if temp > self.params.max_temperature_threshold:
             # Protein denaturation effects

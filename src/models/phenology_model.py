@@ -22,7 +22,7 @@ from typing import Dict, Tuple, Optional, Any, List
 from dataclasses import dataclass
 from enum import Enum
 import math
-from utils.temperature_utils import calculate_thermal_time, calculate_temperature_stress_factor
+from src.utils.temperature_utils import calculate_thermal_time, calculate_temperature_stress_factor
 
 
 class LettuceGrowthStage(Enum):

@@ -1014,7 +1014,7 @@ class EnhancedRootUptakeModel:
 
     def calculate_temperature_factor(self, temperature: float) -> float:
         """Calculate temperature factor using centralized Q10 utility."""
-        from utils.temperature_utils import calculate_q10_temperature_factor
+        from src.utils.temperature_utils import calculate_q10_temperature_factor
         
         factor = calculate_q10_temperature_factor(
             temperature=temperature,

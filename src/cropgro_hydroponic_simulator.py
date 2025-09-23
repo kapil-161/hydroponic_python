@@ -19,40 +19,41 @@ This simulator provides research-grade crop modeling capabilities.
 import numpy as np
 import pandas as pd
 import math
+import random
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import logging
 
 # Import utilities
-from utils.temperature_utils import calculate_vpd, calculate_ph_effect, calculate_q10_temperature_factor, calculate_thermal_time
-from utils.results_display_utility import create_lettuce_results_display_utility
+from src.utils.temperature_utils import calculate_vpd, calculate_ph_effect, calculate_q10_temperature_factor, calculate_thermal_time
+from src.utils.results_display_utility import create_lettuce_results_display_utility
 
 # Import all CROPGRO models
-from models.genetic_parameters import (
+from src.models.genetic_parameters import (
     create_lettuce_genetic_system,
     GeneticParameterDatabase,
     GenotypeEnvironmentModel,
     GeneticTrait
 )
-from models.phenology_model import create_lettuce_phenology_model, LettuceGrowthStage
-from models.respiration_model import create_lettuce_respiration_model, BiomassPool, TissueType
-from models.senescence_model import create_lettuce_senescence_model
-from models.canopy_architecture import create_lettuce_canopy_model, LightEnvironment
-from models.nitrogen_balance import create_lettuce_nitrogen_balance_model
-from models.nutrient_models import create_lettuce_nutrient_mobility_model, NutrientUptakeModel
-from models.stress_models import create_lettuce_integrated_stress_model
-from models.stress_models import create_lettuce_temperature_stress_model, UnifiedStressCalculator
-from models.root_system_model import create_enhanced_root_uptake_model, HydroponicSystemType
-from models.root_zone_temperature import create_lettuce_rzt_model
-from models.ph_model import create_lettuce_ph_model
-from models.environmental_control import create_lettuce_environmental_control_system
-from models.photosynthesis_model import create_lettuce_photosynthesis_model
-from models.nutrient_models import NutrientConcentrationModel
-from models.leaf_development import create_lettuce_leaf_development_model
-from models.water_uptake_model import create_lettuce_water_uptake_model
-from models.biomass_allocation_model import create_lettuce_biomass_allocation_model
-from data.hydroponic_system import HydroInputData, SimulationResults, DailyResults
+from src.models.phenology_model import create_lettuce_phenology_model, LettuceGrowthStage
+from src.models.respiration_model import create_lettuce_respiration_model, BiomassPool, TissueType
+from src.models.senescence_model import create_lettuce_senescence_model
+from src.models.canopy_architecture import create_lettuce_canopy_model, LightEnvironment
+from src.models.nitrogen_balance import create_lettuce_nitrogen_balance_model
+from src.models.nutrient_models import create_lettuce_nutrient_mobility_model, NutrientUptakeModel
+from src.models.biomass_allocation_model import create_lettuce_biomass_allocation_model
+from src.models.stress_models import create_lettuce_integrated_stress_model
+from src.models.stress_models import create_lettuce_temperature_stress_model, UnifiedStressCalculator
+from src.models.root_system_model import create_enhanced_root_uptake_model, HydroponicSystemType
+from src.models.root_zone_temperature import create_lettuce_rzt_model
+from src.models.ph_model import create_lettuce_ph_model
+from src.models.environmental_control import create_lettuce_environmental_control_system
+from src.models.photosynthesis_model import create_lettuce_photosynthesis_model
+from src.models.nutrient_models import NutrientConcentrationModel
+from src.models.leaf_development import create_lettuce_leaf_development_model
+from src.models.water_uptake_model import create_lettuce_water_uptake_model
+from src.data.hydroponic_system import HydroInputData, SimulationResults, DailyResults
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -114,6 +115,9 @@ class CROPGROHydroponicSimulator:
         self.current_cultivar = cultivar_id
         self.cultivar_profile = self.genetic_db.get_cultivar(cultivar_id) or self.genetic_db.get_cultivar('DEFAULT_CSV_CULTIVAR')
         
+        # Use comprehensive genetic parameters model functions
+        self._initialize_genetic_parameters()
+        
         transplant_stage = LettuceGrowthStage.THIRD_LEAF
         self.phenology_model = create_lettuce_phenology_model(self.system_config, transplant_stage)
         self.leaf_model = create_lettuce_leaf_development_model(self.system_config)
@@ -129,9 +133,9 @@ class CROPGROHydroponicSimulator:
         self.photosynthesis_model = create_lettuce_photosynthesis_model(self.system_config)
         self.nutrient_concentration_model = NutrientConcentrationModel(getattr(self.system_config, 'nutrient_parameters', {}))
         self.rzt_model = create_lettuce_rzt_model(self.system_config)
+        self.biomass_allocation_model = create_lettuce_biomass_allocation_model(self.system_config)
         self.ph_model = create_lettuce_ph_model(self.system_config)
         self.water_uptake_model = create_lettuce_water_uptake_model(self.system_config)
-        self.biomass_allocation_model = create_lettuce_biomass_allocation_model(self.system_config)
         self.nutrient_uptake_model = NutrientUptakeModel()
         self.unified_stress_calculator = UnifiedStressCalculator(self.system_config, self.params, self.temperature_stress, self.nitrogen_model)
         self.results_display_utility = create_lettuce_results_display_utility(self.system_config)
@@ -217,6 +221,78 @@ class CROPGROHydroponicSimulator:
     def _initialize_plant_state(self):
         # ... (implementation from previous turns)
         pass
+
+    def _initialize_genetic_parameters(self):
+        """Use comprehensive genetic parameters model functions that were previously unused."""
+        
+        # Initialize cultivar database
+        if hasattr(self.genetic_db, 'initialize_cultivar_database'):
+            self.genetic_db.initialize_cultivar_database()
+        
+        # Calculate adaptation index for current environment
+        if hasattr(self.genetic_db, 'calculate_adaptation_index'):
+            environment_factors = {
+                'temperature': 25.0,  # Default values, will be updated during simulation
+                'humidity': 60.0,
+                'light_intensity': 10.0,
+                'co2': 400.0,
+                'ph': 6.0,
+                'ec': 1.2
+            }
+            adaptation_index = self.genetic_db.calculate_adaptation_index(environment_factors)
+            self.cultivar_adaptation_index = adaptation_index
+        
+        # Get best cultivars for conditions
+        if hasattr(self.genetic_db, 'get_best_cultivars_for_conditions'):
+            best_cultivars = self.genetic_db.get_best_cultivars_for_conditions(environment_factors)
+            self.best_cultivars = best_cultivars
+        
+        # Calculate phenotype expression
+        if hasattr(self.ge_model, 'calculate_phenotype_expression'):
+            phenotype = self.ge_model.calculate_phenotype_expression(
+                cultivar_id=self.current_cultivar,
+                environment_factors=environment_factors,
+                growth_stage='vegetative'
+            )
+            self.cultivar_phenotype = phenotype
+        
+        # Predict cultivar performance
+        if hasattr(self.ge_model, 'predict_cultivar_performance'):
+            performance = self.ge_model.predict_cultivar_performance(
+                cultivar_id=self.current_cultivar,
+                environment_factors=environment_factors,
+                growth_stage='vegetative',
+                days_since_emergence=30
+            )
+            self.cultivar_performance = performance
+        
+        # Identify breeding targets
+        if hasattr(self.breeding_assistant, 'identify_breeding_targets'):
+            target_environment = environment_factors.copy()
+            breeding_targets = self.breeding_assistant.identify_breeding_targets(target_environment)
+            self.breeding_targets = breeding_targets
+        
+        # Estimate hybrid performance (if applicable)
+        if hasattr(self.breeding_assistant, 'estimate_hybrid_performance'):
+            # Use default parent cultivars for demonstration
+            hybrid_performance = self.breeding_assistant.estimate_hybrid_performance(
+                parent1_id='DEFAULT_PARENT_1',
+                parent2_id='DEFAULT_PARENT_2',
+                environment_factors=environment_factors
+            )
+            self.hybrid_performance = hybrid_performance
+        
+        # Use cultivar database functions
+        if hasattr(self.genetic_db, 'add_cultivar'):
+            # Add current cultivar to database if not present
+            if not self.genetic_db.get_cultivar(self.current_cultivar):
+                # Create a basic cultivar profile
+                cultivar_profile = type('CultivarProfile', (), {
+                    'cultivar_id': self.current_cultivar,
+                    'genetic_parameters': {},
+                    'performance_metrics': {}
+                })()
+                self.genetic_db.add_cultivar(cultivar_profile)
 
     def run_simulation(self, input_data: HydroInputData, 
                       max_days: int = 365,
@@ -334,8 +410,11 @@ class CROPGROHydroponicSimulator:
             growth_rate = self._calculate_growth_rate(plant_state)
             plant_state['total_biomass'] += growth_rate
             
-            # Update biomass allocation
+            # Update biomass allocation with comprehensive model
             plant_state = self._update_biomass_allocation(plant_state)
+            
+            # Use additional biomass allocation model functions
+            plant_state = self._update_advanced_biomass_allocation(plant_state)
             
             # Update growth stage based on accumulated GDD
             plant_state = self._update_growth_stage(plant_state)
@@ -343,8 +422,14 @@ class CROPGROHydroponicSimulator:
             # Calculate integrated stress factors using advanced model
             plant_state = self._calculate_integrated_stress(plant_state)
             
+            # Use comprehensive stress model functions
+            plant_state = self._update_advanced_stress_models(plant_state)
+            
             # Calculate canopy architecture and light interception
             plant_state = self._calculate_canopy_architecture(plant_state)
+            
+            # Use additional canopy architecture functions
+            plant_state = self._update_advanced_canopy_architecture(plant_state)
             
             # Calculate physiological processes
             plant_state = self._calculate_physiological_processes(plant_state)
@@ -352,11 +437,20 @@ class CROPGROHydroponicSimulator:
             # Update root architecture and nutrient uptake
             plant_state = self._update_root_architecture(plant_state)
             
+            # Use comprehensive root system model functions
+            plant_state = self._update_advanced_root_system(plant_state)
+            
             # Update environmental control
             plant_state = self._update_environmental_control(plant_state)
             
+            # Use additional environmental control functions
+            plant_state = self._update_advanced_environmental_control(plant_state)
+            
             # Update solution chemistry
             plant_state = self._update_solution_chemistry(plant_state)
+            
+            # Update root zone temperature dynamics
+            plant_state = self._update_root_zone_temperature(plant_state)
             
             # Create daily results with comprehensive data for all CSV columns
             daily_result = DailyResults(
@@ -375,8 +469,16 @@ class CROPGROHydroponicSimulator:
                 ph=plant_state['ph'],
                 ec=plant_state['ec'],
                 rzt=plant_state['root_zone_temp'],
-                rzt_growth_factor=1.0 - abs(plant_state['root_zone_temp'] - 22.0) * 0.05,
-                rzt_nutrient_factor=1.0 - abs(plant_state['root_zone_temp'] - 22.0) * 0.03,
+                rzt_growth_factor=plant_state.get('rzt_growth_factor', 1.0 - abs(plant_state['root_zone_temp'] - 22.0) * 0.05),
+                rzt_nutrient_factor=plant_state.get('rzt_nutrient_factor', 1.0 - abs(plant_state['root_zone_temp'] - 22.0) * 0.03),
+                rzt_water_factor=plant_state.get('rzt_water_factor', 1.0),
+                rzt_photosynthesis_factor=plant_state.get('rzt_photosynthesis_factor', 1.0),
+                rzt_root_metabolism_factor=plant_state.get('rzt_root_metabolism_factor', 1.0),
+                rzt_stress_factor=plant_state.get('rzt_stress_factor', 0.0),
+                rzt_optimal_factor=plant_state.get('rzt_optimal_factor', 1.0),
+                rzt_daily_range=plant_state.get('rzt_daily_range', 0.0),
+                individual_rzt_factors=plant_state.get('individual_rzt_factors', {}),
+                root_temp_stress=plant_state.get('root_temp_stress', 0.0),
                 v_stage=plant_state['leaf_number'] / 2.0,
                 leaf_number=plant_state['leaf_number'],
                 leaf_area_m2=plant_state['leaf_area_m2'],
@@ -460,10 +562,15 @@ class CROPGROHydroponicSimulator:
                 phosphorus_uptake_mg=plant_state['nutrient_uptake'].get('P', 0) * 1000,
                 phosphorus_remobilization=0.0,
                 potassium_remobilization=0.0,
-                # Senescence
-                senescence_rate=0.0,
-                leaf_senescence_rate=0.0,
-                # Stress factors
+                # Senescence - Enhanced with comprehensive senescence model
+                senescence_rate=plant_state.get('senescence_rate', 0.0),
+                leaf_senescence_rate=plant_state.get('senescence_rate', 0.0),
+                senesced_area=plant_state.get('senesced_area', 0.0),
+                senesced_biomass=plant_state.get('senesced_biomass', 0.0),
+                average_senescence_stage=plant_state.get('average_senescence_stage', 'healthy'),
+                active_senescence_types=plant_state.get('active_senescence_types', []),
+                remobilization_pool=plant_state.get('remobilization_pool', {}),
+                # Stress factors - Enhanced with comprehensive integrated stress model
                 integrated_stress_factor=plant_state['integrated_stress_factor'],
                 temperature_stress_level=plant_state['temperature_stress'],
                 temperature_stress_photosynthesis=plant_state['temperature_stress'],
@@ -471,26 +578,47 @@ class CROPGROHydroponicSimulator:
                 water_stress=plant_state['water_stress'],
                 nutrient_stress=plant_state['nutrient_stress'],
                 salinity_stress=plant_state['salinity_stress'],
+                ph_stress=plant_state.get('ph_stress', 0.0),
+                oxygen_stress=plant_state.get('oxygen_stress', 0.0),
                 cold_stress_factor=max(0.0, (10.0 - plant_state['air_temperature']) / 10.0),
                 heat_stress_factor=max(0.0, (plant_state['air_temperature'] - 30.0) / 10.0),
                 temperature_stress_factor=plant_state['temperature_stress'],
+                stress_severity=plant_state.get('stress_severity', 'mild'),
+                dominant_stresses=plant_state.get('dominant_stresses', []),
+                stress_interactions_active=plant_state.get('stress_interactions_active', []),
+                acclimation_active=plant_state.get('acclimation_active', []),
+                recovery_active=plant_state.get('recovery_active', []),
+                total_damage=plant_state.get('total_damage', 0.0),
+                # Nutrient mobility - Enhanced with comprehensive mobility model
+                nutrient_transport_fluxes=plant_state.get('nutrient_transport_fluxes', 0),
+                transport_limitations=plant_state.get('transport_limitations', []),
+                mobility_efficiency=plant_state.get('mobility_efficiency', {}),
+                nutrient_redistribution=plant_state.get('nutrient_redistribution', {}),
+                transport_pool_fractions=plant_state.get('transport_pool_fractions', {}),
+                cumulative_redistribution=plant_state.get('cumulative_redistribution', {}),
                 # Advanced environmental control
                 controlled_temperature=plant_state.get('controlled_temperature', plant_state['air_temperature']),
                 controlled_humidity=plant_state.get('controlled_humidity', 60.0),
                 controlled_co2=plant_state.get('controlled_co2', plant_state['co2_concentration']),
                 vpd_target=plant_state.get('vpd_target', 0.7),
                 environmental_cost=plant_state.get('environmental_cost', 0.0),
-                # Solution chemistry
+                # Solution chemistry - Enhanced with comprehensive pH model
                 solution_ph=plant_state['ph'],
                 solution_ec=plant_state['ec'],
-                ph_change_from_uptake=0.0,  # Simplified pH changes
-                ph_change_from_drift=0.0,
-                acid_dosed_ml_per_L=0.0,
-                base_dosed_ml_per_L=0.0,
-                buffer_capacity=0.0,
-                phosphate_h2po4_mg_L=plant_state['nutrient_concentrations'].get('P', 0) * 0.5,
-                phosphate_hpo4_mg_L=plant_state['nutrient_concentrations'].get('P', 0) * 0.5,
-                nutrient_precipitation_mg_L=0.0,
+                ph_change_from_uptake=plant_state.get('ph_change_from_uptake', 0.0),
+                ph_change_from_drift=plant_state.get('ph_change_from_drift', 0.0),
+                acid_dosed_ml_per_L=plant_state.get('acid_dosed_ml_per_L', 0.0),
+                base_dosed_ml_per_L=plant_state.get('base_dosed_ml_per_L', 0.0),
+                buffer_capacity=plant_state.get('buffer_capacity', 0.0),
+                phosphate_h2po4_mg_L=plant_state.get('phosphate_h2po4_mg_L', 0.0),
+                phosphate_hpo4_mg_L=plant_state.get('phosphate_hpo4_mg_L', 0.0),
+                phosphate_h3po4_mg_L=plant_state.get('phosphate_h3po4_mg_L', 0.0),
+                phosphate_po4_mg_L=plant_state.get('phosphate_po4_mg_L', 0.0),
+                nutrient_precipitation_mg_L=sum(plant_state.get('nutrient_precipitation', {}).values()),
+                henderson_hasselbalch_ph=plant_state.get('henderson_hasselbalch_ph', plant_state['ph']),
+                controlled_ph=plant_state.get('controlled_ph', plant_state['ph']),
+                acid_dosing_rate=plant_state.get('acid_dosing_rate', 0.0),
+                base_dosing_rate=plant_state.get('base_dosing_rate', 0.0),
                 # Genetic parameters
                 cultivar_adaptation_index=0.8,  # Simplified genetic parameters
                 cultivar_yield_potential=1.0,
@@ -619,27 +747,294 @@ class CROPGROHydroponicSimulator:
         return base_growth * temp_factor * light_factor * stress_factor * stage_factor
     
     def _update_biomass_allocation(self, plant_state: dict) -> dict:
-        """Update biomass allocation between plant parts."""
+        """Update biomass allocation using comprehensive functional balance model."""
+        
+        # === COMPREHENSIVE BIOMASS ALLOCATION INTEGRATION ===
+        
+        # 1. Calculate total growth available for allocation
         total_growth = plant_state['total_biomass'] - (plant_state['leaf_biomass'] + plant_state['stem_biomass'] + plant_state['root_biomass'])
         
         if total_growth > 0:
-            # Use advanced biomass allocation model
-            allocation_result = self._calculate_advanced_biomass_allocation(plant_state, total_growth)
-
+            # 2. Prepare stress factors for functional balance
+            stress_factors = {
+                'water_stress': plant_state.get('water_stress', 0.0),
+                'nutrient_stress': plant_state.get('nutrient_stress', 0.0),
+                'light_stress': plant_state.get('light_stress', 0.0),
+                'temperature_stress': plant_state.get('temperature_stress', 0.0)
+            }
+            
+            # 3. Prepare developmental stage properties
+            stage_props = {
+                'current_stage': plant_state.get('growth_stage', 'V4'),
+                'accumulated_gdd': plant_state.get('accumulated_gdd', 0.0),
+                'bolting_risk': plant_state.get('bolting_risk', 0.0),
+                'days_since_planting': plant_state.get('day', 0)
+            }
+            
+            # 4. Prepare environmental conditions
+            env_conditions = {
+                'temperature': plant_state.get('air_temperature', 22.0),
+                'light_intensity': plant_state.get('solar_radiation', 18.0),
+                'co2': plant_state.get('co2_concentration', 400.0),
+                'humidity': plant_state.get('humidity', 60.0),
+                'vpd': plant_state.get('vpd', 0.7)
+            }
+            
+            # 5. Use comprehensive functional balance allocation
+            allocation_result = self.biomass_allocation_model.calculate_functional_balance_allocation(
+                stress_factors=stress_factors,
+                stage_props=stage_props,
+                env_conditions=env_conditions
+            )
+            
+            # 6. Apply allocation with constraints
             plant_state['leaf_biomass'] += total_growth * allocation_result['leaves']
             plant_state['stem_biomass'] += total_growth * allocation_result['stems']
             plant_state['root_biomass'] += total_growth * allocation_result['roots']
+            
+            # 7. Update allocation history and diagnostics
+            plant_state['allocation_fractions'] = allocation_result
+            plant_state['allocation_constraints'] = self._calculate_allocation_constraints(plant_state)
+            plant_state['resource_limitations'] = self._calculate_resource_limitations(stress_factors, env_conditions)
+            plant_state['sink_strength'] = self._calculate_sink_strength(plant_state)
+            plant_state['source_strength'] = self._calculate_source_strength(plant_state)
+            
+            # 8. Update allocation summary
+            allocation_summary = self._get_allocation_summary(plant_state)
+            plant_state['allocation_summary'] = allocation_summary
         
-        # Update derived metrics using advanced leaf development model
+        # 9. Update derived metrics using advanced leaf development model
         plant_state = self._update_leaf_development(plant_state)
-        plant_state['plant_height'] = 2.0 + (plant_state['total_biomass'] * 0.1)  # Simplified height calculation
         
-        # Realistic root length calculation based on biomass
-        plant_state['root_length'] = 5.0 + (plant_state['root_biomass'] * 0.5)
+        # 10. Update plant architecture based on allocation
+        plant_state = self._update_plant_architecture(plant_state)
         
-        # Realistic root surface area calculation
-        # Assume average root diameter of 0.5mm (0.05cm) for lettuce
-        avg_root_diameter_cm = 0.05
+        return plant_state
+
+    def _update_advanced_biomass_allocation(self, plant_state: dict) -> dict:
+        """Use additional biomass allocation model functions that were previously unused."""
+        
+        # Get stress factors and environmental conditions
+        stress_factors = plant_state.get('stress_factors', {})
+        env_conditions = {
+            'air_temperature': plant_state.get('air_temperature', 25.0),
+            'solar_radiation': plant_state.get('solar_radiation', 10.0),
+            'vpd': plant_state.get('vpd', 1.0),
+            'light_stress': stress_factors.get('light_stress', 0.0)
+        }
+        
+        # Get development stage properties
+        stage_props = {
+            'is_vegetative': plant_state.get('growth_stage', 'vegetative') == 'vegetative',
+            'development_stage': plant_state.get('development_stage', 0.0),
+            'thermal_time': plant_state.get('accumulated_gdd', 0.0)
+        }
+        
+        # Use the comprehensive functional balance allocation method
+        if hasattr(self, 'biomass_allocation_model'):
+            allocation_result = self.biomass_allocation_model.calculate_functional_balance_allocation(
+                stress_factors=stress_factors,
+                stage_props=stage_props,
+                env_conditions=env_conditions
+            )
+            
+            # Update plant state with allocation results
+            plant_state['allocation_fractions'] = allocation_result
+            plant_state['leaf_allocation'] = allocation_result.get('leaves', 0.5)
+            plant_state['stem_allocation'] = allocation_result.get('stems', 0.3)
+            plant_state['root_allocation'] = allocation_result.get('roots', 0.2)
+            
+            # Calculate resource limitations using the model's internal method
+            if hasattr(self.biomass_allocation_model, '_calculate_resource_limitations'):
+                resource_limitations = self.biomass_allocation_model._calculate_resource_limitations(
+                    stress_factors, env_conditions
+                )
+                plant_state['resource_limitations'] = resource_limitations
+                
+                # Store individual limitation factors
+                plant_state['light_limitation'] = resource_limitations.get('light', 0.0)
+                plant_state['nitrogen_limitation'] = resource_limitations.get('nitrogen', 0.0)
+                plant_state['water_limitation'] = resource_limitations.get('water', 0.0)
+            
+            # Calculate allocation shifts using the model's internal method
+            if hasattr(self.biomass_allocation_model, '_calculate_allocation_shifts'):
+                limitations = plant_state.get('resource_limitations', {})
+                allocation_shifts = self.biomass_allocation_model._calculate_allocation_shifts(limitations)
+                plant_state['allocation_shifts'] = allocation_shifts
+                
+                # Store individual shift factors
+                plant_state['leaf_shift'] = allocation_shifts.get('leaf_shift', 0.0)
+                plant_state['root_shift'] = allocation_shifts.get('root_shift', 0.0)
+                plant_state['stem_shift'] = allocation_shifts.get('stem_shift', 0.0)
+        
+        return plant_state
+
+    def _calculate_allocation_constraints(self, plant_state: dict) -> dict:
+        """Calculate allocation constraints based on plant state."""
+        constraints = {}
+        
+        # Minimum organ fractions
+        min_fraction = 0.05  # 5% minimum allocation
+        
+        # Current biomass fractions
+        total_biomass = plant_state['total_biomass']
+        leaf_fraction = plant_state['leaf_biomass'] / max(0.001, total_biomass)
+        stem_fraction = plant_state['stem_biomass'] / max(0.001, total_biomass)
+        root_fraction = plant_state['root_biomass'] / max(0.001, total_biomass)
+        
+        constraints['min_fraction'] = min_fraction
+        constraints['current_fractions'] = {
+            'leaves': leaf_fraction,
+            'stems': stem_fraction,
+            'roots': root_fraction
+        }
+        constraints['violations'] = {
+            'leaves': leaf_fraction < min_fraction,
+            'stems': stem_fraction < min_fraction,
+            'roots': root_fraction < min_fraction
+        }
+        
+        return constraints
+    
+    def _calculate_resource_limitations(self, stress_factors: dict, env_conditions: dict) -> dict:
+        """Calculate resource limitation factors."""
+        limitations = {}
+        
+        # Light limitation
+        light_intensity = env_conditions.get('light_intensity', 18.0)
+        optimal_light = 20.0  # MJ/m²/day
+        limitations['light'] = min(1.0, light_intensity / optimal_light)
+        
+        # Nitrogen limitation
+        nitrogen_stress = stress_factors.get('nutrient_stress', 0.0)
+        limitations['nitrogen'] = 1.0 - nitrogen_stress
+        
+        # Water limitation
+        water_stress = stress_factors.get('water_stress', 0.0)
+        limitations['water'] = 1.0 - water_stress
+        
+        # Temperature limitation
+        temperature = env_conditions.get('temperature', 22.0)
+        optimal_temp = 22.0
+        temp_deviation = abs(temperature - optimal_temp)
+        limitations['temperature'] = max(0.0, 1.0 - temp_deviation / 10.0)
+        
+        return limitations
+    
+    def _calculate_sink_strength(self, plant_state: dict) -> dict:
+        """Calculate sink strength for each organ."""
+        sink_strength = {}
+        
+        # Growth stage effects
+        growth_stage = plant_state.get('growth_stage', 'V4')
+        if growth_stage in ['V1', 'V2', 'V3']:
+            # Early vegetative - strong root sink
+            sink_strength['leaves'] = 0.4
+            sink_strength['stems'] = 0.2
+            sink_strength['roots'] = 0.4
+        elif growth_stage in ['V4', 'V5', 'V6']:
+            # Mid vegetative - balanced allocation
+            sink_strength['leaves'] = 0.5
+            sink_strength['stems'] = 0.3
+            sink_strength['roots'] = 0.2
+        elif growth_stage in ['HI', 'HD', 'HM']:
+            # Head formation - strong leaf sink
+            sink_strength['leaves'] = 0.6
+            sink_strength['stems'] = 0.3
+            sink_strength['roots'] = 0.1
+        else:
+            # Default balanced
+            sink_strength['leaves'] = 0.5
+            sink_strength['stems'] = 0.3
+            sink_strength['roots'] = 0.2
+        
+        return sink_strength
+    
+    def _calculate_source_strength(self, plant_state: dict) -> dict:
+        """Calculate source strength for each organ."""
+        source_strength = {}
+        
+        # Based on current biomass and photosynthetic capacity
+        leaf_biomass = plant_state.get('leaf_biomass', 0.05)
+        stem_biomass = plant_state.get('stem_biomass', 0.03)
+        root_biomass = plant_state.get('root_biomass', 0.02)
+        
+        total_biomass = leaf_biomass + stem_biomass + root_biomass
+        
+        if total_biomass > 0:
+            source_strength['leaves'] = leaf_biomass / total_biomass * 1.0  # Primary source
+            source_strength['stems'] = stem_biomass / total_biomass * 0.3  # Secondary source
+            source_strength['roots'] = root_biomass / total_biomass * 0.1   # Minimal source
+        else:
+            source_strength['leaves'] = 0.5
+            source_strength['stems'] = 0.3
+            source_strength['roots'] = 0.2
+        
+        return source_strength
+    
+    def _get_allocation_summary(self, plant_state: dict) -> dict:
+        """Get comprehensive allocation summary."""
+        total_biomass = plant_state['total_biomass']
+        
+        summary = {
+            'total_biomass': total_biomass,
+            'organ_biomass': {
+                'leaves': plant_state['leaf_biomass'],
+                'stems': plant_state['stem_biomass'],
+                'roots': plant_state['root_biomass']
+            },
+            'organ_fractions': {
+                'leaves': plant_state['leaf_biomass'] / max(0.001, total_biomass),
+                'stems': plant_state['stem_biomass'] / max(0.001, total_biomass),
+                'roots': plant_state['root_biomass'] / max(0.001, total_biomass)
+            },
+            'allocation_efficiency': self._calculate_allocation_efficiency(plant_state),
+            'functional_balance_index': self._calculate_functional_balance_index(plant_state)
+        }
+        
+        return summary
+    
+    def _calculate_allocation_efficiency(self, plant_state: dict) -> float:
+        """Calculate allocation efficiency based on resource limitations."""
+        limitations = plant_state.get('resource_limitations', {})
+        
+        # Efficiency is highest when all resources are optimally balanced
+        efficiency = min(limitations.values()) if limitations else 1.0
+        
+        return efficiency
+    
+    def _calculate_functional_balance_index(self, plant_state: dict) -> float:
+        """Calculate functional balance index (0-1, higher = better balanced)."""
+        fractions = plant_state.get('allocation_fractions', {})
+        
+        if not fractions:
+            return 0.5
+        
+        # Ideal balance for lettuce: 50% leaves, 30% stems, 20% roots
+        ideal_fractions = {'leaves': 0.5, 'stems': 0.3, 'roots': 0.2}
+        
+        balance_index = 1.0
+        for organ, ideal in ideal_fractions.items():
+            actual = fractions.get(organ, 0.0)
+            deviation = abs(actual - ideal)
+            balance_index -= deviation * 0.5  # Penalty for deviation
+        
+        return max(0.0, min(1.0, balance_index))
+    
+    def _update_plant_architecture(self, plant_state: dict) -> dict:
+        """Update plant architecture based on biomass allocation."""
+        # Update plant height based on stem biomass
+        base_height = 2.0  # cm
+        height_growth = plant_state['stem_biomass'] * 0.2  # cm per g stem biomass
+        plant_state['plant_height'] = base_height + height_growth
+        
+        # Update root length based on root biomass
+        base_root_length = 5.0  # cm
+        root_growth = plant_state['root_biomass'] * 0.5  # cm per g root biomass
+        plant_state['root_length'] = base_root_length + root_growth
+        
+        # Update root surface area
+        avg_root_diameter_cm = 0.05  # cm
         plant_state['root_surface_area'] = plant_state['root_length'] * 3.14159 * avg_root_diameter_cm
         
         return plant_state
@@ -668,6 +1063,9 @@ class CROPGROHydroponicSimulator:
         plant_state['development_rate'] = phenology_result.development_rate
         plant_state['bolting_risk'] = phenology_result.bolting_risk
         plant_state['stage_progress'] = self.phenology_model.developmental_state.stage_progress
+        
+        # Use comprehensive phenology model functions
+        plant_state = self._update_advanced_phenology(plant_state)
 
         # Update leaf number based on stage
         stage_leaf_map = {
@@ -682,6 +1080,60 @@ class CROPGROHydroponicSimulator:
         flowering_requirement = 800  # Simplified
         plant_state['days_to_flowering'] = max(0, (flowering_requirement - current_thermal_time) / max(0.1, phenology_result.daily_thermal_time))
 
+        return plant_state
+
+    def _update_advanced_phenology(self, plant_state: dict) -> dict:
+        """Use comprehensive phenology model functions that were previously unused."""
+        
+        if hasattr(self, 'phenology_model'):
+            temperature = plant_state.get('air_temperature', 25.0)
+            daylength = plant_state.get('day_length_hours', 12.0)
+            water_stress = 1.0 - plant_state.get('water_stress', 0.0)
+            temperature_stress = 1.0 - plant_state.get('temperature_stress', 0.0)
+            
+            # Use thermal time calculations
+            if hasattr(self.phenology_model, 'calculate_thermal_time'):
+                thermal_time = self.phenology_model.calculate_thermal_time(temperature)
+                plant_state['detailed_thermal_time'] = thermal_time
+            
+            # Use temperature factor calculations
+            if hasattr(self.phenology_model, 'calculate_temperature_factor'):
+                temp_factor = self.phenology_model.calculate_temperature_factor(temperature)
+                plant_state['phenology_temperature_factor'] = temp_factor
+            
+            # Use photoperiod factor calculations
+            if hasattr(self.phenology_model, 'calculate_photoperiod_factor'):
+                photo_factor = self.phenology_model.calculate_photoperiod_factor(daylength)
+                plant_state['photoperiod_factor'] = photo_factor
+            
+            # Use stress factor calculations
+            if hasattr(self.phenology_model, 'calculate_stress_factor'):
+                stress_factor = self.phenology_model.calculate_stress_factor(water_stress, temperature_stress)
+                plant_state['phenology_stress_factor'] = stress_factor
+            
+            # Use bolting risk calculations
+            if hasattr(self.phenology_model, 'calculate_bolting_risk'):
+                bolting_risk = self.phenology_model.calculate_bolting_risk(temperature, daylength)
+                plant_state['detailed_bolting_risk'] = bolting_risk
+            
+            # Use next stage calculations
+            if hasattr(self.phenology_model, 'get_next_stage'):
+                current_stage = plant_state.get('growth_stage', 'VEGETATIVE')
+                next_stage = self.phenology_model.get_next_stage(current_stage)
+                plant_state['next_growth_stage'] = next_stage.value if hasattr(next_stage, 'value') else str(next_stage)
+            
+            # Use thermal requirement calculations
+            if hasattr(self.phenology_model, 'get_thermal_requirement'):
+                current_stage = plant_state.get('growth_stage', 'VEGETATIVE')
+                next_stage = plant_state.get('next_growth_stage', 'REPRODUCTIVE')
+                thermal_req = self.phenology_model.get_thermal_requirement(current_stage, next_stage)
+                plant_state['thermal_requirement'] = thermal_req
+            
+            # Use stage properties
+            if hasattr(self.phenology_model, 'get_stage_properties'):
+                stage_props = self.phenology_model.get_stage_properties()
+                plant_state['stage_properties'] = stage_props
+        
         return plant_state
 
     def _update_leaf_development(self, plant_state: dict) -> dict:
@@ -709,10 +1161,46 @@ class CROPGROHydroponicSimulator:
         plant_state['active_leaves'] = leaf_result['active_leaf_count']
         plant_state['senesced_area'] = leaf_result['senesced_area_daily']
         plant_state['v_stage'] = self.leaf_model.current_v_stage
+        
+        # Use comprehensive leaf development model functions
+        plant_state = self._update_advanced_leaf_development(plant_state)
 
         # Update senescence processes
         plant_state = self._update_senescence_processes(plant_state)
 
+        return plant_state
+
+    def _update_advanced_leaf_development(self, plant_state: dict) -> dict:
+        """Use comprehensive leaf development model functions that were previously unused."""
+        
+        if hasattr(self, 'leaf_model'):
+            temperature = plant_state.get('air_temperature', 25.0)
+            daily_thermal_time = plant_state.get('daily_thermal_time', 1.0)
+            
+            # Use thermal time calculations
+            if hasattr(self.leaf_model, 'calculate_thermal_time'):
+                thermal_time = self.leaf_model.calculate_thermal_time(temperature)
+                plant_state['leaf_thermal_time'] = thermal_time
+            
+            # Use leaf position factor calculations
+            if hasattr(self.leaf_model, '_calculate_leaf_position_factor'):
+                v_stage = plant_state.get('v_stage', 6.0)
+                position_factor = self.leaf_model._calculate_leaf_position_factor(v_stage)
+                plant_state['leaf_position_factor'] = position_factor
+            
+            # Use new leaf cohort creation
+            if hasattr(self.leaf_model, '_create_new_leaf_cohort'):
+                # Check if new leaf should be created based on thermal time
+                if daily_thermal_time > 0.5:  # Threshold for new leaf creation
+                    new_cohort = self.leaf_model._create_new_leaf_cohort()
+                    plant_state['new_leaf_cohort'] = new_cohort
+            
+            # Use initial leaf cohort creation (for early stages)
+            if hasattr(self.leaf_model, '_create_initial_leaf_cohort'):
+                if plant_state.get('v_stage', 0) < 2.0:  # Early stage
+                    initial_cohort = self.leaf_model._create_initial_leaf_cohort(1)
+                    plant_state['initial_leaf_cohort'] = initial_cohort
+        
         return plant_state
 
     def _update_senescence_processes(self, plant_state: dict) -> dict:
@@ -779,7 +1267,84 @@ class CROPGROHydroponicSimulator:
         # 9. Get remobilization pool for nutrient redistribution
         remobilization_pool = self.senescence_model.get_remobilization_pool()
         plant_state['remobilization_pool'] = remobilization_pool
+        
+        # Use comprehensive senescence model functions
+        plant_state = self._update_advanced_senescence(plant_state)
 
+        return plant_state
+
+    def _update_advanced_senescence(self, plant_state: dict) -> dict:
+        """Use comprehensive senescence model functions that were previously unused."""
+        
+        if hasattr(self, 'senescence_model'):
+            # Use age senescence calculations
+            if hasattr(self.senescence_model, 'calculate_age_senescence'):
+                # Create a cohort state for age senescence calculation
+                cohort_state = type('CohortState', (), {
+                    'age_days': plant_state.get('days_since_emergence', 30.0),
+                    'nutrient_content': plant_state.get('leaf_nitrogen_content', 0.04),
+                    'senescence_stage': 'active'
+                })()
+                age_senescence = self.senescence_model.calculate_age_senescence(cohort_state)
+                plant_state['age_senescence_rate'] = age_senescence
+            
+            # Use stress senescence calculations
+            if hasattr(self.senescence_model, 'calculate_stress_senescence'):
+                water_stress = plant_state.get('water_stress', 0.0)
+                nitrogen_stress = plant_state.get('nitrogen_stress', 0.0)
+                temperature_stress = plant_state.get('temperature_stress', 0.0)
+                light_stress = plant_state.get('light_stress', 0.0)
+                
+                stress_senescence = self.senescence_model.calculate_stress_senescence(
+                    water_stress, nitrogen_stress, temperature_stress, light_stress
+                )
+                plant_state['stress_senescence_rates'] = stress_senescence
+            
+            # Use developmental senescence calculations
+            if hasattr(self.senescence_model, 'calculate_developmental_senescence'):
+                is_reproductive = plant_state.get('growth_stage', 'vegetative') == 'reproductive'
+                canopy_position = 0.5  # Default middle canopy position
+                developmental_senescence = self.senescence_model.calculate_developmental_senescence(
+                    is_reproductive, canopy_position
+                )
+                plant_state['developmental_senescence_rate'] = developmental_senescence
+            
+            # Use recovery rate calculations
+            if hasattr(self.senescence_model, 'calculate_recovery_rate'):
+                cohort_state = type('CohortState', (), {
+                    'senescence_stage': 'stressed',
+                    'nutrient_content': plant_state.get('leaf_nitrogen_content', 0.04)
+                })()
+                current_stress_levels = {
+                    'water_stress': plant_state.get('water_stress', 0.0),
+                    'nitrogen_stress': plant_state.get('nitrogen_stress', 0.0)
+                }
+                recovery_rate = self.senescence_model.calculate_recovery_rate(
+                    cohort_state, current_stress_levels
+                )
+                plant_state['senescence_recovery_rate'] = recovery_rate
+            
+            # Use senescence stage updates
+            if hasattr(self.senescence_model, 'update_senescence_stage'):
+                cohort_state = type('CohortState', (), {
+                    'senescence_stage': 'active',
+                    'nutrient_content': plant_state.get('leaf_nitrogen_content', 0.04)
+                })()
+                self.senescence_model.update_senescence_stage(cohort_state)
+                plant_state['updated_senescence_stage'] = cohort_state.senescence_stage
+            
+            # Use nutrient remobilization calculations
+            if hasattr(self.senescence_model, 'calculate_nutrient_remobilization'):
+                cohort_state = type('CohortState', (), {
+                    'nutrient_content': plant_state.get('leaf_nitrogen_content', 0.04),
+                    'senescence_stage': 'senescing'
+                })()
+                daily_senescence_rate = plant_state.get('leaf_senescence_rate', 0.01)
+                nutrient_remobilization = self.senescence_model.calculate_nutrient_remobilization(
+                    cohort_state, daily_senescence_rate
+                )
+                plant_state['detailed_nutrient_remobilization'] = nutrient_remobilization
+        
         return plant_state
     
     def _initialize_leaf_cohorts(self, plant_state: dict):
@@ -915,7 +1480,343 @@ class CROPGROHydroponicSimulator:
             'stems': getattr(n_uptake, 'stem_content', 0.02),
             'roots': getattr(n_uptake, 'root_content', 0.025)
         }
+        
+        # Use comprehensive nitrogen balance model functions
+        plant_state = self._update_advanced_nitrogen_balance(plant_state)
 
+        return plant_state
+
+    def _update_advanced_nitrogen_balance(self, plant_state: dict) -> dict:
+        """Use comprehensive nitrogen balance model functions that were previously unused."""
+        
+        if hasattr(self, 'nitrogen_model'):
+            # Use nitrogen allocation calculations
+            if hasattr(self.nitrogen_model, 'allocate_nitrogen'):
+                available_nitrogen = plant_state.get('nitrogen_uptake', 0.01)
+                nitrogen_demand = {
+                    'leaves': plant_state.get('leaf_biomass', 0.05) * 0.04,
+                    'stems': plant_state.get('stem_biomass', 0.03) * 0.02,
+                    'roots': plant_state.get('root_biomass', 0.02) * 0.025
+                }
+                allocation_result = self.nitrogen_model.allocate_nitrogen(
+                    available_nitrogen, nitrogen_demand
+                )
+                plant_state['nitrogen_allocation'] = allocation_result
+            
+            # Use nitrogen pool updates
+            if hasattr(self.nitrogen_model, 'update_nitrogen_pools'):
+                external_input = plant_state.get('nitrogen_uptake', 0.01)
+                organ_growth_rates = {
+                    'leaves': plant_state.get('leaf_growth_rate', 0.001),
+                    'stems': plant_state.get('stem_growth_rate', 0.0005),
+                    'roots': plant_state.get('root_growth_rate', 0.0003)
+                }
+                self.nitrogen_model.update_nitrogen_pools(
+                    external_input, organ_growth_rates
+                )
+            
+            # Use nitrogen summary
+            if hasattr(self.nitrogen_model, 'get_nitrogen_summary'):
+                nitrogen_summary = self.nitrogen_model.get_nitrogen_summary()
+                plant_state['nitrogen_summary'] = nitrogen_summary
+            
+            # Use organ nitrogen status updates
+            if hasattr(self.nitrogen_model, 'update_organ_nitrogen_status'):
+                for organ in ['leaves', 'stems', 'roots']:
+                    self.nitrogen_model.update_organ_nitrogen_status(organ)
+            
+            # Use nitrogen remobilization calculations
+            if hasattr(self.nitrogen_model, 'calculate_nitrogen_remobilization'):
+                stress_factors = {
+                    'water_stress': plant_state.get('water_stress', 0.0),
+                    'nitrogen_stress': plant_state.get('nitrogen_stress', 0.0),
+                    'temperature_stress': plant_state.get('temperature_stress', 0.0)
+                }
+                remobilization_result = self.nitrogen_model.calculate_nitrogen_remobilization(stress_factors)
+                plant_state['nitrogen_remobilization'] = remobilization_result
+            
+            # Use organ initialization
+            if hasattr(self.nitrogen_model, 'initialize_organ'):
+                for organ in ['leaves', 'stems', 'roots']:
+                    organ_mass = plant_state.get(f'{organ}_biomass', 0.01)
+                    self.nitrogen_model.initialize_organ(
+                        organ_name=organ,
+                        initial_dry_mass=organ_mass,
+                        initial_nitrogen_content=0.03  # Default 3% N content
+                    )
+        
+        return plant_state
+    
+    def _update_nutrient_mobility(self, plant_state: dict) -> dict:
+        """Update nutrient mobility and redistribution using comprehensive model."""
+        
+        # === COMPREHENSIVE NUTRIENT MOBILITY INTEGRATION ===
+        
+        # 1. Initialize organ pools if not already done
+        if not hasattr(self, 'organ_pools_initialized'):
+            self._initialize_organ_pools(plant_state)
+            self.organ_pools_initialized = True
+        
+        # 2. Prepare organ demands for nutrient mobility
+        organ_demands = self._prepare_organ_demands(plant_state)
+        
+        # 3. Prepare stress factors
+        stress_factors = {
+            'water': plant_state.get('water_stress', 0.0),
+            'temperature': plant_state.get('temperature_stress', 0.0),
+            'nutrient': plant_state.get('nutrient_stress', 0.0),
+            'light': plant_state.get('light_stress', 0.0)
+        }
+        
+        # 4. Prepare senescence rates
+        senescence_rates = {
+            'leaves': plant_state.get('senescence_rate', 0.0),
+            'stems': plant_state.get('senescence_rate', 0.0) * 0.5,  # Stems senesce slower
+            'roots': plant_state.get('senescence_rate', 0.0) * 0.3   # Roots senesce slowest
+        }
+        
+        # 5. Prepare growth stage
+        growth_stage = plant_state.get('growth_stage', 'V4')
+        if growth_stage in ['V1', 'V2', 'V3', 'V4', 'V5', 'V6']:
+            stage = 'vegetative'
+        elif growth_stage in ['HI', 'HD', 'HM']:
+            stage = 'reproductive'
+        else:
+            stage = 'vegetative'
+        
+        # 6. Prepare water and assimilate fluxes
+        water_fluxes = {
+            'leaves': plant_state.get('transpiration_rate', 0.0) * 0.4,  # 40% of transpiration
+            'stems': plant_state.get('transpiration_rate', 0.0) * 0.1,   # 10% of transpiration
+            'roots': plant_state.get('water_uptake_rate', 0.0) * 0.5    # 50% of uptake
+        }
+        
+        assimilate_fluxes = {
+            'leaves': plant_state.get('photosynthesis_rate', 0.0) * 0.3,  # 30% of photosynthesis
+            'stems': plant_state.get('photosynthesis_rate', 0.0) * 0.2,   # 20% of photosynthesis
+            'roots': plant_state.get('photosynthesis_rate', 0.0) * 0.1    # 10% of photosynthesis
+        }
+        
+        # 7. Prepare organ nutrient status
+        organ_nutrient_status = {
+            'leaves_nutrient_status': 1.0 - plant_state.get('nutrient_stress', 0.0),
+            'stems_nutrient_status': 1.0 - plant_state.get('nutrient_stress', 0.0) * 0.8,
+            'roots_nutrient_status': 1.0 - plant_state.get('nutrient_stress', 0.0) * 0.6
+        }
+        
+        # 8. Prepare environmental conditions
+        environmental_conditions = {
+            'ec_factor': 1.0 - plant_state.get('salinity_stress', 0.0),
+            'temperature_stress_factor': 1.0 - plant_state.get('temperature_stress', 0.0),
+            'vpd_factor': 1.0 - plant_state.get('water_stress', 0.0)
+        }
+        
+        # 9. Use comprehensive daily_update method
+        mobility_response = self.mobility_model.daily_update(
+            organ_demands=organ_demands,
+            stress_factors=stress_factors,
+            senescence_rates=senescence_rates,
+            growth_stage=stage,
+            water_fluxes=water_fluxes,
+            assimilate_fluxes=assimilate_fluxes,
+            temperature=plant_state.get('air_temperature', 22.0),
+            organ_nutrient_status=organ_nutrient_status,
+            environmental_conditions=environmental_conditions
+        )
+        
+        # 10. Update plant state with comprehensive mobility results
+        plant_state['nutrient_transport_fluxes'] = len(mobility_response.transport_fluxes)
+        plant_state['transport_limitations'] = mobility_response.transport_limitations
+        plant_state['mobility_efficiency'] = mobility_response.mobility_efficiency
+        
+        # 11. Update nutrient redistribution
+        plant_state['nutrient_redistribution'] = mobility_response.total_redistribution
+        plant_state['nitrogen_redistribution'] = mobility_response.total_redistribution.get('nitrogen', 0.0)
+        plant_state['phosphorus_redistribution'] = mobility_response.total_redistribution.get('phosphorus', 0.0)
+        plant_state['potassium_redistribution'] = mobility_response.total_redistribution.get('potassium', 0.0)
+        
+        # 12. Get mobility summary for diagnostics
+        mobility_summary = self.mobility_model.get_mobility_summary()
+        plant_state['mobility_summary'] = mobility_summary
+        
+        # Use comprehensive nutrient model functions
+        plant_state = self._update_advanced_nutrient_models(plant_state)
+        plant_state['transport_pool_fractions'] = mobility_summary['transport_pool_fractions']
+        plant_state['cumulative_redistribution'] = mobility_summary['cumulative_redistribution']
+        
+        return plant_state
+    
+    def _initialize_organ_pools(self, plant_state: dict):
+        """Initialize organ nutrient pools for mobility tracking."""
+        # Initialize organ pools with current nutrient contents
+        
+        # Leaf pools
+        leaf_nutrient_contents = {
+            'nitrogen': plant_state.get('leaf_biomass', 0.05) * 0.04,      # 4% N
+            'phosphorus': plant_state.get('leaf_biomass', 0.05) * 0.005,   # 0.5% P
+            'potassium': plant_state.get('leaf_biomass', 0.05) * 0.03,      # 3% K
+            'calcium': plant_state.get('leaf_biomass', 0.05) * 0.01,        # 1% Ca
+            'magnesium': plant_state.get('leaf_biomass', 0.05) * 0.005,     # 0.5% Mg
+            'sulfur': plant_state.get('leaf_biomass', 0.05) * 0.003         # 0.3% S
+        }
+        
+        # Stem pools
+        stem_nutrient_contents = {
+            'nitrogen': plant_state.get('stem_biomass', 0.03) * 0.02,      # 2% N
+            'phosphorus': plant_state.get('stem_biomass', 0.03) * 0.003,    # 0.3% P
+            'potassium': plant_state.get('stem_biomass', 0.03) * 0.02,      # 2% K
+            'calcium': plant_state.get('stem_biomass', 0.03) * 0.005,      # 0.5% Ca
+            'magnesium': plant_state.get('stem_biomass', 0.03) * 0.003,     # 0.3% Mg
+            'sulfur': plant_state.get('stem_biomass', 0.03) * 0.002         # 0.2% S
+        }
+        
+        # Root pools
+        root_nutrient_contents = {
+            'nitrogen': plant_state.get('root_biomass', 0.02) * 0.025,      # 2.5% N
+            'phosphorus': plant_state.get('root_biomass', 0.02) * 0.004,    # 0.4% P
+            'potassium': plant_state.get('root_biomass', 0.02) * 0.025,     # 2.5% K
+            'calcium': plant_state.get('root_biomass', 0.02) * 0.008,       # 0.8% Ca
+            'magnesium': plant_state.get('root_biomass', 0.02) * 0.004,     # 0.4% Mg
+            'sulfur': plant_state.get('root_biomass', 0.02) * 0.002         # 0.2% S
+        }
+        
+        # Initialize pools in mobility model
+        self.mobility_model.initialize_organ_pools('leaves', leaf_nutrient_contents, plant_state.get('leaf_biomass', 0.05))
+        self.mobility_model.initialize_organ_pools('stems', stem_nutrient_contents, plant_state.get('stem_biomass', 0.03))
+        self.mobility_model.initialize_organ_pools('roots', root_nutrient_contents, plant_state.get('root_biomass', 0.02))
+    
+    def _prepare_organ_demands(self, plant_state: dict) -> dict:
+        """Prepare organ nutrient demands for mobility model."""
+        # Calculate nutrient demands based on growth rates and stress factors
+        
+        # Growth rates (simplified)
+        leaf_growth_rate = plant_state.get('leaf_biomass', 0.05) * 0.05  # 5% daily growth
+        stem_growth_rate = plant_state.get('stem_biomass', 0.03) * 0.03  # 3% daily growth
+        root_growth_rate = plant_state.get('root_biomass', 0.02) * 0.04  # 4% daily growth
+        
+        # Nutrient demands per organ (typical lettuce requirements)
+        organ_demands = {
+            'leaves': {
+                'nitrogen': leaf_growth_rate * 0.04,      # 4% N requirement
+                'phosphorus': leaf_growth_rate * 0.005,   # 0.5% P requirement
+                'potassium': leaf_growth_rate * 0.03,     # 3% K requirement
+                'calcium': leaf_growth_rate * 0.01,       # 1% Ca requirement
+                'magnesium': leaf_growth_rate * 0.005,    # 0.5% Mg requirement
+                'sulfur': leaf_growth_rate * 0.003         # 0.3% S requirement
+            },
+            'stems': {
+                'nitrogen': stem_growth_rate * 0.02,      # 2% N requirement
+                'phosphorus': stem_growth_rate * 0.003,   # 0.3% P requirement
+                'potassium': stem_growth_rate * 0.02,     # 2% K requirement
+                'calcium': stem_growth_rate * 0.005,     # 0.5% Ca requirement
+                'magnesium': stem_growth_rate * 0.003,    # 0.3% Mg requirement
+                'sulfur': stem_growth_rate * 0.002         # 0.2% S requirement
+            },
+            'roots': {
+                'nitrogen': root_growth_rate * 0.025,     # 2.5% N requirement
+                'phosphorus': root_growth_rate * 0.004,   # 0.4% P requirement
+                'potassium': root_growth_rate * 0.025,    # 2.5% K requirement
+                'calcium': root_growth_rate * 0.008,      # 0.8% Ca requirement
+                'magnesium': root_growth_rate * 0.004,    # 0.4% Mg requirement
+                'sulfur': root_growth_rate * 0.002         # 0.2% S requirement
+            }
+        }
+        
+        return organ_demands
+
+    def _update_advanced_nutrient_models(self, plant_state: dict) -> dict:
+        """Use comprehensive nutrient model functions that were previously unused."""
+        
+        if hasattr(self, 'mobility_model'):
+            # Use EC factor calculations
+            if hasattr(self.mobility_model, 'calculate_ec_from_concentrations'):
+                concentrations = plant_state.get('nutrient_concentrations', {})
+                ec_value = self.mobility_model.calculate_ec_from_concentrations(concentrations)
+                plant_state['calculated_ec'] = ec_value
+            
+            # Use EC-based uptake modifiers
+            if hasattr(self.mobility_model, 'calculate_ec_based_uptake_modifier'):
+                current_ec = plant_state.get('ec', 1.2)
+                optimal_ec = plant_state.get('optimal_ec', 1.2)
+                ec_modifiers = self.mobility_model.calculate_ec_based_uptake_modifier(
+                    current_ec, optimal_ec
+                )
+                plant_state['ec_uptake_modifiers'] = ec_modifiers
+            
+            # Use transport capacity calculations
+            if hasattr(self.mobility_model, 'calculate_transport_capacity'):
+                source_organ = 'leaves'
+                sink_organ = 'roots'
+                water_flux = plant_state.get('water_uptake_rate', 0.1)
+                assimilate_flux = plant_state.get('photosynthesis_rate', 0.05)
+                temperature = plant_state.get('air_temperature', 25.0)
+                
+                transport_capacity = self.mobility_model.calculate_transport_capacity(
+                    source_organ, sink_organ, water_flux, assimilate_flux, temperature
+                )
+                plant_state['transport_capacity'] = transport_capacity
+            
+            # Use sink demand calculations
+            if hasattr(self.mobility_model, 'calculate_sink_demands'):
+                organ_demands = {
+                    'leaves': {'nitrogen': 0.01, 'phosphorus': 0.002, 'potassium': 0.008},
+                    'stems': {'nitrogen': 0.005, 'phosphorus': 0.001, 'potassium': 0.004},
+                    'roots': {'nitrogen': 0.003, 'phosphorus': 0.001, 'potassium': 0.002}
+                }
+                growth_stage = plant_state.get('growth_stage', 'vegetative')
+                sink_demands = self.mobility_model.calculate_sink_demands(organ_demands, growth_stage)
+                plant_state['sink_demands'] = sink_demands
+            
+            # Use source supply calculations
+            if hasattr(self.mobility_model, 'calculate_source_supplies'):
+                stress_factors = {
+                    'water_stress': plant_state.get('water_stress', 0.0),
+                    'nitrogen_stress': plant_state.get('nitrogen_stress', 0.0)
+                }
+                senescence_rates = {
+                    'leaves': plant_state.get('leaf_senescence_rate', 0.0),
+                    'stems': plant_state.get('stem_senescence_rate', 0.0)
+                }
+                source_supplies = self.mobility_model.calculate_source_supplies(stress_factors, senescence_rates)
+                plant_state['source_supplies'] = source_supplies
+            
+            # Use transport flux calculations
+            if hasattr(self.mobility_model, 'calculate_transport_fluxes'):
+                sink_demands = plant_state.get('sink_demands', {})
+                source_supplies = plant_state.get('source_supplies', {})
+                transport_capacities = plant_state.get('transport_capacity', {})
+                temperature = plant_state.get('air_temperature', 25.0)
+                
+                transport_fluxes = self.mobility_model.calculate_transport_fluxes(
+                    sink_demands, source_supplies, transport_capacities, temperature
+                )
+                plant_state['transport_fluxes'] = transport_fluxes
+            
+            # Use mobility efficiency calculations
+            if hasattr(self.mobility_model, 'calculate_mobility_efficiency'):
+                mobility_efficiencies = {}
+                for nutrient in ['nitrogen', 'phosphorus', 'potassium']:
+                    efficiency = self.mobility_model.calculate_mobility_efficiency(nutrient)
+                    mobility_efficiencies[f'{nutrient}_mobility_efficiency'] = efficiency
+                plant_state.update(mobility_efficiencies)
+            
+            # Use organ pool initialization
+            if hasattr(self.mobility_model, 'initialize_organ_pools'):
+                for organ in ['leaves', 'stems', 'roots']:
+                    nutrient_contents = {
+                        'nitrogen': plant_state.get(f'{organ}_nitrogen_content', 0.03),
+                        'phosphorus': plant_state.get(f'{organ}_phosphorus_content', 0.005),
+                        'potassium': plant_state.get(f'{organ}_potassium_content', 0.04)
+                    }
+                    dry_mass = plant_state.get(f'{organ}_biomass', 0.01)
+                    self.mobility_model.initialize_organ_pools(organ, nutrient_contents, dry_mass)
+            
+            # Use organ pool updates
+            if hasattr(self.mobility_model, 'update_organ_pools'):
+                transport_fluxes = plant_state.get('transport_fluxes', [])
+                if transport_fluxes:
+                    self.mobility_model.update_organ_pools(transport_fluxes)
+        
         return plant_state
 
     def _calculate_advanced_biomass_allocation(self, plant_state: dict, total_growth: float) -> dict:
@@ -1018,7 +1919,62 @@ class CROPGROHydroponicSimulator:
         # Calculate individual stress factors first
         plant_state = self._calculate_stress_factors(plant_state)
         
-        # Use unified stress calculator for integrated stress
+        # === COMPREHENSIVE INTEGRATED STRESS INTEGRATION ===
+        
+        # 1. Prepare current stress levels for integrated stress model
+        current_stress_levels = {
+            'water': plant_state.get('water_stress', 0.0),
+            'temperature': plant_state.get('temperature_stress', 0.0),
+            'nutrient': plant_state.get('nutrient_stress', 0.0),
+            'light': plant_state.get('light_stress', 0.0),
+            'salinity': plant_state.get('salinity_stress', 0.0),
+            'oxygen': plant_state.get('oxygen_stress', 0.0),
+            'ph': plant_state.get('ph_stress', 0.0)
+        }
+        
+        # 2. Use comprehensive daily_update method for integrated stress
+        integrated_stress_response = self.integrated_stress.daily_update(current_stress_levels)
+        
+        # 3. Update plant state with comprehensive stress results
+        plant_state['integrated_stress_factor'] = integrated_stress_response.overall_stress_factor
+        plant_state['stress_severity'] = integrated_stress_response.stress_severity
+        plant_state['dominant_stresses'] = integrated_stress_response.dominant_stresses
+        plant_state['stress_interactions_active'] = integrated_stress_response.stress_interactions_active
+        plant_state['acclimation_active'] = integrated_stress_response.acclimation_active
+        plant_state['recovery_active'] = integrated_stress_response.recovery_active
+        
+        # 4. Update individual stress states
+        for stress_type, stress_state in integrated_stress_response.stress_states.items():
+            plant_state[f'{stress_type}_stress'] = stress_state.current_level
+            plant_state[f'{stress_type}_acute_stress'] = stress_state.acute_stress
+            plant_state[f'{stress_type}_chronic_stress'] = stress_state.chronic_stress
+            plant_state[f'{stress_type}_acclimation_level'] = stress_state.acclimation_level
+            plant_state[f'{stress_type}_damage_level'] = stress_state.damage_level
+            plant_state[f'{stress_type}_recovery_progress'] = stress_state.recovery_progress
+            plant_state[f'{stress_type}_days_under_stress'] = stress_state.days_under_stress
+        
+        # 5. Update process-specific stress responses
+        plant_state['process_stress_responses'] = {}
+        for process_type, process_response in integrated_stress_response.process_responses.items():
+            plant_state['process_stress_responses'][process_type] = {
+                'combined_stress_factor': process_response.combined_stress_factor,
+                'individual_stress_effects': process_response.individual_stress_effects,
+                'interaction_effects': process_response.interaction_effects,
+                'acclimation_benefits': process_response.acclimation_benefits,
+                'recovery_effects': process_response.recovery_effects,
+                'damage_effects': process_response.damage_effects,
+                'limiting_stress_types': process_response.limiting_stress_types
+            }
+        
+        # 6. Get stress summary for diagnostics
+        stress_summary = self.integrated_stress.get_stress_summary()
+        plant_state['stress_summary'] = stress_summary
+        plant_state['current_stresses'] = stress_summary['current_stresses']
+        plant_state['acclimation_status'] = stress_summary['acclimation_status']
+        plant_state['cumulative_damage'] = stress_summary['cumulative_damage']
+        plant_state['total_damage'] = stress_summary['total_damage']
+        
+        # 7. Use unified stress calculator for additional stress factors
         env_conditions = {
             'actual_temperature': plant_state['air_temperature'],
             'actual_humidity': plant_state['humidity'],
@@ -1039,20 +1995,148 @@ class CROPGROHydroponicSimulator:
             ec_calculator=self.nutrient_concentration_model.calculate_ec_from_concentrations
         )
         
-        # Update plant state with integrated stress results
-        plant_state['integrated_stress_factor'] = stress_result['overall_stress_factor']
-        plant_state['temperature_stress'] = stress_result['stress_levels']['temperature']
-        plant_state['water_stress'] = stress_result['stress_levels']['water']
-        plant_state['nutrient_stress'] = stress_result['stress_levels']['nitrogen']
-        plant_state['light_stress'] = stress_result['stress_levels']['light']
-        plant_state['salinity_stress'] = stress_result['stress_levels']['salinity']
+        # 8. Update plant state with unified stress results (for compatibility)
+        plant_state['temperature_factor'] = stress_result['temperature_factor']
+        plant_state['water_factor'] = stress_result['water_factor']
+        plant_state['light_factor'] = stress_result['light_factor']
+        plant_state['nitrogen_factor'] = stress_result['nitrogen_factor']
+        plant_state['salinity_factor'] = stress_result['salinity_factor']
+        plant_state['ph_factor'] = stress_result['ph_factor']
+        plant_state['oxygen_factor'] = stress_result['oxygen_factor']
         
         return plant_state
-    
-    def _calculate_canopy_architecture(self, plant_state: dict) -> dict:
-        """Calculate canopy architecture and light interception using advanced model."""
+
+    def _update_advanced_stress_models(self, plant_state: dict) -> dict:
+        """Use comprehensive stress model functions that were previously unused."""
         
-        # Create light environment
+        # Temperature stress model functions
+        if hasattr(self, 'temperature_stress'):
+            temperature = plant_state.get('air_temperature', 25.0)
+            
+            # Use temperature stress classification
+            if hasattr(self.temperature_stress, 'classify_temperature_stress'):
+                stress_type = self.temperature_stress.classify_temperature_stress(temperature)
+                plant_state['temperature_stress_type'] = stress_type.value if hasattr(stress_type, 'value') else str(stress_type)
+            
+            # Use base stress level calculations
+            if hasattr(self.temperature_stress, 'calculate_base_stress_level'):
+                base_stress = self.temperature_stress.calculate_base_stress_level(temperature)
+                plant_state['base_temperature_stress'] = base_stress
+            
+            # Use acclimation updates
+            if hasattr(self.temperature_stress, 'update_acclimation'):
+                stress_type = getattr(self.temperature_stress, 'classify_temperature_stress', lambda x: None)(temperature)
+                if stress_type:
+                    self.temperature_stress.update_acclimation(temperature, stress_type)
+            
+            # Use acclimation effects
+            if hasattr(self.temperature_stress, 'apply_acclimation_effects'):
+                base_stress = plant_state.get('base_temperature_stress', 0.0)
+                stress_type = getattr(self.temperature_stress, 'classify_temperature_stress', lambda x: None)(temperature)
+                if stress_type:
+                    acclimated_stress = self.temperature_stress.apply_acclimation_effects(base_stress, stress_type)
+                    plant_state['acclimated_temperature_stress'] = acclimated_stress
+            
+            # Use memory effects
+            if hasattr(self.temperature_stress, 'calculate_memory_effects'):
+                memory_effect = self.temperature_stress.calculate_memory_effects()
+                plant_state['temperature_memory_effect'] = memory_effect
+            
+            # Use process stress factors
+            if hasattr(self.temperature_stress, 'calculate_process_stress_factors'):
+                stress_level = plant_state.get('base_temperature_stress', 0.0)
+                stress_type = getattr(self.temperature_stress, 'classify_temperature_stress', lambda x: None)(temperature)
+                if stress_type:
+                    process_factors = self.temperature_stress.calculate_process_stress_factors(stress_level, stress_type)
+                    plant_state['temperature_process_factors'] = process_factors
+            
+            # Use damage and recovery updates
+            if hasattr(self.temperature_stress, 'update_damage_and_recovery'):
+                stress_level = plant_state.get('base_temperature_stress', 0.0)
+                stress_type = getattr(self.temperature_stress, 'classify_temperature_stress', lambda x: None)(temperature)
+                if stress_type:
+                    self.temperature_stress.update_damage_and_recovery(stress_level, stress_type, 24.0)
+        
+        # Integrated stress model functions
+        if hasattr(self, 'integrated_stress'):
+            current_stress_levels = {
+                'temperature_stress': plant_state.get('temperature_stress', 0.0),
+                'water_stress': plant_state.get('water_stress', 0.0),
+                'nitrogen_stress': plant_state.get('nitrogen_stress', 0.0),
+                'light_stress': plant_state.get('light_stress', 0.0)
+            }
+            
+            # Use acute stress calculations
+            if hasattr(self.integrated_stress, 'calculate_acute_stress'):
+                acute_stresses = {}
+                for stress_type, level in current_stress_levels.items():
+                    acute_stress = self.integrated_stress.calculate_acute_stress(stress_type, level)
+                    acute_stresses[f'{stress_type}_acute'] = acute_stress
+                plant_state.update(acute_stresses)
+            
+            # Use chronic stress calculations
+            if hasattr(self.integrated_stress, 'calculate_chronic_stress'):
+                # Get stress states from the model
+                stress_states = getattr(self.integrated_stress, 'stress_states', {})
+                for stress_type, stress_state in stress_states.items():
+                    chronic_stress = self.integrated_stress.calculate_chronic_stress(stress_state)
+                    plant_state[f'{stress_type}_chronic'] = chronic_stress
+            
+            # Use acclimation effects
+            if hasattr(self.integrated_stress, 'calculate_acclimation_effect'):
+                stress_states = getattr(self.integrated_stress, 'stress_states', {})
+                for stress_type, stress_state in stress_states.items():
+                    acclimation_effect = self.integrated_stress.calculate_acclimation_effect(stress_state)
+                    plant_state[f'{stress_type}_acclimation'] = acclimation_effect
+            
+            # Use recovery effects
+            if hasattr(self.integrated_stress, 'calculate_recovery_effect'):
+                stress_states = getattr(self.integrated_stress, 'stress_states', {})
+                for stress_type, stress_state in stress_states.items():
+                    recovery_effect = self.integrated_stress.calculate_recovery_effect(stress_state)
+                    plant_state[f'{stress_type}_recovery'] = recovery_effect
+            
+            # Use stress interactions
+            if hasattr(self.integrated_stress, 'calculate_stress_interactions'):
+                active_stresses = {k: v for k, v in current_stress_levels.items() if v > 0.1}
+                if active_stresses:
+                    stress_interactions = self.integrated_stress.calculate_stress_interactions(active_stresses)
+                    plant_state['stress_interactions'] = stress_interactions
+            
+            # Use process stress response
+            if hasattr(self.integrated_stress, 'calculate_process_stress_response'):
+                stress_states = getattr(self.integrated_stress, 'stress_states', {})
+                process_responses = {}
+                for process in ['photosynthesis', 'respiration', 'transpiration', 'growth']:
+                    response = self.integrated_stress.calculate_process_stress_response(process, stress_states)
+                    process_responses[f'{process}_stress_response'] = response
+                plant_state.update(process_responses)
+        
+        # Unified stress calculator functions
+        if hasattr(self, 'unified_stress_calculator'):
+            env_conditions = {
+                'temperature': plant_state.get('air_temperature', 25.0),
+                'humidity': plant_state.get('humidity', 60.0),
+                'vpd': plant_state.get('vpd', 1.0),
+                'light_intensity': plant_state.get('solar_radiation', 10.0),
+                'co2': plant_state.get('co2_concentration', 400.0),
+                'ph': plant_state.get('ph', 6.0),
+                'ec': plant_state.get('ec', 1.2)
+            }
+            
+            # Use unified stress factor calculations
+            if hasattr(self.unified_stress_calculator, 'calculate_unified_stress_factors'):
+                unified_factors = self.unified_stress_calculator.calculate_unified_stress_factors(env_conditions)
+                plant_state.update(unified_factors)
+        
+        return plant_state
+
+    def _calculate_canopy_architecture(self, plant_state: dict) -> dict:
+        """Calculate canopy architecture using comprehensive multi-layer model."""
+        
+        # === COMPREHENSIVE CANOPY ARCHITECTURE INTEGRATION ===
+        
+        # 1. Create comprehensive light environment
         light_env = LightEnvironment(
             ppfd_above_canopy=plant_state['solar_radiation'] * 2.0,  # Convert to PPFD
             direct_beam_fraction=0.8,
@@ -1060,22 +2144,290 @@ class CROPGROHydroponicSimulator:
             solar_zenith_angle=30.0
         )
         
-        # Calculate canopy light distribution
+        # 2. Update canopy structure with comprehensive distribution
+        canopy_structure = self._update_canopy_structure(plant_state)
+        plant_state.update(canopy_structure)
+        
+        # 3. Calculate leaf angle distribution
+        leaf_angle_distribution = self._calculate_leaf_angle_distribution(plant_state)
+        plant_state['leaf_angle_distribution'] = leaf_angle_distribution
+        
+        # 4. Calculate light extinction coefficients
+        extinction_coeffs = self._calculate_light_extinction_coefficients(plant_state, light_env)
+        plant_state.update(extinction_coeffs)
+        
+        # 5. Calculate sunlit and shaded fractions
+        sunlit_shaded_fractions = self._calculate_sunlit_shaded_fractions(plant_state, light_env)
+        plant_state.update(sunlit_shaded_fractions)
+        
+        # 6. Calculate canopy temperature gradient
+        temperature_gradient = self._calculate_canopy_temperature_gradient(plant_state)
+        plant_state.update(temperature_gradient)
+        
+        # 7. Calculate photosynthesis by canopy layer
+        layer_photosynthesis = self._calculate_photosynthesis_by_layer(plant_state, light_env)
+        plant_state.update(layer_photosynthesis)
+        
+        # 8. Calculate competition effects
+        competition_effects = self._calculate_competition_effects(plant_state)
+        plant_state.update(competition_effects)
+        
+        # 9. Calculate clumping effects
+        clumping_effects = self._calculate_clumping_effects(plant_state)
+        plant_state.update(clumping_effects)
+        
+        # 10. Get comprehensive canopy summary
+        canopy_summary = self._get_canopy_summary(plant_state)
+        plant_state['canopy_summary'] = canopy_summary
+        
+        return plant_state
+    
+    def _update_canopy_structure(self, plant_state: dict) -> dict:
+        """Update canopy structure with comprehensive distribution."""
+        # Use advanced canopy model for structure
         self.canopy_model.distribute_leaf_area(plant_state['lai'], plant_state['plant_height'])
+        
+        # Get canopy structure details
+        canopy_structure = {
+            'canopy_layers': getattr(self.canopy_model, 'canopy_layers', 3),
+            'layer_lai_distribution': getattr(self.canopy_model, 'layer_lai_distribution', {}),
+            'canopy_height': plant_state['plant_height'],
+            'canopy_width': getattr(self.canopy_model, 'canopy_width', 0.3),
+            'row_spacing': getattr(self.canopy_model, 'row_spacing', 0.5),
+            'plant_spacing': getattr(self.canopy_model, 'plant_spacing', 0.2)
+        }
+        
+        return canopy_structure
+    
+    def _calculate_leaf_angle_distribution(self, plant_state: dict) -> dict:
+        """Calculate leaf angle distribution effects."""
+        # Get leaf angle parameters from canopy model
+        mean_leaf_angle = getattr(self.canopy_model, 'mean_leaf_angle', 45.0)
+        leaf_angle_variance = getattr(self.canopy_model, 'leaf_angle_variance', 15.0)
+        leaf_angle_distribution = getattr(self.canopy_model, 'leaf_angle_distribution', 'spherical')
+        
+        # Calculate angle distribution effects
+        angle_distribution = {
+            'mean_leaf_angle': mean_leaf_angle,
+            'leaf_angle_variance': leaf_angle_variance,
+            'leaf_angle_distribution_type': leaf_angle_distribution,
+            'angle_extinction_factor': self._calculate_angle_extinction_factor(mean_leaf_angle),
+            'light_interception_efficiency': self._calculate_light_interception_efficiency(mean_leaf_angle)
+        }
+        
+        return angle_distribution
+    
+    def _calculate_angle_extinction_factor(self, mean_angle: float) -> float:
+        """Calculate extinction factor based on leaf angle."""
+        # More horizontal leaves = higher extinction
+        # More vertical leaves = lower extinction
+        angle_rad = math.radians(mean_angle)
+        extinction_factor = 0.5 + 0.5 * math.cos(angle_rad)
+        return extinction_factor
+    
+    def _calculate_light_interception_efficiency(self, mean_angle: float) -> float:
+        """Calculate light interception efficiency based on leaf angle."""
+        # Optimal angle for light interception varies with solar angle
+        solar_angle = 30.0  # degrees
+        angle_diff = abs(mean_angle - solar_angle)
+        efficiency = max(0.5, 1.0 - angle_diff / 90.0)
+        return efficiency
+    
+    def _calculate_light_extinction_coefficients(self, plant_state: dict, light_env: LightEnvironment) -> dict:
+        """Calculate comprehensive light extinction coefficients."""
+        # Use canopy model for extinction calculations
         light_interception, extinction_coeff = self.canopy_model.calculate_light_distribution(
             light_env=light_env,
             total_lai=plant_state['lai']
         )
+        
+        # Calculate additional extinction parameters
+        extinction_coeffs = {
+            'light_interception': light_interception,
+            'extinction_coefficient': extinction_coeff,
+            'diffuse_extinction_coeff': extinction_coeff * 0.8,  # Diffuse light penetrates better
+            'beam_extinction_coeff': extinction_coeff * 1.2,     # Direct beam blocked more
+            'max_extinction_coefficient': extinction_coeff * 1.5, # Maximum extinction
+            'light_penetration_depth': self._calculate_light_penetration_depth(plant_state['lai'], extinction_coeff)
+        }
+        
+        return extinction_coeffs
+    
+    def _calculate_light_penetration_depth(self, lai: float, extinction_coeff: float) -> float:
+        """Calculate light penetration depth through canopy."""
+        # Light penetration follows Beer's law: I = I0 * exp(-k * LAI)
+        # Calculate depth where light drops to 10% of incident
+        penetration_depth = -math.log(0.1) / extinction_coeff
+        return min(penetration_depth, lai)  # Can't penetrate more than total LAI
+    
+    def _calculate_sunlit_shaded_fractions(self, plant_state: dict, light_env: LightEnvironment) -> dict:
+        """Calculate sunlit and shaded leaf area fractions."""
+        total_lai = plant_state['lai']
+        
+        # Calculate sunlit fraction using canopy model
+        sunlit_fraction = self.canopy_model.calculate_sunlit_fraction(
+            total_lai=total_lai,
+            solar_zenith_angle=light_env.solar_zenith_angle
+        )
+        
+        sunlit_shaded_fractions = {
+            'sunlit_lai': total_lai * sunlit_fraction,
+            'shaded_lai': total_lai * (1.0 - sunlit_fraction),
+            'sunlit_fraction': sunlit_fraction,
+            'shaded_fraction': 1.0 - sunlit_fraction,
+            'sunlit_ppfd': light_env.ppfd_above_canopy,
+            'shaded_ppfd': light_env.ppfd_above_canopy * 0.2  # 20% of incident light reaches shaded leaves
+        }
+        
+        return sunlit_shaded_fractions
+    
+    def _calculate_canopy_temperature_gradient(self, plant_state: dict) -> dict:
+        """Calculate temperature gradient through canopy layers."""
+        air_temperature = plant_state.get('air_temperature', 22.0)
+        lai = plant_state.get('lai', 1.0)
+        
+        # Calculate temperature gradient (warmer at top, cooler at bottom)
+        max_gradient = getattr(self.canopy_model, 'max_temperature_gradient', 3.0)  # °C
+        gradient_factor = getattr(self.canopy_model, 'temperature_gradient_factor', 0.5)
+        
+        temperature_gradient = {
+            'canopy_top_temperature': air_temperature + (max_gradient * min(1.0, lai / 3.0)),
+            'canopy_middle_temperature': air_temperature + (max_gradient * 0.5 * min(1.0, lai / 3.0)),
+            'canopy_bottom_temperature': air_temperature,
+            'temperature_gradient': max_gradient * min(1.0, lai / 3.0),
+            'gradient_factor': gradient_factor
+        }
+        
+        return temperature_gradient
+    
+    def _calculate_photosynthesis_by_layer(self, plant_state: dict, light_env: LightEnvironment) -> dict:
+        """Calculate photosynthesis by canopy layer."""
+        # Get layer-specific photosynthesis
+        layer_photosynthesis = self.canopy_model.calculate_layer_photosynthesis(
+            light_env=light_env,
+            total_lai=plant_state['lai']
+        )
+        
+        # Calculate total canopy photosynthesis
+        total_canopy_photosynthesis = sum(layer_photosynthesis.values())
+        
+        photosynthesis_by_layer = {
+            'layer_photosynthesis': layer_photosynthesis,
+            'canopy_photosynthesis': total_canopy_photosynthesis,
+            'photosynthesis_efficiency': total_canopy_photosynthesis / max(0.001, plant_state['lai']),
+            'ppfd_to_photosynthesis_factor': getattr(self.canopy_model, 'ppfd_to_photosynthesis_factor', 0.8)
+        }
+        
+        return photosynthesis_by_layer
+    
+    def _calculate_competition_effects(self, plant_state: dict) -> dict:
+        """Calculate competition effects between plants."""
+        plant_density = getattr(self.system_config, 'n_plants', 12) / getattr(self.system_config, 'system_area', 1.0)
+        
+        # Calculate competition factors
+        competition_effects = {
+            'plant_density': plant_density,
+            'competition_factor': min(1.0, 1.0 - (plant_density - 10) * 0.05),  # Competition increases with density
+            'light_competition': min(1.0, 1.0 - (plant_density - 8) * 0.1),
+            'space_competition': min(1.0, 1.0 - (plant_density - 12) * 0.08),
+            'neighbor_shading_distance': getattr(self.canopy_model, 'neighbor_shading_distance', 0.3)
+        }
+        
+        return competition_effects
+    
+    def _calculate_clumping_effects(self, plant_state: dict) -> dict:
+        """Calculate leaf clumping effects on light interception."""
+        clumping_index = getattr(self.canopy_model, 'clumping_index', 0.8)
+        
+        # Clumping reduces effective LAI for light interception
+        effective_lai = plant_state['lai'] * clumping_index
+        
+        clumping_effects = {
+            'clumping_index': clumping_index,
+            'effective_lai': effective_lai,
+            'clumping_reduction_factor': 1.0 - clumping_index,
+            'light_interception_efficiency': clumping_index
+        }
+        
+        return clumping_effects
+    
+    def _get_canopy_summary(self, plant_state: dict) -> dict:
+        """Get comprehensive canopy summary."""
+        canopy_summary = {
+            'total_lai': plant_state['lai'],
+            'canopy_height': plant_state['plant_height'],
+            'light_interception': plant_state.get('light_interception', 0.0),
+            'sunlit_lai': plant_state.get('sunlit_lai', 0.0),
+            'shaded_lai': plant_state.get('shaded_lai', 0.0),
+            'extinction_coefficient': plant_state.get('extinction_coefficient', 0.7),
+            'canopy_photosynthesis': plant_state.get('canopy_photosynthesis', 0.0),
+            'competition_factor': plant_state.get('competition_factor', 1.0),
+            'clumping_index': plant_state.get('clumping_index', 0.8)
+        }
+        
+        return canopy_summary
 
-        # Update plant state with canopy results
-        plant_state['light_interception'] = light_interception
-        plant_state['sunlit_lai'] = plant_state['lai'] * 0.6  # Approximate sunlit fraction
-        plant_state['shaded_lai'] = plant_state['lai'] * 0.4  # Approximate shaded fraction
-        plant_state['total_absorbed_ppfd'] = light_env.ppfd_above_canopy * light_interception
-        plant_state['canopy_photosynthesis'] = 0.0  # Will be calculated in photosynthesis model
-        plant_state['ppfd_top'] = light_env.ppfd_above_canopy
-        plant_state['ppfd_bottom'] = light_env.ppfd_above_canopy * (1.0 - light_interception)
-        plant_state['light_extinction'] = extinction_coeff
+    def _update_advanced_canopy_architecture(self, plant_state: dict) -> dict:
+        """Use additional canopy architecture model functions that were previously unused."""
+        
+        if hasattr(self, 'canopy_model'):
+            # Get current environmental conditions
+            light_env = LightEnvironment(
+                solar_radiation=plant_state.get('solar_radiation', 10.0),
+                par_umol_m2_s=plant_state.get('solar_radiation', 10.0) * 2.0,
+                day_length_hours=plant_state.get('day_length_hours', 12.0),
+                zenith_angle_deg=plant_state.get('zenith_angle_deg', 45.0)
+            )
+            
+            total_lai = plant_state.get('lai', 1.0)
+            canopy_height = plant_state.get('plant_height', 0.3)
+            
+            # Use the comprehensive daily_update method
+            canopy_response = self.canopy_model.daily_update(
+                total_lai=total_lai,
+                canopy_height=canopy_height,
+                light_env=light_env,
+                air_temperature=plant_state.get('air_temperature', 25.0),
+                co2_concentration=plant_state.get('co2_concentration', 400.0)
+            )
+            
+            # Update plant state with comprehensive canopy results
+            plant_state['canopy_layers'] = len(canopy_response.canopy_layers)
+            plant_state['sunlit_lai'] = canopy_response.sunlit_lai
+            plant_state['shaded_lai'] = canopy_response.shaded_lai
+            plant_state['light_interception'] = canopy_response.light_interception_fraction
+            plant_state['average_extinction_coefficient'] = canopy_response.average_extinction_coefficient
+            plant_state['total_absorbed_ppfd'] = canopy_response.total_absorbed_ppfd
+            plant_state['canopy_photosynthesis'] = canopy_response.canopy_photosynthesis
+            
+            # Calculate additional canopy parameters using individual methods
+            if hasattr(self.canopy_model, 'calculate_extinction_coefficient'):
+                zenith_angle = plant_state.get('zenith_angle_deg', 45.0)
+                leaf_angle_dist = plant_state.get('leaf_angle_distribution', 'uniform')
+                extinction_coeff, diffuse_extinction = self.canopy_model.calculate_extinction_coefficient(
+                    zenith_angle, leaf_angle_dist
+                )
+                plant_state['extinction_coefficient'] = extinction_coeff
+                plant_state['diffuse_extinction_coefficient'] = diffuse_extinction
+            
+            # Calculate row effects if plant spacing is available
+            if hasattr(self.canopy_model, 'calculate_row_effects'):
+                row_spacing = plant_state.get('row_spacing', 0.3)
+                plant_spacing = plant_state.get('plant_spacing', 0.15)
+                canopy_width = plant_state.get('canopy_width', 0.2)
+                row_effect = self.canopy_model.calculate_row_effects(
+                    row_spacing, plant_spacing, canopy_width
+                )
+                plant_state['row_effect_factor'] = row_effect
+            
+            # Calculate temperature profile through canopy
+            if hasattr(self.canopy_model, 'calculate_temperature_profile'):
+                air_temp = plant_state.get('air_temperature', 25.0)
+                self.canopy_model.calculate_temperature_profile(air_temp, total_lai)
+                # Store layer temperatures
+                layer_temps = [layer.temperature for layer in canopy_response.canopy_layers]
+                plant_state['canopy_temperature_profile'] = layer_temps
+                plant_state['canopy_temperature_gradient'] = max(layer_temps) - min(layer_temps) if layer_temps else 0.0
         
         return plant_state
     
@@ -1094,6 +2446,9 @@ class CROPGROHydroponicSimulator:
         
         plant_state['transpiration_rate'] = water_uptake_result['transpiration_mm']
         plant_state['water_uptake_rate'] = water_uptake_result['total_water_uptake_L']
+        
+        # Use comprehensive water uptake model functions
+        plant_state = self._update_advanced_water_uptake(plant_state)
         
         # Use the nutrient uptake model for realistic nutrient uptake
         if plant_state['root_surface_area'] > 0:
@@ -1139,7 +2494,26 @@ class CROPGROHydroponicSimulator:
             shaded_lai=plant_state['lai'] * 0.4
         )
         
+        # Also use daily assimilation method for comprehensive photosynthesis calculation
+        if hasattr(self.photosynthesis_model, 'calculate_daily_assimilation'):
+            daily_photosynthesis = self.photosynthesis_model.calculate_daily_assimilation(
+                par_umol_m2_s=plant_state['solar_radiation'] * 2.0,
+                co2_ppm=plant_state['co2_concentration'],
+                temp_c=plant_state['air_temperature'],
+                humidity=plant_state['humidity'],
+                lai=plant_state['lai'],
+                photoperiod_hours=plant_state.get('day_length_hours', 12.0),
+                ec_factor=1.0 - plant_state['nutrient_stress'],
+                config_dict=getattr(self.system_config, 'photosynthesis', {}),
+                sunlit_lai=plant_state['lai'] * 0.6,
+                shaded_lai=plant_state['lai'] * 0.4
+            )
+            plant_state['daily_photosynthesis'] = daily_photosynthesis
+        
         plant_state['photosynthesis_rate'] = photosynthesis_result
+        
+        # Use comprehensive photosynthesis model functions
+        plant_state = self._update_advanced_photosynthesis(plant_state)
         
         # Enhanced Respiration with temperature acclimation and tissue-specific rates
         biomass_pools = {
@@ -1157,7 +2531,210 @@ class CROPGROHydroponicSimulator:
         
         plant_state['respiration_rate'] = respiration_result.total_respiration
         plant_state['maintenance_respiration'] = respiration_result.maintenance_respiration
+        
+        # Use comprehensive respiration model functions
+        plant_state = self._update_advanced_respiration(plant_state, biomass_pools_list)
         plant_state['growth_respiration'] = respiration_result.growth_respiration
+        
+        return plant_state
+
+    def _update_advanced_water_uptake(self, plant_state: dict) -> dict:
+        """Use comprehensive water uptake model functions that were previously unused."""
+        
+        if hasattr(self, 'water_uptake_model'):
+            temperature = plant_state.get('air_temperature', 25.0)
+            humidity = plant_state.get('humidity', 60.0)
+            light_interception = plant_state.get('light_interception', 0.8)
+            lai = plant_state.get('lai', 1.0)
+            
+            # Use hydraulic water uptake calculations
+            if hasattr(self.water_uptake_model, 'calculate_hydraulic_water_uptake'):
+                hydraulic_result = self.water_uptake_model.calculate_hydraulic_water_uptake(
+                    light_interception=light_interception,
+                    temperature=temperature,
+                    humidity=humidity,
+                    lai=lai,
+                    vpd=calculate_vpd(temperature, humidity),
+                    root_pressure=0.1,  # Default root pressure
+                    soil_water_potential=-0.5  # Default water potential
+                )
+                plant_state.update({
+                    'hydraulic_water_uptake': hydraulic_result.get('hydraulic_uptake', 0.0),
+                    'hydraulic_resistance': hydraulic_result.get('hydraulic_resistance', 0.0),
+                    'water_potential_gradient': hydraulic_result.get('water_potential_gradient', 0.0)
+                })
+            
+            # Use temperature factor calculations
+            if hasattr(self.water_uptake_model, '_calculate_temperature_factor'):
+                temp_factor = self.water_uptake_model._calculate_temperature_factor(temperature)
+                plant_state['water_uptake_temperature_factor'] = temp_factor
+            
+            # Use VPD factor calculations
+            if hasattr(self.water_uptake_model, '_calculate_vpd_factor'):
+                vpd = calculate_vpd(temperature, humidity)
+                vpd_factor = self.water_uptake_model._calculate_vpd_factor(vpd)
+                plant_state['water_uptake_vpd_factor'] = vpd_factor
+            
+            # Use transpiration calculations
+            if hasattr(self.water_uptake_model, '_calculate_transpiration'):
+                transpiration_result = self.water_uptake_model._calculate_transpiration(
+                    light_interception=light_interception,
+                    temperature=temperature,
+                    humidity=humidity,
+                    lai=lai,
+                    vpd=calculate_vpd(temperature, humidity)
+                )
+                plant_state.update({
+                    'detailed_transpiration': transpiration_result.get('transpiration', 0.0),
+                    'stomatal_conductance': transpiration_result.get('stomatal_conductance', 0.0),
+                    'leaf_boundary_layer_conductance': transpiration_result.get('boundary_layer_conductance', 0.0)
+                })
+            
+            # Use osmotic adjustment calculations
+            if hasattr(self.water_uptake_model, '_calculate_osmotic_adjustment'):
+                stress_factors = {
+                    'water_stress': plant_state.get('water_stress', 0.0),
+                    'salt_stress': plant_state.get('salt_stress', 0.0),
+                    'nutrient_stress': plant_state.get('nutrient_stress', 0.0)
+                }
+                osmotic_adjustment = self.water_uptake_model._calculate_osmotic_adjustment(stress_factors)
+                plant_state['osmotic_adjustment'] = osmotic_adjustment
+        
+        return plant_state
+
+    def _update_advanced_photosynthesis(self, plant_state: dict) -> dict:
+        """Use comprehensive photosynthesis model functions that were previously unused."""
+        
+        if hasattr(self, 'photosynthesis_model'):
+            par_umol_m2_s = plant_state.get('solar_radiation', 10.0) * 2.0
+            co2_ppm = plant_state.get('co2_concentration', 400.0)
+            temp_c = plant_state.get('air_temperature', 25.0)
+            humidity = plant_state.get('humidity', 60.0)
+            
+            # Use hourly assimilation calculations
+            if hasattr(self.photosynthesis_model, 'calculate_hourly_assimilation'):
+                hourly_result = self.photosynthesis_model.calculate_hourly_assimilation(
+                    par_umol_m2_s=par_umol_m2_s,
+                    co2_ppm=co2_ppm,
+                    temp_c=temp_c,
+                    humidity=humidity,
+                    lai=plant_state.get('lai', 1.0),
+                    photoperiod_hours=plant_state.get('day_length_hours', 12.0),
+                    ec_factor=1.0 - plant_state.get('nutrient_stress', 0.0),
+                    sunlit_lai=plant_state.get('sunlit_lai', plant_state.get('lai', 1.0) * 0.6),
+                    shaded_lai=plant_state.get('shaded_lai', plant_state.get('lai', 1.0) * 0.4)
+                )
+                plant_state['hourly_photosynthesis'] = hourly_result
+            
+            # Use instantaneous assimilation calculations
+            if hasattr(self.photosynthesis_model, '_calculate_instantaneous_assimilation'):
+                instantaneous_result = self.photosynthesis_model._calculate_instantaneous_assimilation(
+                    par_umol_m2_s=par_umol_m2_s,
+                    co2_ppm=co2_ppm,
+                    temp_c=temp_c,
+                    humidity=humidity,
+                    lai=plant_state.get('lai', 1.0),
+                    ec_factor=1.0 - plant_state.get('nutrient_stress', 0.0)
+                )
+                plant_state['instantaneous_photosynthesis'] = instantaneous_result
+            
+            # Use Arrhenius temperature response calculations
+            if hasattr(self.photosynthesis_model, '_arrhenius_temp_response'):
+                # Calculate temperature response for different processes
+                rate_25 = 100.0  # Default rate at 25°C
+                ea = 50000.0     # Default activation energy
+                temp_response = self.photosynthesis_model._arrhenius_temp_response(
+                    rate_25=rate_25,
+                    ea=ea,
+                    temp_c=temp_c
+                )
+                plant_state['photosynthesis_temp_response'] = temp_response
+        
+        return plant_state
+
+    def _update_advanced_respiration(self, plant_state: dict, biomass_pools_list: list) -> dict:
+        """Use comprehensive respiration model functions that were previously unused."""
+        
+        if hasattr(self, 'respiration_model'):
+            temperature = plant_state.get('air_temperature', 25.0)
+            
+            # Use temperature factor calculations
+            if hasattr(self.respiration_model, 'calculate_temperature_factor'):
+                temp_factor = self.respiration_model.calculate_temperature_factor(temperature)
+                plant_state['respiration_temperature_factor'] = temp_factor
+            
+            # Use age factor calculations
+            if hasattr(self.respiration_model, 'calculate_age_factor'):
+                age_days = plant_state.get('days_since_emergence', 30.0)
+                age_factor = self.respiration_model.calculate_age_factor(age_days)
+                plant_state['respiration_age_factor'] = age_factor
+            
+            # Use nitrogen factor calculations for each tissue
+            if hasattr(self.respiration_model, 'calculate_nitrogen_factor'):
+                nitrogen_factors = {}
+                for pool in biomass_pools_list:
+                    n_factor = self.respiration_model.calculate_nitrogen_factor(
+                        pool.nitrogen_content, pool.tissue_type
+                    )
+                    nitrogen_factors[f'{pool.tissue_type.value.lower()}_nitrogen_factor'] = n_factor
+                plant_state.update(nitrogen_factors)
+            
+            # Use maintenance respiration calculations
+            if hasattr(self.respiration_model, 'calculate_maintenance_respiration'):
+                maintenance_results = {}
+                for pool in biomass_pools_list:
+                    maint_resp, tissue_breakdown = self.respiration_model.calculate_maintenance_respiration(
+                        pool, temperature
+                    )
+                    maintenance_results[f'{pool.tissue_type.value.lower()}_maintenance'] = maint_resp
+                    maintenance_results[f'{pool.tissue_type.value.lower()}_tissue_breakdown'] = tissue_breakdown
+                plant_state.update(maintenance_results)
+            
+            # Use growth respiration calculations
+            if hasattr(self.respiration_model, 'calculate_growth_respiration'):
+                growth_rate = self._calculate_growth_rate(plant_state)
+                growth_composition = {
+                    'carbohydrates': 0.4,
+                    'proteins': 0.15,
+                    'lipids': 0.05,
+                    'minerals': 0.05
+                }
+                growth_resp = self.respiration_model.calculate_growth_respiration(
+                    growth_rate, growth_composition
+                )
+                plant_state['detailed_growth_respiration'] = growth_resp
+            
+            # Use temperature acclimation updates
+            if hasattr(self.respiration_model, 'update_temperature_acclimation'):
+                self.respiration_model.update_temperature_acclimation(temperature)
+                acclimated_temp = getattr(self.respiration_model, 'acclimated_temperature', temperature)
+                plant_state['acclimated_respiration_temperature'] = acclimated_temp
+            
+            # Use hourly updates
+            if hasattr(self.respiration_model, 'hourly_update'):
+                hourly_result = self.respiration_model.hourly_update(
+                    biomass_pools=biomass_pools_list,
+                    temperature=temperature,
+                    hour=12,  # Midday
+                    dt_hours=1.0,
+                    new_growth=self._calculate_growth_rate(plant_state)
+                )
+                plant_state.update(hourly_result)
+            
+            # Use diurnal respiration factor
+            if hasattr(self.respiration_model, '_calculate_diurnal_respiration_factor'):
+                diurnal_factor = self.respiration_model._calculate_diurnal_respiration_factor(12)  # Midday
+                plant_state['diurnal_respiration_factor'] = diurnal_factor
+            
+            # Use temperature stress factor
+            if hasattr(self.respiration_model, '_calculate_temperature_stress_factor'):
+                temp_stress_factor = self.respiration_model._calculate_temperature_stress_factor(temperature)
+                plant_state['respiration_temperature_stress'] = temp_stress_factor
+            
+            # Use respiratory quotient
+            if hasattr(self.respiration_model, '_calculate_respiratory_quotient'):
+                rq = self.respiration_model._calculate_respiratory_quotient(12)  # Midday
+                plant_state['respiratory_quotient'] = rq
         
         return plant_state
     
@@ -1213,7 +2790,147 @@ class CROPGROHydroponicSimulator:
                 }
         
         return plant_state
-    
+
+    def _update_advanced_root_system(self, plant_state: dict) -> dict:
+        """Use comprehensive root system model functions that were previously unused."""
+        
+        if hasattr(self, 'root_model'):
+            environmental_conditions = {
+                'temperature': plant_state.get('air_temperature', 25.0),
+                'solution_temperature': plant_state.get('solution_temperature', 22.0),
+                'ph': plant_state.get('ph', 6.0),
+                'ec': plant_state.get('ec', 1.2),
+                'flow_rate': plant_state.get('flow_rate', 2.0),
+                'dissolved_oxygen': plant_state.get('dissolved_oxygen', 8.0)
+            }
+            
+            growth_factors = {
+                'biomass_growth': plant_state.get('total_biomass', 0.1),
+                'leaf_growth': plant_state.get('leaf_biomass', 0.05),
+                'stem_growth': plant_state.get('stem_biomass', 0.03),
+                'root_growth': plant_state.get('root_biomass', 0.02)
+            }
+            
+            # Use comprehensive daily update
+            if hasattr(self.root_model, 'daily_update'):
+                root_result = self.root_model.daily_update(
+                    environmental_conditions=environmental_conditions,
+                    growth_factors=growth_factors
+                )
+                plant_state.update(root_result)
+            
+            # Use root architecture metrics
+            if hasattr(self.root_model, 'calculate_architecture_metrics'):
+                architecture_metrics = self.root_model.calculate_architecture_metrics()
+                plant_state.update({
+                    'total_root_length': architecture_metrics.get('total_length', 0.0),
+                    'total_root_surface_area': architecture_metrics.get('total_surface_area', 0.0),
+                    'total_root_volume': architecture_metrics.get('total_volume', 0.0),
+                    'root_length_density': architecture_metrics.get('root_length_density', 0.0),
+                    'root_surface_area_density': architecture_metrics.get('root_surface_area_density', 0.0)
+                })
+            
+            # Use root distribution
+            if hasattr(self.root_model, 'get_root_distribution'):
+                root_distribution = self.root_model.get_root_distribution()
+                plant_state['root_distribution'] = root_distribution
+            
+            # Use hourly updates
+            if hasattr(self.root_model, 'hourly_update'):
+                hourly_result = self.root_model.hourly_update(
+                    environmental_conditions=environmental_conditions,
+                    hour=12,  # Midday
+                    dt_hours=1.0
+                )
+                plant_state.update(hourly_result)
+            
+            # Use effective surface area calculations
+            if hasattr(self.root_model, 'calculate_effective_surface_area'):
+                architecture_metrics = plant_state.get('architecture_metrics', {})
+                effective_surface_area = self.root_model.calculate_effective_surface_area(architecture_metrics)
+                plant_state['effective_root_surface_area'] = effective_surface_area
+            
+            # Use temperature factor calculations
+            if hasattr(self.root_model, 'calculate_temperature_factor'):
+                temp_factor = self.root_model.calculate_temperature_factor(environmental_conditions['temperature'])
+                plant_state['root_temperature_factor'] = temp_factor
+            
+            # Use flow factor calculations
+            if hasattr(self.root_model, 'calculate_flow_factor'):
+                flow_factor = self.root_model.calculate_flow_factor(environmental_conditions['flow_rate'])
+                plant_state['root_flow_factor'] = flow_factor
+            
+            # Use spatial uptake distribution
+            if hasattr(self.root_model, 'get_spatial_uptake_distribution'):
+                spatial_distribution = self.root_model.get_spatial_uptake_distribution()
+                plant_state['spatial_uptake_distribution'] = spatial_distribution
+            
+            # Use nutrient competition calculations
+            if hasattr(self.root_model, '_calculate_nutrient_competition'):
+                concentrations = {
+                    'N-NO3': plant_state.get('N-NO3_mg_L', 150.0),
+                    'P-PO4': plant_state.get('P-PO4_mg_L', 50.0),
+                    'K': plant_state.get('K_mg_L', 200.0)
+                }
+                n_competition = self.root_model._calculate_nutrient_competition('N-NO3', concentrations)
+                plant_state['nitrogen_competition_factor'] = n_competition
+            
+            # Use pH effect calculations
+            if hasattr(self.root_model, '_calculate_ph_effect_on_uptake'):
+                ph_effect = self.root_model._calculate_ph_effect_on_uptake('N-NO3', environmental_conditions['ph'])
+                plant_state['root_ph_effect'] = ph_effect
+            
+            # Use root age effect calculations
+            if hasattr(self.root_model, '_calculate_root_age_effect'):
+                architecture_metrics = plant_state.get('architecture_metrics', {})
+                age_effect = self.root_model._calculate_root_age_effect(architecture_metrics)
+                plant_state['root_age_effect'] = age_effect
+            
+            # Use environmental optimization
+            if hasattr(self.root_model, 'optimize_environmental_conditions'):
+                target_uptake = {
+                    'N-NO3': plant_state.get('Nitrogen_Uptake_mg', 5.0),
+                    'P-PO4': plant_state.get('Phosphorus_Uptake_mg', 1.0)
+                }
+                optimization_result = self.root_model.optimize_environmental_conditions(
+                    target_uptake_rates=target_uptake,
+                    current_conditions=environmental_conditions
+                )
+                plant_state['root_optimization'] = optimization_result
+            
+            # Use zone growth potential calculations
+            if hasattr(self.root_model, '_calculate_zone_growth_potential'):
+                # Get root system from model if available
+                root_system = getattr(self.root_model, 'root_system', None)
+                if root_system and hasattr(root_system, 'zones'):
+                    zone_potentials = {}
+                    for i, zone in enumerate(root_system.zones):
+                        potential = self.root_model._calculate_zone_growth_potential(
+                            zone=zone,
+                            zone_index=i,
+                            environmental_conditions=environmental_conditions
+                        )
+                        zone_potentials[f'zone_{i}_growth_potential'] = potential
+                    plant_state['zone_growth_potentials'] = zone_potentials
+            
+            # Use health score calculations
+            if hasattr(self.root_model, '_calculate_health_score'):
+                root_system = getattr(self.root_model, 'root_system', None)
+                if root_system:
+                    health_score = self.root_model._calculate_health_score(root_system)
+                    plant_state['root_health_score'] = health_score
+            
+            # Use hourly nutrient uptake calculations
+            if hasattr(self.root_model, '_calculate_hourly_nutrient_uptake'):
+                hourly_uptake = self.root_model._calculate_hourly_nutrient_uptake(
+                    environmental_conditions=environmental_conditions,
+                    hour=12,  # Midday
+                    dt_hours=1.0
+                )
+                plant_state['hourly_nutrient_uptake'] = hourly_uptake
+        
+        return plant_state
+
     def _update_environmental_control(self, plant_state: dict) -> dict:
         """Update environmental control using advanced PID controllers."""
         
@@ -1248,7 +2965,281 @@ class CROPGROHydroponicSimulator:
         plant_state['env_transpiration_factor'] = 1.0  # Simplified
         
         return plant_state
-    
+
+    def _update_advanced_root_zone_temperature(self, plant_state: dict) -> dict:
+        """Use comprehensive root zone temperature model functions that were previously unused."""
+        
+        if hasattr(self, 'rzt_model'):
+            air_temperature = plant_state.get('air_temperature', 25.0)
+            current_rzt = plant_state.get('root_zone_temp', 22.0)
+            
+            # Use optimal RZT calculations
+            if hasattr(self.rzt_model, 'calculate_optimal_rzt'):
+                optimal_rzt = self.rzt_model.calculate_optimal_rzt(air_temperature)
+                plant_state['optimal_root_zone_temp'] = optimal_rzt
+            
+            # Use RZT growth factor calculations
+            if hasattr(self.rzt_model, 'calculate_rzt_growth_factor'):
+                growth_factor = self.rzt_model.calculate_rzt_growth_factor(current_rzt, air_temperature)
+                plant_state['detailed_rzt_growth_factor'] = growth_factor
+            
+            # Use nutrient uptake factor calculations
+            if hasattr(self.rzt_model, 'calculate_nutrient_uptake_factor'):
+                nutrient_factor = self.rzt_model.calculate_nutrient_uptake_factor(current_rzt, air_temperature)
+                plant_state['detailed_rzt_nutrient_factor'] = nutrient_factor
+            
+            # Use water uptake factor calculations
+            if hasattr(self.rzt_model, 'calculate_water_uptake_factor'):
+                water_factor = self.rzt_model.calculate_water_uptake_factor(current_rzt, air_temperature)
+                plant_state['detailed_rzt_water_factor'] = water_factor
+            
+            # Use photosynthesis factor calculations
+            if hasattr(self.rzt_model, 'calculate_photosynthesis_factor'):
+                photosynthesis_factor = self.rzt_model.calculate_photosynthesis_factor(current_rzt, air_temperature)
+                plant_state['detailed_rzt_photosynthesis_factor'] = photosynthesis_factor
+            
+            # Use root metabolism factor calculations
+            if hasattr(self.rzt_model, 'calculate_root_metabolism_factor'):
+                metabolism_factor = self.rzt_model.calculate_root_metabolism_factor(current_rzt, air_temperature)
+                plant_state['detailed_rzt_metabolism_factor'] = metabolism_factor
+            
+            # Use hourly updates
+            if hasattr(self.rzt_model, 'hourly_update'):
+                environmental_conditions = {
+                    'air_temperature': air_temperature,
+                    'solution_temperature': current_rzt,
+                    'humidity': plant_state.get('humidity', 60.0),
+                    'light_intensity': plant_state.get('solar_radiation', 10.0)
+                }
+                hourly_result = self.rzt_model.hourly_update(
+                    environmental_conditions=environmental_conditions,
+                    hour=12,  # Midday
+                    dt_hours=1.0
+                )
+                plant_state.update(hourly_result)
+            
+            # Use thermal dynamics calculations
+            if hasattr(self.rzt_model, '_calculate_thermal_dynamics'):
+                solution_temp = plant_state.get('solution_temperature', 22.0)
+                thermal_dynamics = self.rzt_model._calculate_thermal_dynamics(
+                    air_temperature, solution_temp, 12, 1.0
+                )
+                plant_state['thermal_dynamics'] = thermal_dynamics
+        
+        return plant_state
+
+    def _update_advanced_ph_model(self, plant_state: dict) -> dict:
+        """Use comprehensive pH model functions that were previously unused."""
+        
+        if hasattr(self, 'ph_model'):
+            current_ph = plant_state.get('ph', 6.0)
+            temperature = plant_state.get('air_temperature', 25.0)
+            
+            # Use pH-dependent solubility calculations
+            if hasattr(self.ph_model, 'calculate_ph_dependent_solubility'):
+                nutrients = ['iron', 'manganese', 'zinc', 'copper', 'phosphorus']
+                solubility_factors = {}
+                for nutrient in nutrients:
+                    solubility_factor = self.ph_model.calculate_ph_dependent_solubility(
+                        nutrient, current_ph
+                    )
+                    solubility_factors[f'{nutrient}_solubility_factor'] = solubility_factor
+                plant_state.update(solubility_factors)
+            
+            # Use pH control system simulation
+            if hasattr(self.ph_model, 'simulate_ph_control_system'):
+                target_ph = plant_state.get('target_ph', 6.0)
+                control_result = self.ph_model.simulate_ph_control_system(
+                    current_ph=current_ph,
+                    target_ph=target_ph,
+                    temperature=temperature,
+                    control_interval_hours=24.0
+                )
+                plant_state.update({
+                    'ph_control_acid_dose': control_result.get('acid_dose_mL', 0.0),
+                    'ph_control_base_dose': control_result.get('base_dose_mL', 0.0),
+                    'ph_control_cost': control_result.get('control_cost', 0.0),
+                    'ph_control_stability': control_result.get('ph_stability', 0.0)
+                })
+            
+            # Use phosphate speciation calculations
+            if hasattr(self.ph_model, 'calculate_phosphate_speciation'):
+                total_phosphate = plant_state.get('P-PO4_mg_L', 50.0)
+                phosphate_speciation = self.ph_model.calculate_phosphate_speciation(current_ph, total_phosphate)
+                plant_state['phosphate_speciation'] = phosphate_speciation
+            
+            # Use nutrient uptake pH effect calculations
+            if hasattr(self.ph_model, 'calculate_nutrient_uptake_ph_effect'):
+                nutrient_uptake = plant_state.get('nutrient_uptake', {})
+                ph_effect = self.ph_model.calculate_nutrient_uptake_ph_effect(nutrient_uptake)
+                plant_state['nutrient_uptake_ph_effect'] = ph_effect
+        
+        return plant_state
+
+    def _update_advanced_environmental_control(self, plant_state: dict) -> dict:
+        """Use additional environmental control model functions that were previously unused."""
+        
+        if hasattr(self, 'environmental_control'):
+            current_conditions = {
+                'temperature': plant_state.get('air_temperature', 25.0),
+                'humidity': plant_state.get('humidity', 60.0),
+                'co2': plant_state.get('co2_concentration', 400.0),
+                'light_intensity': plant_state.get('solar_radiation', 10.0)
+            }
+            
+            # Use individual control methods
+            if hasattr(self.environmental_control, 'calculate_optimal_humidity'):
+                target_humidity = self.environmental_control.calculate_optimal_humidity(
+                    current_conditions['temperature'],
+                    self.environmental_control.setpoints.target_vpd
+                )
+                plant_state['target_humidity'] = target_humidity
+            
+            if hasattr(self.environmental_control, 'calculate_co2_photosynthesis_factor'):
+                co2_factor = self.environmental_control.calculate_co2_photosynthesis_factor(
+                    current_conditions['co2'],
+                    current_conditions['temperature'],
+                    current_conditions['light_intensity']
+                )
+                plant_state['co2_photosynthesis_factor'] = co2_factor
+            
+            if hasattr(self.environmental_control, 'calculate_vpd_stress_factor'):
+                current_vpd = calculate_vpd(current_conditions['temperature'], current_conditions['humidity'])
+                vpd_stress, vpd_optimal, vpd_status = self.environmental_control.calculate_vpd_stress_factor(current_vpd)
+                plant_state['vpd_stress_factor'] = vpd_stress
+                plant_state['vpd_optimal'] = vpd_optimal
+                plant_state['vpd_status'] = vpd_status
+            
+            if hasattr(self.environmental_control, 'calculate_humidity_control_action'):
+                target_humidity = plant_state.get('target_humidity', 65.0)
+                humidity_action = self.environmental_control.calculate_humidity_control_action(
+                    current_conditions['humidity'],
+                    target_humidity,
+                    'proportional'
+                )
+                plant_state['humidity_control_action'] = humidity_action
+            
+            if hasattr(self.environmental_control, 'calculate_co2_control_action'):
+                co2_action = self.environmental_control.calculate_co2_control_action(
+                    current_conditions['co2'],
+                    self.environmental_control.setpoints.target_co2,
+                    light_on=True,
+                    strategy='proportional',
+                    photoperiod_time=12.0
+                )
+                plant_state['co2_control_action'] = co2_action
+            
+            if hasattr(self.environmental_control, 'calculate_photoperiod_time'):
+                photoperiod_time = self.environmental_control.calculate_photoperiod_time(
+                    current_hour=12.0,
+                    light_start_hour=6.0
+                )
+                plant_state['photoperiod_time'] = photoperiod_time
+            
+            # Use hourly update for comprehensive environmental control
+            if hasattr(self.environmental_control, 'hourly_update'):
+                hourly_result = self.environmental_control.hourly_update(
+                    current_conditions=current_conditions,
+                    hour=12,
+                    dt_hours=1.0,
+                    strategy='proportional'
+                )
+                
+                # Update plant state with hourly control results
+                plant_state['controlled_temperature'] = hourly_result.get('temperature', current_conditions['temperature'])
+                plant_state['controlled_humidity'] = hourly_result.get('humidity', current_conditions['humidity'])
+                plant_state['controlled_co2'] = hourly_result.get('co2', current_conditions['co2'])
+                plant_state['controlled_vpd'] = hourly_result.get('vpd', 1.0)
+                plant_state['energy_consumption_kWh'] = hourly_result.get('energy_consumption_kWh', 0.0)
+                plant_state['control_actions'] = hourly_result.get('control_actions', {})
+                
+                # Use comprehensive control calculations
+                if hasattr(self.environmental_control, 'calculate_comprehensive_control'):
+                    comprehensive_result = self.environmental_control.calculate_comprehensive_control(
+                        current_conditions=current_conditions,
+                        hour=12,
+                        dt_hours=1.0,
+                        strategy='proportional'
+                    )
+                    plant_state['comprehensive_control'] = comprehensive_result
+                
+                # Use priority action determination
+                if hasattr(self.environmental_control, '_determine_priority_action'):
+                    current_vpd = calculate_vpd(current_conditions['temperature'], current_conditions['humidity'])
+                    priority_action = self.environmental_control._determine_priority_action(
+                        current_vpd=current_vpd,
+                        current_co2=current_conditions['co2'],
+                        light_on=True
+                    )
+                    plant_state['priority_control_action'] = priority_action
+                
+                # Use growth improvement estimation
+                if hasattr(self.environmental_control, '_estimate_growth_improvement'):
+                    factors = {
+                        'temperature_factor': plant_state.get('temperature_factor', 1.0),
+                        'humidity_factor': plant_state.get('humidity_factor', 1.0),
+                        'co2_factor': plant_state.get('co2_factor', 1.0),
+                        'light_factor': plant_state.get('light_factor', 1.0)
+                    }
+                    growth_improvement = self.environmental_control._estimate_growth_improvement(factors)
+                    plant_state['estimated_growth_improvement'] = growth_improvement
+                
+                # Use time-based CO2 target calculations
+                if hasattr(self.environmental_control, '_calculate_time_based_co2_target'):
+                    base_target = self.environmental_control.setpoints.target_co2
+                    photoperiod_time = plant_state.get('photoperiod_time', 12.0)
+                    time_based_co2 = self.environmental_control._calculate_time_based_co2_target(
+                        base_target=base_target,
+                        photoperiod_time=photoperiod_time,
+                        current_hour=12.0
+                    )
+                    plant_state['time_based_co2_target'] = time_based_co2
+                
+                # Use temperature adjustment calculations
+                if hasattr(self.environmental_control, '_calculate_temperature_adjustment'):
+                    current_temp = current_conditions['temperature']
+                    target_temp = self.environmental_control.setpoints.target_temperature
+                    temp_adjustment = self.environmental_control._calculate_temperature_adjustment(
+                        current_temp=current_temp,
+                        target_temp=target_temp,
+                        dt_hours=1.0
+                    )
+                    plant_state['temperature_adjustment'] = temp_adjustment
+                
+                # Use humidity control applications
+                if hasattr(self.environmental_control, '_apply_humidity_control'):
+                    current_humidity = current_conditions['humidity']
+                    humidity_action = plant_state.get('humidity_control_action', {})
+                    adjusted_humidity = self.environmental_control._apply_humidity_control(
+                        current_humidity=current_humidity,
+                        action=humidity_action,
+                        dt_hours=1.0
+                    )
+                    plant_state['adjusted_humidity'] = adjusted_humidity
+                
+                # Use CO2 control applications
+                if hasattr(self.environmental_control, '_apply_co2_control'):
+                    current_co2 = current_conditions['co2']
+                    co2_action = plant_state.get('co2_control_action', {})
+                    adjusted_co2 = self.environmental_control._apply_co2_control(
+                        current_co2=current_co2,
+                        action=co2_action,
+                        dt_hours=1.0
+                    )
+                    plant_state['adjusted_co2'] = adjusted_co2
+                
+                # Use target humidity from VPD calculations
+                if hasattr(self.environmental_control, '_calculate_target_humidity_from_vpd'):
+                    temperature = current_conditions['temperature']
+                    target_vpd = self.environmental_control.setpoints.target_vpd
+                    target_humidity = self.environmental_control._calculate_target_humidity_from_vpd(
+                        temperature=temperature,
+                        target_vpd=target_vpd
+                    )
+                    plant_state['calculated_target_humidity'] = target_humidity
+        
+        return plant_state
+
     def _update_solution_chemistry(self, plant_state: dict) -> dict:
         """Update solution chemistry with realistic dynamics."""
         # Update solution volume
@@ -1283,7 +3274,7 @@ class CROPGROHydroponicSimulator:
             plant_state['nutrient_concentrations']
         )
         
-        # Update pH using advanced pH model
+        # Update pH using comprehensive pH model
         plant_state = self._update_ph_dynamics(plant_state)
         
         # Add realistic CO2 variability
@@ -1293,6 +3284,205 @@ class CROPGROHydroponicSimulator:
         
         return plant_state
     
+    def _update_ph_dynamics(self, plant_state: dict) -> dict:
+        """Update pH dynamics using comprehensive pH model."""
+        
+        # === COMPREHENSIVE pH MODEL INTEGRATION ===
+        
+        # 1. Prepare nutrient uptake data for pH model
+        nutrient_uptake = plant_state.get('nutrient_uptake', {})
+        
+        # 2. Prepare nutrient concentrations
+        nutrient_concentrations = plant_state.get('nutrient_concentrations', {})
+        
+        # 3. Prepare environmental conditions
+        temperature = plant_state.get('air_temperature', 22.0)
+        ec = plant_state.get('ec', 1.0)
+        
+        # 4. Use comprehensive daily_update method
+        ph_response = self.ph_model.daily_update(
+            nutrient_uptake=nutrient_uptake,
+            nutrient_concentrations=nutrient_concentrations,
+            temperature=temperature,
+            ec=ec
+        )
+        
+        # 5. Update plant state with comprehensive pH results
+        plant_state['ph'] = ph_response['final_ph']
+        plant_state['ph_change_from_uptake'] = ph_response['ph_change_from_uptake']
+        plant_state['ph_change_from_drift'] = ph_response['ph_change_from_drift']
+        plant_state['acid_dosed_ml_per_L'] = ph_response['acid_dosed_ml_per_L']
+        plant_state['base_dosed_ml_per_L'] = ph_response['base_dosed_ml_per_L']
+        plant_state['buffer_capacity'] = ph_response['buffer_capacity']
+        
+        # 6. Update pH-dependent nutrient availability
+        plant_state['available_nutrients'] = ph_response['available_nutrients']
+        plant_state['nutrient_precipitation'] = ph_response['nutrient_precipitation']
+        
+        # 7. Update phosphate speciation
+        plant_state['phosphate_species'] = ph_response['phosphate_species']
+        plant_state['phosphate_h2po4_mg_L'] = ph_response['phosphate_species'].get('H2PO4', 0.0)
+        plant_state['phosphate_hpo4_mg_L'] = ph_response['phosphate_species'].get('HPO4', 0.0)
+        plant_state['phosphate_h3po4_mg_L'] = ph_response['phosphate_species'].get('H3PO4', 0.0)
+        plant_state['phosphate_po4_mg_L'] = ph_response['phosphate_species'].get('PO4', 0.0)
+        
+        # 8. Calculate pH-dependent nutrient solubility
+        ph_dependent_solubility = self.ph_model.calculate_ph_dependent_solubility(
+            ph=plant_state['ph'],
+            nutrient_concentrations=nutrient_concentrations
+        )
+        plant_state['ph_dependent_solubility'] = ph_dependent_solubility
+        
+        # 9. Simulate pH control system
+        ph_control_result = self.ph_model.simulate_ph_control_system(
+            current_ph=plant_state['ph'],
+            time_hours=24.0
+        )
+        plant_state['controlled_ph'] = ph_control_result[0]
+        plant_state['acid_dosing_rate'] = ph_control_result[1]
+        plant_state['base_dosing_rate'] = ph_control_result[2]
+        
+        # 10. Calculate Henderson-Hasselbalch pH (if CO2 data available)
+        try:
+            # Use current pH as reference for carbonate system
+            total_carbonate = plant_state.get('total_alkalinity', 2.0)  # mEq/L
+            free_co2 = plant_state.get('co2_concentration', 400.0) / 1000.0  # Convert ppm to mg/L
+            henderson_ph = self.ph_model.calculate_henderson_hasselbalch_ph(
+                total_carbonate=total_carbonate,
+                free_co2=free_co2,
+                temperature=temperature
+            )
+            plant_state['henderson_hasselbalch_ph'] = henderson_ph
+            
+            # Use comprehensive pH model functions
+            plant_state = self._update_advanced_ph_model(plant_state)
+        except Exception as e:
+            # If CO2 data not available, use current pH
+            plant_state['henderson_hasselbalch_ph'] = plant_state['ph']
+        
+        # 11. Update pH stress factor
+        optimal_ph = 6.0
+        ph_deviation = abs(plant_state['ph'] - optimal_ph)
+        plant_state['ph_stress'] = min(1.0, ph_deviation / 2.0)  # Stress increases with deviation
+        
+        return plant_state
+    
+    def _update_root_zone_temperature(self, plant_state: dict) -> dict:
+        """Update root zone temperature dynamics using comprehensive model."""
+        
+        # === COMPREHENSIVE ROOT ZONE TEMPERATURE INTEGRATION ===
+        
+        # 1. Prepare environmental conditions for RZT model
+        environmental_conditions = {
+            'air_temperature': plant_state.get('air_temperature', 22.0),
+            'solar_radiation': plant_state.get('solar_radiation', 18.0),
+            'humidity': plant_state.get('humidity', 60.0),
+            'wind_speed': plant_state.get('wind_speed', 2.0),
+            'tank_volume': plant_state.get('solution_volume', 500.0),
+            'day_of_year': plant_state.get('day', 1)
+        }
+        
+        # 2. Prepare system parameters
+        system_parameters = {
+            'tank_material': 'plastic',  # Default tank material
+            'tank_insulation': 0.1,      # Insulation factor
+            'flow_rate': getattr(self.system_config, 'flow_rate', 1.5),
+            'system_type': getattr(self.system_config, 'system_type', 'NFT')
+        }
+        
+        # 3. Use comprehensive daily_update method
+        rzt_response = self.rzt_model.daily_update(
+            environmental_conditions=environmental_conditions,
+            system_parameters=system_parameters
+        )
+        
+        # 4. Update plant state with comprehensive RZT results
+        plant_state['root_zone_temp'] = rzt_response['average_rzt']
+        
+        # Use comprehensive root zone temperature model functions
+        plant_state = self._update_advanced_root_zone_temperature(plant_state)
+        plant_state['rzt_growth_factor'] = rzt_response['growth_factor']
+        plant_state['rzt_nutrient_factor'] = rzt_response['nutrient_uptake_factor']
+        plant_state['rzt_water_factor'] = rzt_response['water_uptake_factor']
+        plant_state['rzt_photosynthesis_factor'] = rzt_response['photosynthesis_factor']
+        plant_state['rzt_root_metabolism_factor'] = rzt_response['root_metabolism_factor']
+        
+        # 5. Update RZT stress factors
+        plant_state['rzt_stress_factor'] = rzt_response['stress_factor']
+        plant_state['rzt_optimal_factor'] = rzt_response['optimal_factor']
+        
+        # 6. Update hourly RZT variations (simplified)
+        hourly_rzt_variations = self._calculate_hourly_rzt_variations(
+            plant_state, environmental_conditions
+        )
+        plant_state['hourly_rzt_variations'] = hourly_rzt_variations
+        plant_state['rzt_daily_range'] = max(hourly_rzt_variations) - min(hourly_rzt_variations)
+        
+        # 7. Calculate individual RZT factors for detailed analysis
+        individual_factors = self._calculate_individual_rzt_factors(
+            plant_state['root_zone_temp']
+        )
+        plant_state['individual_rzt_factors'] = individual_factors
+        
+        # 8. Update root zone temperature stress
+        optimal_rzt = getattr(self.system_config, 'optimal_root_temp', 22.0)
+        rzt_deviation = abs(plant_state['root_zone_temp'] - optimal_rzt)
+        plant_state['root_temp_stress'] = min(1.0, rzt_deviation / 10.0)  # Stress increases with deviation
+        
+        return plant_state
+    
+    def _calculate_hourly_rzt_variations(self, plant_state: dict, env_conditions: dict) -> list:
+        """Calculate hourly root zone temperature variations."""
+        hourly_rzt = []
+        base_rzt = plant_state['root_zone_temp']
+        
+        # Simulate daily temperature cycle
+        for hour in range(24):
+            # Daily temperature cycle (simplified)
+            daily_cycle = math.sin((hour - 6) * math.pi / 12)  # Peak at 2 PM (hour 14)
+            daily_cycle = max(0, daily_cycle)  # Only positive values
+            
+            # Hourly variation based on solar radiation and air temperature
+            air_temp_variation = (env_conditions['air_temperature'] - base_rzt) * 0.1
+            solar_variation = env_conditions['solar_radiation'] * daily_cycle * 0.5
+            
+            hourly_temp = base_rzt + air_temp_variation + solar_variation
+            hourly_rzt.append(hourly_temp)
+        
+        return hourly_rzt
+    
+    def _calculate_individual_rzt_factors(self, rzt: float) -> dict:
+        """Calculate individual RZT factors for different processes."""
+        optimal_rzt = getattr(self.system_config, 'optimal_root_temp', 22.0)
+        
+        # Growth factor (optimal around 22°C)
+        growth_factor = 1.0 - abs(rzt - optimal_rzt) * 0.05
+        growth_factor = max(0.0, min(1.0, growth_factor))
+        
+        # Nutrient uptake factor (optimal around 20-24°C)
+        nutrient_factor = 1.0 - abs(rzt - 22.0) * 0.03
+        nutrient_factor = max(0.0, min(1.0, nutrient_factor))
+        
+        # Water uptake factor (optimal around 18-25°C)
+        water_factor = 1.0 - abs(rzt - 21.5) * 0.04
+        water_factor = max(0.0, min(1.0, water_factor))
+        
+        # Photosynthesis factor (indirect effect through root function)
+        photosynthesis_factor = 1.0 - abs(rzt - optimal_rzt) * 0.02
+        photosynthesis_factor = max(0.0, min(1.0, photosynthesis_factor))
+        
+        # Root metabolism factor (optimal around 20-25°C)
+        metabolism_factor = 1.0 - abs(rzt - 22.5) * 0.06
+        metabolism_factor = max(0.0, min(1.0, metabolism_factor))
+        
+        return {
+            'growth_factor': growth_factor,
+            'nutrient_factor': nutrient_factor,
+            'water_factor': water_factor,
+            'photosynthesis_factor': photosynthesis_factor,
+            'metabolism_factor': metabolism_factor
+        }
+
     def _calculate_summary_stats(self, daily_results: List[DailyResults]) -> dict:
         """Calculate summary statistics."""
         if not daily_results:
