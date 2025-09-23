@@ -1219,7 +1219,7 @@ class UnifiedStressCalculator:
         Returns:
             Dict containing all stress factors and supporting data
         """
-        from ..utils.temperature_utils import calculate_ph_effect
+        from utils.temperature_utils import calculate_ph_effect
 
         # Extract environmental variables
         actual_temperature = env_conditions['actual_temperature']

@@ -907,3 +907,4 @@ ec_factor_b_uptake_vmax,0.0,dS_per_m_per_uptake_rate,EC factor for B uptake Vmax
 ec_factor_b_uptake_km,0.0,dS_per_m_per_km,EC factor for B uptake Km parameter,nutrient_parameters,System parameter,1.0
 ec_factor_mo_uptake_vmax,0.0,dS_per_m_per_uptake_rate,EC factor for Mo uptake Vmax parameter,nutrient_parameters,System parameter,1.0
 ec_factor_mo_uptake_km,0.0,dS_per_m_per_km,EC factor for Mo uptake Km parameter,nutrient_parameters,System parameter,1.0
+g_max,1.2,mol/m2/s,Maximum stomatal conductance,photosynthesis,Jarvis 1976,1.0

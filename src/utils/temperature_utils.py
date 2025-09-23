@@ -8,6 +8,9 @@ Provides standardized Q10, thermal time, VPD, pH, and temperature factor calcula
 import math
 import numpy as np
 from typing import Optional, Any
+def clamp_value(value: float, min_val: float, max_val: float) -> float:
+    """Clamp value to specified range."""
+    return max(min_val, min(max_val, value))
 
 
 def sanitize_temperature(temperature: Any) -> float:
@@ -123,19 +126,7 @@ def calculate_temperature_stress_factor(temperature: float,
         return (stress_temp_max - temperature) / (stress_temp_max - optimal_temp_max)
 
 
-def clamp_value(value: float, min_val: float = 0.0, max_val: float = 1.0) -> float:
-    """
-    Clamp a value between minimum and maximum bounds.
-    
-    Args:
-        value: Value to clamp
-        min_val: Minimum allowed value
-        max_val: Maximum allowed value
-        
-    Returns:
-        Clamped value
-    """
-    return max(min_val, min(max_val, value))
+# clamp_value function now imported from core_utils
 
 
 def interpolate_linear(value: float, 

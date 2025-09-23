@@ -902,7 +902,7 @@ class EnhancedRootUptakeModel:
         return {
             **architecture_metrics,
             **hourly_uptake_results,
-            'system_type': self.system_type.value
+            'system_type': self.system_type.value if hasattr(self.system_type, 'value') else self.system_type
         }
 
     def daily_update(self,
@@ -918,7 +918,7 @@ class EnhancedRootUptakeModel:
         return {
             **architecture_metrics,
             **uptake_results,
-            'system_type': self.system_type.value
+            'system_type': self.system_type.value if hasattr(self.system_type, 'value') else self.system_type
         }
 
     def calculate_nutrient_uptake(self,
@@ -1014,7 +1014,7 @@ class EnhancedRootUptakeModel:
 
     def calculate_temperature_factor(self, temperature: float) -> float:
         """Calculate temperature factor using centralized Q10 utility."""
-        from ..utils.temperature_utils import calculate_q10_temperature_factor
+        from utils.temperature_utils import calculate_q10_temperature_factor
         
         factor = calculate_q10_temperature_factor(
             temperature=temperature,

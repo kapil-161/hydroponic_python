@@ -294,7 +294,7 @@ class EnhancedRespirationModel:
         Returns:
             Temperature factor (1.0 at reference temperature)
         """
-        from ..utils.temperature_utils import calculate_q10_temperature_factor
+        from utils.temperature_utils import calculate_q10_temperature_factor
         
         reference_temp = acclimated_temp or self.acclimated_reference_temp
         
@@ -308,7 +308,7 @@ class EnhancedRespirationModel:
         )
         
         # Prevent excessive respiration at very high temperatures
-        from ..utils.temperature_utils import sanitize_temperature
+        from utils.temperature_utils import sanitize_temperature
         temp = sanitize_temperature(temperature)
         if temp > self.params.max_temperature_threshold:
             # Protein denaturation effects
@@ -327,8 +327,8 @@ class EnhancedRespirationModel:
         Returns:
             Age factor (1.0 for young tissue)
         """
-        from ..utils.math_utils import clamp_value
-        
+        # from utils.math_utils import clamp_value  # Module deleted
+
         # Natural exponential increase in respiration with age - no caps
         age_effect = 1.0 + (self.params.age_effect_coefficient * max(0.0, age_days))
         return max(1.0, age_effect)  # Natural aging without artificial limits
@@ -344,14 +344,14 @@ class EnhancedRespirationModel:
         Returns:
             Nitrogen factor (1.0 at reference N content)
         """
-        from ..utils.math_utils import safe_divide
+        # from utils.math_utils import safe_divide  # Module deleted
         
         if tissue_type != TissueType.LEAVES:
             return 1.0  # N effects mainly in leaves
         
-        n_ratio = safe_divide(nitrogen_content, self.params.reference_leaf_n, None)
-        if n_ratio is None:
+        if self.params.reference_leaf_n == 0:
             raise ValueError("❌ Reference leaf nitrogen content must be provided in CSV configuration - no hardcoded defaults allowed")
+        n_ratio = nitrogen_content / self.params.reference_leaf_n
         factor = 1.0 + self.params.n_effect_slope * (n_ratio - 1.0)
         
         return max(0.1, factor)  # Natural nitrogen response without caps
@@ -493,16 +493,14 @@ class EnhancedRespirationModel:
             self.acclimated_reference_temp += acclimation_change
             
             # Keep within reasonable bounds from CSV configuration
-            from ..utils.math_utils import clamp_value
+            # from utils.math_utils import clamp_value  # Module deleted
             min_temp = getattr(self.params, 'min_acclimation_temperature', None)
             max_temp = getattr(self.params, 'max_acclimation_temperature', None)
             
             if min_temp is None or max_temp is None:
                 raise ValueError("❌ Temperature acclimation bounds (min_acclimation_temperature, max_acclimation_temperature) must be provided in CSV configuration")
-            
-            self.acclimated_reference_temp = clamp_value(
-                self.acclimated_reference_temp, min_temp, max_temp
-            )
+
+            self.acclimated_reference_temp = max(min_temp, min(max_temp, self.acclimated_reference_temp))
     
     def calculate_total_respiration(self, biomass_pools: List[BiomassPool], 
                                   temperature: float, 

@@ -13,7 +13,7 @@ from typing import Dict, Tuple, Optional, List, Any
 from dataclasses import dataclass
 from enum import Enum
 import math
-from ..utils.temperature_utils import calculate_vpd
+from utils.temperature_utils import calculate_vpd
 
 
 class ControlStrategy(Enum):

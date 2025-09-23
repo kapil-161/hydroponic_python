@@ -22,7 +22,7 @@ from typing import Dict, Tuple, Optional, Any, List
 from dataclasses import dataclass
 from enum import Enum
 import math
-from ..utils.temperature_utils import calculate_thermal_time, calculate_temperature_stress_factor
+from utils.temperature_utils import calculate_thermal_time, calculate_temperature_stress_factor
 
 
 class LettuceGrowthStage(Enum):
@@ -288,10 +288,14 @@ class ComprehensivePhenologyModel:
         thermal_time = self.calculate_thermal_time(temperature)
         max_thermal_time = self.params.optimal_temperature_min - self.params.base_temperature
         
-        from ..utils.math_utils import clamp_value, safe_divide
-        
+        # from utils.math_utils import clamp_value, safe_divide  # Module deleted
+
         if max_thermal_time > 0:
-            return clamp_value(safe_divide(thermal_time, max_thermal_time), 0.0, 1.0)
+            if max_thermal_time == 0:
+                ratio = 0.0
+            else:
+                ratio = thermal_time / max_thermal_time
+            return max(0.0, min(1.0, ratio))
         else:
             return 1.0 if thermal_time > 0 else 0.0
     

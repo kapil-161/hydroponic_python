@@ -11,9 +11,12 @@ from pathlib import Path
 from datetime import datetime
 from typing import Any, Dict
 
+# Add src directory to Python path
+sys.path.insert(0, str(Path(__file__).parent / "src"))
+
 # Import CROPGRO system
-from src.cropgro_hydroponic_simulator import CROPGROHydroponicSimulator
-from src.data.hydroponic_system import DefaultConfigurations, HydroInputData, WeatherData
+from cropgro_hydroponic_simulator import CROPGROHydroponicSimulator
+from data.hydroponic_system import DefaultConfigurations, HydroInputData, WeatherData
 # WeatherGenerator removed - weather data must come from CSV files
 
 
