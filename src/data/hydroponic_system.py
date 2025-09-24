@@ -1,5 +1,5 @@
 """
-Hydroponic System Data Classes and Configuration
+Hydroponic System Data Classes and Configuration - No hardcoded defaults allowed and no fallback to simple alternative codes
 """
 
 from dataclasses import dataclass, field

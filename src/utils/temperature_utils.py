@@ -1,5 +1,5 @@
 """
-Temperature Utility Functions
+Temperature Utility Functions - No hardcoded defaults allowed and no fallback to simple alternative codes
 
 Centralized temperature calculations to eliminate duplication across models.
 Provides standardized Q10, thermal time, VPD, pH, and temperature factor calculations.

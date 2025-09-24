@@ -1,5 +1,5 @@
 """
-Unified Root System Model
+Unified Root System Model - No hardcoded defaults allowed and no fallback to simple alternative codes
 
 Combines:
 - Enhanced Root Architecture Model (spatial, cohorts)

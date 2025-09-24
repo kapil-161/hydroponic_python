@@ -1,5 +1,5 @@
 """
-Unified Nutrient Models
+Unified Nutrient Models - No hardcoded defaults allowed and no fallback to simple alternative codes
 
 Combines:
 - Nutrient Concentration Submodel (solution ion dynamics and EC factors)

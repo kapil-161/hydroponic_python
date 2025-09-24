@@ -1,5 +1,5 @@
 """
-Leaf Development Model for Hydroponic Lettuce
+Leaf Development Model for Hydroponic Lettuce - No hardcoded defaults allowed and no fallback to simple alternative codes
 Based on DSSAT CROPGRO approach with adaptations for lettuce
 
 Key concepts implemented:

@@ -1,5 +1,5 @@
 """
-Core Utilities Module
+Core Utilities Module - No hardcoded defaults allowed and no fallback to simple alternative codes
 
 Consolidated utility functions to reduce file count.
 Contains all essential calculations and helper functions.

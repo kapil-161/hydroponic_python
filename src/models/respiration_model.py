@@ -1,5 +1,5 @@
 """
-Enhanced Respiration Model for Hydroponic Crop Simulation
+Enhanced Respiration Model for Hydroponic Crop Simulation - No hardcoded defaults allowed and no fallback to simple alternative codes
 Based on CROPGRO RESPIR.for and plant respiration research
 
 Key concepts implemented:

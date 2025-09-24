@@ -1,5 +1,5 @@
 """
-Environmental Control System for Hydroponic Lettuce Production
+Environmental Control System for Hydroponic Lettuce Production - No hardcoded defaults allowed and no fallback to simple alternative codes
 Includes VPD optimization, humidity control, and CO2 enrichment strategies
 
 Based on recent research (2021-2024):

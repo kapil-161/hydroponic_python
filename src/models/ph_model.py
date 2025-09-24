@@ -1,5 +1,5 @@
 """
-Comprehensive pH Model for Hydroponic Systems
+Comprehensive pH Model for Hydroponic Systems - No hardcoded defaults allowed and no fallback to simple alternative codes
 
 Implements scientifically accurate pH dynamics including:
 1. Henderson-Hasselbalch buffer chemistry

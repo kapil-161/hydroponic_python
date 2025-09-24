@@ -1,5 +1,5 @@
 """
-Comprehensive Phenology Model for Hydroponic Crop Simulation
+Comprehensive Phenology Model for Hydroponic Crop Simulation - No hardcoded defaults allowed and no fallback to simple alternative codes
 Based on CROPGRO PHENOL.for and developmental physiology research
 
 Key concepts implemented:

@@ -1,5 +1,5 @@
 """
-Water Uptake Model for Hydroponic Systems
+Water Uptake Model for Hydroponic Systems - No hardcoded defaults allowed and no fallback to simple alternative codes
 
 This module implements water uptake calculations based on:
 1. Penman-Monteith evapotranspiration

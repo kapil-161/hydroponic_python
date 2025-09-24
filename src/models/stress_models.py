@@ -1,5 +1,5 @@
 """
-Unified Stress Models
+Unified Stress Models - No hardcoded defaults allowed and no fallback to simple alternative codes
 
 Combines:
 - Temperature stress model (heat/cold/frost, acclimation, damage)

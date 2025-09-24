@@ -1,5 +1,5 @@
 """
-Canopy Architecture Model for Hydroponic Crop Simulation
+Canopy Architecture Model for Hydroponic Crop Simulation -No hardcoded defaults allowed and no fallback to simple alternative codes
 Based on CROPGRO CANOPY.for and canopy light interception research
 
 Key concepts implemented:

@@ -1,5 +1,5 @@
 """
-Plant Nitrogen Balance Model for Hydroponic Crop Simulation
+Plant Nitrogen Balance Model for Hydroponic Crop Simulation - No hardcoded defaults allowed and no fallback to simple alternative codes
 Based on CROPGRO NFIX.for and NUPTAK.for and plant nitrogen research
 
 Key concepts implemented:

@@ -1,5 +1,5 @@
 """
-Biomass Allocation Model
+Biomass Allocation Model- No hardcoded defaults allowed and no fallback to simple alternative codes
 
 This module implements functional balance theory for biomass allocation:
 - Plants allocate biomass to overcome the most limiting resource

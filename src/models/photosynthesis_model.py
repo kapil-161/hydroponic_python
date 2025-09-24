@@ -1,5 +1,5 @@
 """
-Photosynthesis Model (Dynamic Stomatal Conductance)
+Photosynthesis Model (Dynamic Stomatal Conductance) - No hardcoded defaults allowed and no fallback to simple alternative codes
 Calculates daily carbon assimilation based on light, CO2, and temperature.
 Integrates a Jarvis-type model for dynamic stomatal conductance.
 """

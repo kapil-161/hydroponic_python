@@ -1,5 +1,5 @@
 """
-Root Zone Temperature (RZT) Model for Hydroponic Systems
+Root Zone Temperature (RZT) Model for Hydroponic Systems - No hardcoded defaults allowed and no fallback to simple alternative codes
 
 Based on scientific findings from:
 1. "Raising root zone temperature improves plant productivity and metabolites 

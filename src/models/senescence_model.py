@@ -1,5 +1,5 @@
 """
-Advanced Senescence Model for Hydroponic Crop Simulation
+Advanced Senescence Model for Hydroponic Crop Simulation - No hardcoded defaults allowed and no fallback to simple alternative codes
 Based on CROPGRO SENES.for and plant senescence research
 
 Key concepts implemented:

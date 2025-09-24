@@ -1,5 +1,5 @@
 """
-Results Display Utility
+Results Display Utility - No hardcoded defaults allowed and no fallback to simple alternative codes
 
 This utility provides comprehensive result formatting and display functionality
 for the CROPGRO Hydroponic Simulator. It formats daily simulation results into

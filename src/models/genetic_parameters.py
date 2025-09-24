@@ -1,5 +1,5 @@
 """
-Advanced Genetic Parameters System for Hydroponic Lettuce Production
+Advanced Genetic Parameters System for Hydroponic Lettuce Production - No hardcoded defaults allowed and no fallback to simple alternative codes
 
 Implements DSSAT-style cultivar-specific modeling with:
 - Genetic coefficients for multiple lettuce varieties

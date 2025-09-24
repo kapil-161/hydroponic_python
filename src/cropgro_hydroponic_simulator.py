@@ -1,5 +1,5 @@
 """
-Enhanced CROPGRO Hydroponic Simulator
+Enhanced CROPGRO Hydroponic Simulator - No hardcoded defaults allowed and no fallback to simple alternative codes
 
 This is the MAIN SIMULATION ENGINE that integrates ALL advanced CROPGRO models:
 - Genetic parameters for cultivar-specific modeling

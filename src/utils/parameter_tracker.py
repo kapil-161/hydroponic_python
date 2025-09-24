@@ -1,5 +1,5 @@
 """
-Parameter Usage Tracking System
+Parameter Usage Tracking System - No hardcoded defaults allowed and no fallback to simple alternative codes
 
 This module tracks which parameters from CSV files are actually used during simulation
 and which parameters are loaded but never accessed.
