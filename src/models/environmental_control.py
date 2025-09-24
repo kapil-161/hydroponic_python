@@ -888,8 +888,8 @@ def create_lettuce_environmental_control_system(system_config=None) -> Environme
         
         # Get environmental control parameters from CSV data loaded in system_config
         if system_config:
-            env_setpoints = getattr(system_config, 'environmental_control_parameters', {})
-            env_params = getattr(system_config, 'environment_parameters', {})
+            env_setpoints = getattr(system_config, 'environment', {})
+            env_params = getattr(system_config, 'environment', {})
             
             # Combine environmental control and environment parameters
             combined_params = env_setpoints.copy()

@@ -371,9 +371,9 @@ def create_lettuce_leaf_development_model(system_config=None) -> LeafDevelopment
         raise ValueError("❌ system_config is required - no hardcoded defaults allowed")
     
     # Get leaf development parameters from CSV data loaded in system_config
-    leaf_params = getattr(system_config, 'leaf_development_parameters', None)
+    leaf_params = getattr(system_config, 'leaf_development', None)
     canopy_params = getattr(system_config, 'canopy_parameters', None)
-    phenology_params = getattr(system_config, 'phenology_parameters', None)
+    phenology_params = getattr(system_config, 'phenology', None)
     nitrogen_params = getattr(system_config, 'nitrogen_parameters', None)
 
     if leaf_params is None:

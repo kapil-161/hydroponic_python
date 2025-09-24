@@ -730,7 +730,7 @@ def create_lettuce_nutrient_mobility_model(system_config=None) -> NutrientMobili
         raise ValueError("❌ system_config is required - no hardcoded defaults allowed")
     
     # Get nutrient mobility parameters from CSV data loaded in system_config
-    nutrient_mobility_params = getattr(system_config, 'nutrient_mobility_parameters', None)
+    nutrient_mobility_params = getattr(system_config, 'nutrient_parameters', None)
     
     if nutrient_mobility_params is None:
         raise ValueError("❌ nutrient_mobility_parameters missing from CSV - no fallback defaults allowed")

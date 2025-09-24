@@ -123,7 +123,7 @@ class SenescenceParameters:
             # Stress-induced senescence thresholds - map to consolidated parameters
             water_stress_threshold=config_dict.get('water_stress_threshold', config_dict.get('drought_threshold', 0.6)),
             nitrogen_stress_threshold=config_dict.get('nitrogen_stress_threshold', config_dict.get('n_stress_threshold', 0.75)),
-            temperature_stress_threshold=config_dict['temperature_stress_threshold'],
+            temperature_stress_threshold=config_dict['temp_stress_threshold'],
             light_stress_threshold=config_dict['light_stress_threshold'],
             
             # Stress senescence rates
@@ -590,13 +590,17 @@ def create_lettuce_senescence_model(system_config=None) -> AdvancedSenescenceMod
         # Get senescence parameters from CSV data loaded in system_config
         senescence_params = getattr(system_config, 'senescence_parameters', {})
         nitrogen_params = getattr(system_config, 'nitrogen_parameters', {})
-        phenology_params = getattr(system_config, 'phenology_parameters', {})
+        phenology_params = getattr(system_config, 'phenology', {})
+        stress_params = getattr(system_config, 'stress_parameters', {})
 
         # Combine parameters from different CSV files
         config = {}
 
         # Add senescence parameters
         config.update(senescence_params)
+        
+        # Add stress parameters
+        config.update(stress_params)
 
         # Get stress thresholds from their consolidated locations
         if 'water_stress_threshold' not in config and 'drought_threshold' in phenology_params:

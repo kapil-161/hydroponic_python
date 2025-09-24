@@ -460,11 +460,12 @@ class BreedingAssistant:
         return performance
 
 
-def create_lettuce_genetic_system(system_config=None) -> Tuple[GeneticParameterDatabase, GenotypeEnvironmentModel, BreedingAssistant]:
+def create_lettuce_genetic_system(system_config=None, cultivar_id="DEFAULT_CSV_CULTIVAR") -> Tuple[GeneticParameterDatabase, GenotypeEnvironmentModel, BreedingAssistant]:
     """Create complete genetic parameter system for lettuce using CSV configuration.
     
     Args:
         system_config: System configuration object containing CSV-loaded parameters
+        cultivar_id: The cultivar ID to use for the genetic profile
         
     Returns:
         Tuple of (GeneticParameterDatabase, GenotypeEnvironmentModel, BreedingAssistant)
@@ -481,9 +482,7 @@ def create_lettuce_genetic_system(system_config=None) -> Tuple[GeneticParameterD
         # Create genetic database
         genetic_db = GeneticParameterDatabase()
         
-        # Create a default cultivar from genetic parameters
-        # This allows the system to work with existing CSV structure
-        cultivar_id = "DEFAULT_CSV_CULTIVAR"
+        # Use the provided cultivar ID instead of hardcoded default
         
         # Create genetic coefficients from CSV data
         genetic_coeffs = GeneticCoefficients()
@@ -494,7 +493,7 @@ def create_lettuce_genetic_system(system_config=None) -> Tuple[GeneticParameterD
         # Create cultivar profile with required parameters from CSV
         cultivar_profile = CultivarProfile(
             cultivar_id=cultivar_id,
-            cultivar_name="CSV Configured Cultivar",
+            cultivar_name=f"CSV Configured {cultivar_id}",
             lettuce_type=LettuceType.BUTTERHEAD,
             breeder="CSV Configuration",
             year_released=2024,
@@ -503,7 +502,7 @@ def create_lettuce_genetic_system(system_config=None) -> Tuple[GeneticParameterD
             adaptation_score=genetic_params.get('adaptation_score', None),  # Must be provided in CSV
             trait_values={},  # Empty trait values - can be populated later
             pedigree=["CSV configured"],
-            breeding_notes="Cultivar created from CSV genetic parameters"
+            breeding_notes=f"Cultivar {cultivar_id} created from CSV genetic parameters"
         )
         
         # Validate required performance parameters

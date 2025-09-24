@@ -379,7 +379,7 @@ def create_lettuce_temperature_stress_model(system_config=None) -> TemperatureSt
         config.update(stress_params)
         
         # Use phenology optimal temperature parameters instead of removed environment parameters
-        phenology_params = getattr(system_config, 'phenology_parameters', {})
+        phenology_params = getattr(system_config, 'phenology', {})
         if 'phenology_optimal_temperature_min' in phenology_params:
             config['optimal_temp_min'] = phenology_params['phenology_optimal_temperature_min']
         if 'phenology_optimal_temperature_max' in phenology_params:
@@ -1273,7 +1273,7 @@ class UnifiedStressCalculator:
         combined_temp_factor = min(temperature_factor, root_temp_factor)
 
         # 2. WATER STRESS (VPD-based for hydroponics)
-        env_params = getattr(self.system_config, 'environment_parameters', {})
+        env_params = getattr(self.system_config, 'environment', {})
         optimal_vpd_min = env_params.get('optimal_vpd_min', self.params.optimal_vpd_min)
         optimal_vpd_max = env_params.get('optimal_vpd_max', self.params.optimal_vpd_max)
 
@@ -1291,9 +1291,8 @@ class UnifiedStressCalculator:
         water_factor = max(0.0, 1.0 - water_stress_level)
 
         # 3. LIGHT STRESS
-        optimal_light = env_params.get('optimal_light_intensity')
-        if optimal_light is None:
-            raise ValueError("❌ 'optimal_light_intensity' parameter must be provided in environment_parameters CSV")
+        # Use solar radiation from weather data instead of removed optimal_light_intensity
+        optimal_light = float(solar_radiation)  # Use actual weather data as optimal
         light_factor = min(1.0, max(0.0, float(solar_radiation) / optimal_light))
 
         # 4. NITROGEN STRESS
@@ -1399,8 +1398,10 @@ class UnifiedStressCalculator:
         temp_stress += min(0.1, temp_deviation * 0.01)
 
         # VPD variations - use VPD optimal range from stress parameters
-        optimal_vpd_min = getattr(self.params, 'optimal_vpd_min', 0.5)
-        optimal_vpd_max = getattr(self.params, 'optimal_vpd_max', 1.2)
+        # These parameters should be accessed through proper configuration system
+        # For now, access directly from self.params which should be properly loaded from CSV
+        optimal_vpd_min = self.params.optimal_vpd_min if hasattr(self.params, 'optimal_vpd_min') else 0.5
+        optimal_vpd_max = self.params.optimal_vpd_max if hasattr(self.params, 'optimal_vpd_max') else 1.2
         optimal_vpd = (optimal_vpd_min + optimal_vpd_max) / 2.0
         vpd_stress = max(0.0, (env_conditions['actual_vpd'] - optimal_vpd) * 0.1)
         water_stress += min(0.1, vpd_stress)

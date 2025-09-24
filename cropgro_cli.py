@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 # Import CROPGRO system
 from cropgro_hydroponic_simulator import CROPGROHydroponicSimulator
 from data.hydroponic_system import DefaultConfigurations, HydroInputData, WeatherData
-from src.utils.parameter_tracker import ParameterTracker, TrackedSystemConfig
+# Parameter tracker removed - no longer needed
 # WeatherGenerator removed - weather data must come from CSV files
 
 
@@ -55,11 +55,8 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
         # Only type affects the engine; keep other fields
         system_config.system_type = system_type.upper()
     
-    # Initialize parameter tracker if requested
+    # Parameter tracker removed - no longer needed
     parameter_tracker = None
-    if show_parameter_usage:
-        parameter_tracker = ParameterTracker()
-        print("🔍 Parameter usage tracking enabled")
     
     # Load parameters from SINGLE MASTER FILE - NO CONFLICTS ALLOWED
     try:
@@ -85,16 +82,19 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
             # Check for duplicate parameter names across all categories
             all_param_names = df['parameter_name'].tolist()
             duplicate_params = []
-            seen_params = set()
+            seen_params = {}
             
             for param_name in all_param_names:
                 if param_name in seen_params:
-                    duplicate_params.append(param_name)
+                    # Check if values are the same
+                    current_value = df[df['parameter_name'] == param_name]['value'].iloc[0]
+                    if seen_params[param_name] != current_value:
+                        duplicate_params.append(param_name)
                 else:
-                    seen_params.add(param_name)
+                    seen_params[param_name] = df[df['parameter_name'] == param_name]['value'].iloc[0]
             
             if duplicate_params:
-                print(f"❌ ERROR: Duplicate parameter names found in CSV file:")
+                print(f"❌ ERROR: Duplicate parameter names with different values found in CSV file:")
                 for dup_param in set(duplicate_params):  # Remove duplicates from error list
                     dup_rows = df[df['parameter_name'] == dup_param]
                     print(f"   • '{dup_param}' appears {len(dup_rows)} times:")
@@ -102,8 +102,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                         category = row.get('category', 'unknown')
                         value = row.get('value', 'unknown')
                         print(f"     - Row {idx+2}: category='{category}', value='{value}'")
-                print(f"\n💡 Please remove duplicate entries to avoid parameter loading issues.")
-                print(f"   Duplicate parameters can cause values to be loaded as lists instead of scalars.")
+                print(f"\n💡 Please ensure duplicate parameters have the same value across categories.")
                 return
             
             # Group parameters by category
@@ -304,10 +303,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
                 # Add all parameters from this category to nutrient_params
                 nutrient_params.update(category_data)
 
-    # Wrap system_config with parameter tracker if enabled
-    if parameter_tracker:
-        system_config = TrackedSystemConfig(system_config, parameter_tracker)
-        print("🔍 System config wrapped with parameter tracking")
+    # Parameter tracking removed - using system_config directly
 
     # Update system_config with dynamic system settings from CSV
     if hasattr(system_config, 'system_settings'):
@@ -471,7 +467,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
     
     # Calculate totals
     total_system_biomass = final_biomass * plant_count
-    system_yield = total_system_biomass / system_area
+    system_yield = total_system_biomass / system_area if system_area > 0 else 0.0
     
     # Calculate growth rates
     if total_days > 1:
@@ -495,7 +491,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
     print(f"\n📊 SIMULATION OVERVIEW:")
     print(f"  • Duration: {total_days} days")
     print(f"  • Final Stage: {final_stage}")
-    print(f"  • System: {plant_count} plants × {system_area} m² = {plant_count/system_area:.1f} plants/m²")
+    print(f"  • System: {plant_count} plants × {system_area} m² = {plant_count/system_area:.1f} plants/m²" if system_area > 0 else f"  • System: {plant_count} plants × {system_area} m² = N/A plants/m²")
     
     print(f"\n⚖️  FINAL BIOMASS RESULTS:")
     print(f"  {'Metric':<25} {'Per Plant':<15} {'Total System':<15} {'Per m²':<15}")
@@ -503,12 +499,14 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
     print(f"  {'Final Biomass':<25} {final_biomass.real if isinstance(final_biomass, complex) else final_biomass:<15.2f} g {total_system_biomass.real if isinstance(total_system_biomass, complex) else total_system_biomass:<15.1f} g {system_yield.real if isinstance(system_yield, complex) else system_yield:<15.1f} g/m²")
     
     if total_growth is not None:
-        print(f"  {'Total Growth':<25} {total_growth.real if isinstance(total_growth, complex) else total_growth:<15.2f} g {total_system_growth.real if isinstance(total_system_growth, complex) else total_system_growth:<15.1f} g {(total_system_growth.real if isinstance(total_system_growth, complex) else total_system_growth)/system_area:<15.1f} g/m²")
+        growth_per_m2 = (total_system_growth.real if isinstance(total_system_growth, complex) else total_system_growth)/system_area if system_area > 0 else 0.0
+        print(f"  {'Total Growth':<25} {total_growth.real if isinstance(total_growth, complex) else total_growth:<15.2f} g {total_system_growth.real if isinstance(total_system_growth, complex) else total_system_growth:<15.1f} g {growth_per_m2:<15.1f} g/m²")
     else:
         print(f"  {'Total Growth':<25} {'Data Missing':<15} {'Data Missing':<15} {'Data Missing':<15}")
         
     if avg_daily_growth is not None:
-        print(f"  {'Avg Daily Growth':<25} {avg_daily_growth.real if isinstance(avg_daily_growth, complex) else avg_daily_growth:<15.3f} g/day {avg_system_growth.real if isinstance(avg_system_growth, complex) else avg_system_growth:<15.2f} g/day {(avg_system_growth.real if isinstance(avg_system_growth, complex) else avg_system_growth)/system_area:<15.2f} g/m²/day")
+        avg_growth_per_m2 = (avg_system_growth.real if isinstance(avg_system_growth, complex) else avg_system_growth)/system_area if system_area > 0 else 0.0
+        print(f"  {'Avg Daily Growth':<25} {avg_daily_growth.real if isinstance(avg_daily_growth, complex) else avg_daily_growth:<15.3f} g/day {avg_system_growth.real if isinstance(avg_system_growth, complex) else avg_system_growth:<15.2f} g/day {avg_growth_per_m2:<15.2f} g/m²/day")
     else:
         print(f"  {'Avg Daily Growth':<25} {'Data Missing':<15} {'Data Missing':<15} {'Data Missing':<15}")
     
@@ -721,7 +719,8 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
     if final_stage in ['HM', 'HARVEST_MATURITY', 'HARVEST', 'MATURE']:
         print(f"  • ✅ Harvest Maturity Reached!")
         print(f"  • Final Harvest Biomass: {final_biomass:.1f} g/plant")
-        print(f"  • Final System Yield: {(final_biomass * plant_count / system_area):.1f} g/m²")
+        system_yield_final = (final_biomass * plant_count / system_area) if system_area > 0 else 0.0
+        print(f"  • Final System Yield: {system_yield_final:.1f} g/m²")
         print(f"  • Growth Duration: {total_days} days")
     elif avg_daily_growth is not None and avg_daily_growth > 0:
         # Estimate days to harvest for plants still growing

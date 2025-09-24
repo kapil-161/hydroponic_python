@@ -662,7 +662,7 @@ def create_lettuce_phenology_model(system_config=None, initial_stage: LettuceGro
         raise ValueError("❌ system_config is required - no hardcoded defaults allowed")
     
     # Get consolidated phenology parameters from CSV data loaded in system_config
-    phenology_params = getattr(system_config, 'phenology_parameters', None)
+    phenology_params = getattr(system_config, 'phenology', None)
     thermal_requirements = getattr(system_config, 'thermal_requirements', None)
     
     if phenology_params is None:

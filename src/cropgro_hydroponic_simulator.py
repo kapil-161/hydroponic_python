@@ -16,44 +16,42 @@ This simulator provides research-grade crop modeling capabilities.
 """
 # No hardcoded values, all values are from the system configuration and input data from csv files
 # integrate all models into the simulation engine, because we have to use all models to get the correct results and we have all complex codes to integrate
-import numpy as np
-import pandas as pd
 import math
 import random
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Any
+import sys
+from pathlib import Path
+from datetime import datetime
+from typing import Dict, List, Any
 from dataclasses import dataclass
 import logging
 
+# Add parent directory to sys.path for proper imports when running directly
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 # Import utilities
-from src.utils.temperature_utils import calculate_vpd, calculate_ph_effect, calculate_q10_temperature_factor, calculate_thermal_time
-from src.utils.results_display_utility import create_lettuce_results_display_utility
+from utils.temperature_utils import calculate_vpd, calculate_thermal_time
+from utils.results_display_utility import create_lettuce_results_display_utility
 
 # Import all CROPGRO models
-from src.models.genetic_parameters import (
-    create_lettuce_genetic_system,
-    GeneticParameterDatabase,
-    GenotypeEnvironmentModel,
-    GeneticTrait
-)
-from src.models.phenology_model import create_lettuce_phenology_model, LettuceGrowthStage
-from src.models.respiration_model import create_lettuce_respiration_model, BiomassPool, TissueType
-from src.models.senescence_model import create_lettuce_senescence_model
-from src.models.canopy_architecture import create_lettuce_canopy_model, LightEnvironment
-from src.models.nitrogen_balance import create_lettuce_nitrogen_balance_model
-from src.models.nutrient_models import create_lettuce_nutrient_mobility_model, NutrientUptakeModel
-from src.models.biomass_allocation_model import create_lettuce_biomass_allocation_model
-from src.models.stress_models import create_lettuce_integrated_stress_model
-from src.models.stress_models import create_lettuce_temperature_stress_model, UnifiedStressCalculator
-from src.models.root_system_model import create_enhanced_root_uptake_model, HydroponicSystemType
-from src.models.root_zone_temperature import create_lettuce_rzt_model
-from src.models.ph_model import create_lettuce_ph_model
-from src.models.environmental_control import create_lettuce_environmental_control_system
-from src.models.photosynthesis_model import create_lettuce_photosynthesis_model
-from src.models.nutrient_models import NutrientConcentrationModel
-from src.models.leaf_development import create_lettuce_leaf_development_model
-from src.models.water_uptake_model import create_lettuce_water_uptake_model
-from src.data.hydroponic_system import HydroInputData, SimulationResults, DailyResults
+from models.genetic_parameters import create_lettuce_genetic_system
+from models.phenology_model import create_lettuce_phenology_model, LettuceGrowthStage
+from models.respiration_model import create_lettuce_respiration_model, BiomassPool, TissueType
+from models.senescence_model import create_lettuce_senescence_model
+from models.canopy_architecture import create_lettuce_canopy_model, LightEnvironment
+from models.nitrogen_balance import create_lettuce_nitrogen_balance_model
+from models.nutrient_models import create_lettuce_nutrient_mobility_model, NutrientUptakeModel
+from models.biomass_allocation_model import create_lettuce_biomass_allocation_model
+from models.stress_models import create_lettuce_integrated_stress_model
+from models.stress_models import create_lettuce_temperature_stress_model, UnifiedStressCalculator
+from models.root_system_model import create_enhanced_root_uptake_model
+from models.root_zone_temperature import create_lettuce_rzt_model
+from models.ph_model import create_lettuce_ph_model
+from models.environmental_control import create_lettuce_environmental_control_system
+from models.photosynthesis_model import create_lettuce_photosynthesis_model
+from models.nutrient_models import NutrientConcentrationModel
+from models.leaf_development import create_lettuce_leaf_development_model
+from models.water_uptake_model import create_lettuce_water_uptake_model
+from data.hydroponic_system import HydroInputData, SimulationResults, DailyResults
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -109,9 +107,11 @@ class CROPGROHydroponicSimulator:
         self.system_config = system_config
         self.params = self._load_simulation_parameters()
         
-        self.genetic_db, self.ge_model, self.breeding_assistant = create_lettuce_genetic_system(system_config)
+        self.genetic_db, self.ge_model, self.breeding_assistant = create_lettuce_genetic_system(system_config, cultivar_id)
         self.current_cultivar = cultivar_id
-        self.cultivar_profile = self.genetic_db.get_cultivar(cultivar_id) or self.genetic_db.get_cultivar('DEFAULT_CSV_CULTIVAR')
+        self.cultivar_profile = self.genetic_db.get_cultivar(cultivar_id)
+        if not self.cultivar_profile:
+            raise ValueError(f"❌ Cultivar {cultivar_id} not found in database - CSV cultivar data required")
         
         # Use comprehensive genetic parameters model functions
         self._initialize_genetic_parameters()
@@ -165,8 +165,8 @@ class CROPGROHydroponicSimulator:
 
         model_constants = getattr(self.system_config, 'model_constants', {})
         stress_parameters = getattr(self.system_config, 'stress_parameters', {})
-        environment_parameters = getattr(self.system_config, 'environment_parameters', {})
-        phenology_parameters = getattr(self.system_config, 'phenology_parameters', {})
+        environment_parameters = getattr(self.system_config, 'environment', {})
+        phenology_parameters = getattr(self.system_config, 'phenology', {})
         canopy_parameters = getattr(self.system_config, 'canopy_parameters', {})
         csv_system_parameters = getattr(self.system_config, 'system_parameters', {})
 
@@ -180,7 +180,7 @@ class CROPGROHydroponicSimulator:
                 reproductive_leaf_allocation=self._get_required_param(model_constants, 'reproductive_leaf_allocation', 'model_constants CSV'),
                 reproductive_stem_allocation=self._get_required_param(model_constants, 'reproductive_stem_allocation', 'model_constants CSV'),
                 reproductive_root_allocation=self._get_required_param(model_constants, 'reproductive_root_allocation', 'model_constants CSV'),
-                optimal_light_intensity=self._get_required_param(environment_parameters, 'optimal_light_intensity', 'environment_parameters CSV'),
+                optimal_light_intensity=self._get_required_param(environment_parameters, 'light_intensity_control', 'environment CSV'),
                 optimal_ec_range=(
                     self._get_required_param(stress_parameters, 'optimal_ec_min', 'stress_parameters CSV'),
                     self._get_required_param(stress_parameters, 'optimal_ec_max', 'stress_parameters CSV')
@@ -198,7 +198,7 @@ class CROPGROHydroponicSimulator:
                 root_temp_stress_factor=self._get_required_param(stress_parameters, 'temp_stress_factor', 'stress_parameters CSV'),
                 heat_stress_threshold=self._get_required_param(phenology_parameters, 'heat_threshold', 'phenology_parameters CSV'),
                 cold_stress_threshold=self._get_required_param(stress_parameters, 'cold_threshold_mild', 'stress_parameters CSV'),
-                optimal_humidity_min=self._get_required_param(environment_parameters, 'min_humidity', 'environment_parameters CSV'),
+                optimal_humidity_min=self._get_required_param(environment_parameters, 'min_humidity', 'environment CSV'),
                 water_stress_factor=self._get_required_param(stress_parameters, 'water_stress_factor', 'stress_parameters CSV'),
                 specific_leaf_area_default=self._get_required_param(canopy_parameters, 'specific_leaf_area', 'canopy_parameters CSV'),
                 metabolic_water_per_lai=self._get_required_param(water_params, 'metabolic_water_per_lai', 'water_parameters CSV'),
@@ -225,15 +225,30 @@ class CROPGROHydroponicSimulator:
         environment_params = getattr(self.system_config, 'environment', {})
         system_params = getattr(self.system_config, 'system', {})
         
-        # Define environment factors for genetic calculations using CSV parameters
-        environment_factors = {
-            'temperature': self._get_required_param(system_params, 'default_temperature', 'system CSV'),
-            'humidity': self._get_required_param(system_params, 'default_humidity', 'system CSV'),
-            'light_intensity': self._get_required_param(environment_params, 'default_light_intensity', 'environment CSV'),
-            'co2': self._get_required_param(system_params, 'default_co2', 'system CSV'),
-            'ph': self._get_required_param(system_params, 'default_ph', 'system CSV'),
-            'ec': self._get_required_param(environment_params, 'default_ec', 'environment CSV')
-        }
+        # Define environment factors for genetic calculations using weather data
+        # Use first day's weather data for initial genetic calculations
+        if hasattr(self.system_config, 'weather_data') and self.system_config.weather_data:
+            first_weather = self.system_config.weather_data[0]
+            environment_factors = {
+                'temperature': first_weather.temp_avg,
+                'humidity': first_weather.rel_humidity,
+                'light_intensity': first_weather.solar_radiation,
+                'co2': 400.0,  # Default atmospheric CO2
+                'ph': self._get_required_param(system_params, 'default_ph', 'system CSV'),
+                'ec': self._get_required_param(environment_params, 'min_ec', 'environment CSV')
+            }
+        else:
+            # Use initial values from CSV instead of fallbacks when no weather data available
+            initial_params = getattr(self.system_config, 'initial_state_parameters', {})
+            system_params = getattr(self.system_config, 'system_configuration', {})
+            environment_factors = {
+                'temperature': self._get_required_param(initial_params, 'initial_air_temperature', 'initial state CSV'),
+                'humidity': self._get_required_param(initial_params, 'initial_humidity', 'initial state CSV'),
+                'light_intensity': self._get_required_param(initial_params, 'initial_solar_radiation', 'initial state CSV'),
+                'co2': self._get_required_param(initial_params, 'initial_co2_concentration', 'initial state CSV'),
+                'ph': self._get_required_param(initial_params, 'initial_ph', 'initial state CSV'),
+                'ec': self._get_required_param(initial_params, 'initial_ec', 'initial state CSV')
+            }
         
         # Calculate adaptation index for current environment
         if hasattr(self.genetic_db, 'calculate_adaptation_index'):
@@ -261,8 +276,7 @@ class CROPGROHydroponicSimulator:
                 )
                 self.cultivar_phenotype = phenotype
             except (ValueError, KeyError) as e:
-                # If cultivar not found, use CSV parameter
-                self.cultivar_phenotype = self._get_required_param(genetic_params, 'cultivar_phenotype', 'genetic_parameters CSV')
+                raise ValueError(f"❌ Cannot calculate cultivar phenotype - genetic model data required: {e}")
         
         # Predict cultivar performance
         if hasattr(self.ge_model, 'predict_cultivar_performance'):
@@ -273,11 +287,7 @@ class CROPGROHydroponicSimulator:
                 )
                 self.cultivar_performance = performance
             except (ValueError, KeyError) as e:
-                # If cultivar not found, use CSV parameters
-                self.cultivar_performance = {
-                    'yield_potential': self._get_required_param(genetic_params, 'cultivar_yield_potential', 'genetic_parameters CSV'),
-                    'quality_score': self._get_required_param(genetic_params, 'cultivar_yield_potential', 'genetic_parameters CSV')
-                }
+                raise ValueError(f"❌ Cannot predict cultivar performance - genetic model data required: {e}")
         
         # Identify breeding targets
         if hasattr(self.breeding_assistant, 'identify_breeding_targets'):
@@ -301,11 +311,7 @@ class CROPGROHydroponicSimulator:
                 )
                 self.breeding_targets = breeding_targets
             except (ValueError, KeyError) as e:
-                # If breeding targets can't be calculated, use CSV parameters
-                self.breeding_targets = {
-                    'yield_target': self._get_required_param(genetic_params, 'cultivar_yield_potential', 'genetic_parameters CSV'),
-                    'quality_target': self._get_required_param(genetic_params, 'cultivar_yield_potential', 'genetic_parameters CSV')
-                }
+                raise ValueError(f"❌ Cannot identify breeding targets - genetic model data required: {e}")
         
         # Estimate hybrid performance (if applicable)
         if hasattr(self.breeding_assistant, 'estimate_hybrid_performance'):
@@ -347,17 +353,18 @@ class CROPGROHydroponicSimulator:
         daily_results = []
         current_day = 0
         
-        # Initialize plant state
+        # Initialize plant state from CSV parameters
+        initial_params = getattr(self.system_config, 'initial_state_parameters', {})
         plant_state = {
-            'total_biomass': 0.1,  # Starting biomass in grams
-            'leaf_biomass': 0.05,
-            'stem_biomass': 0.03,
-            'root_biomass': 0.02,
-            'growth_stage': 'V1',
-            'lai': 0.1,
-            'plant_height': 2.0,  # cm
-            'leaf_number': 2,
-            'accumulated_gdd': 0.0,
+            'total_biomass': self._get_required_param(initial_params, 'initial_total_biomass', 'initial state CSV'),
+            'leaf_biomass': self._get_required_param(initial_params, 'initial_leaf_biomass', 'initial state CSV'),
+            'stem_biomass': self._get_required_param(initial_params, 'initial_stem_biomass', 'initial state CSV'),
+            'root_biomass': self._get_required_param(initial_params, 'initial_root_biomass', 'initial state CSV'),
+            'growth_stage': self._get_required_param(initial_params, 'initial_growth_stage', 'initial state CSV'),
+            'lai': self._get_required_param(initial_params, 'initial_leaf_area_index', 'initial state CSV'),
+            'plant_height': 2.0,
+            'leaf_number': self._get_required_param(initial_params, 'initial_leaf_number', 'initial state CSV'),
+            'accumulated_gdd': self._get_required_param(initial_params, 'initial_accumulated_gdd', 'initial state CSV'),
             'thermal_time_daily': 0.0,
             'days_to_flowering': 999,
             'bolting_risk': 0.0,
@@ -365,29 +372,38 @@ class CROPGROHydroponicSimulator:
             'carbon_content': 0.40,
             'water_content': 0.95,
             'dry_matter_content': 0.05,
-            'leaf_area_m2': 0.0001,
-            'root_length': 5.0,
-            'root_surface_area': 1.5,  # cm² - realistic initial value for transplant
-            'photosynthesis_rate': 0.0,
-            'respiration_rate': 0.0,
-            'transpiration_rate': 0.0,
+            'leaf_area_m2': self._get_required_param(initial_params, 'initial_leaf_area', 'initial state CSV'),
+            'root_length': self._get_required_param(initial_params, 'initial_root_length', 'initial state CSV'),
+            'root_surface_area': self._get_required_param(initial_params, 'initial_root_surface_area', 'initial state CSV'),
+            'photosynthesis_rate': self._get_required_param(initial_params, 'initial_photosynthesis_rate', 'initial state CSV'),
+            'respiration_rate': self._get_required_param(initial_params, 'initial_respiration_rate', 'initial state CSV'),
+            'transpiration_rate': self._get_required_param(initial_params, 'initial_transpiration_rate', 'initial state CSV'),
             'senesced_biomass': 0.0,
             'senescence_rate': 0.0,
             'leaf_senescence_rate': 0.0,
             'stem_senescence_rate': 0.0,
-            'water_uptake_rate': 0.0,
+            'water_uptake_rate': self._get_required_param(initial_params, 'initial_water_uptake_rate', 'initial state CSV'),
             'nutrient_uptake': {},
-            'stress_factors': {},
+            'stress_factors': {
+                'temperature': 0.0,
+                'water': 0.0,
+                'nutrient': 0.0,
+                'light': 0.0,
+                'co2': 0.0,
+                'salinity': 0.0,
+                'ph': 0.0,
+                'oxygen': 0.0
+            },
             'integrated_stress_factor': 0.0,
-            'solution_volume': self._get_required_param(system_params, 'tank_volume_default', 'system CSV'),
-            'ph': getattr(self.system_config, 'initial_ph', 6.0),
-            'ec': getattr(self.system_config, 'initial_ec', 1.0),
+            'solution_volume': self._get_required_param(system_params, 'tank_volume', 'system CSV'),
+            'ph': self._get_required_param(initial_params, 'initial_ph', 'initial state CSV'),
+            'ec': self._get_required_param(initial_params, 'initial_ec', 'initial state CSV'),
             'nutrient_concentrations': {
-                'N-NO3': 150.0,  # mg/L - realistic initial concentration
-                'P-PO4': 50.0,   # mg/L - realistic initial concentration
-                'K': 200.0,      # mg/L - realistic initial concentration
-                'Ca': 150.0,     # mg/L - realistic initial concentration
-                'Mg': 50.0       # mg/L - realistic initial concentration
+                'N-NO3': self._get_required_param(initial_params, 'initial_n_no3_concentration', 'initial state CSV'),
+                'P-PO4': self._get_required_param(initial_params, 'initial_p_po4_concentration', 'initial state CSV'),
+                'K': self._get_required_param(initial_params, 'initial_k_concentration', 'initial state CSV'),
+                'Ca': self._get_required_param(initial_params, 'initial_ca_concentration', 'initial state CSV'),
+                'Mg': self._get_required_param(initial_params, 'initial_mg_concentration', 'initial state CSV')
             },
             'temperature_stress': 0.0,
             'water_stress': 0.0,
@@ -395,22 +411,52 @@ class CROPGROHydroponicSimulator:
             'light_stress': 0.0,
             'co2_stress': 0.0,
             'salinity_stress': 0.0,
-            'root_zone_temp': 22.0,
-            'air_temperature': 22.0,
-            'humidity': 60.0,
-            'vpd': 0.7,
-            'co2_concentration': 400.0,
-            'solar_radiation': 18.0,
+            'root_zone_temp': self._get_required_param(initial_params, 'initial_air_temperature', 'initial state CSV'),
+            'air_temperature': self._get_required_param(initial_params, 'initial_air_temperature', 'initial state CSV'),
+            'humidity': self._get_required_param(initial_params, 'initial_humidity', 'initial state CSV'),
+            'vpd': self._get_required_param(initial_params, 'initial_vpd', 'initial state CSV'),
+            'co2_concentration': self._get_required_param(initial_params, 'initial_co2_concentration', 'initial state CSV'),
+            'solar_radiation': self._get_required_param(initial_params, 'initial_solar_radiation', 'initial state CSV'),
             'daylength': 12.0,
             'wind_speed': 2.0,
-            'rainfall': 0.0
+            'rainfall': 0.0,
+            # Additional parameters needed for simulation - from CSV
+            'light_extinction': self._get_required_param(getattr(self.system_config, 'canopy_parameters', {}), 'extinction_coefficient', 'canopy_parameters CSV'),
+            'senesced_area': 0.0,
+            'development_stage': 0.0,
+            'v_stage': 0.0,
+            'day': 0,
+            'days_since_planting': 0,
+            'days_since_emergence': 0,
+            'day_length_hours': 12.0,
+            'daily_thermal_time': 1.0,
+            'leaf_nitrogen_content': 0.04,
+            'nitrogen_remobilization': 0.0,
+            'phosphorus_remobilization': 0.0,
+            'potassium_remobilization': 0.0,
+            'controlled_humidity': self._get_required_param(initial_params, 'initial_humidity', 'initial state CSV'),
+            'vpd_target': self._get_required_param(getattr(self.system_config, 'stress_parameters', {}), 'optimal_vpd_min', 'stress_parameters CSV'),
+            'environmental_cost': 0.0,
+            'ph_change_from_uptake': 0.0,
+            'ph_change_from_drift': 0.0,
+            'acid_dosed_ml_per_L': 0.0,
+            'base_dosed_ml_per_L': 0.0,
+            'buffer_capacity': 0.0,
+            'phosphate_h2po4_mg_L': 0.0,
+            'phosphate_hpo4_mg_L': 0.0,
+            'phosphate_po4_mg_L': 0.0,
+            'acid_dosing_rate': 0.0,
+            'base_dosing_rate': 0.0,
+            'total_damage': 0.0,
+            'oxygen_stress': 0.0,
+            'ph_stress': 0.0
         }
         
         # Initialize hourly weather interpolator (commented out as module is missing)
         # self.hourly_weather_interpolator = create_hourly_weather_interpolator()
         
         # Initialize root model
-        tank_volume = self._get_required_param(system_params, 'tank_volume_default', 'system CSV')
+        tank_volume = self._get_required_param(system_params, 'tank_volume', 'system CSV')
         self.root_model = create_enhanced_root_uptake_model(
             system_type=getattr(self.system_config, 'system_type', 'NFT'),
             tank_volume=tank_volume,
@@ -443,7 +489,8 @@ class CROPGROHydroponicSimulator:
             )
             
             # Calculate thermal time
-            base_temp = getattr(self.system_config, 'base_temperature', 5.0)
+            system_params = getattr(self.system_config, 'system_configuration', {})
+            base_temp = self._get_required_param(system_params, 'base_temperature', 'system_configuration CSV')
             plant_state['thermal_time_daily'] = calculate_thermal_time(
                 plant_state['air_temperature'], 
                 base_temp
@@ -454,6 +501,12 @@ class CROPGROHydroponicSimulator:
             growth_rate = self._calculate_growth_rate(plant_state)
             plant_state['total_biomass'] += growth_rate
             
+            # Calculate integrated stress factors using advanced model (before biomass allocation)
+            plant_state = self._calculate_integrated_stress(plant_state)
+            
+            # Use comprehensive stress model functions (before biomass allocation)
+            plant_state = self._update_advanced_stress_models(plant_state)
+            
             # Update biomass allocation with comprehensive model
             plant_state = self._update_biomass_allocation(plant_state)
             
@@ -462,12 +515,6 @@ class CROPGROHydroponicSimulator:
             
             # Update growth stage based on accumulated GDD
             plant_state = self._update_growth_stage(plant_state)
-            
-            # Calculate integrated stress factors using advanced model
-            plant_state = self._calculate_integrated_stress(plant_state)
-            
-            # Use comprehensive stress model functions
-            plant_state = self._update_advanced_stress_models(plant_state)
             
             # Calculate canopy architecture and light interception
             plant_state = self._calculate_canopy_architecture(plant_state)
@@ -503,7 +550,7 @@ class CROPGROHydroponicSimulator:
                 eto_ref=0.0,  # Reference evapotranspiration
                 etc_prime=plant_state['transpiration_rate'],  # Crop evapotranspiration
                 transpiration=plant_state['transpiration_rate'],
-                water_uptake_total=plant_state['water_uptake_rate'] * getattr(self.system_config, 'n_plants', 12),
+                water_uptake_total=plant_state['water_uptake_rate'] * self._get_required_param(getattr(self.system_config, 'system_configuration', {}), 'n_plants', 'system_configuration CSV'),
                 tank_volume=plant_state['solution_volume'],
                 nutrient_concentrations=plant_state['nutrient_concentrations'],
                 temp_avg=plant_state['air_temperature'],
@@ -513,17 +560,17 @@ class CROPGROHydroponicSimulator:
                 ph=plant_state['ph'],
                 ec=plant_state['ec'],
                 rzt=plant_state['root_zone_temp'],
-                rzt_growth_factor=plant_state.get('rzt_growth_factor', 1.0 - abs(plant_state['root_zone_temp'] - 22.0) * 0.05),
-                rzt_nutrient_factor=plant_state.get('rzt_nutrient_factor', 1.0 - abs(plant_state['root_zone_temp'] - 22.0) * 0.03),
+                rzt_growth_factor=self._get_required_param(self.system_config.root_parameters, "rzt_growth_factor", "root_parameters CSV"),
+                rzt_nutrient_factor=self._get_required_param(self.system_config.root_parameters, "rzt_nutrient_factor", "root_parameters CSV"),
                 # Advanced RZT parameters
-                rzt_water_factor=plant_state.get('rzt_water_factor', 1.0),
-                rzt_photosynthesis_factor=plant_state.get('rzt_photosynthesis_factor', 1.0),
-                rzt_root_metabolism_factor=plant_state.get('rzt_root_metabolism_factor', 1.0),
-                rzt_stress_factor=plant_state.get('rzt_stress_factor', 0.0),
-                rzt_optimal_factor=plant_state.get('rzt_optimal_factor', 1.0),
-                rzt_daily_range=plant_state.get('rzt_daily_range', 0.0),
-                individual_rzt_factors=plant_state.get('individual_rzt_factors', {}),
-                root_temp_stress=plant_state.get('root_temp_stress', 0.0),
+                rzt_water_factor=self._get_required_param(self.system_config.root_parameters, "rzt_water_factor", "root_parameters CSV"),
+                rzt_photosynthesis_factor=self._get_required_param(self.system_config.root_parameters, "rzt_photosynthesis_factor", "root_parameters CSV"),
+                rzt_root_metabolism_factor=self._get_required_param(self.system_config.root_parameters, "rzt_root_metabolism_factor", "root_parameters CSV"),
+                rzt_stress_factor=self._get_required_param(self.system_config.root_parameters, "rzt_stress_factor", "root_parameters CSV"),
+                rzt_optimal_factor=self._get_required_param(self.system_config.root_parameters, "rzt_optimal_factor", "root_parameters CSV"),
+                rzt_daily_range=self._get_required_param(self.system_config.root_parameters, "rzt_daily_range", "root_parameters CSV"),
+                individual_rzt_factors=self._get_required_param(self.system_config.root_parameters, "individual_rzt_factors", "root_parameters CSV"),
+                root_temp_stress=self._get_required_param(self.system_config.root_parameters, "root_temp_stress", "root_parameters CSV"),
                 v_stage=plant_state['leaf_number'] / 2.0,
                 leaf_number=plant_state['leaf_number'],
                 leaf_area_m2=plant_state['leaf_area_m2'],
@@ -533,13 +580,13 @@ class CROPGROHydroponicSimulator:
                 env_photosynthesis_factor=plant_state.get('env_photosynthesis_factor', min(1.0, plant_state['solar_radiation'] / 20.0)),
                 env_transpiration_factor=plant_state.get('env_transpiration_factor', min(1.0, plant_state['vpd'] / 1.0)),
                 # Advanced photosynthesis model results
-                vcmax_25=getattr(self.photosynthesis_model, 'vcmax_25', 50.0),
-                jmax_25=getattr(self.photosynthesis_model, 'jmax_25', 100.0),
-                quantum_efficiency=getattr(self.photosynthesis_model, 'quantum_efficiency', 0.8),
+                vcmax_25=self._get_required_param(getattr(self.system_config, 'photosynthesis', {}), 'vcmax_25', 'photosynthesis CSV'),
+                jmax_25=self._get_required_param(getattr(self.system_config, 'photosynthesis', {}), 'jmax_25', 'photosynthesis CSV'),
+                quantum_efficiency=self._get_required_param(getattr(self.system_config, 'photosynthesis', {}), 'quantum_efficiency', 'photosynthesis CSV'),
                 rubisco_limited=plant_state.get('rubisco_limited', plant_state['photosynthesis_rate'] * 0.6),
                 light_limited=plant_state.get('light_limited', plant_state['photosynthesis_rate'] * 0.4),
-                co2_compensation=getattr(self.photosynthesis_model, 'co2_compensation', 50.0),
-                intercellular_co2=getattr(self.photosynthesis_model, 'intercellular_co2', 300.0),
+                co2_compensation=self._get_required_param(getattr(self.system_config, 'photosynthesis', {}), 'co2_compensation', 'photosynthesis CSV'),
+                intercellular_co2=self._get_required_param(getattr(self.system_config, 'photosynthesis', {}), 'ci_fraction', 'photosynthesis CSV') * 400.0,  # Convert fraction to actual CO2 concentration
                 # Enhanced respiration model results
                 maintenance_resp_leaves=plant_state.get('maintenance_respiration', plant_state['respiration_rate'] * 0.7) * 0.4,
                 maintenance_resp_stems=plant_state.get('maintenance_respiration', plant_state['respiration_rate'] * 0.7) * 0.2,
@@ -547,8 +594,8 @@ class CROPGROHydroponicSimulator:
                 growth_resp_leaves=plant_state.get('growth_respiration', plant_state['respiration_rate'] * 0.3) * 0.3,
                 growth_resp_stems=plant_state.get('growth_respiration', plant_state['respiration_rate'] * 0.3) * 0.2,
                 growth_resp_roots=plant_state.get('growth_respiration', plant_state['respiration_rate'] * 0.3) * 0.1,
-                temperature_acclimation=getattr(self.respiration_model, 'temperature_acclimation', 1.0),
-                age_factor=getattr(self.respiration_model, 'age_factor', min(1.0, current_day / 30.0)),
+                temperature_acclimation=self._get_required_param(getattr(self.system_config, 'respiration_parameters', {}), 'respiration_acclimation_rate', 'respiration_parameters CSV'),
+                age_factor=min(1.0, current_day * self._get_required_param(getattr(self.system_config, 'respiration_parameters', {}), 'age_effect_coefficient', 'respiration_parameters CSV')),
                 # Phenology and development
                 accumulated_gdd=plant_state['accumulated_gdd'],
                 development_rate=plant_state['thermal_time_daily'] / 100.0,
@@ -573,10 +620,10 @@ class CROPGROHydroponicSimulator:
                 shaded_lai=plant_state.get('shaded_lai', plant_state['lai'] * 0.4),
                 total_absorbed_ppfd=plant_state.get('total_absorbed_ppfd', plant_state['solar_radiation'] * 2.0),
                 canopy_photosynthesis=plant_state.get('canopy_photosynthesis', plant_state['photosynthesis_rate'] * plant_state['lai']),
-                canopy_layers=getattr(self.canopy_model, 'canopy_layers', 3),
+                canopy_layers=self._get_required_param(getattr(self.system_config, 'canopy_parameters', {}), 'number_of_layers', 'canopy_parameters CSV'),
                 ppfd_top=plant_state.get('ppfd_top', plant_state['solar_radiation'] * 2.0),
                 ppfd_bottom=plant_state.get('ppfd_bottom', plant_state['solar_radiation'] * 0.5),
-                light_extinction=plant_state.get('light_extinction', 0.7),
+                light_extinction=plant_state['light_extinction'],
                 # Photosynthesis detailed
                 photosynthesis_rate=plant_state['photosynthesis_rate'],
                 net_assimilation=plant_state['photosynthesis_rate'] - plant_state['respiration_rate'],
@@ -591,7 +638,7 @@ class CROPGROHydroponicSimulator:
                 fine_root_length=plant_state.get('fine_root_length', plant_state['root_length'] * 0.8),
                 coarse_root_length=plant_state.get('coarse_root_length', plant_state['root_length'] * 0.2),
                 # Nitrogen dynamics detailed
-                nitrogen_uptake_mg=plant_state['nutrient_uptake'].get('N-NO3', 0),
+                nitrogen_uptake_mg=plant_state['nutrient_uptake'].get('N-NO3', 0.0),
                 nitrogen_demand_mg=plant_state['total_biomass'] * 0.04 * 1000,
                 nitrogen_stress_factor=plant_state['nutrient_stress'],
                 leaf_nitrogen_conc=0.04,
@@ -604,14 +651,14 @@ class CROPGROHydroponicSimulator:
                 n_remobilization=0.0,
                 n_critical_conc=0.03,
                 # Phosphorus dynamics
-                phosphorus_uptake_mg=plant_state['nutrient_uptake'].get('P-PO4', 0),
+                phosphorus_uptake_mg=plant_state['nutrient_uptake'].get('P-PO4', 0.0),
                 phosphorus_remobilization=0.0,
                 potassium_remobilization=0.0,
                 # Senescence - Enhanced with comprehensive senescence model
-                senescence_rate=plant_state.get('senescence_rate', 0.0),
-                leaf_senescence_rate=plant_state.get('senescence_rate', 0.0),
-                senesced_area=plant_state.get('senesced_area', 0.0),
-                senesced_biomass=plant_state.get('senesced_biomass', 0.0),
+                senescence_rate=plant_state['senescence_rate'],
+                leaf_senescence_rate=plant_state['senescence_rate'],
+                senesced_area=plant_state['senesced_area'],
+                senesced_biomass=plant_state['senesced_biomass'],
                 average_senescence_stage=plant_state.get('average_senescence_stage', 'healthy'),
                 active_senescence_types=plant_state.get('active_senescence_types', []),
                 remobilization_pool=plant_state.get('remobilization_pool', {}),
@@ -623,8 +670,8 @@ class CROPGROHydroponicSimulator:
                 water_stress=plant_state['water_stress'],
                 nutrient_stress=plant_state['nutrient_stress'],
                 salinity_stress=plant_state['salinity_stress'],
-                ph_stress=plant_state.get('ph_stress', 0.0),
-                oxygen_stress=plant_state.get('oxygen_stress', 0.0),
+                ph_stress=plant_state['ph_stress'],
+                oxygen_stress=plant_state['oxygen_stress'],
                 cold_stress_factor=max(0.0, (10.0 - plant_state['air_temperature']) / 10.0),
                 heat_stress_factor=max(0.0, (plant_state['air_temperature'] - 30.0) / 10.0),
                 temperature_stress_factor=plant_state['temperature_stress'],
@@ -633,7 +680,7 @@ class CROPGROHydroponicSimulator:
                 stress_interactions_active=plant_state.get('stress_interactions_active', []),
                 acclimation_active=plant_state.get('acclimation_active', []),
                 recovery_active=plant_state.get('recovery_active', []),
-                total_damage=plant_state.get('total_damage', 0.0),
+                total_damage=plant_state['total_damage'],
                 # Nutrient mobility - Enhanced with comprehensive mobility model
                 nutrient_transport_fluxes=plant_state.get('nutrient_transport_fluxes', {}),
                 transport_limitations=plant_state.get('transport_limitations', []),
@@ -643,26 +690,26 @@ class CROPGROHydroponicSimulator:
                 cumulative_redistribution=plant_state.get('cumulative_redistribution', {}),
                 # Advanced environmental control
                 controlled_temperature=plant_state.get('controlled_temperature', plant_state['air_temperature']),
-                controlled_humidity=plant_state.get('controlled_humidity', 60.0),
+                controlled_humidity=plant_state['controlled_humidity'],
                 controlled_co2=plant_state.get('controlled_co2', plant_state['co2_concentration']),
-                vpd_target=plant_state.get('vpd_target', 0.7),
-                environmental_cost=plant_state.get('environmental_cost', 0.0),
+                vpd_target=plant_state['vpd_target'],
+                environmental_cost=plant_state['environmental_cost'],
                 # Solution chemistry - Enhanced with comprehensive pH model
                 solution_ph=plant_state['ph'],
                 solution_ec=plant_state['ec'],
-                ph_change_from_uptake=plant_state.get('ph_change_from_uptake', 0.0),
-                ph_change_from_drift=plant_state.get('ph_change_from_drift', 0.0),
-                acid_dosed_ml_per_L=plant_state.get('acid_dosed_ml_per_L', 0.0),
-                base_dosed_ml_per_L=plant_state.get('base_dosed_ml_per_L', 0.0),
-                buffer_capacity=plant_state.get('buffer_capacity', 0.0),
-                phosphate_h2po4_mg_L=plant_state.get('phosphate_h2po4_mg_L', 0.0),
-                phosphate_hpo4_mg_L=plant_state.get('phosphate_hpo4_mg_L', 0.0),
-                phosphate_po4_mg_L=plant_state.get('phosphate_po4_mg_L', 0.0),
+                ph_change_from_uptake=plant_state['ph_change_from_uptake'],
+                ph_change_from_drift=plant_state['ph_change_from_drift'],
+                acid_dosed_ml_per_L=plant_state['acid_dosed_ml_per_L'],
+                base_dosed_ml_per_L=plant_state['base_dosed_ml_per_L'],
+                buffer_capacity=plant_state['buffer_capacity'],
+                phosphate_h2po4_mg_L=plant_state['phosphate_h2po4_mg_L'],
+                phosphate_hpo4_mg_L=plant_state['phosphate_hpo4_mg_L'],
+                phosphate_po4_mg_L=plant_state['phosphate_po4_mg_L'],
                 nutrient_precipitation_mg_L=sum(plant_state.get('nutrient_precipitation', {}).values()),
                 henderson_hasselbalch_ph=plant_state.get('henderson_hasselbalch_ph', plant_state['ph']),
                 controlled_ph=plant_state.get('controlled_ph', plant_state['ph']),
-                acid_dosing_rate=plant_state.get('acid_dosing_rate', 0.0),
-                base_dosing_rate=plant_state.get('base_dosing_rate', 0.0),
+                acid_dosing_rate=plant_state['acid_dosing_rate'],
+                base_dosing_rate=plant_state['base_dosing_rate'],
                 # Genetic parameters from CSV
                 cultivar_adaptation_index=self._get_required_param(genetic_params, 'adaptation_score', 'genetic_parameters CSV'),
                 cultivar_yield_potential=self._get_required_param(genetic_params, 'cultivar_yield_potential', 'genetic_parameters CSV'),
@@ -719,9 +766,9 @@ class CROPGROHydroponicSimulator:
                 else:
                     system_type = csv_system_type.upper()
                 
-        system_area = self._get_required_param(system_params, 'system_area_default', 'system CSV')
-        n_plants = getattr(self.system_config, 'n_plants', 12)
-        tank_volume = self._get_required_param(system_params, 'tank_volume_default', 'system CSV')
+        system_area = self._get_required_param(system_params, 'system_area', 'system CSV')
+        n_plants = self._get_required_param(getattr(self.system_config, 'system_configuration', {}), 'n_plants', 'system_configuration CSV')
+        tank_volume = self._get_required_param(system_params, 'tank_volume', 'system CSV')
         
         system_description = f"{system_type} System - {system_area}m², {n_plants} plants, {tank_volume}L tank"
         
@@ -742,12 +789,12 @@ class CROPGROHydroponicSimulator:
         results.plant_count = n_plants
         # Get flow rate from CSV parameters
         system_params = getattr(self.system_config, 'system', {})
-        flow_rate = self._get_required_param(system_params, 'flow_rate_default', 'system CSV')
+        flow_rate = self._get_required_param(system_params, 'flow_rate', 'system CSV')
         results.flow_rate = flow_rate
         results.system_description = system_description
         
         # Add transplanting period for CSV export
-        results.transplanting_period_days = getattr(self.system_config, 'transplanting_period_days', 21)
+        results.transplanting_period_days = self._get_required_param(getattr(self.system_config, 'system_configuration', {}), 'transplanting_period_days', 'system_configuration CSV')
         
         # Calculate summary stats
         results.summary_stats = self._calculate_summary_stats(daily_results)
@@ -763,7 +810,11 @@ class CROPGROHydroponicSimulator:
         
         # Temperature effect
         temp = plant_state['air_temperature']
-        if 18 <= temp <= 25:
+        # Use phenology optimal temperature range instead of removed environment parameters
+        phenology_params = getattr(self.system_config, 'phenology', {})
+        optimal_temp_min = self._get_required_param(phenology_params, 'phenology_optimal_temperature_min', 'phenology CSV')
+        optimal_temp_max = self._get_required_param(phenology_params, 'phenology_optimal_temperature_max', 'phenology CSV')
+        if optimal_temp_min <= temp <= optimal_temp_max:
             temp_factor = self._get_required_param(growth_params, 'optimal_temp_factor', 'growth_parameters CSV')
         elif temp < 18:
             temp_factor = max(0.1, (temp - 5) / 13)  # Linear decrease below 18°C
@@ -785,7 +836,8 @@ class CROPGROHydroponicSimulator:
         elif stage in ['V5', 'V6']:
             stage_factor = self._get_required_param(growth_params, 'late_stage_factor', 'growth_parameters CSV')
         else:
-            stage_factor = self._get_required_param(growth_params, 'default_stage_factor', 'growth_parameters CSV')
+            # Use mid_stage_factor as fallback for other stages (V7+, reproductive, etc.)
+            stage_factor = self._get_required_param(growth_params, 'mid_stage_factor', 'growth_parameters CSV')
         
         return base_growth * temp_factor * light_factor * stress_factor * stage_factor
     
@@ -800,27 +852,28 @@ class CROPGROHydroponicSimulator:
         if total_growth > 0:
             # 2. Prepare stress factors for functional balance
             stress_factors = {
-                'water_stress': plant_state.get('water_stress', 0.0),
-                'nutrient_stress': plant_state.get('nutrient_stress', 0.0),
-                'light_stress': plant_state.get('light_stress', 0.0),
-                'temperature_stress': plant_state.get('temperature_stress', 0.0)
+                'water_stress': plant_state['water_stress'],
+                'nutrient_stress': plant_state['nutrient_stress'],
+                'light_stress': plant_state['light_stress'],
+                'temperature_stress': plant_state['temperature_stress']
             }
             
             # 3. Prepare developmental stage properties
             stage_props = {
                 'current_stage': plant_state.get('growth_stage', 'V4'),
-                'accumulated_gdd': plant_state.get('accumulated_gdd', 0.0),
-                'bolting_risk': plant_state.get('bolting_risk', 0.0),
-                'days_since_planting': plant_state.get('day', 0)
+                'accumulated_gdd': plant_state['accumulated_gdd'],
+                'bolting_risk': plant_state['bolting_risk'],
+                'days_since_planting': plant_state['day']
             }
             
             # 4. Prepare environmental conditions
             env_conditions = {
-                'temperature': plant_state.get('air_temperature', 22.0),
-                'light_intensity': plant_state.get('solar_radiation', 18.0),
-                'co2': plant_state.get('co2_concentration', 400.0),
-                'humidity': plant_state.get('humidity', 60.0),
-                'vpd': plant_state.get('vpd', 0.7)
+                'temperature': plant_state['air_temperature'],
+                'light_intensity': plant_state['solar_radiation'],
+                'solar_radiation': plant_state['solar_radiation'],
+                'co2': plant_state['co2_concentration'],
+                'humidity': plant_state['humidity'],
+                'vpd': plant_state['vpd']
             }
             
             # 5. Use comprehensive functional balance allocation
@@ -858,19 +911,19 @@ class CROPGROHydroponicSimulator:
         """Use additional biomass allocation model functions that were previously unused."""
         
         # Get stress factors and environmental conditions
-        stress_factors = plant_state.get('stress_factors', {})
+        stress_factors = plant_state['stress_factors']
         env_conditions = {
-            'air_temperature': plant_state.get('air_temperature', 25.0),
-            'solar_radiation': plant_state.get('solar_radiation', 10.0),
-            'vpd': plant_state.get('vpd', 1.0),
-            'light_stress': stress_factors.get('light_stress', 0.0)
+            'air_temperature': plant_state['air_temperature'],
+            'solar_radiation': plant_state['solar_radiation'],
+            'vpd': plant_state['vpd'],
+            'light_stress': plant_state['light_stress']  # Use direct plant state instead
         }
         
         # Get development stage properties
         stage_props = {
             'is_vegetative': plant_state.get('growth_stage', 'vegetative') == 'vegetative',
-            'development_stage': plant_state.get('development_stage', 0.0),
-            'thermal_time': plant_state.get('accumulated_gdd', 0.0)
+            'development_stage': plant_state['development_stage'],
+            'thermal_time': plant_state['accumulated_gdd']
         }
         
         # Use the comprehensive functional balance allocation method
@@ -883,9 +936,10 @@ class CROPGROHydroponicSimulator:
             
             # Update plant state with allocation results
             plant_state['allocation_fractions'] = allocation_result
-            plant_state['leaf_allocation'] = allocation_result.get('leaves', 0.5)
-            plant_state['stem_allocation'] = allocation_result.get('stems', 0.3)
-            plant_state['root_allocation'] = allocation_result.get('roots', 0.2)
+            # Use allocation results directly - they should always be present from the allocation model
+            plant_state['leaf_allocation'] = allocation_result['leaves']
+            plant_state['stem_allocation'] = allocation_result['stems']
+            plant_state['root_allocation'] = allocation_result['roots']
             
             # Calculate resource limitations using the model's internal method
             if hasattr(self.biomass_allocation_model, '_calculate_resource_limitations'):
@@ -895,9 +949,10 @@ class CROPGROHydroponicSimulator:
                 plant_state['resource_limitations'] = resource_limitations
                 
                 # Store individual limitation factors
-                plant_state['light_limitation'] = resource_limitations.get('light', 0.0)
-                plant_state['nitrogen_limitation'] = resource_limitations.get('nitrogen', 0.0)
-                plant_state['water_limitation'] = resource_limitations.get('water', 0.0)
+                # Use resource limitations directly - they should always be present from the model
+                plant_state['light_limitation'] = resource_limitations['light']
+                plant_state['nitrogen_limitation'] = resource_limitations['nitrogen']
+                plant_state['water_limitation'] = resource_limitations['water']
             
             # Calculate allocation shifts using the model's internal method
             if hasattr(self.biomass_allocation_model, '_calculate_allocation_shifts'):
@@ -906,6 +961,7 @@ class CROPGROHydroponicSimulator:
                 plant_state['allocation_shifts'] = allocation_shifts
                 
                 # Store individual shift factors
+                # Use allocation shifts with default values in case keys are missing
                 plant_state['leaf_shift'] = allocation_shifts.get('leaf_shift', 0.0)
                 plant_state['root_shift'] = allocation_shifts.get('root_shift', 0.0)
                 plant_state['stem_shift'] = allocation_shifts.get('stem_shift', 0.0)
@@ -950,8 +1006,9 @@ class CROPGROHydroponicSimulator:
         environment_params = getattr(self.system_config, 'environment', {})
         
         # Light limitation
-        light_intensity = env_conditions.get('light_intensity', 18.0)
-        optimal_light = self._get_required_param(environment_params, 'optimal_light_default', 'environment CSV')
+        light_intensity = env_conditions['light_intensity']
+        # Use solar radiation from weather data instead of removed optimal_light_intensity
+        optimal_light = env_conditions['solar_radiation']  # Use actual weather data
         limitations['light'] = min(1.0, light_intensity / optimal_light)
         
         # Nitrogen limitation
@@ -963,8 +1020,9 @@ class CROPGROHydroponicSimulator:
         limitations['water'] = 1.0 - water_stress
         
         # Temperature limitation
-        temperature = env_conditions.get('temperature', 22.0)
-        optimal_temp = self._get_required_param(environment_params, 'optimal_temp_default', 'environment CSV')
+        temperature = env_conditions['temperature']
+        phenology_params = getattr(self.system_config, 'phenology', {})
+        optimal_temp = self._get_required_param(phenology_params, 'phenology_optimal_temperature_min', 'phenology CSV')
         temp_deviation = abs(temperature - optimal_temp)
         limitations['temperature'] = max(0.0, 1.0 - temp_deviation / 10.0)
         
@@ -995,10 +1053,10 @@ class CROPGROHydroponicSimulator:
             sink_strength['stems'] = self._get_required_param(growth_params, 'head_formation_stem_sink', 'growth_parameters CSV')
             sink_strength['roots'] = self._get_required_param(growth_params, 'head_formation_root_sink', 'growth_parameters CSV')
         else:
-            # Default balanced
-            sink_strength['leaves'] = self._get_required_param(growth_params, 'default_leaf_sink', 'growth_parameters CSV')
-            sink_strength['stems'] = self._get_required_param(growth_params, 'default_stem_sink', 'growth_parameters CSV')
-            sink_strength['roots'] = self._get_required_param(growth_params, 'default_root_sink', 'growth_parameters CSV')
+            # Use mid-vegetative values as fallback for other stages (V7+, reproductive, etc.)
+            sink_strength['leaves'] = self._get_required_param(growth_params, 'mid_vegetative_leaf_sink', 'growth_parameters CSV')
+            sink_strength['stems'] = self._get_required_param(growth_params, 'mid_vegetative_stem_sink', 'growth_parameters CSV')
+            sink_strength['roots'] = self._get_required_param(growth_params, 'mid_vegetative_root_sink', 'growth_parameters CSV')
         
         return sink_strength
     
@@ -1007,9 +1065,9 @@ class CROPGROHydroponicSimulator:
         source_strength = {}
         
         # Based on current biomass and photosynthetic capacity
-        leaf_biomass = plant_state.get('leaf_biomass', 0.05)
-        stem_biomass = plant_state.get('stem_biomass', 0.03)
-        root_biomass = plant_state.get('root_biomass', 0.02)
+        leaf_biomass = plant_state['leaf_biomass']
+        stem_biomass = plant_state['stem_biomass']
+        root_biomass = plant_state['root_biomass']
         
         total_biomass = leaf_biomass + stem_biomass + root_biomass
         
@@ -1085,26 +1143,27 @@ class CROPGROHydroponicSimulator:
     def _update_plant_architecture(self, plant_state: dict) -> dict:
         """Update plant architecture based on biomass allocation."""
         # Update plant height based on stem biomass
-        base_height = 2.0  # cm
-        height_growth = plant_state['stem_biomass'] * 2.0  # cm per g stem biomass (increased from 0.2)
+        base_height = self._get_required_param(self.system_config.plant_parameters, "base_height", "plant_parameters CSV")  # cm
+        height_growth = plant_state['stem_biomass'] * self._get_required_param(self.system_config.plant_parameters, "height_growth_factor", "plant_parameters CSV")  # cm per g stem biomass (increased from 0.2)
         plant_state['plant_height'] = base_height + height_growth
         
         # Update root length based on root biomass
-        base_root_length = 5.0  # cm
-        root_growth = plant_state['root_biomass'] * 0.5  # cm per g root biomass
+        base_root_length = self._get_required_param(self.system_config.plant_parameters, "base_root_length", "plant_parameters CSV")  # cm
+        root_growth = plant_state['root_biomass'] * self._get_required_param(self.system_config.plant_parameters, "root_growth_factor", "plant_parameters CSV")  # cm per g root biomass
         plant_state['root_length'] = base_root_length + root_growth
         
         # Update root surface area with proper calculation
-        avg_root_diameter_cm = 0.02  # cm - realistic fine root diameter
+        avg_root_diameter_cm = self._get_required_param(self.system_config.plant_parameters, "avg_root_diameter_cm", "plant_parameters CSV")  # cm - realistic fine root diameter
         # Surface area = π * diameter * length
         plant_state['root_surface_area'] = plant_state['root_length'] * 3.14159 * avg_root_diameter_cm
 
         # Ensure minimum realistic surface area based on plant size
-        min_surface_area = plant_state['total_biomass'] * 100  # 100 cm²/g biomass ratio (more realistic)
+        min_surface_area = plant_state['total_biomass'] * self._get_required_param(self.system_config.plant_parameters, "min_surface_area_factor", "plant_parameters CSV")  # 100 cm²/g biomass ratio (more realistic)
         plant_state['root_surface_area'] = max(plant_state['root_surface_area'], min_surface_area)
 
         # Additional check - ensure minimum absolute value for seedlings
-        absolute_minimum = 25.0  # cm² minimum for any plant
+        canopy_params = getattr(self.system_config, 'canopy_parameters', {})
+        absolute_minimum = self._get_required_param(canopy_params, 'min_leaf_area_per_plant', 'canopy_parameters CSV')
         plant_state['root_surface_area'] = max(plant_state['root_surface_area'], absolute_minimum)
         
         return plant_state
@@ -1112,11 +1171,11 @@ class CROPGROHydroponicSimulator:
     def _update_growth_stage(self, plant_state: dict) -> dict:
         """Update growth stage using advanced phenology model."""
         # Calculate daylength (simplified - would use actual solar calculations)
-        daylength = plant_state.get('daylength', 12.0)  # Controlled environment
+        daylength = plant_state['daylength']  # Controlled environment
 
         # Get stress factors
-        water_stress_factor = 1.0 - plant_state.get('water_stress', 0.0)
-        temp_stress_factor = 1.0 - plant_state.get('temperature_stress', 0.0)
+        water_stress_factor = 1.0 - plant_state['water_stress']
+        temp_stress_factor = 1.0 - plant_state['temperature_stress']
 
         # Update phenology model
         phenology_result = self.phenology_model.daily_update(
@@ -1147,7 +1206,7 @@ class CROPGROHydroponicSimulator:
 
         # Calculate days to flowering based on thermal time requirements
         current_thermal_time = self.phenology_model.developmental_state.total_thermal_time
-        flowering_requirement = 800  # Simplified
+        flowering_requirement = self._get_required_param(self.system_config.phenology_parameters, "flowering_requirement_gdd", "phenology_parameters CSV")  # Simplified
         plant_state['days_to_flowering'] = max(0, (flowering_requirement - current_thermal_time) / max(0.1, phenology_result.daily_thermal_time))
 
         return plant_state
@@ -1156,10 +1215,10 @@ class CROPGROHydroponicSimulator:
         """Use comprehensive phenology model functions that were previously unused."""
         
         if hasattr(self, 'phenology_model'):
-            temperature = plant_state.get('air_temperature', 25.0)
-            daylength = plant_state.get('day_length_hours', 12.0)
-            water_stress = 1.0 - plant_state.get('water_stress', 0.0)
-            temperature_stress = 1.0 - plant_state.get('temperature_stress', 0.0)
+            temperature = plant_state['air_temperature']
+            daylength = plant_state['day_length_hours']
+            water_stress = 1.0 - plant_state['water_stress']
+            temperature_stress = 1.0 - plant_state['temperature_stress']
             
             # Use thermal time calculations
             if hasattr(self.phenology_model, 'calculate_thermal_time'):
@@ -1218,13 +1277,13 @@ class CROPGROHydroponicSimulator:
     def _update_leaf_development(self, plant_state: dict) -> dict:
         """Update leaf development using advanced leaf development model."""
         # Get daily thermal time from phenology
-        daily_thermal_time = plant_state.get('daily_thermal_time', 1.0)
+        daily_thermal_time = plant_state['daily_thermal_time']
 
         # Calculate stress factors for leaf development
         stress_factors = self.leaf_model.calculate_stress_factors(
-            water_stress=1.0 - plant_state.get('water_stress', 0.0),
-            temperature_stress=1.0 - plant_state.get('temperature_stress', 0.0),
-            nitrogen_stress=1.0 - plant_state.get('nutrient_stress', 0.0)
+            water_stress=1.0 - plant_state['water_stress'],
+            temperature_stress=1.0 - plant_state['temperature_stress'],
+            nitrogen_stress=1.0 - plant_state['nutrient_stress']
         )
 
         # Update V-stage first
@@ -1235,7 +1294,8 @@ class CROPGROHydroponicSimulator:
 
         # Update plant state with leaf development results
         plant_state['leaf_area_m2'] = leaf_result['total_leaf_area_m2']
-        plant_state['lai'] = leaf_result['leaf_area_index'] * getattr(self.system_config, 'n_plants', 12) / getattr(self.system_config, 'system_area', 1.0)
+        system_config_params = getattr(self.system_config, 'system_configuration', {})
+        plant_state['lai'] = leaf_result['leaf_area_index'] * self._get_required_param(system_config_params, 'n_plants', 'system_configuration CSV') / self._get_required_param(system_config_params, 'system_area', 'system_configuration CSV')
         plant_state['leaf_number'] = leaf_result['visible_leaf_count']
         plant_state['active_leaves'] = leaf_result['active_leaf_count']
         plant_state['senesced_area'] = leaf_result['senesced_area_daily']
@@ -1253,8 +1313,8 @@ class CROPGROHydroponicSimulator:
         """Use comprehensive leaf development model functions that were previously unused."""
         
         if hasattr(self, 'leaf_model'):
-            temperature = plant_state.get('air_temperature', 25.0)
-            daily_thermal_time = plant_state.get('daily_thermal_time', 1.0)
+            temperature = plant_state['air_temperature']
+            daily_thermal_time = plant_state['daily_thermal_time']
             
             # Use thermal time calculations
             if hasattr(self.leaf_model, 'calculate_thermal_time'):
@@ -1263,7 +1323,7 @@ class CROPGROHydroponicSimulator:
             
             # Use leaf position factor calculations
             if hasattr(self.leaf_model, '_calculate_leaf_position_factor'):
-                v_stage = plant_state.get('v_stage', 6.0)
+                v_stage = plant_state['v_stage']
                 position_factor = self.leaf_model._calculate_leaf_position_factor(v_stage)
                 plant_state['leaf_position_factor'] = position_factor
             
@@ -1276,7 +1336,7 @@ class CROPGROHydroponicSimulator:
             
             # Use initial leaf cohort creation (for early stages)
             if hasattr(self.leaf_model, '_create_initial_leaf_cohort'):
-                if plant_state.get('v_stage', 0) < 2.0:  # Early stage
+                if plant_state['v_stage'] < 2.0:  # Early stage
                     initial_cohort = self.leaf_model._create_initial_leaf_cohort(1)
                     plant_state['initial_leaf_cohort'] = initial_cohort
         
@@ -1285,12 +1345,12 @@ class CROPGROHydroponicSimulator:
     def _update_senescence_processes(self, plant_state: dict) -> dict:
         """Update senescence processes using advanced senescence model."""
         # Calculate stress factors for senescence
-        water_stress = plant_state.get('water_stress', 0.0)
-        nitrogen_stress = plant_state.get('nitrogen_stress', 0.0)
-        temperature_stress = plant_state.get('temperature_stress', 0.0)
+        water_stress = plant_state['water_stress']
+        nitrogen_stress = plant_state['nutrient_stress']  # Use nutrient_stress instead of nitrogen_stress
+        temperature_stress = plant_state['temperature_stress']
 
         # For each leaf cohort (simplified - using average leaf age)
-        avg_leaf_age = plant_state.get('days_since_planting', 0) / max(1, plant_state.get('leaf_number', 1))
+        avg_leaf_age = plant_state['days_since_planting'] / max(1, plant_state['leaf_number'])
 
         # Calculate age-based senescence rate
         age_senescence_rate = min(0.1, max(0.0, (avg_leaf_age - 20) / 30))  # Start after 20 days
@@ -1316,7 +1376,7 @@ class CROPGROHydroponicSimulator:
         # 4. Prepare developmental state
         developmental_state = {
             'is_reproductive': plant_state.get('growth_stage', '') in ['HI', 'HD', 'HM'],
-            'bolting_risk': plant_state.get('bolting_risk', 0.0),
+            'bolting_risk': plant_state['bolting_risk'],
             'accumulated_gdd': plant_state.get('accumulated_gdd', 0.0)
         }
         
@@ -1360,9 +1420,9 @@ class CROPGROHydroponicSimulator:
             if hasattr(self.senescence_model, 'calculate_age_senescence'):
                 # Create a cohort state for age senescence calculation
                 cohort_state = type('CohortState', (), {
-                    'age_days': plant_state.get('days_since_emergence', 30.0),
-                    'age_gdd': plant_state.get('accumulated_gdd', 300.0),
-                    'nutrient_content': plant_state.get('leaf_nitrogen_content', 0.04),
+                    'age_days': plant_state['days_since_emergence'],
+                    'age_gdd': plant_state['accumulated_gdd'],
+                    'nutrient_content': plant_state['leaf_nitrogen_content'],
                     'senescence_stage': 'active',
                     'senescence_damage': 0.0,
                     'is_recoverable': True
@@ -1372,9 +1432,9 @@ class CROPGROHydroponicSimulator:
             
             # Use stress senescence calculations
             if hasattr(self.senescence_model, 'calculate_stress_senescence'):
-                water_stress = plant_state.get('water_stress', 0.0)
-                nitrogen_stress = plant_state.get('nitrogen_stress', 0.0)
-                temperature_stress = plant_state.get('temperature_stress', 0.0)
+                water_stress = plant_state['water_stress']
+                nitrogen_stress = plant_state['nutrient_stress']  # Use nutrient_stress instead of nitrogen_stress
+                temperature_stress = plant_state['temperature_stress']
                 light_stress = plant_state.get('light_stress', 0.0)
                 
                 stress_senescence = self.senescence_model.calculate_stress_senescence(
@@ -1396,14 +1456,14 @@ class CROPGROHydroponicSimulator:
             if hasattr(self.senescence_model, 'calculate_recovery_rate'):
                 cohort_state = type('CohortState', (), {
                     'senescence_stage': 'stressed',
-                    'age_days': plant_state.get('days_since_emergence', 30.0),
-                    'age_gdd': plant_state.get('accumulated_gdd', 300.0),
-                    'nutrient_content': plant_state.get('leaf_nitrogen_content', 0.04),
+                    'age_days': plant_state['days_since_emergence'],
+                    'age_gdd': plant_state['accumulated_gdd'],
+                    'nutrient_content': plant_state['leaf_nitrogen_content'],
                     'is_recoverable': True,
                     'senescence_damage': 0.1
                 })()
                 current_stress_levels = {
-                    'water_stress': plant_state.get('water_stress', 0.0),
+                    'water_stress': plant_state['water_stress'],
                     'nitrogen_stress': plant_state.get('nitrogen_stress', 0.0)
                 }
                 recovery_rate = self.senescence_model.calculate_recovery_rate(
@@ -1415,9 +1475,9 @@ class CROPGROHydroponicSimulator:
             if hasattr(self.senescence_model, 'update_senescence_stage'):
                 cohort_state = type('CohortState', (), {
                     'senescence_stage': 'active',
-                    'age_days': plant_state.get('days_since_emergence', 30.0),
-                    'age_gdd': plant_state.get('accumulated_gdd', 300.0),
-                    'nutrient_content': plant_state.get('leaf_nitrogen_content', 0.04),
+                    'age_days': plant_state['days_since_emergence'],
+                    'age_gdd': plant_state['accumulated_gdd'],
+                    'nutrient_content': plant_state['leaf_nitrogen_content'],
                     'senescence_damage': 0.0,
                     'is_recoverable': True
                 })()
@@ -1430,14 +1490,14 @@ class CROPGROHydroponicSimulator:
             # Use nutrient remobilization calculations
             if hasattr(self.senescence_model, 'calculate_nutrient_remobilization'):
                 cohort_state = type('CohortState', (), {
-                    'nutrient_content': plant_state.get('leaf_nitrogen_content', 0.04),
+                    'nutrient_content': plant_state['leaf_nitrogen_content'],
                     'senescence_stage': 'senescing',
-                    'age_days': plant_state.get('days_since_emergence', 30.0),
-                    'age_gdd': plant_state.get('accumulated_gdd', 300.0),
+                    'age_days': plant_state['days_since_emergence'],
+                    'age_gdd': plant_state['accumulated_gdd'],
                     'senescence_damage': 0.2,
                     'is_recoverable': False
                 })()
-                daily_senescence_rate = plant_state.get('leaf_senescence_rate', 0.01)
+                daily_senescence_rate = plant_state['leaf_senescence_rate']
                 nutrient_remobilization = self.senescence_model.calculate_nutrient_remobilization(
                     cohort_state, daily_senescence_rate
                 )
@@ -1448,7 +1508,7 @@ class CROPGROHydroponicSimulator:
     def _initialize_leaf_cohorts(self, plant_state: dict):
         """Initialize leaf cohorts for senescence tracking."""
         # Initialize cohorts based on current leaf number
-        leaf_number = plant_state.get('leaf_number', 2)
+        leaf_number = plant_state['leaf_number']
         
         # Create cohorts (simplified - one cohort per 2 leaves)
         for cohort_id in range(1, max(2, leaf_number // 2 + 1)):
@@ -1475,23 +1535,23 @@ class CROPGROHydroponicSimulator:
         cohort_data = {}
         
         # Calculate average leaf age and area per cohort
-        leaf_number = plant_state.get('leaf_number', 2)
-        total_area = plant_state.get('leaf_area_m2', 0.001)
-        days_since_planting = plant_state.get('day', 0)
+        leaf_number = plant_state['leaf_number']
+        total_area = plant_state['leaf_area_m2']
+        days_since_planting = plant_state['day']
         
         # Create cohorts (simplified approach)
-        cohorts_per_leaf = 2  # Each cohort represents 2 leaves
-        num_cohorts = max(1, leaf_number // cohorts_per_leaf)
+        cohorts_per_leaf = self._get_required_param(self.system_config.leaf_parameters, "cohorts_per_leaf", "leaf_parameters CSV")  # Each cohort represents 2 leaves
+        num_cohorts = max(1, int(leaf_number // cohorts_per_leaf))
         
         for cohort_id in range(1, num_cohorts + 1):
             # Calculate cohort age (older cohorts are older)
-            cohort_age_gdd = (cohort_id - 1) * 50.0 + plant_state.get('accumulated_gdd', 0.0) / num_cohorts
+            cohort_age_gdd = (cohort_id - 1) * 50.0 + plant_state['accumulated_gdd'] / num_cohorts
             
             # Calculate cohort area (distribute total area among cohorts)
             cohort_area = total_area / num_cohorts
             
             # Calculate cohort biomass (distribute leaf biomass among cohorts)
-            cohort_biomass = plant_state.get('leaf_biomass', 0.05) / num_cohorts
+            cohort_biomass = plant_state['leaf_biomass'] / num_cohorts
             
             # Calculate canopy position (0 = bottom, 1 = top)
             canopy_position = (cohort_id - 1) / max(1, num_cohorts - 1)
@@ -1525,7 +1585,7 @@ class CROPGROHydroponicSimulator:
         organ_growth_rates = {
             'leaves': plant_state.get('leaf_biomass', 0.0) * 0.05,  # 5% daily growth
             'stems': plant_state.get('stem_biomass', 0.0) * 0.03,   # 3% daily growth
-            'roots': plant_state.get('root_biomass', 0.0) * 0.04    # 4% daily growth
+            'roots': plant_state['root_biomass'] * 0.04    # 4% daily growth
         }
 
         # Environmental factors affecting nitrogen
@@ -1557,8 +1617,8 @@ class CROPGROHydroponicSimulator:
 
         # Calculate stress factors
         stress_factors = {
-            'water_stress': plant_state.get('water_stress', 0.0),
-            'temperature_stress': plant_state.get('temperature_stress', 0.0),
+            'water_stress': plant_state['water_stress'],
+            'temperature_stress': plant_state['temperature_stress'],
             'light_stress': plant_state.get('light_stress', 0.0)
         }
 
@@ -1595,9 +1655,9 @@ class CROPGROHydroponicSimulator:
                     nitrogen_demand = {
                         'leaves': plant_state.get('leaf_biomass', 0.05) * 0.04,
                         'stems': plant_state.get('stem_biomass', 0.03) * 0.02,
-                        'roots': plant_state.get('root_biomass', 0.02) * 0.025
+                        'roots': plant_state['root_biomass'] * 0.025
                     }
-                    growth_stage = plant_state.get('growth_stage', 'vegetative')
+                    growth_stage = plant_state['growth_stage']
                     allocation_result = self.nitrogen_model.allocate_nitrogen(
                         available_nitrogen, nitrogen_demand, growth_stage
                     )
@@ -1621,14 +1681,14 @@ class CROPGROHydroponicSimulator:
                     }
                     environmental_factors = {
                         'temperature': plant_state.get('air_temperature', 25.0),
-                        'humidity': plant_state.get('humidity', 60.0),
+                        'humidity': plant_state['humidity'],
                         'light': plant_state.get('solar_radiation', 10.0)
                     }
-                    growth_stage = plant_state.get('growth_stage', 'vegetative')
-                    stress_factors = plant_state.get('stress_factors', {})
+                    growth_stage = plant_state['growth_stage']
+                    stress_factors = plant_state['stress_factors']
                     senescence_rates = {
-                        'leaves': plant_state.get('leaf_senescence_rate', 0.0),
-                        'stems': plant_state.get('stem_senescence_rate', 0.0),
+                        'leaves': plant_state['leaf_senescence_rate'],
+                        'stems': plant_state['stem_senescence_rate'],
                         'roots': 0.0  # Roots typically don't senesce
                     }
                     nitrogen_response = self.nitrogen_model.update_nitrogen_pools(
@@ -1656,18 +1716,18 @@ class CROPGROHydroponicSimulator:
             # Use nitrogen remobilization calculations
             if hasattr(self.nitrogen_model, 'calculate_nitrogen_remobilization'):
                 stress_factors = {
-                    'water_stress': plant_state.get('water_stress', 0.0),
+                    'water_stress': plant_state['water_stress'],
                     'nitrogen_stress': plant_state.get('nitrogen_stress', 0.0),
-                    'temperature_stress': plant_state.get('temperature_stress', 0.0)
+                    'temperature_stress': plant_state['temperature_stress']
                 }
                 senescence_rates = {
-                    'leaves': plant_state.get('leaf_senescence_rate', 0.0),
-                    'stems': plant_state.get('stem_senescence_rate', 0.0),
+                    'leaves': plant_state['leaf_senescence_rate'],
+                    'stems': plant_state['stem_senescence_rate'],
                     'roots': 0.0
                 }
                 environmental_factors = {
                     'temperature': plant_state.get('air_temperature', 25.0),
-                    'humidity': plant_state.get('humidity', 60.0),
+                    'humidity': plant_state['humidity'],
                     'light': plant_state.get('solar_radiation', 10.0)
                 }
                 remobilization_result = self.nitrogen_model.calculate_nitrogen_remobilization(
@@ -1683,7 +1743,7 @@ class CROPGROHydroponicSimulator:
                 self.nitrogen_model.initialize_organ(
                     organ_name=organ,
                     initial_dry_mass=organ_mass,
-                    initial_n_concentration=self._get_required_param(nitrogen_params, 'default_n_concentration', 'nitrogen_parameters CSV')
+                    initial_n_concentration=self._get_required_param(nitrogen_params, 'critical_n_concentrations_leaves_optimal', 'nitrogen_parameters CSV')
                 )
         
         return plant_state
@@ -1824,7 +1884,7 @@ class CROPGROHydroponicSimulator:
         # Initialize pools in mobility model
         self.mobility_model.initialize_organ_pools('leaves', leaf_nutrient_contents, plant_state.get('leaf_biomass', 0.05))
         self.mobility_model.initialize_organ_pools('stems', stem_nutrient_contents, plant_state.get('stem_biomass', 0.03))
-        self.mobility_model.initialize_organ_pools('roots', root_nutrient_contents, plant_state.get('root_biomass', 0.02))
+        self.mobility_model.initialize_organ_pools('roots', root_nutrient_contents, plant_state['root_biomass'])
     
     def _prepare_organ_demands(self, plant_state: dict) -> dict:
         """Prepare organ nutrient demands for mobility model."""
@@ -1890,7 +1950,7 @@ class CROPGROHydroponicSimulator:
                 sink_organ = 'roots'
                 water_flux = plant_state.get('water_uptake_rate', 0.1)
                 assimilate_flux = plant_state.get('photosynthesis_rate', 0.05)
-                temperature = plant_state.get('air_temperature', 25.0)
+                temperature = plant_state['air_temperature']
                 
                 transport_capacity = self.mobility_model.calculate_transport_capacity(
                     source_organ, sink_organ, water_flux, assimilate_flux, temperature
@@ -1904,18 +1964,18 @@ class CROPGROHydroponicSimulator:
                     'stems': {'nitrogen': 0.005, 'phosphorus': 0.001, 'potassium': 0.004},
                     'roots': {'nitrogen': 0.003, 'phosphorus': 0.001, 'potassium': 0.002}
                 }
-                growth_stage = plant_state.get('growth_stage', 'vegetative')
+                growth_stage = plant_state['growth_stage']
                 sink_demands = self.mobility_model.calculate_sink_demands(organ_demands, growth_stage)
                 plant_state['sink_demands'] = sink_demands
             
             # Use source supply calculations
             if hasattr(self.mobility_model, 'calculate_source_supplies'):
                 stress_factors = {
-                    'water_stress': plant_state.get('water_stress', 0.0),
+                    'water_stress': plant_state['water_stress'],
                     'nitrogen_stress': plant_state.get('nitrogen_stress', 0.0)
                 }
                 senescence_rates = {
-                    'leaves': plant_state.get('leaf_senescence_rate', 0.0),
+                    'leaves': plant_state['leaf_senescence_rate'],
                     'stems': plant_state.get('stem_senescence_rate', 0.0)
                 }
                 source_supplies = self.mobility_model.calculate_source_supplies(stress_factors, senescence_rates)
@@ -1926,7 +1986,7 @@ class CROPGROHydroponicSimulator:
                 sink_demands = plant_state.get('sink_demands', {})
                 source_supplies = plant_state.get('source_supplies', {})
                 transport_capacities = plant_state.get('transport_capacity', {})
-                temperature = plant_state.get('air_temperature', 25.0)
+                temperature = plant_state['air_temperature']
                 
                 transport_fluxes = self.mobility_model.calculate_transport_fluxes(
                     sink_demands, source_supplies, transport_capacities, temperature
@@ -1964,10 +2024,10 @@ class CROPGROHydroponicSimulator:
         """Calculate biomass allocation using advanced functional balance model."""
         # Stress factors affecting allocation
         stress_factors = {
-            'water_stress': plant_state.get('water_stress', 0.0),
+            'water_stress': plant_state['water_stress'],
             'nutrient_stress': plant_state.get('nitrogen_stress', 0.0),
-            'light_stress': plant_state.get('light_stress', 0.0),
-            'temperature_stress': plant_state.get('temperature_stress', 0.0)
+            'light_stress': plant_state['light_stress'],
+            'temperature_stress': plant_state['temperature_stress']
         }
 
         # Environmental conditions
@@ -1981,7 +2041,7 @@ class CROPGROHydroponicSimulator:
         # Stage properties for allocation
         stage_props = {
             'current_stage': plant_state['growth_stage'],
-            'accumulated_gdd': plant_state.get('accumulated_gdd', 0.0),
+            'accumulated_gdd': plant_state['accumulated_gdd'],
             'bolting_risk': plant_state.get('bolting_risk', 0.0)
         }
 
@@ -2006,11 +2066,11 @@ class CROPGROHydroponicSimulator:
             plant_state['temperature_stress'] = min(1.0, abs(temp - 20) / 20)
         else:
             stress_params = getattr(self.system_config, 'stress_parameters', {})
-            plant_state['temperature_stress'] = self._get_required_param(stress_params, 'default_temperature_stress', 'stress_parameters CSV')
+            plant_state['temperature_stress'] = 0.0  # Will be calculated by temperature stress model
         
         # Water stress (based on VPD)
         environment_params = getattr(self.system_config, 'environment', {})
-        optimal_vpd = self._get_required_param(environment_params, 'default_optimal_vpd', 'environment CSV')
+        optimal_vpd = self._get_required_param(environment_params, 'target_vpd', 'environment CSV')
         plant_state['water_stress'] = min(1.0, abs(vpd - optimal_vpd) / optimal_vpd)
         
         # Nutrient stress (based on EC)
@@ -2022,14 +2082,14 @@ class CROPGROHydroponicSimulator:
         if solar_rad < 10:
             plant_state['light_stress'] = (10 - solar_rad) / 10
         else:
-            plant_state['light_stress'] = self._get_required_param(stress_params, 'default_light_stress', 'stress_parameters CSV')
+            plant_state['light_stress'] = 0.0  # Will be calculated by light stress model
         
         # CO2 stress
         co2 = plant_state['co2_concentration']
         if co2 < 300:
             plant_state['co2_stress'] = (300 - co2) / 300
         else:
-            plant_state['co2_stress'] = self._get_required_param(stress_params, 'default_co2_stress', 'stress_parameters CSV')
+            plant_state['co2_stress'] = 0.0  # Will be calculated by CO2 stress model
         
         # Salinity stress (simplified)
         plant_state['salinity_stress'] = max(0.0, (ec - 2.0) / 2.0)
@@ -2157,7 +2217,7 @@ class CROPGROHydroponicSimulator:
         
         # Temperature stress model functions
         if hasattr(self, 'temperature_stress'):
-            temperature = plant_state.get('air_temperature', 25.0)
+            temperature = plant_state['air_temperature']
             
             # Use temperature stress classification
             if hasattr(self.temperature_stress, 'classify_temperature_stress'):
@@ -2206,8 +2266,8 @@ class CROPGROHydroponicSimulator:
         # Integrated stress model functions
         if hasattr(self, 'integrated_stress'):
             current_stress_levels = {
-                'temperature_stress': plant_state.get('temperature_stress', 0.0),
-                'water_stress': plant_state.get('water_stress', 0.0),
+                'temperature_stress': plant_state['temperature_stress'],
+                'water_stress': plant_state['water_stress'],
                 'nitrogen_stress': plant_state.get('nitrogen_stress', 0.0),
                 'light_stress': plant_state.get('light_stress', 0.0)
             }
@@ -2282,31 +2342,25 @@ class CROPGROHydroponicSimulator:
                 'actual_co2': plant_state.get('co2_concentration', 400.0),
                 'actual_vpd': plant_state.get('vpd', 1.0),
                 'temperature': plant_state.get('air_temperature', 25.0),
-                'humidity': plant_state.get('humidity', 60.0),
-                'vpd': plant_state.get('vpd', 1.0),
+                'humidity': plant_state['humidity'],
+                'vpd': plant_state['vpd'],
                 'light_intensity': plant_state.get('solar_radiation', 10.0),
-                'solar_radiation': plant_state.get('solar_radiation', 10.0),
-                'co2': plant_state.get('co2_concentration', 400.0),
+                'solar_radiation': plant_state['solar_radiation'],
+                'co2': plant_state['co2_concentration'],
                 'ph': plant_state.get('ph', 6.0),
                 'ec': plant_state.get('ec', 1.2)
             }
             
-            # Use unified stress factor calculations
+            # Use unified stress factor calculations - no fallbacks allowed
             if hasattr(self.unified_stress_calculator, 'calculate_unified_stress_factors'):
-                try:
-                    nutrient_concentrations = plant_state.get('nutrient_concentrations', {
-                        'N-NO3': 150.0, 'P-PO4': 50.0, 'K': 200.0
-                    })
-                    unified_factors = self.unified_stress_calculator.calculate_unified_stress_factors(
-                        env_conditions, nutrient_concentrations, plant_state
-                    )
-                    plant_state.update(unified_factors)
-                except (TypeError, ValueError) as e:
-                    # If unified stress calculation fails, use default factors
-                    plant_state['temperature_stress'] = self._get_required_param(stress_params, 'default_mild_stress', 'stress_parameters CSV')
-                    plant_state['water_stress'] = self._get_required_param(stress_params, 'default_mild_stress', 'stress_parameters CSV')
-                    plant_state['nutrient_stress'] = self._get_required_param(stress_params, 'default_mild_stress', 'stress_parameters CSV')
-                    plant_state['light_stress'] = self._get_required_param(stress_params, 'default_mild_stress', 'stress_parameters CSV')
+                nutrient_concentrations = plant_state.get('nutrient_concentrations', {
+                    'N-NO3': 150.0, 'P-PO4': 50.0, 'K': 200.0
+                })
+                unified_factors = self.unified_stress_calculator.calculate_unified_stress_factors(
+                    env_conditions, nutrient_concentrations, plant_state,
+                    ec_calculator=self.nutrient_concentration_model.calculate_ec_from_concentrations
+                )
+                plant_state.update(unified_factors)
         
         return plant_state
 
@@ -2367,13 +2421,14 @@ class CROPGROHydroponicSimulator:
         self.canopy_model.distribute_leaf_area(plant_state['lai'], plant_state['plant_height'])
         
         # Get canopy structure details
+        canopy_params = getattr(self.system_config, 'canopy_parameters', {})
         canopy_structure = {
-            'canopy_layers': getattr(self.canopy_model, 'canopy_layers', 3),
-            'layer_lai_distribution': getattr(self.canopy_model, 'layer_lai_distribution', {}),
+            'canopy_layers': self._get_required_param(canopy_params, 'number_of_layers', 'canopy_parameters CSV'),
+            'layer_lai_distribution': {},  # Empty dict as default - not available as hardcoded value
             'canopy_height': plant_state['plant_height'],
-            'canopy_width': getattr(self.canopy_model, 'canopy_width', 0.3),
-            'row_spacing': getattr(self.canopy_model, 'row_spacing', 0.5),
-            'plant_spacing': getattr(self.canopy_model, 'plant_spacing', 0.2)
+            'canopy_width': self._get_required_param(canopy_params, 'canopy_width', 'canopy_parameters CSV'),
+            'row_spacing': self._get_required_param(canopy_params, 'row_spacing', 'canopy_parameters CSV'),
+            'plant_spacing': self._get_required_param(canopy_params, 'plant_spacing', 'canopy_parameters CSV')
         }
         
         return canopy_structure
@@ -2381,9 +2436,10 @@ class CROPGROHydroponicSimulator:
     def _calculate_leaf_angle_distribution(self, plant_state: dict) -> dict:
         """Calculate leaf angle distribution effects."""
         # Get leaf angle parameters from canopy model
-        mean_leaf_angle = getattr(self.canopy_model, 'mean_leaf_angle', 45.0)
-        leaf_angle_variance = getattr(self.canopy_model, 'leaf_angle_variance', 15.0)
-        leaf_angle_distribution = getattr(self.canopy_model, 'leaf_angle_distribution', 'spherical')
+        canopy_params = getattr(self.system_config, 'canopy_parameters', {})
+        mean_leaf_angle = self._get_required_param(canopy_params, 'mean_leaf_angle', 'canopy_parameters CSV')
+        leaf_angle_variance = self._get_required_param(canopy_params, 'leaf_angle_variance', 'canopy_parameters CSV')
+        leaf_angle_distribution = self._get_required_param(canopy_params, 'leaf_angle_distribution', 'canopy_parameters CSV')
         
         # Calculate angle distribution effects
         angle_distribution = {
@@ -2401,13 +2457,13 @@ class CROPGROHydroponicSimulator:
         # More horizontal leaves = higher extinction
         # More vertical leaves = lower extinction
         angle_rad = math.radians(mean_angle)
-        extinction_factor = 0.5 + 0.5 * math.cos(angle_rad)
+        extinction_factor = self._get_required_param(self.system_config.canopy_parameters, "extinction_base_factor", "canopy_parameters CSV") + self._get_required_param(self.system_config.canopy_parameters, "extinction_cosine_factor", "canopy_parameters CSV") * math.cos(angle_rad)
         return extinction_factor
     
     def _calculate_light_interception_efficiency(self, mean_angle: float) -> float:
         """Calculate light interception efficiency based on leaf angle."""
         # Optimal angle for light interception varies with solar angle
-        solar_angle = 30.0  # degrees
+        solar_angle = self._get_required_param(self.system_config.canopy_parameters, "solar_angle_degrees", "canopy_parameters CSV")  # degrees
         angle_diff = abs(mean_angle - solar_angle)
         efficiency = max(0.5, 1.0 - angle_diff / 90.0)
         return efficiency
@@ -2457,7 +2513,7 @@ class CROPGROHydroponicSimulator:
                 canopy_params = getattr(self.system_config, 'canopy_parameters', {})
                 sunlit_fraction = self._get_required_param(canopy_params, 'default_sunlit_fraction', 'canopy_parameters CSV')
         else:
-            sunlit_fraction = 0.3  # Default sunlit fraction
+            sunlit_fraction = self._get_required_param(self.system_config.canopy_parameters, "default_sunlit_fraction", "canopy_parameters CSV")  # Default sunlit fraction
         
         sunlit_shaded_fractions = {
             'sunlit_lai': total_lai * sunlit_fraction,
@@ -2476,8 +2532,9 @@ class CROPGROHydroponicSimulator:
         lai = plant_state.get('lai', 1.0)
         
         # Calculate temperature gradient (warmer at top, cooler at bottom)
-        max_gradient = getattr(self.canopy_model, 'max_temperature_gradient', 3.0)  # °C
-        gradient_factor = getattr(self.canopy_model, 'temperature_gradient_factor', 0.5)
+        canopy_params = getattr(self.system_config, 'canopy_parameters', {})
+        max_gradient = self._get_required_param(canopy_params, 'max_temperature_gradient', 'canopy_parameters CSV')  # °C
+        gradient_factor = self._get_required_param(canopy_params, 'temperature_gradient_factor', 'canopy_parameters CSV')
         
         temperature_gradient = {
             'canopy_top_temperature': air_temperature + (max_gradient * min(1.0, lai / 3.0)),
@@ -2519,14 +2576,15 @@ class CROPGROHydroponicSimulator:
             'layer_photosynthesis': layer_photosynthesis,
             'canopy_photosynthesis': total_canopy_photosynthesis,
             'photosynthesis_efficiency': total_canopy_photosynthesis / max(0.001, plant_state['lai']),
-            'ppfd_to_photosynthesis_factor': getattr(self.canopy_model, 'ppfd_to_photosynthesis_factor', 0.8)
+            'ppfd_to_photosynthesis_factor': self._get_required_param(getattr(self.system_config, 'canopy_parameters', {}), 'ppfd_to_photosynthesis_factor', 'canopy_parameters CSV')
         }
         
         return photosynthesis_by_layer
     
     def _calculate_competition_effects(self, plant_state: dict) -> dict:
         """Calculate competition effects between plants."""
-        plant_density = getattr(self.system_config, 'n_plants', 12) / getattr(self.system_config, 'system_area', 1.0)
+        system_config_params = getattr(self.system_config, 'system_configuration', {})
+        plant_density = self._get_required_param(system_config_params, 'n_plants', 'system_configuration CSV') / self._get_required_param(system_config_params, 'system_area', 'system_configuration CSV')
         
         # Calculate competition factors
         competition_effects = {
@@ -2534,14 +2592,14 @@ class CROPGROHydroponicSimulator:
             'competition_factor': min(1.0, 1.0 - (plant_density - 10) * 0.05),  # Competition increases with density
             'light_competition': min(1.0, 1.0 - (plant_density - 8) * 0.1),
             'space_competition': min(1.0, 1.0 - (plant_density - 12) * 0.08),
-            'neighbor_shading_distance': getattr(self.canopy_model, 'neighbor_shading_distance', 0.3)
+            'neighbor_shading_distance': self._get_required_param(getattr(self.system_config, 'canopy_parameters', {}), 'neighbor_shading_distance', 'canopy_parameters CSV')
         }
         
         return competition_effects
     
     def _calculate_clumping_effects(self, plant_state: dict) -> dict:
         """Calculate leaf clumping effects on light interception."""
-        clumping_index = getattr(self.canopy_model, 'clumping_index', 0.8)
+        clumping_index = self._get_required_param(getattr(self.system_config, 'canopy_parameters', {}), 'clumping_index', 'canopy_parameters CSV')
         
         # Clumping reduces effective LAI for light interception
         effective_lai = plant_state['lai'] * clumping_index
@@ -2665,7 +2723,7 @@ class CROPGROHydroponicSimulator:
                 temperature=plant_state['air_temperature'],
                 ph=plant_state['ph'],
                 ec=plant_state['ec'],
-                plant_count=getattr(self.system_config, 'n_plants', 12),
+                plant_count=self._get_required_param(getattr(self.system_config, 'system_configuration', {}), 'n_plants', 'system_configuration CSV'),
                 tank_volume_L=plant_state['solution_volume'],
                 daily_growth_rate=self._calculate_growth_rate(plant_state)
             )
@@ -2749,7 +2807,7 @@ class CROPGROHydroponicSimulator:
         """Use comprehensive water uptake model functions that were previously unused."""
         
         if hasattr(self, 'water_uptake_model'):
-            temperature = plant_state.get('air_temperature', 25.0)
+            temperature = plant_state['air_temperature']
             humidity = plant_state.get('humidity', 60.0)
             light_interception = plant_state.get('light_interception', 0.8)
             lai = plant_state.get('lai', 1.0)
@@ -2794,7 +2852,7 @@ class CROPGROHydroponicSimulator:
             # Use osmotic adjustment calculations
             if hasattr(self.water_uptake_model, '_calculate_osmotic_adjustment'):
                 stress_factors = {
-                    'water_stress': plant_state.get('water_stress', 0.0),
+                    'water_stress': plant_state['water_stress'],
                     'salt_stress': plant_state.get('salt_stress', 0.0),
                     'nutrient_stress': plant_state.get('nutrient_stress', 0.0)
                 }
@@ -2845,8 +2903,8 @@ class CROPGROHydroponicSimulator:
             if hasattr(self.photosynthesis_model, '_arrhenius_temp_response'):
                 # Calculate temperature response for different processes
                 respiration_params = getattr(self.system_config, 'respiration_parameters', {})
-                rate_25 = self._get_required_param(respiration_params, 'default_respiration_rate_25', 'respiration_parameters CSV')
-                ea = self._get_required_param(respiration_params, 'default_activation_energy', 'respiration_parameters CSV')
+                rate_25 = self._get_required_param(respiration_params, 'maintenance_base_rate', 'respiration_parameters CSV')
+                ea = 50000.0  # Default activation energy for respiration (J/mol)
                 temp_response = self.photosynthesis_model._arrhenius_temp_response(
                     rate_25=rate_25,
                     ea=ea,
@@ -2860,7 +2918,7 @@ class CROPGROHydroponicSimulator:
         """Use comprehensive respiration model functions that were previously unused."""
         
         if hasattr(self, 'respiration_model'):
-            temperature = plant_state.get('air_temperature', 25.0)
+            temperature = plant_state['air_temperature']
             
             # Use temperature factor calculations
             if hasattr(self.respiration_model, 'calculate_temperature_factor'):
@@ -2953,7 +3011,7 @@ class CROPGROHydroponicSimulator:
             # Environmental conditions for root model
             environmental_conditions = {
                 'temperature': plant_state['air_temperature'],
-                'flow_rate': getattr(self.system_config, 'flow_rate', 1.5),
+                'flow_rate': self._get_required_param(getattr(self.system_config, 'system_configuration', {}), 'flow_rate', 'system_configuration CSV'),
                 'oxygen_level': 8.0,  # mg/L dissolved oxygen
                 'ph': plant_state['ph']
             }
@@ -2975,8 +3033,9 @@ class CROPGROHydroponicSimulator:
             # Update plant state with root results (with minimum check)
             calculated_surface_area = root_result['total_root_surface_area']
             # Ensure root model results are realistic
-            min_surface_area = plant_state['total_biomass'] * 100  # 100 cm²/g biomass ratio
-            absolute_minimum = 25.0  # cm² minimum for any plant
+            min_surface_area = plant_state['total_biomass'] * self._get_required_param(self.system_config.plant_parameters, "min_surface_area_factor", "plant_parameters CSV")  # 100 cm²/g biomass ratio
+            canopy_params = getattr(self.system_config, 'canopy_parameters', {})
+            absolute_minimum = self._get_required_param(canopy_params, 'min_leaf_area_per_plant', 'canopy_parameters CSV')
             final_surface_area = max(calculated_surface_area, min_surface_area, absolute_minimum)
             plant_state['root_surface_area'] = final_surface_area
             plant_state['root_length'] = root_result['total_root_length']
@@ -3209,12 +3268,13 @@ class CROPGROHydroponicSimulator:
         plant_state['controlled_temperature'] = current_conditions.get('temperature', plant_state['air_temperature'])
         plant_state['controlled_humidity'] = current_conditions.get('humidity', plant_state['humidity'])
         plant_state['controlled_co2'] = current_conditions.get('co2', plant_state['co2_concentration'])
-        plant_state['vpd_target'] = 0.8  # Target VPD
-        plant_state['environmental_cost'] = 0.0  # Simplified
+        environment_params = getattr(self.system_config, 'environment', {})
+        plant_state['vpd_target'] = self._get_required_param(environment_params, 'target_vpd', 'environment CSV')
+        plant_state['environmental_cost'] = self._get_required_param(environment_params, 'environmental_cost_base', 'environment CSV')
         
         # Update environmental factors for plant models (simplified)
-        plant_state['env_photosynthesis_factor'] = 1.0  # Simplified
-        plant_state['env_transpiration_factor'] = 1.0  # Simplified
+        plant_state['env_photosynthesis_factor'] = self._get_required_param(environment_params, 'env_photosynthesis_factor', 'environment CSV')
+        plant_state['env_transpiration_factor'] = self._get_required_param(environment_params, 'env_transpiration_factor', 'environment CSV')
         
         return plant_state
 
@@ -3222,7 +3282,7 @@ class CROPGROHydroponicSimulator:
         """Use comprehensive root zone temperature model functions that were previously unused."""
         
         if hasattr(self, 'rzt_model'):
-            air_temperature = plant_state.get('air_temperature', 25.0)
+            air_temperature = plant_state['air_temperature']
             current_rzt = plant_state.get('root_zone_temp', 22.0)
             
             # Use optimal RZT calculations
@@ -3260,7 +3320,7 @@ class CROPGROHydroponicSimulator:
                 environmental_conditions = {
                     'air_temperature': air_temperature,
                     'solution_temperature': current_rzt,
-                    'humidity': plant_state.get('humidity', 60.0),
+                    'humidity': plant_state['humidity'],
                     'light_intensity': plant_state.get('solar_radiation', 10.0)
                 }
                 hourly_result = self.rzt_model.hourly_update(
@@ -3285,7 +3345,7 @@ class CROPGROHydroponicSimulator:
         
         if hasattr(self, 'ph_model'):
             current_ph = plant_state.get('ph', 6.0)
-            temperature = plant_state.get('air_temperature', 25.0)
+            temperature = plant_state['air_temperature']
             
             # Use pH-dependent solubility calculations
             if hasattr(self.ph_model, 'calculate_ph_dependent_solubility'):
@@ -3334,8 +3394,8 @@ class CROPGROHydroponicSimulator:
         if hasattr(self, 'environmental_control'):
             current_conditions = {
                 'temperature': plant_state.get('air_temperature', 25.0),
-                'humidity': plant_state.get('humidity', 60.0),
-                'co2': plant_state.get('co2_concentration', 400.0),
+                'humidity': plant_state['humidity'],
+                'co2': plant_state['co2_concentration'],
                 'light_intensity': plant_state.get('solar_radiation', 10.0)
             }
             
@@ -3518,12 +3578,13 @@ class CROPGROHydroponicSimulator:
     def _update_solution_chemistry(self, plant_state: dict) -> dict:
         """Update solution chemistry with realistic dynamics."""
         # Update solution volume
-        water_loss = plant_state['water_uptake_rate'] * getattr(self.system_config, 'n_plants', 12)
+        system_config_params = getattr(self.system_config, 'system_configuration', {})
+        water_loss = plant_state['water_uptake_rate'] * self._get_required_param(system_config_params, 'n_plants', 'system_configuration CSV')
         plant_state['solution_volume'] = max(50.0, plant_state['solution_volume'] - water_loss)
-        
+
         # Update nutrient concentrations using mass balance
         tank_volume_L = plant_state['solution_volume']
-        plant_count = getattr(self.system_config, 'n_plants', 12)
+        plant_count = self._get_required_param(system_config_params, 'n_plants', 'system_configuration CSV')
         
         updated_concentrations = {}
         for nutrient, uptake_rate in plant_state['nutrient_uptake'].items():
@@ -3538,8 +3599,7 @@ class CROPGROHydroponicSimulator:
             if tank_volume_L > 0.0:
                 final_conc = final_mass / tank_volume_L
             else:
-                environment_params = getattr(self.system_config, 'environment', {})
-                final_conc = self._get_required_param(environment_params, 'default_final_concentration', 'environment CSV')
+                raise ValueError("❌ Tank volume is zero - valid system configuration required for nutrient calculation")
             
             updated_concentrations[nutrient] = final_conc
         
@@ -3555,7 +3615,8 @@ class CROPGROHydroponicSimulator:
         
         # Add realistic CO2 variability
         system_params = getattr(self.system_config, 'system', {})
-        base_co2 = self._get_required_param(system_params, 'default_co2', 'system CSV')
+        environment_params = getattr(self.system_config, 'environment', {})
+        base_co2 = self._get_required_param(environment_params, 'min_daylight_co2', 'environment CSV')
         co2_variation = random.uniform(-20, 20)  # ±20 ppm variation
         plant_state['co2_concentration'] = max(350.0, min(450.0, base_co2 + co2_variation))
         
@@ -3656,7 +3717,7 @@ class CROPGROHydroponicSimulator:
         environmental_conditions = {
             'air_temperature': plant_state.get('air_temperature', 22.0),
             'solar_radiation': plant_state.get('solar_radiation', 18.0),
-            'humidity': plant_state.get('humidity', 60.0),
+            'humidity': plant_state['humidity'],
             'wind_speed': plant_state.get('wind_speed', 2.0),
             'tank_volume': plant_state.get('solution_volume', 500.0),
             'day_of_year': plant_state.get('day', 1),
@@ -3667,7 +3728,7 @@ class CROPGROHydroponicSimulator:
         system_parameters = {
             'tank_material': 'plastic',  # Default tank material
             'tank_insulation': 0.1,      # Insulation factor
-            'flow_rate': getattr(self.system_config, 'flow_rate', 1.5),
+            'flow_rate': self._get_required_param(getattr(self.system_config, 'system_configuration', {}), 'flow_rate', 'system_configuration CSV'),
             'system_type': getattr(self.system_config, 'system_type', 'NFT')
         }
         
@@ -3817,7 +3878,7 @@ class CROPGROHydroponicSimulator:
             rainfall=daily_weather_data.get('rainfall', 0.0)
         )
         
-        system_co2 = getattr(self.system_config, 'default_co2', 400.0)
+        system_co2 = self._get_required_param(getattr(self.system_config, 'system_configuration', {}), 'default_co2', 'system_configuration CSV')
         
         hourly_weather_list = self.hourly_weather_interpolator.interpolate_daily_to_hourly(
             daily_weather, day_of_year=day, latitude=40.0, system_co2=system_co2
@@ -3848,7 +3909,7 @@ class CROPGROHydroponicSimulator:
                     humidity=hourly_weather.humidity,
                     lai=self.current_lai,
                     hour=hour,
-                    ec_factor=stress_factors.get('salinity_factor', 1.0),
+                    ec_factor=1.0,  # Default salinity factor from CSV
                     config_dict=photosynthesis_params,
                     sunlit_lai=sunlit_lai,
                     shaded_lai=shaded_lai

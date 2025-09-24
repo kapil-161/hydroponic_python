@@ -259,38 +259,6 @@ def create_summary_table(data: Dict[str, float], title: str = "Results") -> str:
 # DAILY UPDATE BASE CLASS
 # =============================================================================
 
-@dataclass
-class DailyUpdateInput:
-    """Standard input data structure for daily model updates."""
-    day: int
-    temperature: float
-    humidity: float
-    solar_radiation: float
-    daylength: float
-    vpd: float
-    co2_concentration: float
-    ph: float
-    ec: float
-    nutrient_concentrations: Dict[str, float]
-    biomass_state: Dict[str, float]
-    stress_factors: Dict[str, float]
-    environmental_conditions: Dict[str, Any]
-
-
-@dataclass
-class DailyUpdateOutput:
-    """Standard output data structure for daily model updates."""
-    success: bool
-    updated_state: Dict[str, Any]
-    calculated_values: Dict[str, float]
-    warnings: list = None
-    errors: list = None
-
-    def __post_init__(self):
-        if self.warnings is None:
-            self.warnings = []
-        if self.errors is None:
-            self.errors = []
 
 
 # =============================================================================
