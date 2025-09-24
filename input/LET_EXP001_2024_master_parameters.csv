@@ -585,3 +585,64 @@ dehumidifier_capacity,8.0,L_per_hour,Water removal rate for dehumidifier,control
 system_multipliers_nft_root_length_multiplier,1.0,unitless,Root length multiplier for NFT system,root_system
 system_multipliers_nft_surface_area_multiplier,1.0,unitless,Surface area multiplier for NFT system,root_system
 system_multipliers_nft_branching_multiplier,1.0,unitless,Branching multiplier for NFT system,root_system
+cultivar_phenotype,0.5,fraction,Default phenotype value for cultivar evaluation,genetic_parameters
+cultivar_yield_potential,1.0,fraction,Genetic yield potential factor,genetic_parameters
+genetic_photosynthesis_capacity,1.0,fraction,Genetic photosynthesis capacity factor,genetic_parameters
+genetic_ec_tolerance,1.5,fraction,Genetic EC tolerance factor,genetic_parameters
+genetic_nitrate_efficiency,1.0,fraction,Genetic nitrate efficiency factor,genetic_parameters
+root_activity_young,1.0,fraction,Root activity factor for young roots,genetic_parameters
+root_activity_old,0.8,fraction,Root activity factor for old roots,genetic_parameters
+root_turnover_rate,0.0,fraction,Root turnover rate,genetic_parameters
+base_growth_rate,0.5,g_per_day,Base growth rate in grams per day,growth_parameters
+leaf_growth_allocation,0.5,fraction,Leaf growth allocation fraction,growth_parameters
+stem_growth_allocation,0.3,fraction,Stem growth allocation fraction,growth_parameters
+root_growth_allocation,0.2,fraction,Root growth allocation fraction,growth_parameters
+default_light_intensity,10.0,MJ_per_m2_per_day,Default light intensity for genetic calculations,environment
+default_ec,1.2,dS_per_m,Default EC for genetic calculations,environment
+flow_rate_default,50.0,L_per_hour,Default flow rate for hydroponic system,system
+tank_volume_default,500.0,L,Default tank volume for hydroponic system,system
+system_area_default,1.0,m2,Default system area,system
+optimal_light_default,20.0,MJ_per_m2_per_day,Default optimal light intensity,environment
+optimal_temp_default,22.0,celsius,Default optimal temperature,environment
+min_fraction_allocation,0.05,fraction,Minimum fraction for biomass allocation,growth_parameters
+early_vegetative_leaf_sink,0.4,fraction,Leaf sink strength in early vegetative stage,growth_parameters
+early_vegetative_stem_sink,0.2,fraction,Stem sink strength in early vegetative stage,growth_parameters
+early_vegetative_root_sink,0.4,fraction,Root sink strength in early vegetative stage,growth_parameters
+mid_vegetative_leaf_sink,0.5,fraction,Leaf sink strength in mid vegetative stage,growth_parameters
+mid_vegetative_stem_sink,0.3,fraction,Stem sink strength in mid vegetative stage,growth_parameters
+mid_vegetative_root_sink,0.2,fraction,Root sink strength in mid vegetative stage,growth_parameters
+head_formation_leaf_sink,0.6,fraction,Leaf sink strength in head formation stage,growth_parameters
+head_formation_stem_sink,0.3,fraction,Stem sink strength in head formation stage,growth_parameters
+head_formation_root_sink,0.1,fraction,Root sink strength in head formation stage,growth_parameters
+default_leaf_sink,0.5,fraction,Default leaf sink strength,growth_parameters
+default_stem_sink,0.3,fraction,Default stem sink strength,growth_parameters
+default_root_sink,0.2,fraction,Default root sink strength,growth_parameters
+ideal_leaf_fraction,0.5,fraction,Ideal leaf fraction for functional balance,growth_parameters
+ideal_stem_fraction,0.3,fraction,Ideal stem fraction for functional balance,growth_parameters
+ideal_root_fraction,0.2,fraction,Ideal root fraction for functional balance,growth_parameters
+balance_index_base,1.0,fraction,Base balance index for functional balance calculation,growth_parameters
+deviation_penalty,0.5,fraction,Penalty factor for deviation from ideal fractions,growth_parameters
+default_thermal_requirement,50.0,degree_days,Default thermal requirement for phenology,phenology
+default_canopy_position,0.5,fraction,Default middle canopy position,canopy_parameters
+default_n_concentration,0.03,fraction,Default 3% N content,nitrogen_parameters
+default_sunlit_fraction,0.3,fraction,Default sunlit fraction,canopy_parameters
+default_respiration_rate_25,100.0,unitless,Default respiration rate at 25°C,respiration_parameters
+default_activation_energy,50000.0,J_per_mol,Default activation energy for respiration,respiration_parameters
+optimal_temp_factor,1.0,fraction,Optimal temperature factor,growth_parameters
+early_stage_factor,0.3,fraction,Growth stage factor for early stages,growth_parameters
+mid_stage_factor,0.8,fraction,Growth stage factor for mid stages,growth_parameters
+late_stage_factor,1.0,fraction,Growth stage factor for late stages,growth_parameters
+default_stage_factor,0.5,fraction,Default growth stage factor,growth_parameters
+default_source_leaf,0.5,fraction,Default source strength for leaves,growth_parameters
+default_source_stem,0.3,fraction,Default source strength for stems,growth_parameters
+default_source_root,0.2,fraction,Default source strength for roots,growth_parameters
+default_temperature_stress,0.0,fraction,Default temperature stress value,stress_parameters
+default_optimal_vpd,0.7,kPa,Default optimal VPD value,environment
+default_light_stress,0.0,fraction,Default light stress value,stress_parameters
+default_co2_stress,0.0,fraction,Default CO2 stress value,stress_parameters
+default_mild_stress,0.1,fraction,Default mild stress value,stress_parameters
+default_growth_improvement,15.0,percent,Default growth improvement estimate,growth_parameters
+default_final_concentration,0.0,mg_per_L,Default final concentration,environment
+default_daily_photosynthesis,0.0,unitless,Default daily photosynthesis value,photosynthesis
+default_daily_respiration,0.0,unitless,Default daily respiration value,respiration_parameters
+default_hourly_photosynthesis,0.0,unitless,Default hourly photosynthesis value,photosynthesis
