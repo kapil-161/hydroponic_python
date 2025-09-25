@@ -175,31 +175,44 @@ class ComprehensivePhenologyModel:
         self.temperature_history: List[float] = []
 
     def calculate_thermal_time(self, temperature: float) -> float:
+        """Use consolidated thermal time calculation from core_utils."""
+        from src.utils.core_utils import calculate_thermal_time
+
         if temperature is None:
             raise ValueError("Temperature must be provided")
-        Tbase = self.params.base_temperature
-        Topt1 = self.params.optimal_temperature_min
-        Topt2 = self.params.optimal_temperature_max
-        Tmax = self.params.maximum_temperature
-        if Tbase >= Topt1 or Topt1 >= Topt2 or Topt2 >= Tmax:
-            raise ValueError("Invalid temperature parameters: base < opt_min < opt_max < max")
-        if temperature <= Tbase or temperature >= Tmax:
-            return 0.0
-        elif Tbase < temperature <= Topt1:
-            factor = (temperature - Tbase) / (Topt1 - Tbase)
-            return (temperature - Tbase) * factor * self.params.thermal_time_scale
-        elif Topt1 < temperature <= Topt2:
-            return (temperature - Tbase) * self.params.thermal_time_scale
-        else:
-            factor = (Tmax - temperature) / (Tmax - Topt2)
-            return (temperature - Tbase) * factor * self.params.thermal_time_scale
+
+        # Create config structure for consolidated function
+        thermal_config = type('Config', (), {
+            'thermal_time': {
+                'base_temp': self.params.base_temperature,
+                'optimal_temp_min': self.params.optimal_temperature_min,
+                'optimal_temp_max': self.params.optimal_temperature_max,
+                'max_temp': self.params.maximum_temperature,
+                'thermal_time_scale': self.params.thermal_time_scale
+            }
+        })
+
+        return calculate_thermal_time(temperature, thermal_config, method='scaled')
 
     def calculate_temperature_factor(self, temperature: float) -> float:
-        thermal_time = self.calculate_thermal_time(temperature)
-        max_thermal_time = (self.params.optimal_temperature_min - self.params.base_temperature) * self.params.thermal_time_scale
-        if max_thermal_time <= 0:
-            raise ValueError("Maximum thermal time must be positive")
-        return max(0.0, min(1.0, thermal_time / max_thermal_time))
+        """Use consolidated temperature factor calculation from core_utils."""
+        from src.utils.core_utils import calculate_temperature_factor
+
+        # Create config structure for consolidated function
+        temp_config = type('Config', (), {
+            'temperature_factor': {
+                'max_thermal_time': (self.params.optimal_temperature_min - self.params.base_temperature) * self.params.thermal_time_scale
+            },
+            'thermal_time': {
+                'base_temp': self.params.base_temperature,
+                'optimal_temp_min': self.params.optimal_temperature_min,
+                'optimal_temp_max': self.params.optimal_temperature_max,
+                'max_temp': self.params.maximum_temperature,
+                'thermal_time_scale': self.params.thermal_time_scale
+            }
+        })
+
+        return calculate_temperature_factor(temperature, temp_config, method='thermal')
 
     def calculate_photoperiod_factor(self, daylength: float) -> float:
         if daylength is None or daylength < 0:

@@ -57,6 +57,10 @@ class WaterUptakeParameters:
     max_osmotic_adjustment: float         # MPa
     salt_stress_osmotic_factor: float      # Dimensionless
 
+    # Temperature factor parameters
+    temp_tolerance: float                 # Temperature tolerance range
+    min_temp_factor: float               # Minimum temperature factor
+
     def __post_init__(self):
         """Validate parameter ranges to ensure physical realism."""
         if not all(isinstance(p, (int, float)) for p in vars(self).values()):
@@ -87,8 +91,10 @@ class WaterUptakeParameters:
             raise ValueError("Hydraulic conductances must be positive")
         if self.root_conductance_scaling_factor <= 0 or self.xylem_conductance_scaling_factor <= 0:
             raise ValueError("Conductance scaling factors must be positive")
-        if self.transpiration_potential_factor <= 0 or self.solution_potential_factor <= 0:
-            raise ValueError("Potential factors must be positive")
+        if self.transpiration_potential_factor == 0:
+            raise ValueError("Transpiration potential factor cannot be zero")
+        if self.solution_potential_factor == 0:
+            raise ValueError("Solution potential factor cannot be zero")
         if self.max_osmotic_adjustment <= 0 or self.salt_stress_osmotic_factor <= 0:
             raise ValueError("Stress parameters must be positive")
 
@@ -106,7 +112,7 @@ class WaterUptakeParameters:
             'metabolic_water_per_lai', 'base_root_conductance', 'root_conductance_scaling_factor',
             'base_xylem_conductance', 'xylem_conductance_scaling_factor', 'base_leaf_potential',
             'transpiration_potential_factor', 'solution_potential_factor', 'cavitation_threshold',
-            'max_osmotic_adjustment', 'salt_stress_osmotic_factor'
+            'max_osmotic_adjustment', 'salt_stress_osmotic_factor', 'temp_tolerance', 'min_temp_factor'
         ]
         for param in required_params:
             if (param not in water_params and
@@ -139,7 +145,9 @@ class WaterUptakeParameters:
             solution_potential_factor=float(root_params['solution_potential_factor']),
             cavitation_threshold=float(root_params['cavitation_threshold']),
             max_osmotic_adjustment=float(stress_params['max_osmotic_adjustment']),
-            salt_stress_osmotic_factor=float(stress_params['salt_stress_osmotic_factor'])
+            salt_stress_osmotic_factor=float(stress_params['salt_stress_osmotic_factor']),
+            temp_tolerance=float(water_params['temp_tolerance']),
+            min_temp_factor=float(water_params['min_temp_factor'])
         )
 
 @dataclass
@@ -351,12 +359,24 @@ class WaterUptakeModel:
         return max(0.1, hydraulic_water_uptake + metabolic_water)
 
     def _calculate_temperature_factor(self, temperature: float) -> float:
-        """Calculate temperature response factor (0 to 1)."""
+        """Use consolidated temperature factor calculation from core_utils."""
+        from src.utils.core_utils import calculate_temperature_factor
+
         if not isinstance(temperature, (int, float)):
             raise ValueError("Temperature must be numeric")
-        if self.params.optimal_temperature - 15 <= temperature <= self.params.optimal_temperature + 15:
-            return 1.0
-        return max(0.3, 1.0 - abs(temperature - self.params.optimal_temperature) * self.params.temperature_sensitivity)
+
+        # Create config structure for consolidated function
+        # Replace hardcoded 15 and 0.3 with CSV parameters
+        temp_config = type('Config', (), {
+            'temperature_factor': {
+                'optimal_temp': self.params.optimal_temperature,
+                'temperature_sensitivity': self.params.temperature_sensitivity,
+                'temp_tolerance': self.params.temp_tolerance,  # Must be in CSV instead of hardcoded 15
+                'min_factor': self.params.min_temp_factor      # Must be in CSV instead of hardcoded 0.3
+            }
+        })
+
+        return calculate_temperature_factor(temperature, temp_config, method='linear')
 
     def _calculate_vpd_factor(self, vpd: float) -> float:
         """Calculate VPD response factor (0 to 1)."""

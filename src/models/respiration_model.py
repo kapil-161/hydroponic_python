@@ -357,15 +357,26 @@ class EnhancedRespirationModel:
         return max(self.params.min_diurnal_factor, min(self.params.max_diurnal_factor, diurnal_factor))
 
     def _calculate_temperature_stress_factor(self, temperature: float) -> float:
+        """Use consolidated temperature stress factor calculation from core_utils."""
+        from src.utils.core_utils import calculate_temperature_stress_factor
+
         if temperature is None:
             raise ValueError("Temperature must be provided")
-        temp_deviation = abs(temperature - self.params.optimal_temperature)
-        if temp_deviation <= self.params.moderate_stress_threshold:
-            return 1.0
-        elif temp_deviation <= self.params.severe_stress_threshold:
-            return 1.0 + self.params.moderate_stress_factor * (temp_deviation - self.params.moderate_stress_threshold)
-        else:
-            return self.params.severe_stress_base + self.params.severe_stress_factor * (temp_deviation - self.params.severe_stress_threshold)
+
+        # Create config structure for consolidated function
+        # ALL parameters come from CSV configuration
+        temp_config = type('Config', (), {
+            'temperature_stress': {
+                'optimal_temperature': self.params.optimal_temperature,
+                'moderate_stress_threshold': self.params.moderate_stress_threshold,
+                'severe_stress_threshold': self.params.severe_stress_threshold,
+                'moderate_stress_factor': self.params.moderate_stress_factor,
+                'severe_stress_base': self.params.severe_stress_base,
+                'severe_stress_factor': self.params.severe_stress_factor
+            }
+        })
+
+        return calculate_temperature_stress_factor(temperature, temp_config, method='respiration')
 
     def _calculate_respiratory_quotient(self, hour: int) -> float:
         if hour is None:

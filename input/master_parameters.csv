@@ -1,0 +1,279 @@
+category,parameter_name,value,unit,description
+# Phenology Model Parameters
+phenology_parameters,base_temperature,10.0,°C,Base temperature for thermal time calculation
+phenology_parameters,optimal_temperature_min,18.0,°C,Minimum optimal temperature for development
+phenology_parameters,optimal_temperature_max,24.0,°C,Maximum optimal temperature for development
+phenology_parameters,maximum_temperature,35.0,°C,Maximum temperature beyond which development ceases
+phenology_parameters,thermal_time_scale,1.0,dimensionless,Scaling factor for thermal time calculation
+phenology_parameters,photoperiod_sensitive,true,boolean,Whether plant is sensitive to photoperiod
+phenology_parameters,critical_photoperiod,14.0,hours,Critical photoperiod for flowering induction
+phenology_parameters,photoperiod_slope,0.1,dimensionless,Slope of photoperiod response function
+phenology_parameters,bolting_photoperiod_threshold,16.0,hours,Photoperiod threshold for bolting risk
+phenology_parameters,bolting_temperature_threshold,25.0,°C,Temperature threshold for bolting risk
+phenology_parameters,bolting_photoperiod_divisor,2.0,dimensionless,Divisor for photoperiod bolting risk calculation
+phenology_parameters,bolting_photoperiod_risk_max,0.8,fraction,Maximum risk from photoperiod stress
+phenology_parameters,bolting_temperature_divisor,5.0,dimensionless,Divisor for temperature bolting risk calculation
+phenology_parameters,bolting_temperature_risk_max,0.7,fraction,Maximum risk from temperature stress
+phenology_parameters,bolting_sustained_stress_risk,0.05,fraction,Daily risk accumulation under sustained stress
+phenology_parameters,bolting_maturity_risk_factor,0.02,fraction,Risk increase per day after maturity
+phenology_parameters,bolting_maturity_risk_max,0.6,fraction,Maximum maturity-related bolting risk
+phenology_parameters,bolting_risk_threshold,0.3,fraction,Cumulative risk threshold for bolting initiation
+phenology_parameters,environmental_buffer_days,3,days,Buffer days for environmental stress averaging
+phenology_parameters,environmental_history_days,7,days,Days of environmental history to consider
+phenology_parameters,head_formation_node_requirement,8,nodes,Minimum node count required for head formation
+phenology_parameters,vernalization_required,false,boolean,Whether vernalization is required for flowering
+phenology_parameters,vernalization_temperature,4.0,°C,Temperature for vernalization requirement
+phenology_parameters,vernalization_days,30,days,Days of vernalization required
+phenology_parameters,stress_acceleration_factor,1.5,dimensionless,Acceleration factor under stress conditions
+phenology_parameters,drought_threshold,0.3,fraction,Water stress threshold for development acceleration
+phenology_parameters,heat_threshold,30.0,°C,Temperature threshold for heat stress effects
+
+# Thermal Requirements for Growth Stage Transitions
+phenology_parameters,GE_to_VE,50.0,GDD,Germination to emergence
+phenology_parameters,VE_to_V1,80.0,GDD,Emergence to first leaf
+phenology_parameters,V1_to_V2,60.0,GDD,First to second leaf
+phenology_parameters,V2_to_V3,60.0,GDD,Second to third leaf
+phenology_parameters,V3_to_V4,60.0,GDD,Third to fourth leaf
+phenology_parameters,V4_to_V5,60.0,GDD,Fourth to fifth leaf
+phenology_parameters,V5_to_V6,60.0,GDD,Fifth to sixth leaf
+phenology_parameters,V6_to_V7,65.0,GDD,Sixth to seventh leaf
+phenology_parameters,V7_to_V8,65.0,GDD,Seventh to eighth leaf
+phenology_parameters,V8_to_V9,65.0,GDD,Eighth to ninth leaf
+phenology_parameters,V9_to_V10,70.0,GDD,Ninth to tenth leaf
+phenology_parameters,V10_to_V11+,70.0,GDD,Tenth leaf to mature vegetative
+phenology_parameters,V11+_to_HI,100.0,GDD,Mature vegetative to head initiation
+phenology_parameters,HI_to_HD,150.0,GDD,Head initiation to head development
+phenology_parameters,HD_to_HM,200.0,GDD,Head development to harvest maturity
+phenology_parameters,HM_to_BI,300.0,GDD,Harvest maturity to bolting initiation
+phenology_parameters,BI_to_FL,120.0,GDD,Bolting initiation to flowering
+phenology_parameters,FL_to_AN,50.0,GDD,Flowering to anthesis
+phenology_parameters,AN_to_SD,200.0,GDD,Anthesis to seed development
+phenology_parameters,SD_to_PM,150.0,GDD,Seed development to physiological maturity
+
+# Consolidated Thermal Time Parameters
+thermal_time,base_temp,10.0,°C,Base temperature for thermal time calculation
+thermal_time,optimal_temp_min,18.0,°C,Minimum optimal temperature for thermal time
+thermal_time,optimal_temp_max,24.0,°C,Maximum optimal temperature for thermal time
+thermal_time,max_temp,35.0,°C,Maximum temperature for thermal time calculation
+thermal_time,thermal_time_scale,1.0,dimensionless,Scale factor for thermal time calculation
+
+# Photosynthesis Model Parameters
+photosynthesis_parameters,phi_psii,0.85,dimensionless,Maximum quantum efficiency of PSII
+photosynthesis_parameters,r,8.314,J_mol_K,Gas constant for Arrhenius calculations
+photosynthesis_parameters,g_max,0.6,mol_m2_s,Maximum stomatal conductance
+photosynthesis_parameters,min_par_threshold,30.0,μmol_m2_s,Minimum PAR threshold for photosynthesis
+photosynthesis_parameters,enzyme_saturation_lai,3.0,m2_m2,LAI threshold for enzyme saturation
+photosynthesis_parameters,light_penetration_lai,2.5,m2_m2,LAI threshold for light penetration effects
+photosynthesis_parameters,enzyme_saturation_rate,0.1,dimensionless,Rate of enzyme saturation decline per LAI unit
+photosynthesis_parameters,min_enzyme_factor,0.3,dimensionless,Minimum enzyme efficiency factor
+photosynthesis_parameters,excess_lai_efficiency,0.8,dimensionless,Efficiency factor for excess LAI
+photosynthesis_parameters,umol_to_g_carbon_ratio,1.2e-5,g_μmol,Conversion ratio from μmol CO2 to g C
+photosynthesis_parameters,seconds_per_hour,3600,s,Seconds per hour for time conversions
+photosynthesis_parameters,hours_per_day,24,h,Hours per day for daily calculations
+photosynthesis_parameters,kc,270.0,μbar,Michaelis constant for CO2
+photosynthesis_parameters,ko,165000.0,μbar,Michaelis constant for O2
+photosynthesis_parameters,gamma_star,42.75,μbar,CO2 compensation point
+photosynthesis_parameters,jmax_25,120.0,μmol_m2_s,Maximum electron transport rate at 25°C
+photosynthesis_parameters,vcmax_25,60.0,μmol_m2_s,Maximum carboxylation rate at 25°C
+photosynthesis_parameters,theta,0.7,dimensionless,Curvature factor of light response
+photosynthesis_parameters,alpha,0.24,mol_mol,Quantum efficiency of CO2 fixation
+photosynthesis_parameters,rd_25,1.5,μmol_m2_s,Dark respiration rate at 25°C
+photosynthesis_parameters,eaj,37000.0,J_mol,Activation energy for Jmax
+photosynthesis_parameters,eav,65000.0,J_mol,Activation energy for Vcmax
+photosynthesis_parameters,ear,46000.0,J_mol,Activation energy for dark respiration
+photosynthesis_parameters,o2_mmol_mol,210.0,mmol_mol,Atmospheric O2 concentration
+photosynthesis_parameters,shaded_light_fraction,0.15,dimensionless,Fraction of PAR available to shaded leaves
+photosynthesis_parameters,photosynthesis_cold_limit,5.0,°C,Cold temperature limit for photosynthesis stress
+photosynthesis_parameters,photosynthesis_heat_limit,40.0,°C,Heat temperature limit for photosynthesis stress
+photosynthesis_parameters,min_stress_factor,0.1,dimensionless,Minimum temperature stress factor for photosynthesis
+
+# Respiration Model Parameters
+respiration_parameters,maintenance_base_rate,0.015,g_C_g_biomass_day,Base maintenance respiration rate at 25°C
+respiration_parameters,reference_temperature,25.0,°C,Reference temperature for Q10 response
+respiration_parameters,q10_factor,2.0,dimensionless,Temperature response coefficient for respiration
+respiration_parameters,growth_efficiency,0.75,dimensionless,Conversion efficiency for biomass synthesis
+respiration_parameters,biosynthetic_cost,1.35,g_glucose_g_biomass,General biosynthetic cost for growth
+respiration_parameters,age_effect_coefficient,0.005,day_inverse,Daily increase in respiration per day of age
+respiration_parameters,max_age_effect,3.0,dimensionless,Maximum age multiplier for respiration
+respiration_parameters,acclimation_rate,0.1,dimensionless,Rate of thermal acclimation per day
+respiration_parameters,acclimation_memory,14.0,days,Days of temperature memory for acclimation
+respiration_parameters,n_effect_slope,1.2,dimensionless,Respiration response to leaf N content
+respiration_parameters,reference_leaf_n,0.035,g_N_g_biomass,Reference leaf nitrogen content
+respiration_parameters,max_temperature_threshold,40.0,°C,Maximum temperature before protein denaturation
+respiration_parameters,temperature_decay_factor,0.1,°C_inverse,Decay factor for high temperature respiration
+respiration_parameters,size_penalty_threshold,50.0,g_biomass,Biomass threshold for size penalty
+respiration_parameters,size_penalty_rate,0.002,g_inverse,Rate of size penalty increase per g biomass
+respiration_parameters,glucose_to_carbon_ratio,0.4,g_C_g_glucose,Glucose to carbon conversion ratio
+respiration_parameters,min_history_threshold,3,days,Minimum temperature history days for acclimation
+respiration_parameters,day_start_hour,6,h,Start hour of day period
+respiration_parameters,day_end_hour,18,h,End hour of day period
+respiration_parameters,day_respiration_factor,1.0,dimensionless,Day period respiration factor
+respiration_parameters,night_respiration_factor,0.8,dimensionless,Night period respiration factor
+respiration_parameters,carbon_to_co2_ratio,3.67,g_CO2_g_C,Carbon to CO2 molecular weight ratio
+respiration_parameters,circadian_amplitude_1,0.15,dimensionless,Amplitude of first circadian peak
+respiration_parameters,circadian_peak_1,14,h,Hour of first circadian peak
+respiration_parameters,circadian_amplitude_2,0.05,dimensionless,Amplitude of second circadian peak
+respiration_parameters,circadian_peak_2,2,h,Hour of second circadian peak
+respiration_parameters,diurnal_base_factor,1.0,dimensionless,Base factor for diurnal variation
+respiration_parameters,optimal_temperature,22.0,°C,Optimal temperature for respiration
+respiration_parameters,moderate_stress_threshold,30.0,°C,Temperature threshold for moderate stress
+respiration_parameters,severe_stress_threshold,35.0,°C,Temperature threshold for severe stress
+respiration_parameters,moderate_stress_factor,1.5,dimensionless,Multiplication factor for moderate stress
+respiration_parameters,severe_stress_base,0.5,dimensionless,Base factor for severe stress
+respiration_parameters,severe_stress_factor,2.0,dimensionless,Multiplication factor for severe stress
+respiration_parameters,daytime_respiratory_quotient,0.9,dimensionless,CO2 release to O2 uptake ratio during day
+respiration_parameters,nighttime_respiratory_quotient,1.0,dimensionless,CO2 release to O2 uptake ratio during night
+respiration_parameters,min_acclimation_temperature,10.0,°C,Minimum temperature for acclimation
+respiration_parameters,max_acclimation_temperature,35.0,°C,Maximum temperature for acclimation
+respiration_parameters,min_diurnal_factor,0.3,dimensionless,Minimum diurnal respiration factor
+respiration_parameters,max_diurnal_factor,1.8,dimensionless,Maximum diurnal respiration factor
+respiration_parameters,tissue_factor_leaves,1.0,dimensionless,Respiration factor for leaf tissues
+respiration_parameters,tissue_factor_stems,0.8,dimensionless,Respiration factor for stem tissues
+respiration_parameters,tissue_factor_roots,1.2,dimensionless,Respiration factor for root tissues
+respiration_parameters,tissue_factor_reproductive,1.5,dimensionless,Respiration factor for reproductive tissues
+respiration_parameters,protein_respiration_cost,2.2,g_glucose_g_protein,Biosynthetic cost for protein synthesis
+respiration_parameters,carbohydrate_respiration_cost,1.1,g_glucose_g_carb,Biosynthetic cost for carbohydrate synthesis
+respiration_parameters,lipid_respiration_cost,3.2,g_glucose_g_lipid,Biosynthetic cost for lipid synthesis
+respiration_parameters,organic_acid_respiration_cost,1.4,g_glucose_g_acid,Biosynthetic cost for organic acid synthesis
+respiration_parameters,lignin_respiration_cost,2.8,g_glucose_g_lignin,Biosynthetic cost for lignin synthesis
+respiration_parameters,mineral_respiration_cost,0.1,g_glucose_g_mineral,Biosynthetic cost for mineral uptake
+respiration_parameters,protein_fraction,0.15,dimensionless,Fraction of growth allocated to proteins
+respiration_parameters,carbohydrate_fraction,0.50,dimensionless,Fraction of growth allocated to carbohydrates
+respiration_parameters,lipid_fraction,0.08,dimensionless,Fraction of growth allocated to lipids
+respiration_parameters,organic_acid_fraction,0.12,dimensionless,Fraction of growth allocated to organic acids
+respiration_parameters,lignin_fraction,0.15,dimensionless,Fraction of growth allocated to lignin
+
+# Water Uptake Model Parameters
+water_parameters,psychrometric_constant,0.665,kPa_°C,Psychrometric constant for Penman-Monteith
+water_parameters,wind_speed,2.0,m_s,Wind speed for evapotranspiration calculations
+water_parameters,net_radiation_factor,0.77,dimensionless,Fraction of solar radiation converted to net radiation
+water_parameters,radiation_offset,2.45,MJ_m2_day,Radiation offset for net radiation calculation
+water_parameters,base_crop_coefficient,1.0,dimensionless,Base crop coefficient for lettuce
+water_parameters,lai_coefficient_factor,3.0,m2_m2,LAI scaling factor for crop coefficient
+water_parameters,vegetative_stage_factor,0.8,dimensionless,Crop coefficient multiplier for vegetative stage
+water_parameters,head_formation_stage_factor,1.2,dimensionless,Crop coefficient multiplier for head formation
+water_parameters,mature_stage_factor,0.9,dimensionless,Crop coefficient multiplier for mature stage
+water_parameters,optimal_temperature,22.0,°C,Optimal temperature for water uptake
+water_parameters,temperature_sensitivity,0.15,°C_inverse,Temperature response sensitivity factor
+water_parameters,optimal_vpd_min,0.8,kPa,Minimum optimal vapor pressure deficit
+water_parameters,optimal_vpd_max,1.5,kPa,Maximum optimal vapor pressure deficit
+water_parameters,vpd_sensitivity,0.3,kPa_inverse,VPD response sensitivity factor
+water_parameters,metabolic_water_per_biomass,0.002,L_g_biomass,Metabolic water demand per unit biomass
+water_parameters,metabolic_water_per_lai,0.1,L_LAI,Metabolic water demand per LAI unit
+water_parameters,temp_tolerance,15.0,°C,Temperature tolerance range for water uptake
+water_parameters,min_temp_factor,0.3,dimensionless,Minimum temperature response factor
+
+# Root System Parameters
+root_system_parameters,base_root_conductance,0.5,L_day_MPa_m2,Base root hydraulic conductance
+root_system_parameters,root_conductance_scaling_factor,2.0,dimensionless,Root conductance scaling factor
+root_system_parameters,base_xylem_conductance,1.2,L_day_MPa,Base xylem hydraulic conductance
+root_system_parameters,xylem_conductance_scaling_factor,10.0,g_biomass,Xylem conductance scaling factor
+root_system_parameters,base_leaf_potential,-0.3,MPa,Baseline leaf water potential
+root_system_parameters,transpiration_potential_factor,0.05,MPa_mm_day,Leaf potential change per transpiration rate
+root_system_parameters,solution_potential_factor,-0.036,MPa_dS_m,Solution potential change per EC unit
+root_system_parameters,cavitation_threshold,-2.0,MPa,Water potential threshold for cavitation
+
+# Stress Parameters (water uptake specific)
+stress_parameters,max_osmotic_adjustment,0.5,MPa,Maximum osmotic adjustment under stress
+stress_parameters,salt_stress_osmotic_factor,0.8,dimensionless,Salinity stress effect on osmotic adjustment
+
+# Environmental Control System Parameters
+environment,target_vpd,1.0,kPa,Target vapor pressure deficit for optimal growth
+environment,vpd_tolerance,0.2,kPa,Acceptable VPD deviation from target
+environment,min_humidity,45.0,%,Minimum allowed relative humidity
+environment,max_humidity,75.0,%,Maximum allowed relative humidity
+environment,day_temp,22.0,°C,Optimal daytime temperature
+environment,night_temp,18.0,°C,Optimal nighttime temperature
+environment,temp_tolerance,2.0,°C,Acceptable temperature deviation
+environment,target_co2,800.0,ppm,Target CO2 concentration during photoperiod
+environment,ambient_co2,400.0,ppm,Ambient atmospheric CO2 concentration
+environment,co2_tolerance,50.0,ppm,Acceptable CO2 deviation from target
+environment,light_hours,16.0,h,Photoperiod duration per day
+environment,light_intensity_control,200.0,μmol_m2_s,Light intensity setpoint for control
+environment,co2_enrichment_start_hour,6.0,h,Hour to begin CO2 enrichment
+environment,humidity_deadband,3.0,%,Humidity control deadband to prevent oscillation
+environment,max_temperature_change_per_hour,3.0,°C_h,Maximum temperature change rate for HVAC
+environment,ambient_temperature,20.0,°C,External ambient temperature
+environment,thermal_mass_factor,0.05,h_inverse,Building thermal inertia factor
+environment,base_co2_loss_rate,20.0,ppm_h,Baseline CO2 loss rate from ventilation
+environment,min_co2_concentration,300.0,ppm,Minimum allowable CO2 concentration
+environment,max_co2_concentration,1200.0,ppm,Maximum allowable CO2 concentration
+environment,light_saturation_threshold,800.0,μmol_m2_s,Light saturation threshold for CO2 response
+environment,co2_response_vmax,2.0,dimensionless,Maximum CO2 photosynthesis enhancement factor
+environment,co2_response_km,200.0,ppm,Half-saturation CO2 concentration for response
+environment,max_co2_enhancement_factor,2.2,dimensionless,Maximum theoretical CO2 enhancement factor
+environment,co2_enrichment_duration,8.0,h,Duration of CO2 enrichment period
+environment,co2_enrichment_strategy,morning_only,text,CO2 enrichment timing strategy
+environment,co2_morning_target,1000.0,ppm,CO2 target during morning enrichment
+environment,co2_afternoon_target,600.0,ppm,CO2 target during afternoon period
+
+# PID Control Parameters
+environment,pid_humidity_kp,1.2,dimensionless,Proportional gain for humidity PID control
+environment,pid_humidity_ki,0.1,dimensionless,Integral gain for humidity PID control
+environment,pid_humidity_kd,0.05,dimensionless,Derivative gain for humidity PID control
+environment,pid_co2_kp,0.8,dimensionless,Proportional gain for CO2 PID control
+environment,pid_co2_ki,0.05,dimensionless,Integral gain for CO2 PID control
+environment,pid_co2_kd,0.02,dimensionless,Derivative gain for CO2 PID control
+environment,pid_temperature_kp,2.0,dimensionless,Proportional gain for temperature PID control
+environment,pid_temperature_ki,0.2,dimensionless,Integral gain for temperature PID control
+environment,pid_temperature_kd,0.1,dimensionless,Derivative gain for temperature PID control
+
+# Control Equipment Parameters
+control_equipment_parameters,humidifier_capacity,5.0,L_h,Maximum humidifier water addition rate
+control_equipment_parameters,dehumidifier_capacity,8.0,L_h,Maximum dehumidifier water removal rate
+control_equipment_parameters,humidifier_efficiency,0.12,%_per_L_h,Humidity increase per liter per hour
+control_equipment_parameters,dehumidifier_efficiency,0.15,%_per_L_h,Humidity decrease per liter per hour
+control_equipment_parameters,co2_injection_rate,100.0,ppm_min,Maximum CO2 injection rate
+control_equipment_parameters,co2_sensor_accuracy,25.0,ppm,CO2 sensor measurement accuracy
+control_equipment_parameters,co2_mixing_time,5.0,min,Time for CO2 to mix throughout growing area
+control_equipment_parameters,air_exchange_rate,2.0,ACH,Air changes per hour for ventilation
+control_equipment_parameters,circulation_fan_power,150.0,W,Circulation fan power consumption
+
+# Nutrient Model Parameters
+nutrient_parameters,ec_factor_n_no3,0.71,dS_m_per_mg_L,EC contribution factor for nitrate nitrogen
+nutrient_parameters,ec_factor_n_nh4,0.73,dS_m_per_mg_L,EC contribution factor for ammonium nitrogen
+nutrient_parameters,ec_factor_p_po4,0.58,dS_m_per_mg_L,EC contribution factor for phosphate phosphorus
+nutrient_parameters,ec_factor_k,0.64,dS_m_per_mg_L,EC contribution factor for potassium
+nutrient_parameters,ec_factor_ca,0.50,dS_m_per_mg_L,EC contribution factor for calcium
+nutrient_parameters,ec_factor_mg,0.82,dS_m_per_mg_L,EC contribution factor for magnesium
+nutrient_parameters,ec_factor_s_so4,0.65,dS_m_per_mg_L,EC contribution factor for sulfate sulfur
+nutrient_parameters,ec_factor_fe,0.18,dS_m_per_mg_L,EC contribution factor for iron
+nutrient_parameters,ec_factor_mn,0.19,dS_m_per_mg_L,EC contribution factor for manganese
+nutrient_parameters,ec_factor_zn,0.15,dS_m_per_mg_L,EC contribution factor for zinc
+nutrient_parameters,ec_factor_cu,0.16,dS_m_per_mg_L,EC contribution factor for copper
+nutrient_parameters,ec_factor_b,0.14,dS_m_per_mg_L,EC contribution factor for boron
+nutrient_parameters,ec_factor_mo,0.10,dS_m_per_mg_L,EC contribution factor for molybdenum
+nutrient_parameters,minimum_volume_fraction,0.1,dimensionless,Minimum solution volume fraction
+nutrient_parameters,xylem_transport_capacity,0.8,L_day_mg,Maximum xylem transport rate per unit concentration
+nutrient_parameters,phloem_transport_capacity,0.3,g_day_mg,Maximum phloem transport rate per unit concentration
+nutrient_parameters,temperature_q10,2.1,dimensionless,Temperature response coefficient for nutrient processes
+nutrient_parameters,transpiration_coupling,0.7,dimensionless,Coupling factor for transpiration-driven transport
+nutrient_parameters,ec_uptake_high_threshold,1.5,dimensionless,High EC ratio threshold for uptake modification
+nutrient_parameters,ec_uptake_low_threshold,0.5,dimensionless,Low EC ratio threshold for uptake modification
+nutrient_parameters,ec_uptake_modifier_n_high,0.3,dimensionless,Nitrogen uptake modifier under high EC
+nutrient_parameters,ec_uptake_modifier_p_high,0.4,dimensionless,Phosphorus uptake modifier under high EC
+nutrient_parameters,ec_uptake_modifier_k_high,0.2,dimensionless,Potassium uptake modifier under high EC
+nutrient_parameters,ec_uptake_modifier_ca_high,0.1,dimensionless,Calcium uptake modifier under high EC
+nutrient_parameters,ec_uptake_modifier_n_low,0.2,dimensionless,Nitrogen uptake modifier under low EC
+nutrient_parameters,ec_uptake_modifier_p_low,0.3,dimensionless,Phosphorus uptake modifier under low EC
+nutrient_parameters,ec_uptake_modifier_fe_low,0.4,dimensionless,Iron uptake modifier under low EC
+
+# Michaelis-Menten Uptake Kinetics
+nutrient_parameters,kinetics_n_no3_vmax,12.0,mg_cm2_day,Maximum uptake rate for nitrate nitrogen
+nutrient_parameters,kinetics_n_no3_km,15.0,mg_L,Michaelis constant for nitrate nitrogen
+nutrient_parameters,kinetics_n_no3_min_conc,0.5,mg_L,Minimum concentration for nitrate nitrogen uptake
+nutrient_parameters,kinetics_n_nh4_vmax,8.0,mg_cm2_day,Maximum uptake rate for ammonium nitrogen
+nutrient_parameters,kinetics_n_nh4_km,5.0,mg_L,Michaelis constant for ammonium nitrogen
+nutrient_parameters,kinetics_n_nh4_min_conc,0.2,mg_L,Minimum concentration for ammonium nitrogen uptake
+nutrient_parameters,kinetics_p_po4_vmax,2.5,mg_cm2_day,Maximum uptake rate for phosphate phosphorus
+nutrient_parameters,kinetics_p_po4_km,3.0,mg_L,Michaelis constant for phosphate phosphorus
+nutrient_parameters,kinetics_p_po4_min_conc,0.1,mg_L,Minimum concentration for phosphate phosphorus uptake
+nutrient_parameters,kinetics_k_vmax,15.0,mg_cm2_day,Maximum uptake rate for potassium
+nutrient_parameters,kinetics_k_km,25.0,mg_L,Michaelis constant for potassium
+nutrient_parameters,kinetics_k_min_conc,1.0,mg_L,Minimum concentration for potassium uptake
+nutrient_parameters,kinetics_ca_vmax,6.0,mg_cm2_day,Maximum uptake rate for calcium
+nutrient_parameters,kinetics_ca_km,40.0,mg_L,Michaelis constant for calcium
+nutrient_parameters,kinetics_ca_min_conc,2.0,mg_L,Minimum concentration for calcium uptake
+nutrient_parameters,kinetics_mg_vmax,4.0,mg_cm2_day,Maximum uptake rate for magnesium
+nutrient_parameters,kinetics_mg_km,12.0,mg_L,Michaelis constant for magnesium
+nutrient_parameters,kinetics_mg_min_conc,0.5,mg_L,Minimum concentration for magnesium uptake

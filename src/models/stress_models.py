@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -745,7 +745,7 @@ class UnifiedStressCalculator:
         if not ec_calculator or not solution_temp_calculator:
             raise ValueError("ec_calculator and solution_temp_calculator must be provided")
 
-        from src.utils.temperature_utils import calculate_ph_effect
+        from src.utils.core_utils import calculate_ph_effect
 
         actual_temperature = env_conditions['actual_temperature']
         actual_vpd = env_conditions['actual_vpd']

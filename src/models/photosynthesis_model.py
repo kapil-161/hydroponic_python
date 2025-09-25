@@ -29,6 +29,9 @@ class PhotosynthesisParameters:
     ear: float
     o2_mmol_mol: float
     shaded_light_fraction: float
+    photosynthesis_cold_limit: float
+    photosynthesis_heat_limit: float
+    min_stress_factor: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'PhotosynthesisParameters':
@@ -38,7 +41,8 @@ class PhotosynthesisParameters:
             'excess_lai_efficiency', 'umol_to_g_carbon_ratio', 'seconds_per_hour',
             'hours_per_day', 'kc', 'ko', 'gamma_star', 'jmax_25', 'vcmax_25',
             'theta', 'alpha', 'rd_25', 'eaj', 'eav', 'ear', 'o2_mmol_mol',
-            'shaded_light_fraction'
+            'shaded_light_fraction', 'photosynthesis_cold_limit', 'photosynthesis_heat_limit',
+            'min_stress_factor'
         ]
         for param in required_params:
             if param not in config:
@@ -82,7 +86,10 @@ class PhotosynthesisParameters:
             eav=float(config['eav']),
             ear=float(config['ear']),
             o2_mmol_mol=float(config['o2_mmol_mol']),
-            shaded_light_fraction=float(config['shaded_light_fraction'])
+            shaded_light_fraction=float(config['shaded_light_fraction']),
+            photosynthesis_cold_limit=float(config['photosynthesis_cold_limit']),
+            photosynthesis_heat_limit=float(config['photosynthesis_heat_limit']),
+            min_stress_factor=float(config['min_stress_factor'])
         )
 
 @dataclass
@@ -161,16 +168,23 @@ class PhotosynthesisModel:
         return max(0.0, hourly_g_c_per_m2 * lai * ec_factor), gs
 
     def _calculate_temperature_stress_factor(self, temp_c: float, optimal_temp_min: float, optimal_temp_max: float) -> float:
-        if temp_c is None:
-            raise ValueError("Temperature must be provided")
-        if optimal_temp_min >= optimal_temp_max:
-            raise ValueError("optimal_temp_min must be less than optimal_temp_max")
-        if temp_c < optimal_temp_min:
-            return max(0.1, (temp_c - 5.0) / (optimal_temp_min - 5.0))
-        elif temp_c <= optimal_temp_max:
-            return 1.0
-        else:
-            return max(0.1, (40.0 - temp_c) / (40.0 - optimal_temp_max))
+        """Use consolidated temperature stress factor calculation from core_utils."""
+        from src.utils.core_utils import calculate_temperature_stress_factor
+
+        # Create config structure for consolidated function
+        # ALL parameters must come from CSV configuration - no hardcoded values like 5.0, 40.0
+        temp_config = type('Config', (), {
+            'temperature_stress': {
+                'optimal_temp_min': optimal_temp_min,
+                'optimal_temp_max': optimal_temp_max,
+                # These parameters must be defined in CSV - no hardcoded fallbacks
+                'photosynthesis_cold_limit': self.params.photosynthesis_cold_limit,
+                'photosynthesis_heat_limit': self.params.photosynthesis_heat_limit,
+                'min_factor': self.params.min_stress_factor
+            }
+        })
+
+        return calculate_temperature_stress_factor(temp_c, temp_config, method='photosynthesis')
 
     def calculate_hourly_assimilation(self, par_umol_m2_s: float, co2_ppm: float, temp_c: float, humidity: float,
                                      lai: float, ec_factor: float, config: Dict[str, Any],

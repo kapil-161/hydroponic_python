@@ -134,28 +134,20 @@ class LeafDevelopmentModel:
             self._create_initial_leaf_cohort(i + 1)
     
     def calculate_thermal_time(self, temperature_list: list) -> list:
-        """
-        Calculate daily thermal time using cardinal temperature approach.
-        Equation: TT = f(T, Tmin, Topt1, Topt2, Tmax)
-        """
-        Tmin = self.params.min_temp
-        Topt1 = self.params.opt_temp_min  
-        Topt2 = self.params.opt_temp_max
-        Tmax = self.params.max_temp
-        
-        thermal_time_list = []
-        for T in temperature_list:
-            if T <= Tmin or T >= Tmax:
-                thermal_time_list.append(0.0)
-            elif Tmin < T <= Topt1:
-                thermal_time_list.append((T - Tmin) / (Topt1 - Tmin) * (Topt1 - Tmin))
-            elif Topt1 < T <= Topt2:
-                thermal_time_list.append(Topt1 - Tmin)
-            else:  # Topt2 < T < Tmax
-                factor = (Tmax - T) / (Tmax - Topt2)
-                thermal_time_list.append(factor * (Topt1 - Tmin))
-        
-        return thermal_time_list
+        """Use consolidated thermal time calculation from core_utils."""
+        from src.utils.core_utils import calculate_thermal_time_list
+
+        # Create config structure for consolidated function
+        thermal_config = type('Config', (), {
+            'thermal_time': {
+                'base_temp': self.params.min_temp,
+                'optimal_temp_min': self.params.opt_temp_min,
+                'optimal_temp_max': self.params.opt_temp_max,
+                'max_temp': self.params.max_temp
+            }
+        })
+
+        return calculate_thermal_time_list(temperature_list, thermal_config, method='cardinal')
     
     def calculate_stress_factors(self, water_stress_list: list, 
                                nitrogen_stress_list: list,

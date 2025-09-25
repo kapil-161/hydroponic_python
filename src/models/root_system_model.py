@@ -566,10 +566,26 @@ class EnhancedRootSystemModel:
         return effective_area
 
     def calculate_temperature_factor(self, temperature: float) -> float:
+        """Use consolidated temperature factor calculation from core_utils."""
+        from src.utils.core_utils import calculate_temperature_factor
+
         if temperature is None:
             raise ValueError("Temperature must be provided")
-        factor = self.params.q10_factor ** ((temperature - self.params.optimal_temperature) / 10.0)
-        return max(0.1, min(4.0, factor))
+
+        # Create config structure for consolidated function
+        # ALL parameters must come from CSV configuration - no hardcoded values
+        temp_config = type('Config', (), {
+            'temperature_factor': {
+                'optimal_temp': self.params.optimal_temperature,
+                'q10': self.params.q10_factor,
+                'min_factor': self.params.min_temperature_factor,
+                'max_factor': self.params.max_temperature_factor,
+                'max_temp_threshold': self.params.max_temp_threshold,
+                'temp_decay_factor': self.params.temp_decay_factor
+            }
+        })
+
+        return calculate_temperature_factor(temperature, temp_config, method='clamped')
 
     def calculate_flow_factor(self, flow_rate: float) -> float:
         if flow_rate is None or flow_rate < 0:
