@@ -35,6 +35,61 @@ initial_water_uptake_rate,0.01,L_day,Initial water uptake rate per plant,initial
 initial_transpiration_rate,0.008,L_day,Initial transpiration rate per plant,initial_state_parameters
 initial_photosynthesis_rate,2.5,umol_m2_s,Initial photosynthesis rate,initial_state_parameters
 initial_respiration_rate,1.0,umol_m2_s,Initial respiration rate,initial_state_parameters
+initial_simulation_day,1,days,Initial simulation day,initial_state_parameters
+initial_thermal_time_daily,8.5,gdd_day,Initial daily thermal time,initial_state_parameters
+initial_days_to_flowering,45,days,Initial days to flowering,initial_state_parameters
+initial_bolting_risk,0.0,fraction,Initial bolting risk,initial_state_parameters
+initial_nitrogen_content,0.04,g_g,Initial nitrogen content,initial_state_parameters
+initial_carbon_content,0.45,g_g,Initial carbon content,initial_state_parameters
+initial_water_content,0.85,g_g,Initial water content,initial_state_parameters
+initial_dry_weight,0.02,g,Initial dry weight,initial_state_parameters
+initial_salinity_stress,0.0,fraction,Initial salinity stress,initial_state_parameters
+initial_water_stress,0.0,fraction,Initial water stress,initial_state_parameters
+initial_temperature_stress,0.0,fraction,Initial temperature stress,initial_state_parameters
+initial_light_stress,0.0,fraction,Initial light stress,initial_state_parameters
+initial_nutrient_stress,0.0,fraction,Initial nutrient stress,initial_state_parameters
+initial_dry_matter_content,0.15,g_g,Initial dry matter content,initial_state_parameters
+initial_senesced_biomass,0.0,g,Initial senesced biomass,initial_state_parameters
+initial_senesced_area,0.0,m2,Initial senesced area,initial_state_parameters
+initial_integrated_stress_factor,0.0,fraction,Initial integrated stress factor,initial_state_parameters
+initial_v_stage,4.0,stage,Initial V stage,initial_state_parameters
+initial_development_stage,0.0,stage,Initial development stage,initial_state_parameters
+initial_senescence_stage,healthy,category,Initial senescence stage,initial_state_parameters
+initial_leaf_nitrogen_concentration,0.04,g_g,Initial leaf nitrogen concentration,initial_state_parameters
+initial_stem_nitrogen_concentration,0.02,g_g,Initial stem nitrogen concentration,initial_state_parameters
+initial_root_nitrogen_concentration,0.025,g_g,Initial root nitrogen concentration,initial_state_parameters
+initial_senescence_rate,0.0,fraction_day,Initial senescence rate,initial_state_parameters
+initial_leaf_senescence_rate,0.0,fraction_day,Initial leaf senescence rate,initial_state_parameters
+initial_stem_senescence_rate,0.0,fraction_day,Initial stem senescence rate,initial_state_parameters
+initial_root_senescence_rate,0.0,fraction_day,Initial root senescence rate,initial_state_parameters
+initial_nitrogen_uptake,0.0,g_day,Initial nitrogen uptake,initial_state_parameters
+initial_nitrogen_stress,0.0,fraction,Initial nitrogen stress,initial_state_parameters
+initial_leaf_growth_rate,0.001,g_day,Initial leaf growth rate,initial_state_parameters
+initial_stem_growth_rate,0.0005,g_day,Initial stem growth rate,initial_state_parameters
+initial_root_growth_rate,0.0003,g_day,Initial root growth rate,initial_state_parameters
+initial_co2_stress,0.0,fraction,Initial CO2 stress,initial_state_parameters
+initial_ph_stress,0.0,fraction,Initial pH stress,initial_state_parameters
+initial_oxygen_stress,0.0,fraction,Initial oxygen stress,initial_state_parameters
+initial_total_damage,0.0,fraction,Initial total damage,initial_state_parameters
+initial_environmental_cost,0.0,currency,Initial environmental cost,initial_state_parameters
+initial_ph_change_from_uptake,0.0,pH_units,Initial pH change from uptake,initial_state_parameters
+initial_ph_change_from_drift,0.0,pH_units,Initial pH change from drift,initial_state_parameters
+initial_acid_dosed_ml_per_L,0.0,ml_L,Initial acid dosed per L,initial_state_parameters
+initial_base_dosed_ml_per_L,0.0,ml_L,Initial base dosed per L,initial_state_parameters
+initial_buffer_capacity,0.0,buffer_units,Initial buffer capacity,initial_state_parameters
+initial_phosphate_h2po4_mg_L,0.0,mg_L,Initial H2PO4 concentration,initial_state_parameters
+initial_phosphate_hpo4_mg_L,0.0,mg_L,Initial HPO4 concentration,initial_state_parameters
+initial_phosphate_po4_mg_L,0.0,mg_L,Initial PO4 concentration,initial_state_parameters
+initial_acid_dosing_rate,0.0,ml_L_day,Initial acid dosing rate,initial_state_parameters
+initial_base_dosing_rate,0.0,ml_L_day,Initial base dosing rate,initial_state_parameters
+initial_daylength,12.0,hours,Initial daylength,initial_state_parameters
+initial_wind_speed,0.5,m_s,Initial wind speed,initial_state_parameters
+initial_total_tank_volume,500.0,L,Initial total tank volume,initial_state_parameters
+initial_previous_tank_volume,500.0,L,Initial previous tank volume,initial_state_parameters
+initial_plant_density,12.0,plants_m2,Initial plant density,initial_state_parameters
+initial_weather_conditions,controlled,category,Initial weather conditions,initial_state_parameters
+initial_original_tank_volume,500.0,L,Initial original tank volume,initial_state_parameters
+initial_rainfall,0.0,mm,Initial rainfall,initial_state_parameters
 system_type,NFT,unitless,Hydroponic system type,system_configuration
 n_plants,12,count,Number of plants in system,system_configuration
 system_area,1.0,m2,Total system area,system_configuration
@@ -643,6 +698,64 @@ base_root_length,5.0,cm,Base root length,plant_parameters
 root_growth_factor,0.5,cm_per_g,Root growth factor per g root biomass,plant_parameters
 avg_root_diameter_cm,0.02,cm,Average root diameter,plant_parameters
 min_surface_area_factor,100,cm2_per_g,Minimum surface area factor per g biomass,plant_parameters
+low_temperature_threshold,18.0,celsius,Low temperature threshold,plant_parameters
+high_temperature_threshold,25.0,celsius,High temperature threshold,plant_parameters
+temperature_stress_base_low,5.0,celsius,Base temperature for low stress,plant_parameters
+temperature_stress_divisor_low,13.0,celsius,Divisor for low temperature stress,plant_parameters
+temperature_stress_base_high,35.0,celsius,Base temperature for high stress,plant_parameters
+temperature_stress_divisor_high,10.0,celsius,Divisor for high temperature stress,plant_parameters
+minimum_temperature_factor,0.1,fraction,Minimum temperature factor,plant_parameters
+light_intensity_divisor,20.0,MJ_m2_day,Light intensity divisor,plant_parameters
+minimum_stress_factor,0.1,fraction,Minimum stress factor,plant_parameters
+minimum_total_growth,0,g,Minimum total growth threshold,plant_parameters
+default_water_stress,0.0,fraction,Default water stress,plant_parameters
+default_nutrient_stress,0.0,fraction,Default nutrient stress,plant_parameters
+default_light_stress,0.0,fraction,Default light stress,plant_parameters
+default_temperature_stress,0.0,fraction,Default temperature stress,plant_parameters
+default_nitrogen_stress,0.0,fraction,Default nitrogen stress,plant_parameters
+default_accumulated_gdd,0.0,gdd,Default accumulated growing degree days,plant_parameters
+default_bolting_risk,0.0,fraction,Default bolting risk,plant_parameters
+default_days_since_planting,0,days,Default days since planting,plant_parameters
+default_air_temperature,22.0,celsius,Default air temperature,plant_parameters
+default_solar_radiation,18.0,MJ_m2_day,Default solar radiation,plant_parameters
+default_co2_concentration,400.0,ppm,Default CO2 concentration,plant_parameters
+default_humidity,60.0,percent,Default humidity,plant_parameters
+default_vpd,0.7,kPa,Default vapor pressure deficit,plant_parameters
+default_leaf_biomass,0.05,g,Default leaf biomass,plant_parameters
+default_stem_biomass,0.03,g,Default stem biomass,plant_parameters
+default_root_biomass,0.02,g,Default root biomass,plant_parameters
+default_total_biomass,0.1,g,Default total biomass,plant_parameters
+biomass_division_safety,0.001,g,Safety value for biomass division,plant_parameters
+leaf_source_strength_factor,1.0,fraction,Leaf source strength factor,plant_parameters
+stem_source_strength_factor,0.3,fraction,Stem source strength factor,plant_parameters
+root_source_strength_factor,0.1,fraction,Root source strength factor,plant_parameters
+pi_constant,3.14159,unitless,Pi constant for calculations,plant_parameters
+average_root_diameter_cm,0.2,cm,Average root diameter,plant_parameters
+leaf_development_air_temp_alt,25.0,celsius,Alternative air temperature for leaf development,plant_parameters
+leaf_development_solar_rad_alt,10.0,MJ_m2_day,Alternative solar radiation for leaf development,plant_parameters
+leaf_development_vpd_alt,1.0,kPa,Alternative VPD for leaf development,plant_parameters
+default_development_stage,0.0,stage,Default development stage,plant_parameters
+leaf_allocation_default,0.5,fraction,Default leaf allocation,plant_parameters
+stem_allocation_default,0.3,fraction,Default stem allocation,plant_parameters
+root_allocation_default,0.2,fraction,Default root allocation,plant_parameters
+default_daylength,12.0,hours,Default daylength,plant_parameters
+stage_leaf_number_ge,2,count,Leaf number for GE stage,plant_parameters
+stage_leaf_number_ve,2,count,Leaf number for VE stage,plant_parameters
+stage_leaf_number_v1,2,count,Leaf number for V1 stage,plant_parameters
+stage_leaf_number_v2,3,count,Leaf number for V2 stage,plant_parameters
+stage_leaf_number_v3,4,count,Leaf number for V3 stage,plant_parameters
+stage_leaf_number_v4,6,count,Leaf number for V4 stage,plant_parameters
+stage_leaf_number_v5,8,count,Leaf number for V5 stage,plant_parameters
+stage_leaf_number_v6,10,count,Leaf number for V6 stage,plant_parameters
+stage_leaf_number_v7,12,count,Leaf number for V7 stage,plant_parameters
+stage_leaf_number_v8,14,count,Leaf number for V8 stage,plant_parameters
+stage_leaf_number_v9,16,count,Leaf number for V9 stage,plant_parameters
+stage_leaf_number_v10,18,count,Leaf number for V10 stage,plant_parameters
+stage_leaf_number_v11_plus,20,count,Leaf number for V11+ stage,plant_parameters
+stage_leaf_number_hi,22,count,Leaf number for HI stage,plant_parameters
+stage_leaf_number_hd,24,count,Leaf number for HD stage,plant_parameters
+stage_leaf_number_hm,26,count,Leaf number for HM stage,plant_parameters
+stage_leaf_number_default,16,count,Default leaf number for unknown stages,plant_parameters
 flowering_requirement_gdd,800,gdd,Growing degree days required for flowering,phenology_parameters
 cohorts_per_leaf,2,unitless,Number of cohorts per leaf,leaf_parameters
 extinction_base_factor,0.5,unitless,Base factor for extinction coefficient,canopy_parameters
@@ -672,3 +785,219 @@ min_leaf_area_per_plant,25.0,cm2,Minimum leaf area per plant for growth calculat
 env_photosynthesis_factor,1.0,fraction,Environmental photosynthesis factor,environment
 env_transpiration_factor,1.0,fraction,Environmental transpiration factor,environment
 environmental_cost_base,0.0,currency,Base environmental control cost,environment
+default_controlled_humidity,60.0,percent,Default controlled humidity,environment
+default_vpd_target,0.7,kPa,Default vapor pressure deficit target,environment
+default_air_temperature,22.0,celsius,Default air temperature,environment
+default_solar_radiation,18.0,MJ_m2_day,Default solar radiation,environment
+default_co2_concentration,400.0,ppm,Default CO2 concentration,environment
+default_humidity,60.0,percent,Default humidity,environment
+default_vpd,0.7,kPa,Default vapor pressure deficit,environment
+default_leaf_biomass,0.05,g,Default leaf biomass,biomass_parameters
+default_stem_biomass,0.03,g,Default stem biomass,biomass_parameters
+default_root_biomass,0.02,g,Default root biomass,biomass_parameters
+default_total_biomass,0.1,g,Default total biomass,biomass_parameters
+default_leaf_area_m2,0.001,m2,Default leaf area,canopy_parameters
+default_leaf_number,2,count,Default leaf number,canopy_parameters
+default_accumulated_gdd,0.0,gdd,Default accumulated growing degree days,thermal_parameters
+default_growth_stage,V4,stage,Default growth stage,phenology_parameters
+default_bolting_risk,0.0,fraction,Default bolting risk,phenology_parameters
+default_days_since_planting,0,days,Default days since planting,phenology_parameters
+default_development_stage,0.0,stage,Default development stage,phenology_parameters
+default_thermal_time,0.0,gdd,Default thermal time,thermal_parameters
+default_days_since_emergence,30.0,days,Default days since emergence,phenology_parameters
+default_leaf_nitrogen_content,0.04,fraction,Default leaf nitrogen content,nutrient_parameters
+default_water_stress,0.0,fraction,Default water stress,stress_parameters
+default_nutrient_stress,0.0,fraction,Default nutrient stress,stress_parameters
+default_light_stress,0.0,fraction,Default light stress,stress_parameters
+default_temperature_stress,0.0,fraction,Default temperature stress,stress_parameters
+default_nitrogen_stress,0.0,fraction,Default nitrogen stress,stress_parameters
+default_nitrogen_uptake,0.01,g,Default nitrogen uptake,nutrient_parameters
+default_leaf_growth_rate,0.001,g_day,Default leaf growth rate,growth_parameters
+default_stem_growth_rate,0.0005,g_day,Default stem growth rate,growth_parameters
+default_root_growth_rate,0.0003,g_day,Default root growth rate,growth_parameters
+default_leaf_senescence_rate,0.0,fraction_day,Default leaf senescence rate,senescence_parameters
+default_stem_senescence_rate,0.0,fraction_day,Default stem senescence rate,senescence_parameters
+default_root_senescence_rate,0.0,fraction_day,Default root senescence rate,senescence_parameters
+default_senescence_rate,0.0,fraction_day,Default senescence rate,senescence_parameters
+default_senesced_area,0.0,m2,Default senesced area,senescence_parameters
+default_senesced_biomass,0.0,g,Default senesced biomass,senescence_parameters
+default_transpiration_rate,0.0,L_day,Default transpiration rate,water_parameters
+default_water_uptake_rate,0.0,L_day,Default water uptake rate,water_parameters
+default_photosynthesis_rate,0.0,umol_m2_s,Default photosynthesis rate,photosynthesis_parameters
+default_nitrate_concentration,200.0,mg_L,Default nitrate concentration,nutrient_parameters
+default_ammonium_concentration,50.0,mg_L,Default ammonium concentration,nutrient_parameters
+default_ph_value,6.0,pH_units,Default pH value,system_parameters
+default_ec_value,1.0,dS_m,Default EC value,system_parameters
+default_v_stage,6.0,stage,Default V stage,phenology_parameters
+default_daily_thermal_time,1.0,gdd_day,Default daily thermal time,thermal_parameters
+default_day_length_hours,12.0,hours,Default day length,environment
+default_daylength,12.0,hours,Default daylength,environment
+nutrient_content_nitrogen,0.04,fraction,Default nitrogen content in leaves,nutrient_parameters
+nutrient_content_phosphorus,0.005,fraction,Default phosphorus content in leaves,nutrient_parameters
+nutrient_content_potassium,0.03,fraction,Default potassium content in leaves,nutrient_parameters
+nutrient_content_calcium,0.01,fraction,Default calcium content in leaves,nutrient_parameters
+nutrient_content_magnesium,0.005,fraction,Default magnesium content in leaves,nutrient_parameters
+nutrient_content_sulfur,0.003,fraction,Default sulfur content in leaves,nutrient_parameters
+nutrient_content_iron,0.0001,fraction,Default iron content in leaves,nutrient_parameters
+nutrient_content_manganese,0.00005,fraction,Default manganese content in leaves,nutrient_parameters
+nutrient_content_zinc,0.00002,fraction,Default zinc content in leaves,nutrient_parameters
+nutrient_content_copper,0.00001,fraction,Default copper content in leaves,nutrient_parameters
+nutrient_content_boron,0.00002,fraction,Default boron content in leaves,nutrient_parameters
+nutrient_content_molybdenum,0.000001,fraction,Default molybdenum content in leaves,nutrient_parameters
+stem_nutrient_content_nitrogen,0.02,fraction,Default nitrogen content in stems,nutrient_parameters
+stem_nutrient_content_phosphorus,0.003,fraction,Default phosphorus content in stems,nutrient_parameters
+stem_nutrient_content_potassium,0.02,fraction,Default potassium content in stems,nutrient_parameters
+stem_nutrient_content_calcium,0.005,fraction,Default calcium content in stems,nutrient_parameters
+stem_nutrient_content_magnesium,0.003,fraction,Default magnesium content in stems,nutrient_parameters
+stem_nutrient_content_sulfur,0.002,fraction,Default sulfur content in stems,nutrient_parameters
+root_nutrient_content_nitrogen,0.025,fraction,Default nitrogen content in roots,nutrient_parameters
+root_nutrient_content_phosphorus,0.004,fraction,Default phosphorus content in roots,nutrient_parameters
+root_nutrient_content_potassium,0.025,fraction,Default potassium content in roots,nutrient_parameters
+root_nutrient_content_calcium,0.008,fraction,Default calcium content in roots,nutrient_parameters
+root_nutrient_content_magnesium,0.004,fraction,Default magnesium content in roots,nutrient_parameters
+root_nutrient_content_sulfur,0.002,fraction,Default sulfur content in roots,nutrient_parameters
+daily_leaf_growth_fraction,0.05,fraction,Daily leaf growth as fraction of biomass,growth_parameters
+daily_stem_growth_fraction,0.03,fraction,Daily stem growth as fraction of biomass,growth_parameters
+daily_root_growth_fraction,0.04,fraction,Daily root growth as fraction of biomass,growth_parameters
+transpiration_leaf_fraction,0.4,fraction,Fraction of transpiration from leaves,water_parameters
+transpiration_stem_fraction,0.1,fraction,Fraction of transpiration from stems,water_parameters
+water_uptake_root_fraction,0.5,fraction,Fraction of water uptake to roots,water_parameters
+photosynthesis_leaf_fraction,0.3,fraction,Fraction of photosynthesis to leaves,photosynthesis_parameters
+photosynthesis_stem_fraction,0.2,fraction,Fraction of photosynthesis to stems,photosynthesis_parameters
+photosynthesis_root_fraction,0.1,fraction,Fraction of photosynthesis to roots,photosynthesis_parameters
+nutrient_stress_stem_factor,0.8,fraction,Stem nutrient stress factor,stress_parameters
+nutrient_stress_root_factor,0.6,fraction,Root nutrient stress factor,stress_parameters
+cold_stress_base_temperature,10.0,celsius,Base temperature for cold stress calculation,stress_parameters
+cold_stress_divisor,10.0,celsius,Divisor for cold stress calculation,stress_parameters
+heat_stress_base_temperature,30.0,celsius,Base temperature for heat stress calculation,stress_parameters
+heat_stress_divisor,10.0,celsius,Divisor for heat stress calculation,stress_parameters
+low_temperature_threshold,18.0,celsius,Low temperature threshold,temperature_parameters
+high_temperature_threshold,25.0,celsius,High temperature threshold,temperature_parameters
+temperature_stress_base_low,5.0,celsius,Base temperature for low stress,temperature_parameters
+temperature_stress_divisor_low,13.0,celsius,Divisor for low temperature stress,temperature_parameters
+temperature_stress_base_high,35.0,celsius,Base temperature for high stress,temperature_parameters
+temperature_stress_divisor_high,10.0,celsius,Divisor for high temperature stress,temperature_parameters
+minimum_temperature_factor,0.1,fraction,Minimum temperature factor,temperature_parameters
+light_intensity_divisor,20.0,MJ_m2_day,Light intensity divisor,light_parameters
+minimum_stress_factor,0.1,fraction,Minimum stress factor,stress_parameters
+optimal_solar_radiation,20.0,MJ_m2_day,Optimal solar radiation,light_parameters
+optimal_temperature,22.0,celsius,Optimal temperature,temperature_parameters
+temperature_deviation_divisor,10.0,celsius,Temperature deviation divisor,temperature_parameters
+biomass_division_safety,0.001,g,Safety value for biomass division,calculation_parameters
+max_safety_value,1,count,Safety value for max operations,calculation_parameters
+leaf_source_strength_factor,1.0,fraction,Leaf source strength factor,allocation_parameters
+stem_source_strength_factor,0.3,fraction,Stem source strength factor,allocation_parameters
+root_source_strength_factor,0.1,fraction,Root source strength factor,allocation_parameters
+default_balance_index,0.5,fraction,Default balance index,allocation_parameters
+leaf_allocation_default,0.5,fraction,Default leaf allocation,allocation_parameters
+stem_allocation_default,0.3,fraction,Default stem allocation,allocation_parameters
+root_allocation_default,0.2,fraction,Default root allocation,allocation_parameters
+height_growth_factor,0.5,cm_per_g,Height growth per gram stem biomass,growth_parameters
+min_surface_area_factor,100.0,cm2_per_g,Minimum surface area per gram biomass,root_parameters
+root_diameter_default,0.2,cm,Default root diameter,root_parameters
+flowering_thermal_requirement,1000.0,gdd,Thermal time requirement for flowering,thermal_requirements
+thermal_time_safety,0.1,gdd_day,Safety value for thermal time division,calculation_parameters
+age_senescence_start,20.0,days,Age when senescence starts,senescence_parameters
+age_senescence_duration,30.0,days,Duration of age-based senescence,senescence_parameters
+max_age_senescence_rate,0.1,fraction_day,Maximum age-based senescence rate,senescence_parameters
+cohorts_per_leaf,2,count,Number of cohorts per leaf,leaf_parameters
+cohort_age_increment,50.0,gdd,GDD increment per cohort,leaf_parameters
+root_surface_active_fraction,0.9,fraction,Fraction of root surface that is active,root_parameters
+root_cohorts_simplified,3,count,Number of simplified root cohorts,root_parameters
+minimum_limitations_default,1.0,fraction,Default minimum limitations value,calculation_parameters
+minimum_total_growth,0,g,Minimum total growth threshold,growth_parameters
+default_ph_stress,0.0,fraction,Default pH stress,stress_parameters
+default_oxygen_stress,0.0,fraction,Default oxygen stress,stress_parameters
+stage_leaf_number_ge,2,count,Leaf number for GE stage,phenology_parameters
+stage_leaf_number_ve,2,count,Leaf number for VE stage,phenology_parameters
+stage_leaf_number_v1,2,count,Leaf number for V1 stage,phenology_parameters
+stage_leaf_number_v2,3,count,Leaf number for V2 stage,phenology_parameters
+stage_leaf_number_v3,4,count,Leaf number for V3 stage,phenology_parameters
+stage_leaf_number_v4,6,count,Leaf number for V4 stage,phenology_parameters
+stage_leaf_number_v5,8,count,Leaf number for V5 stage,phenology_parameters
+stage_leaf_number_v6,10,count,Leaf number for V6 stage,phenology_parameters
+stage_leaf_number_v7,12,count,Leaf number for V7 stage,phenology_parameters
+stage_leaf_number_v8,14,count,Leaf number for V8 stage,phenology_parameters
+stage_leaf_number_v9,16,count,Leaf number for V9 stage,phenology_parameters
+stage_leaf_number_v10,18,count,Leaf number for V10 stage,phenology_parameters
+stage_leaf_number_v11_plus,20,count,Leaf number for V11+ stage,phenology_parameters
+stage_leaf_number_hi,22,count,Leaf number for HI stage,phenology_parameters
+stage_leaf_number_hd,24,count,Leaf number for HD stage,phenology_parameters
+stage_leaf_number_hm,26,count,Leaf number for HM stage,phenology_parameters
+stage_leaf_number_default,16,count,Default leaf number for unknown stages,phenology_parameters
+thermal_time_divisor_safety,0.5,gdd_day,Safety threshold for thermal time division,calculation_parameters
+early_stage_v_threshold,2.0,stage,V-stage threshold for early stage,phenology_parameters
+leaf_cohort_creation_threshold,0.5,gdd_day,Thermal time threshold for new leaf creation,leaf_parameters
+leaf_age_senescence_start_days,20,days,Leaf age when senescence starts,senescence_parameters
+leaf_age_senescence_duration_days,30,days,Duration for leaf age senescence,senescence_parameters
+max_leaf_age_senescence_rate,0.1,fraction_day,Maximum leaf age senescence rate,senescence_parameters
+average_root_diameter_cm,0.2,cm,Average root diameter,root_parameters
+pi_constant,3.14159,unitless,Pi constant for calculations,calculation_parameters
+default_senescence_rate_value,0.0,fraction_day,Default senescence rate value,senescence_parameters
+default_senesced_area_value,0.0,m2,Default senesced area value,senescence_parameters
+default_senesced_biomass_value,0.0,g,Default senesced biomass value,senescence_parameters
+default_total_damage_value,0.0,fraction,Default total damage value,stress_parameters
+default_environmental_cost_value,0.0,currency,Default environmental cost value,environment
+default_ph_change_from_uptake,0.0,pH_units,Default pH change from uptake,system_parameters
+default_ph_change_from_drift,0.0,pH_units,Default pH change from drift,system_parameters
+default_acid_dosed_ml_per_L,0.0,ml_L,Default acid dosed per L,system_parameters
+default_base_dosed_ml_per_L,0.0,ml_L,Default base dosed per L,system_parameters
+default_buffer_capacity_value,0.0,buffer_units,Default buffer capacity,system_parameters
+default_phosphate_h2po4_mg_L,0.0,mg_L,Default H2PO4 concentration,nutrient_parameters
+default_phosphate_hpo4_mg_L,0.0,mg_L,Default HPO4 concentration,nutrient_parameters
+default_phosphate_po4_mg_L,0.0,mg_L,Default PO4 concentration,nutrient_parameters
+default_acid_dosing_rate,0.0,ml_L_day,Default acid dosing rate,system_parameters
+default_base_dosing_rate,0.0,ml_L_day,Default base dosing rate,system_parameters
+leaf_development_air_temp_alt,25.0,celsius,Alternative air temperature for leaf development,environment
+leaf_development_solar_rad_alt,10.0,MJ_m2_day,Alternative solar radiation for leaf development,environment
+leaf_development_vpd_alt,1.0,kPa,Alternative VPD for leaf development,environment
+growth_rate_heritability,0.8,fraction,Heritability of growth rate,genetic_parameters
+yield_heritability,0.7,fraction,Heritability of yield,genetic_parameters
+transplant_stage,V4,stage,Transplant stage,phenology_parameters
+growth_rate_environmental_sensitivity,0.5,fraction,Growth rate environmental sensitivity,genetic_parameters
+yield_environmental_sensitivity,0.6,fraction,Yield environmental sensitivity,genetic_parameters
+kc,404.9,umol_mol,Michaelis constant for CO2,photosynthesis_parameters
+ko,278.4,mmol_mol,Michaelis constant for O2,photosynthesis_parameters
+gamma_star,42.75,umol_mol,CO2 compensation point,photosynthesis_parameters
+jmax_25,157.0,umol_m2_s,Maximum electron transport rate at 25C,photosynthesis_parameters
+vcmax_25,62.5,umol_m2_s,Maximum carboxylation rate at 25C,photosynthesis_parameters
+theta,0.7,fraction,Curvature parameter,photosynthesis_parameters
+alpha,0.24,fraction,Quantum efficiency,photosynthesis_parameters
+rd_25,0.92,umol_m2_s,Dark respiration at 25C,photosynthesis_parameters
+eaj,37000.0,J_mol,Activation energy for Jmax,photosynthesis_parameters
+eav,65330.0,J_mol,Activation energy for Vcmax,photosynthesis_parameters
+ear,46390.0,J_mol,Activation energy for Rd,photosynthesis_parameters
+phi_psii,0.85,fraction,Quantum efficiency of PSII,photosynthesis_parameters
+r,0.5,fraction,Leaf reflectance,photosynthesis_parameters
+g_max,0.6,mol_m2_s,Maximum stomatal conductance,photosynthesis_parameters
+o2_mmol_mol,210.0,mmol_mol,Oxygen concentration,photosynthesis_parameters
+yield_target,150.0,g_plant,Target yield per plant,genetic_parameters
+min_par_threshold,50.0,umol_m2_s,Minimum PAR threshold,photosynthesis_parameters
+max_par_threshold,1500.0,umol_m2_s,Maximum PAR threshold,photosynthesis_parameters
+light_response_curvature,0.9,fraction,Light response curve curvature,photosynthesis_parameters
+temperature_response_factor,1.0,fraction,Temperature response factor,photosynthesis_parameters
+co2_compensation_factor,1.0,fraction,CO2 compensation factor,photosynthesis_parameters
+stomatal_conductance_slope,9.0,fraction,Stomatal conductance slope,photosynthesis_parameters
+stomatal_intercept,0.01,mol_m2_s,Stomatal conductance intercept,photosynthesis_parameters
+vpd_sensitivity,2.0,kPa,VPD sensitivity factor,photosynthesis_parameters
+quality_heritability,0.65,fraction,Quality trait heritability,genetic_parameters
+enzyme_saturation_lai,3.0,m2_m2,LAI for enzyme saturation,photosynthesis_parameters
+rubisco_content_factor,1.0,fraction,Rubisco content factor,photosynthesis_parameters
+chlorophyll_content_factor,1.0,fraction,Chlorophyll content factor,photosynthesis_parameters
+light_acclimation_factor,1.0,fraction,Light acclimation factor,photosynthesis_parameters
+nitrogen_use_efficiency,25.0,umol_g_N_s,Nitrogen use efficiency,photosynthesis_parameters
+quality_environmental_sensitivity,0.4,fraction,Quality environmental sensitivity,genetic_parameters
+light_penetration_lai,2.5,m2_m2,LAI for light penetration,photosynthesis_parameters
+canopy_extinction_coefficient,0.7,fraction,Canopy extinction coefficient,photosynthesis_parameters
+leaf_angle_factor,1.0,fraction,Leaf angle distribution factor,photosynthesis_parameters
+age_effect_factor,1.0,fraction,Leaf age effect on photosynthesis,photosynthesis_parameters
+quality_target,8.5,unitless,Target quality score,genetic_parameters
+enzyme_saturation_rate,0.85,fraction,Enzyme saturation rate,photosynthesis_parameters
+co2_use_efficiency,4.5,umol_umol,CO2 use efficiency,photosynthesis_parameters
+water_use_efficiency,3.2,umol_mol,Water use efficiency,photosynthesis_parameters
+light_saturation_point,800.0,umol_m2_s,Light saturation point,photosynthesis_parameters
+min_enzyme_factor,0.1,fraction,Minimum enzyme efficiency factor,photosynthesis_parameters
+excess_lai_efficiency,0.8,fraction,Efficiency factor for excess LAI,photosynthesis_parameters
+umol_to_g_carbon_ratio,0.044,g_umol,Conversion ratio from umol CO2 to g C,photosynthesis_parameters
+seconds_per_hour,3600,seconds,Seconds per hour for time conversions,photosynthesis_parameters
+hours_per_day,24,hours,Hours per day,photosynthesis_parameters

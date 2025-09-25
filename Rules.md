@@ -2,6 +2,7 @@
 
 ## Parameter Management
 - no fallback code
+- dont make premature success claims 
 - no default value in code
 - no hardcoded values in code, only in csv
 - all input data should come from one source, no confusion
