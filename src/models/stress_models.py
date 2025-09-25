@@ -562,6 +562,47 @@ class IntegratedStressParameters:
             }
         
         process_sensitivity = config_dict.get("process_sensitivity", {})
+        
+        # Convert flat CSV parameters to nested structure
+        if not process_sensitivity:
+            process_sensitivity = {
+                "photosynthesis": {
+                    "water": config_dict.get("process_sensitivity_water", 0.8),
+                    "temperature": config_dict.get("process_sensitivity_temperature", 0.7),
+                    "nutrient": config_dict.get("process_sensitivity_nutrient", 0.6),
+                    "light": config_dict.get("process_sensitivity_light", 0.8),
+                    "salinity": config_dict.get("process_sensitivity_salinity", 0.5),
+                    "ph": config_dict.get("process_sensitivity_ph", 0.7),
+                    "oxygen": config_dict.get("process_sensitivity_oxygen", 0.6)
+                },
+                "respiration": {
+                    "water": config_dict.get("process_sensitivity_water", 0.8),
+                    "temperature": config_dict.get("process_sensitivity_temperature", 0.7),
+                    "nutrient": config_dict.get("process_sensitivity_nutrient", 0.6),
+                    "light": config_dict.get("process_sensitivity_light", 0.8),
+                    "salinity": config_dict.get("process_sensitivity_salinity", 0.5),
+                    "ph": config_dict.get("process_sensitivity_ph", 0.7),
+                    "oxygen": config_dict.get("process_sensitivity_oxygen", 0.6)
+                },
+                "transpiration": {
+                    "water": config_dict.get("process_sensitivity_water", 0.8),
+                    "temperature": config_dict.get("process_sensitivity_temperature", 0.7),
+                    "nutrient": config_dict.get("process_sensitivity_nutrient", 0.6),
+                    "light": config_dict.get("process_sensitivity_light", 0.8),
+                    "salinity": config_dict.get("process_sensitivity_salinity", 0.5),
+                    "ph": config_dict.get("process_sensitivity_ph", 0.7),
+                    "oxygen": config_dict.get("process_sensitivity_oxygen", 0.6)
+                },
+                "growth": {
+                    "water": config_dict.get("process_sensitivity_water", 0.8),
+                    "temperature": config_dict.get("process_sensitivity_temperature", 0.7),
+                    "nutrient": config_dict.get("process_sensitivity_nutrient", 0.6),
+                    "light": config_dict.get("process_sensitivity_light", 0.8),
+                    "salinity": config_dict.get("process_sensitivity_salinity", 0.5),
+                    "ph": config_dict.get("process_sensitivity_ph", 0.7),
+                    "oxygen": config_dict.get("process_sensitivity_oxygen", 0.6)
+                }
+            }
         memory_duration = config_dict.get("stress_memory_duration", {})
         
         # Convert single stress_memory_duration value to dictionary if needed

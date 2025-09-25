@@ -12,7 +12,7 @@ initial_root_length,100.0,cm,Initial root length,initial_state_parameters
 initial_root_surface_area,50.0,cm2,Initial root surface area,initial_state_parameters
 initial_shoot_length,5.0,cm,Initial shoot length,initial_state_parameters
 initial_node_number,4,count,Initial number of nodes,initial_state_parameters
-initial_leaf_number,6,count,Initial number of leaves,initial_state_parameters
+initial_leaf_number,2,count,Initial number of leaves,initial_state_parameters
 initial_n_no3_concentration,150.0,mg_L,Initial nitrate nitrogen concentration,initial_state_parameters
 initial_p_po4_concentration,50.0,mg_L,Initial phosphate concentration,initial_state_parameters
 initial_k_concentration,200.0,mg_L,Initial potassium concentration,initial_state_parameters
@@ -29,8 +29,8 @@ initial_ph,6.0,unitless,Initial solution pH,initial_state_parameters
 initial_ec,1.0,dS_m,Initial electrical conductivity,initial_state_parameters
 initial_solar_radiation,18.0,MJ_m2_day,Initial solar radiation,initial_state_parameters
 initial_vpd,0.7,kPa,Initial vapor pressure deficit,initial_state_parameters
-initial_growth_stage,V4,unitless,Initial growth stage,initial_state_parameters
-initial_accumulated_gdd,150.0,celsius_days,Initial accumulated growing degree days,initial_state_parameters
+initial_growth_stage,VE,unitless,Initial growth stage,initial_state_parameters
+initial_accumulated_gdd,25.0,celsius_days,Initial accumulated growing degree days,initial_state_parameters
 initial_water_uptake_rate,0.01,L_day,Initial water uptake rate per plant,initial_state_parameters
 initial_transpiration_rate,0.008,L_day,Initial transpiration rate per plant,initial_state_parameters
 initial_photosynthesis_rate,2.5,umol_m2_s,Initial photosynthesis rate,initial_state_parameters
@@ -54,6 +54,7 @@ initial_senesced_area,0.0,m2,Initial senesced area,initial_state_parameters
 initial_integrated_stress_factor,0.0,fraction,Initial integrated stress factor,initial_state_parameters
 initial_v_stage,4.0,stage,Initial V stage,initial_state_parameters
 initial_development_stage,0.0,stage,Initial development stage,initial_state_parameters
+initial_growth_stage,vegetative,category,Initial growth stage,initial_state_parameters
 initial_senescence_stage,healthy,category,Initial senescence stage,initial_state_parameters
 initial_leaf_nitrogen_concentration,0.04,g_g,Initial leaf nitrogen concentration,initial_state_parameters
 initial_stem_nitrogen_concentration,0.02,g_g,Initial stem nitrogen concentration,initial_state_parameters
@@ -64,9 +65,9 @@ initial_stem_senescence_rate,0.0,fraction_day,Initial stem senescence rate,initi
 initial_root_senescence_rate,0.0,fraction_day,Initial root senescence rate,initial_state_parameters
 initial_nitrogen_uptake,0.0,g_day,Initial nitrogen uptake,initial_state_parameters
 initial_nitrogen_stress,0.0,fraction,Initial nitrogen stress,initial_state_parameters
-initial_leaf_growth_rate,0.001,g_day,Initial leaf growth rate,initial_state_parameters
-initial_stem_growth_rate,0.0005,g_day,Initial stem growth rate,initial_state_parameters
-initial_root_growth_rate,0.0003,g_day,Initial root growth rate,initial_state_parameters
+initial_leaf_growth_rate,0.0001,g_day,Initial leaf growth rate,initial_state_parameters
+initial_stem_growth_rate,0.00005,g_day,Initial stem growth rate,initial_state_parameters
+initial_root_growth_rate,0.00003,g_day,Initial root growth rate,initial_state_parameters
 initial_co2_stress,0.0,fraction,Initial CO2 stress,initial_state_parameters
 initial_ph_stress,0.0,fraction,Initial pH stress,initial_state_parameters
 initial_oxygen_stress,0.0,fraction,Initial oxygen stress,initial_state_parameters
@@ -141,7 +142,7 @@ co2_mixing_time,15.0,minutes,Time for full CO2 mixing,control_equipment_paramete
 co2_sensor_accuracy,10.0,umol_per_mol,CO2 sensor precision,control_equipment_parameters
 dehumidifier_efficiency,0.90,fraction,Efficiency factor for dehumidifier,control_equipment_parameters
 humidifier_efficiency,0.85,fraction,Efficiency factor for humidifier,control_equipment_parameters
-base_crop_coefficient,0.7,unitless,Base crop coefficient for ETo calculations,crop_parameters
+base_crop_coefficient,0.9,unitless,Base crop coefficient for ETo calculations,crop_parameters
 kc_light_interception_factor,0.4,unitless,Crop coefficient factor for light interception,crop_parameters
 maximum_height,0.25,m,Maximum crop height for lettuce,crop_parameters
 co2_afternoon_target,600.0,ppm,Afternoon CO2 target,environment
@@ -185,7 +186,7 @@ minimum_leaf_life,7,days,Minimum leaf life,leaf_development
 opt_temp_max,24.0,celsius,Upper optimum temperature,leaf_development
 opt_temp_min,18.0,celsius,Lower optimum temperature,leaf_development
 temperature_stress_sensitivity,0.8,fraction,Temperature stress sensitivity,leaf_development
-initial_leaf_number,6,count,Initial number of leaves,leaf_development
+initial_leaf_number,2,count,Initial number of leaves,leaf_development
 carbohydrate_fraction,0.3,fraction,Carbohydrate fraction in biomass,model_constants
 carbon_to_biomass_ratio,0.45,fraction,Carbon to biomass conversion ratio (calibrated),model_constants
 growth_respiration_fraction,0.25,fraction,Fraction of assimilates used for growth respiration,model_constants
@@ -281,7 +282,7 @@ critical_photoperiod,12.0,hours,Critical photoperiod for development,phenology
 drought_threshold,0.6,fraction,Water stress threshold,phenology
 environmental_buffer_days,5,days,Environmental buffer days for bolting risk,phenology
 environmental_history_days,7,days,Environmental history days for sustained stress,phenology
-harvest_gdd,800.0,gdd,Growing degree days to harvest maturity,phenology
+harvest_gdd,2400.0,gdd,Growing degree days to harvest maturity,phenology
 head_formation_node_requirement,8,nodes,Minimum nodes required for head formation,phenology
 heat_threshold,28.0,celsius,Heat stress threshold,phenology
 maximum_temperature,35.0,celsius,Maximum temperature for development,phenology
@@ -308,7 +309,7 @@ excess_lai_efficiency,0.2,unitless,Efficiency factor for excess LAI,photosynthes
 g_max,1.2,mol/m2/s,Maximum stomatal conductance,photosynthesis
 gamma_star,42.75,umol_per_mol,CO2 compensation point,photosynthesis
 hours_per_day,24,hours,Hours per day for day length calculations,photosynthesis
-jmax_25,125.0,umol_per_m2_per_s,Maximum electron transport rate at 25°C,photosynthesis
+jmax_25,16.0,umol_per_m2_per_s,Maximum electron transport rate at 25°C,photosynthesis
 kc,404.9,umol_per_mol,Michaelis-Menten constant for CO2,photosynthesis
 ko,278.4,mmol_per_mol,Michaelis-Menten constant for O2,photosynthesis
 light_penetration_lai,4.0,unitless,LAI threshold for light penetration (calibrated),photosynthesis
@@ -319,17 +320,18 @@ min_enzyme_factor,0.3,unitless,Minimum enzyme efficiency factor,photosynthesis
 min_par_threshold,0.1,umol_per_m2_per_s,Minimum PAR threshold for photosynthesis,photosynthesis
 o2_mmol_mol,210.0,mmol_per_mol,Atmospheric O2 concentration,photosynthesis
 phi_psii,0.85,mol_per_mol,Quantum yield of PSII,photosynthesis
-quantum_efficiency,0.035,mol_per_mol,Efficiency of light absorption by chlorophyll (calibrated),photosynthesis
+quantum_efficiency,0.025,mol_per_mol,Efficiency of light absorption by chlorophyll (calibrated),photosynthesis
 r,8.314,J_per_mol_per_K,Gas constant,photosynthesis
-rd_25,1.2,umol_per_m2_per_s,Dark respiration rate at 25°C,photosynthesis
+rd_25,0.5,umol_per_m2_per_s,Dark respiration rate at 25°C,photosynthesis
 seconds_per_hour,3600,seconds,Seconds per hour for time conversions,photosynthesis
 theta,0.7,fraction,Curvature factor of light response,photosynthesis
 umol_to_g_carbon_ratio,1.201e-5,unitless,Conversion ratio from umol CO2 to g C,photosynthesis
-vcmax_25,55.0,umol_per_m2_per_s,Maximum carboxylation rate at 25°C for lettuce,photosynthesis
+vcmax_25,8.0,umol_per_m2_per_s,Maximum carboxylation rate at 25°C for lettuce,photosynthesis
 acclimation_memory,5.0,days,Acclimation memory duration (calibrated),respiration_parameters
 age_effect_coefficient,0.015,per_day,Age effect coefficient (calibrated),respiration_parameters
 biosynthetic_cost,1.44,g_glucose_per_g_biomass,Biosynthetic cost for biomass production,respiration_parameters
 carbohydrate_respiration_cost,1.27,g_glucose_per_g_carb,Biosynthetic cost for carbohydrate synthesis,respiration_parameters
+carbohydrates_respiration_cost,1.27,g_glucose_per_g_carb,Biosynthetic cost for carbohydrates synthesis,respiration_parameters
 carbon_to_co2_ratio,3.67,unitless,Carbon to CO2 conversion ratio,respiration_parameters
 circadian_amplitude_1,0.1,unitless,Amplitude of first circadian peak,respiration_parameters
 circadian_amplitude_2,0.05,unitless,Amplitude of second circadian peak,respiration_parameters
@@ -359,13 +361,16 @@ night_respiration_factor,0.9,unitless,Night respiration factor,respiration_param
 nighttime_respiratory_quotient,0.85,unitless,RQ during nighttime,respiration_parameters
 organic_acid_respiration_cost,0.91,g_glucose_per_g_acid,Biosynthetic cost for organic acid synthesis,respiration_parameters
 protein_respiration_cost,1.89,g_glucose_per_g_protein,Biosynthetic cost for protein synthesis,respiration_parameters
+proteins_respiration_cost,1.89,g_glucose_per_g_protein,Biosynthetic cost for proteins synthesis,respiration_parameters
+minerals_respiration_cost,0.1,g_glucose_per_g_mineral,Biosynthetic cost for minerals synthesis,respiration_parameters
+mineral_respiration_cost,0.1,g_glucose_per_g_mineral,Biosynthetic cost for mineral synthesis,respiration_parameters
 q10_factor,1.8,unitless,Q10 temperature factor for respiration (calibrated),respiration_parameters
 reference_leaf_n,0.04,fraction,Reference leaf nitrogen content,respiration_parameters
 reference_temperature,22.0,celsius,Reference temperature for respiration (calibrated),respiration_parameters
 respiration_acclimation_rate,0.03,per_day,Respiration acclimation rate (calibrated),respiration_parameters
 respiration_biosynthetic_cost,1.25,g_glucose_per_g_biomass,Biosynthetic cost for respiration (calibrated),respiration_parameters
 respiration_growth_efficiency,0.80,fraction,Growth efficiency factor for respiration (calibrated),respiration_parameters
-respiration_maintenance_base_rate,0.015,per_day,Maintenance respiration base rate (calibrated),respiration_parameters
+respiration_maintenance_base_rate,0.008,per_day,Maintenance respiration base rate (calibrated),respiration_parameters
 severe_stress_base,1.25,unitless,Base factor for severe stress,respiration_parameters
 severe_stress_factor,0.1,unitless,Factor for severe stress,respiration_parameters
 severe_stress_threshold,8.0,celsius,Temperature threshold for severe stress,respiration_parameters
@@ -419,7 +424,7 @@ optimal_oxygen_level,6.0,mg_per_L,Optimal oxygen level for root uptake,root_syst
 ph_max,6.5,pH_units,Maximum pH for optimal root uptake,root_system
 ph_min,5.5,pH_units,Minimum pH for optimal root uptake,root_system
 ph_penalty_factor,0.15,fraction,pH penalty factor for root uptake,root_system
-primary_root_growth_rate,2.0,cm_per_day,Primary root growth rate,root_system
+primary_root_growth_rate,15.0,cm_per_day,Primary root growth rate,root_system
 root_base_temperature,20.0,celsius,Base temperature for root uptake calculations,root_system
 root_conductance_scaling_factor,1.0,g,Root conductance scaling factor,root_system
 root_zone_efficiency_factor,0.6,fraction,Root zone efficiency factor for volume calculations,root_system
@@ -520,6 +525,7 @@ process_sensitivity_development,0.7,fraction,Development sensitivity to stress,s
 process_sensitivity_growth,0.9,fraction,Growth sensitivity to stress,stress_parameters
 process_sensitivity_photosynthesis,0.8,fraction,Photosynthesis sensitivity to stress,stress_parameters
 process_sensitivity_respiration,0.6,fraction,Respiration sensitivity to stress,stress_parameters
+process_sensitivity_water,0.8,fraction,Water sensitivity to stress,stress_parameters
 recovery_memory_days,14,days,Recovery memory duration,stress_parameters
 respiration_cold_sensitivity,0.5,fraction,Respiration cold sensitivity,stress_parameters
 respiration_heat_sensitivity,0.6,fraction,Respiration heat sensitivity,stress_parameters
@@ -547,11 +553,11 @@ system_channel_length,10.0,meters,Channel length for NFT,system
 system_channel_width,10.0,cm,Channel width,system
 tank_volume,500.0,liters,Total volume of nutrient solution tank,system
 GE_to_VE,50.0,gdd,Growing degree days from germination to emergence,thermal_requirements
-HD_to_HM,100.0,gdd,Growing degree days from head development to harvest maturity,thermal_requirements
+HD_to_HM,300.0,gdd,Growing degree days from head development to harvest maturity,thermal_requirements
 HI_to_HD,80.0,gdd,Growing degree days from head initiation to head development,thermal_requirements
 HM_to_PM,100.0,gdd,Growing degree days from harvest to physiological maturity,thermal_requirements
 V10_to_V11+,25.0,gdd,Growing degree days from tenth leaf to mature vegetative,thermal_requirements
-V11+_to_HI,60.0,gdd,Growing degree days from mature vegetative to head initiation,thermal_requirements
+V11+_to_HI,100.0,gdd,Growing degree days from mature vegetative to head initiation,thermal_requirements
 V1_to_V2,20.0,gdd,Growing degree days from first to second leaf,thermal_requirements
 V2_to_V3,20.0,gdd,Growing degree days from second to third leaf,thermal_requirements
 V3_to_V4,20.0,gdd,Growing degree days from third to fourth leaf,thermal_requirements
@@ -575,10 +581,10 @@ genetic_nitrate_efficiency,1.0,fraction,Genetic nitrate efficiency factor,geneti
 root_activity_young,1.0,fraction,Root activity factor for young roots,genetic_parameters
 root_activity_old,0.8,fraction,Root activity factor for old roots,genetic_parameters
 root_turnover_rate,0.0,fraction,Root turnover rate,genetic_parameters
-base_growth_rate,0.5,g_per_day,Base growth rate in grams per day,growth_parameters
-leaf_growth_allocation,0.5,fraction,Leaf growth allocation fraction,growth_parameters
-stem_growth_allocation,0.3,fraction,Stem growth allocation fraction,growth_parameters
-root_growth_allocation,0.2,fraction,Root growth allocation fraction,growth_parameters
+base_growth_rate,0.4,g_per_day,Base growth rate in grams per day,growth_parameters
+leaf_growth_allocation,0.55,fraction,Leaf growth allocation fraction,growth_parameters
+stem_growth_allocation,0.15,fraction,Stem growth allocation fraction,growth_parameters
+root_growth_allocation,0.3,fraction,Root growth allocation fraction,growth_parameters
 min_fraction_allocation,0.05,fraction,Minimum fraction for biomass allocation,growth_parameters
 early_vegetative_leaf_sink,0.4,fraction,Leaf sink strength in early vegetative stage,growth_parameters
 early_vegetative_stem_sink,0.2,fraction,Stem sink strength in early vegetative stage,growth_parameters
@@ -603,8 +609,8 @@ water_nutrient_interaction_factor,0.2,fraction,Water-nutrient interaction,water_
 water_salinity_interaction_factor,0.3,fraction,Water-salinity interaction,water_parameters
 water_uptake_sensitivity_high,0.8,fraction,Water uptake sensitivity (high),water_parameters
 water_uptake_sensitivity_low,0.3,fraction,Water uptake sensitivity (low),water_parameters
-water_use_efficiency,0.1,unitless,Water use efficiency,water_parameters
-metabolic_water_per_biomass,0.00005,L_per_g,Water requirement per unit biomass,water_parameters
+water_use_efficiency,0.15,unitless,Water use efficiency,water_parameters
+metabolic_water_per_biomass,0.002,L_per_g,Water requirement per unit biomass,water_parameters
 vpd_sensitivity,0.2,1_per_kPa,VPD sensitivity factor for water uptake,water_parameters
 initial_b,0.3,mg_per_L,Initial B concentration in nutrient solution,nutrient_parameters
 initial_ca,50.0,mg_per_L,Initial Ca concentration in nutrient solution,nutrient_parameters
@@ -693,9 +699,9 @@ root_conductivity,0.5,fraction,Root conductivity factor,nutrient_parameters
 activation_energy,50000.0,J_per_mol,Activation energy for nutrient transport,nutrient_parameters
 nutrient_mobility_temperature_q10,2.0,unitless,Q10 temperature factor for nutrient mobility,nutrient_parameters
 base_height,2.0,cm,Base plant height,plant_parameters
-height_growth_factor,2.0,cm_per_g,Height growth factor per g stem biomass,plant_parameters
+height_growth_factor,5.7,cm_per_g,Height growth factor per g stem biomass,plant_parameters
 base_root_length,5.0,cm,Base root length,plant_parameters
-root_growth_factor,0.5,cm_per_g,Root growth factor per g root biomass,plant_parameters
+root_growth_factor,3.0,cm_per_g,Root growth factor per g root biomass,plant_parameters
 avg_root_diameter_cm,0.02,cm,Average root diameter,plant_parameters
 min_surface_area_factor,100,cm2_per_g,Minimum surface area factor per g biomass,plant_parameters
 low_temperature_threshold,18.0,celsius,Low temperature threshold,plant_parameters
@@ -856,12 +862,13 @@ root_nutrient_content_potassium,0.025,fraction,Default potassium content in root
 root_nutrient_content_calcium,0.008,fraction,Default calcium content in roots,nutrient_parameters
 root_nutrient_content_magnesium,0.004,fraction,Default magnesium content in roots,nutrient_parameters
 root_nutrient_content_sulfur,0.002,fraction,Default sulfur content in roots,nutrient_parameters
-daily_leaf_growth_fraction,0.05,fraction,Daily leaf growth as fraction of biomass,growth_parameters
-daily_stem_growth_fraction,0.03,fraction,Daily stem growth as fraction of biomass,growth_parameters
-daily_root_growth_fraction,0.04,fraction,Daily root growth as fraction of biomass,growth_parameters
+daily_leaf_growth_fraction,0.02,fraction,Daily leaf growth as fraction of biomass,growth_parameters
+daily_stem_growth_fraction,0.01,fraction,Daily stem growth as fraction of biomass,growth_parameters
+daily_root_growth_fraction,0.02,fraction,Daily root growth as fraction of biomass,growth_parameters
 transpiration_leaf_fraction,0.4,fraction,Fraction of transpiration from leaves,water_parameters
 transpiration_stem_fraction,0.1,fraction,Fraction of transpiration from stems,water_parameters
 water_uptake_root_fraction,0.5,fraction,Fraction of water uptake to roots,water_parameters
+reference_evapotranspiration,45.0,mm_day,Reference evapotranspiration,water_parameters
 photosynthesis_leaf_fraction,0.3,fraction,Fraction of photosynthesis to leaves,photosynthesis_parameters
 photosynthesis_stem_fraction,0.2,fraction,Fraction of photosynthesis to stems,photosynthesis_parameters
 photosynthesis_root_fraction,0.1,fraction,Fraction of photosynthesis to roots,photosynthesis_parameters
@@ -892,7 +899,7 @@ default_balance_index,0.5,fraction,Default balance index,allocation_parameters
 leaf_allocation_default,0.5,fraction,Default leaf allocation,allocation_parameters
 stem_allocation_default,0.3,fraction,Default stem allocation,allocation_parameters
 root_allocation_default,0.2,fraction,Default root allocation,allocation_parameters
-height_growth_factor,0.5,cm_per_g,Height growth per gram stem biomass,growth_parameters
+height_growth_factor,0.063,cm_per_g,Height growth per gram stem biomass,growth_parameters
 min_surface_area_factor,100.0,cm2_per_g,Minimum surface area per gram biomass,root_parameters
 root_diameter_default,0.2,cm,Default root diameter,root_parameters
 flowering_thermal_requirement,1000.0,gdd,Thermal time requirement for flowering,thermal_requirements
@@ -953,14 +960,14 @@ leaf_development_solar_rad_alt,10.0,MJ_m2_day,Alternative solar radiation for le
 leaf_development_vpd_alt,1.0,kPa,Alternative VPD for leaf development,environment
 growth_rate_heritability,0.8,fraction,Heritability of growth rate,genetic_parameters
 yield_heritability,0.7,fraction,Heritability of yield,genetic_parameters
-transplant_stage,V4,stage,Transplant stage,phenology_parameters
+transplant_stage,V2,stage,Transplant stage,phenology_parameters
 growth_rate_environmental_sensitivity,0.5,fraction,Growth rate environmental sensitivity,genetic_parameters
 yield_environmental_sensitivity,0.6,fraction,Yield environmental sensitivity,genetic_parameters
 kc,404.9,umol_mol,Michaelis constant for CO2,photosynthesis_parameters
 ko,278.4,mmol_mol,Michaelis constant for O2,photosynthesis_parameters
 gamma_star,42.75,umol_mol,CO2 compensation point,photosynthesis_parameters
-jmax_25,157.0,umol_m2_s,Maximum electron transport rate at 25C,photosynthesis_parameters
-vcmax_25,62.5,umol_m2_s,Maximum carboxylation rate at 25C,photosynthesis_parameters
+jmax_25,16.0,umol_m2_s,Maximum electron transport rate at 25C,photosynthesis_parameters
+vcmax_25,8.0,umol_m2_s,Maximum carboxylation rate at 25C,photosynthesis_parameters
 theta,0.7,fraction,Curvature parameter,photosynthesis_parameters
 alpha,0.24,fraction,Quantum efficiency,photosynthesis_parameters
 rd_25,0.92,umol_m2_s,Dark respiration at 25C,photosynthesis_parameters
@@ -1001,3 +1008,6 @@ excess_lai_efficiency,0.8,fraction,Efficiency factor for excess LAI,photosynthes
 umol_to_g_carbon_ratio,0.044,g_umol,Conversion ratio from umol CO2 to g C,photosynthesis_parameters
 seconds_per_hour,3600,seconds,Seconds per hour for time conversions,photosynthesis_parameters
 hours_per_day,24,hours,Hours per day,photosynthesis_parameters
+quantum_efficiency,0.025,mol_CO2_per_mol_photon,Quantum efficiency of photosynthesis,photosynthesis_parameters
+co2_compensation,42.75,umol_mol,CO2 compensation point,photosynthesis_parameters
+intercellular_co2,280.0,umol_mol,Intercellular CO2 concentration,photosynthesis_parameters

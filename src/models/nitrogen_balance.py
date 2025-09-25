@@ -141,6 +141,7 @@ class NitrogenBalanceParameters:
                         raise ValueError(f"❌ Missing {param} parameter for {form} uptake kinetics in CSV configuration")
         
         # Parse allocation coefficients (if provided as flat parameters)
+        allocation_coeffs = {}
         if 'allocation_coefficients' in config_dict:
             allocation_coeffs = config_dict['allocation_coefficients']
         else:
@@ -148,13 +149,18 @@ class NitrogenBalanceParameters:
             for key, value in config_dict.items():
                 if key.startswith('allocation_coefficients_'):
                     # Extract stage and organ from key (e.g., allocation_coefficients_vegetative_leaves)
-                    parts = key.split('_', 2)
-                    if len(parts) >= 3:
-                        stage = parts[1]
-                        organ = parts[2]
+                    # Remove the prefix and split by underscore
+                    remaining = key.replace('allocation_coefficients_', '')
+                    parts = remaining.split('_')
+                    if len(parts) >= 2:
+                        stage = parts[0]
+                        organ = '_'.join(parts[1:])  # Handle organs with underscores like 'reproductive'
                         if stage not in allocation_coeffs:
                             allocation_coeffs[stage] = {}
                         allocation_coeffs[stage][organ] = float(value)
+        
+        # Debug: print allocation coefficients
+        print(f"DEBUG: allocation_coeffs = {allocation_coeffs}")
         
         # Parse critical N concentrations (if provided as flat parameters)
         if 'critical_n_concentrations' in config_dict:

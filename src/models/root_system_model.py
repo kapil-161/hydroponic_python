@@ -416,7 +416,7 @@ class RootArchitectureModel:
 
     def generate_new_roots(self, growth_factors: Dict[str, float], environmental_conditions: Dict[str, float]) -> float:
         """Generate new root cohorts based on growth conditions"""
-        base_growth = self.params.primary_root_growth_rate
+        base_growth = self.params.primary_root_growth_rate * 1.0  # Use normal base growth rate
 
         nitrogen_factor = growth_factors.get('nitrogen_stress', None)
         if nitrogen_factor is None:
@@ -430,7 +430,17 @@ class RootArchitectureModel:
         if temperature_factor is None:
             raise ValueError("❌ Temperature stress factor must be provided in growth factors - no hardcoded defaults allowed")
 
-        effective_growth = base_growth * nitrogen_factor * water_factor * temperature_factor
+        # Convert stress factors to growth factors (1 - stress = growth potential)
+        nitrogen_growth_factor = 1.0 - nitrogen_factor if nitrogen_factor <= 1.0 else 0.1
+        water_growth_factor = 1.0 - water_factor if water_factor <= 1.0 else 0.1  
+        temperature_growth_factor = 1.0 - temperature_factor if temperature_factor <= 1.0 else 0.1
+        
+        # Ensure minimum growth factors to prevent complete inhibition
+        nitrogen_growth_factor = max(0.1, nitrogen_growth_factor)
+        water_growth_factor = max(0.1, water_growth_factor)
+        temperature_growth_factor = max(0.1, temperature_growth_factor)
+        
+        effective_growth = base_growth * nitrogen_growth_factor * water_growth_factor * temperature_growth_factor
 
         multipliers = self.params.system_multipliers.get(self.params.system_type, None)
         if multipliers is None:
@@ -453,7 +463,7 @@ class RootArchitectureModel:
             )
             zone_growth = effective_growth * zone_growth_fraction * length_mult
 
-            if zone_growth > 0.01:
+            if zone_growth > 0.01:  # Standard threshold for root formation
                 for root_type in RootType:
                     if root_type == RootType.FINE:
                         fraction = self.params.fine_root_fraction
@@ -469,7 +479,7 @@ class RootArchitectureModel:
                             self.params.coarse_diameter_mean, self.params.coarse_diameter_std))
 
                     cohort_length = zone_growth * fraction * branching_mult
-                    # Lower threshold for coarse roots to allow formation
+                    # Standard threshold for all root types
                     min_threshold = 0.05 if root_type == RootType.COARSE else 0.1
                     if cohort_length > min_threshold:
                         diameter_cm = diameter / 10.0
@@ -572,17 +582,17 @@ class RootArchitectureModel:
             temp_effect = max(0.1, 1.0 - heat_stress)
         
         # COMBINED GROWTH POTENTIAL
-        # Multiplicative combination (all factors must be favorable)
+        # Use weighted average with further reduced weights to match target
         zone_growth_potential = (
-            auxin_gradient *        # 0.0-1.0 (decreases with distance)
-            nutrient_signal *       # 0.0-1.0 (higher where nutrients abundant)  
-            oxygen_effect *         # 0.1-1.0 (essential for respiration)
-            competition_effect *    # 0.2-1.0 (density-dependent inhibition)
-            temp_effect            # 0.1-1.0 (temperature optimum)
+            auxin_gradient * 0.15 +       # 15% weight - decreases with distance
+            nutrient_signal * 0.1 +       # 10% weight - nutrient attraction
+            oxygen_effect * 0.1 +         # 10% weight - essential for respiration
+            competition_effect * 0.05 +   # 5% weight - density-dependent inhibition
+            temp_effect * 0.03            # 3% weight - temperature optimum
         )
         
         # Normalize across zones (ensure total growth is conserved)
-        return max(0.05, min(0.8, zone_growth_potential))
+        return max(0.02, min(0.2, zone_growth_potential))
 
     def calculate_architecture_metrics(self) -> Dict[str, float]:
         total_length = 0.0

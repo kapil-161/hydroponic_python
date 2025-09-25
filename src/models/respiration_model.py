@@ -139,7 +139,8 @@ class RespirationParameters:
             'carbohydrate': get_required_param('carbohydrate_respiration_cost'),
             'lipid': get_required_param('lipid_respiration_cost'),
             'organic_acid': get_required_param('organic_acid_respiration_cost'),
-            'lignin': get_required_param('lignin_respiration_cost')
+            'lignin': get_required_param('lignin_respiration_cost'),
+            'mineral': get_required_param('mineral_respiration_cost')
         }
         
         return cls(
@@ -443,11 +444,21 @@ class EnhancedRespirationModel:
             
             costs = self.params.biosynthetic_costs
             
+            # Map component names to biosynthetic cost keys
+            component_mapping = {
+                'carbohydrates': 'carbohydrate',
+                'proteins': 'protein',
+                'lipids': 'lipid',
+                'minerals': 'mineral'
+            }
+            
             total_glucose_cost = 0.0
             for component, fraction in growth_composition.items():
-                cost = costs.get(component)
+                # Use mapped name or original name
+                cost_key = component_mapping.get(component, component)
+                cost = costs.get(cost_key)
                 if cost is None:
-                    raise ValueError(f"❌ Respiration cost for {component} must be provided in CSV configuration - no hardcoded defaults allowed")
+                    raise ValueError(f"❌ Respiration cost for {component} (mapped to {cost_key}) must be provided in CSV configuration - no hardcoded defaults allowed")
                 total_glucose_cost += cost * fraction * new_growth
             
             glucose_respired = total_glucose_cost * (1.0 - self.params.growth_efficiency)
