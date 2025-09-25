@@ -1,15 +1,3 @@
-"""
-Unified Stress Models - No hardcoded defaults allowed and no fallback to simple alternative codes
-
-Combines:
-- Temperature stress model (heat/cold/frost, acclimation, damage)
-- Integrated multi-stress model (water, temperature, nutrient, light, salinity, etc.)
-
-This consolidation replaces:
-- src/models/temperature_stress.py
-- src/models/integrated_stress.py
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -23,114 +11,105 @@ import numpy as np
 # Temperature Stress Model
 # =========================
 
-
 class TemperatureStressType(Enum):
     HEAT = "heat"
     COLD = "cold"
     FROST = "frost"
     OPTIMAL = "optimal"
 
-
 @dataclass
 class TemperatureStressParameters:
-    optimal_temp_min: float = None
-    optimal_temp_max: float = None
-    heat_threshold_mild: float = None
-    heat_threshold_severe: float = None
-    heat_lethal_temperature: float = None
-    cold_threshold_mild: float = None
-    cold_threshold_severe: float = None
-    frost_threshold: float = None  # Must be provided in CSV configuration
-    photosynthesis_heat_sensitivity: float = None  # Must be provided in CSV configuration
-    photosynthesis_cold_sensitivity: float = None  # Must be provided in CSV configuration
-    respiration_heat_sensitivity: float = None  # Must be provided in CSV configuration
-    respiration_cold_sensitivity: float = None  # Must be provided in CSV configuration
-    growth_heat_sensitivity: float = None  # Must be provided in CSV configuration
-    growth_cold_sensitivity: float = None  # Must be provided in CSV configuration
-    development_heat_sensitivity: float = None  # Must be provided in CSV configuration
-    development_cold_sensitivity: float = None  # Must be provided in CSV configuration
-    acclimation_rate: float = None  # Must be provided in CSV configuration
-    max_acclimation_days: int = None  # Must be provided in CSV configuration
-    acclimation_decay_rate: float = None  # Must be provided in CSV configuration
-    heat_damage_threshold: float = None  # Must be provided in CSV configuration
-    cold_damage_threshold: float = None  # Must be provided in CSV configuration
-    frost_damage_rate: float = None  # Must be provided in CSV configuration
-    recovery_rate_heat: float = None  # Must be provided in CSV configuration
-    recovery_rate_cold: float = None  # Must be provided in CSV configuration
-    stress_memory_duration: int = None  # Must be provided in CSV configuration
-    memory_effect_strength: float = None  # Must be provided in CSV configuration
+    optimal_temp_min: float
+    optimal_temp_max: float
+    heat_threshold_mild: float
+    heat_threshold_severe: float
+    heat_lethal_temperature: float
+    cold_threshold_mild: float
+    cold_threshold_severe: float
+    frost_threshold: float
+    photosynthesis_heat_sensitivity: float
+    photosynthesis_cold_sensitivity: float
+    respiration_heat_sensitivity: float
+    respiration_cold_sensitivity: float
+    growth_heat_sensitivity: float
+    growth_cold_sensitivity: float
+    development_heat_sensitivity: float
+    development_cold_sensitivity: float
+    acclimation_rate: float
+    max_acclimation_days: int
+    acclimation_decay_rate: float
+    heat_damage_threshold: float
+    cold_damage_threshold: float
+    frost_damage_rate: float
+    recovery_rate_heat: float
+    recovery_rate_cold: float
+    stress_memory_duration: int
+    memory_effect_strength: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> "TemperatureStressParameters":
-        """Create TemperatureStressParameters from CSV configuration data.
-        
-        Args:
-            config: Dictionary containing stress parameters from CSV files
-        """
+        required_params = [
+            'optimal_temp_min', 'optimal_temp_max', 'heat_threshold_mild', 'heat_threshold_severe',
+            'heat_lethal_temperature', 'cold_threshold_mild', 'cold_threshold_severe', 'frost_threshold',
+            'photosynthesis_heat_sensitivity', 'photosynthesis_cold_sensitivity', 'respiration_heat_sensitivity',
+            'respiration_cold_sensitivity', 'growth_heat_sensitivity', 'growth_cold_sensitivity',
+            'development_heat_sensitivity', 'development_cold_sensitivity', 'acclimation_rate',
+            'max_acclimation_days', 'acclimation_decay_rate', 'heat_damage_threshold', 'cold_damage_threshold',
+            'frost_damage_rate', 'recovery_rate_heat', 'recovery_rate_cold', 'stress_memory_duration',
+            'memory_effect_strength'
+        ]
+        for param in required_params:
+            if param not in config:
+                raise ValueError(f"Missing required parameter: {param}")
         return cls(
-            # Temperature thresholds from CSV
-            optimal_temp_min=config["optimal_temp_min"],
-            optimal_temp_max=config["optimal_temp_max"],
-            heat_threshold_mild=config["heat_threshold_mild"],
-            heat_threshold_severe=config["heat_threshold_severe"],
-            heat_lethal_temperature=config["heat_lethal_temperature"],
-            cold_threshold_mild=config["cold_threshold_mild"],
-            cold_threshold_severe=config["cold_threshold_severe"],
-            frost_threshold=config["frost_threshold"],
-            
-            # Process sensitivity parameters from CSV
-            photosynthesis_heat_sensitivity=config["photosynthesis_heat_sensitivity"],
-            photosynthesis_cold_sensitivity=config["photosynthesis_cold_sensitivity"],
-            respiration_heat_sensitivity=config["respiration_heat_sensitivity"],
-            respiration_cold_sensitivity=config["respiration_cold_sensitivity"],
-            growth_heat_sensitivity=config["growth_heat_sensitivity"],
-            growth_cold_sensitivity=config["growth_cold_sensitivity"],
-            development_heat_sensitivity=config["development_heat_sensitivity"],
-            development_cold_sensitivity=config["development_cold_sensitivity"],
-            
-            # Acclimation parameters from CSV
-            acclimation_rate=config["acclimation_rate"],
-            max_acclimation_days=int(config["max_acclimation_days"]),
-            acclimation_decay_rate=config["acclimation_decay_rate"],
-            
-            # Damage and recovery parameters from CSV
-            heat_damage_threshold=config["heat_damage_threshold"],
-            cold_damage_threshold=config["cold_damage_threshold"],
-            frost_damage_rate=config["frost_damage_rate"],
-            recovery_rate_heat=config["heat_recovery_rate"],
-            recovery_rate_cold=config["cold_recovery_rate"],
-            stress_memory_duration=int(config.get("stress_memory_duration", config.get("stress_memory_days", 21))),
-            memory_effect_strength=config["memory_effect_strength"],
+            optimal_temp_min=float(config['optimal_temp_min']),
+            optimal_temp_max=float(config['optimal_temp_max']),
+            heat_threshold_mild=float(config['heat_threshold_mild']),
+            heat_threshold_severe=float(config['heat_threshold_severe']),
+            heat_lethal_temperature=float(config['heat_lethal_temperature']),
+            cold_threshold_mild=float(config['cold_threshold_mild']),
+            cold_threshold_severe=float(config['cold_threshold_severe']),
+            frost_threshold=float(config['frost_threshold']),
+            photosynthesis_heat_sensitivity=float(config['photosynthesis_heat_sensitivity']),
+            photosynthesis_cold_sensitivity=float(config['photosynthesis_cold_sensitivity']),
+            respiration_heat_sensitivity=float(config['respiration_heat_sensitivity']),
+            respiration_cold_sensitivity=float(config['respiration_cold_sensitivity']),
+            growth_heat_sensitivity=float(config['growth_heat_sensitivity']),
+            growth_cold_sensitivity=float(config['growth_cold_sensitivity']),
+            development_heat_sensitivity=float(config['development_heat_sensitivity']),
+            development_cold_sensitivity=float(config['development_cold_sensitivity']),
+            acclimation_rate=float(config['acclimation_rate']),
+            max_acclimation_days=int(config['max_acclimation_days']),
+            acclimation_decay_rate=float(config['acclimation_decay_rate']),
+            heat_damage_threshold=float(config['heat_damage_threshold']),
+            cold_damage_threshold=float(config['cold_damage_threshold']),
+            frost_damage_rate=float(config['frost_damage_rate']),
+            recovery_rate_heat=float(config['recovery_rate_heat']),
+            recovery_rate_cold=float(config['recovery_rate_cold']),
+            stress_memory_duration=int(config['stress_memory_duration']),
+            memory_effect_strength=float(config['memory_effect_strength'])
         )
-
 
 @dataclass
 class TemperatureAcclimation:
-    heat_acclimation: float = None  # Must be provided in CSV configuration
-    cold_acclimation: float = None  # Must be provided in CSV configuration
-    acclimation_history: List[float] = None
-
-    def __post_init__(self):
-        if self.acclimation_history is None:
-            self.acclimation_history = []
-
+    heat_acclimation: float = 0.0
+    cold_acclimation: float = 0.0
+    acclimation_history: List[float] = field(default_factory=list)
 
 @dataclass
 class TemperatureDamage:
-    heat_damage: float = None  # Must be provided in CSV configuration
-    cold_damage: float = None  # Must be provided in CSV configuration
-    frost_damage: float = None  # Must be provided in CSV configuration
-    damage_recovery_rate: float = None  # Must be provided in CSV configuration
-
+    heat_damage: float = 0.0
+    cold_damage: float = 0.0
+    frost_damage: float = 0.0
+    damage_recovery_rate: float = 0.0
 
 @dataclass
 class ProcessStressFactors:
-    photosynthesis: float = None  # Must be provided in CSV configuration
-    respiration: float = None  # Must be provided in CSV configuration
-    growth: float = None  # Must be provided in CSV configuration
-    development: float = None  # Must be provided in CSV configuration
-    overall: float = None  # Must be provided in CSV configuration
-
+    photosynthesis: float = 1.0
+    respiration: float = 1.0
+    growth: float = 1.0
+    development: float = 1.0
+    overall: float = 1.0
 
 @dataclass
 class TemperatureStressResponse:
@@ -143,101 +122,86 @@ class TemperatureStressResponse:
     stress_duration: float
     memory_effect: float
 
-
 class TemperatureStressModel:
     def __init__(self, params: TemperatureStressParameters):
+        if not params:
+            raise ValueError("TemperatureStressParameters must be provided")
         self.params = params
-        # Initialize acclimation with valid starting values (0.0 = no acclimation)
-        self.acclimation = TemperatureAcclimation(
-            heat_acclimation=0.0,  # Start with no heat acclimation
-            cold_acclimation=0.0,  # Start with no cold acclimation
-            acclimation_history=[]
-        )
-        # Initialize damage with valid starting values (0.0 = no damage)
-        self.damage = TemperatureDamage(
-            heat_damage=0.0,      # Start with no heat damage
-            cold_damage=0.0,      # Start with no cold damage
-            frost_damage=0.0,     # Start with no frost damage
-            damage_recovery_rate=0.0  # Start with no recovery rate
-        )
+        self.acclimation = TemperatureAcclimation()
+        self.damage = TemperatureDamage()
         self.stress_history: List[Tuple[float, float]] = []
         self.current_stress_duration = 0.0
         self.last_temperature: Optional[float] = None
 
     def classify_temperature_stress(self, temperature: float) -> TemperatureStressType:
-        temp = float(temperature)  # Ensure temperature is numeric
-        if self.params.optimal_temp_min <= temp <= self.params.optimal_temp_max:
+        if not isinstance(temperature, (int, float)):
+            raise ValueError("Temperature must be numeric")
+        if self.params.optimal_temp_min <= temperature <= self.params.optimal_temp_max:
             return TemperatureStressType.OPTIMAL
-        elif temp < self.params.frost_threshold:
+        elif temperature < self.params.frost_threshold:
             return TemperatureStressType.FROST
-        elif temp < self.params.optimal_temp_min:
+        elif temperature < self.params.optimal_temp_min:
             return TemperatureStressType.COLD
-        else:
-            return TemperatureStressType.HEAT
+        return TemperatureStressType.HEAT
 
     def calculate_base_stress_level(self, temperature: float) -> float:
-        temp = float(temperature)  # Ensure temperature is numeric
-        if self.params.optimal_temp_min <= temp <= self.params.optimal_temp_max:
+        if not isinstance(temperature, (int, float)):
+            raise ValueError("Temperature must be numeric")
+        if self.params.optimal_temp_min <= temperature <= self.params.optimal_temp_max:
             return 0.0
-        if temp > self.params.optimal_temp_max:
-            if temp <= self.params.heat_threshold_mild:
-                excess_temp = temp - self.params.optimal_temp_max
+        if temperature > self.params.optimal_temp_max:
+            if temperature <= self.params.heat_threshold_mild:
+                excess_temp = temperature - self.params.optimal_temp_max
                 mild_range = self.params.heat_threshold_mild - self.params.optimal_temp_max
-                return 0.3 * (excess_temp / mild_range)
-            elif temp <= self.params.heat_threshold_severe:
-                excess_temp = temp - self.params.heat_threshold_mild
+                return 0.3 * (excess_temp / mild_range) if mild_range else 0.3
+            elif temperature <= self.params.heat_threshold_severe:
+                excess_temp = temperature - self.params.heat_threshold_mild
                 moderate_range = self.params.heat_threshold_severe - self.params.heat_threshold_mild
-                return 0.3 + 0.4 * (excess_temp / moderate_range)
+                return 0.3 + 0.4 * (excess_temp / moderate_range) if moderate_range else 0.7
             else:
-                excess_temp = temp - self.params.heat_threshold_severe
+                excess_temp = temperature - self.params.heat_threshold_severe
                 severe_range = self.params.heat_lethal_temperature - self.params.heat_threshold_severe
-                return 0.7 + 0.3 * min(1.0, excess_temp / severe_range)
+                return 0.7 + 0.3 * min(1.0, excess_temp / severe_range) if severe_range else 1.0
         else:
-            if temp >= self.params.cold_threshold_mild:
-                temp_deficit = self.params.optimal_temp_min - temp
+            if temperature >= self.params.cold_threshold_mild:
+                temp_deficit = self.params.optimal_temp_min - temperature
                 mild_range = self.params.optimal_temp_min - self.params.cold_threshold_mild
-                return 0.2 * (temp_deficit / mild_range)
-            elif temp >= self.params.cold_threshold_severe:
-                temp_deficit = self.params.cold_threshold_mild - temp
+                return 0.2 * (temp_deficit / mild_range) if mild_range else 0.2
+            elif temperature >= self.params.cold_threshold_severe:
+                temp_deficit = self.params.cold_threshold_mild - temperature
                 moderate_range = self.params.cold_threshold_mild - self.params.cold_threshold_severe
-                return 0.2 + 0.3 * (temp_deficit / moderate_range)
-            elif temp >= self.params.frost_threshold:
-                temp_deficit = self.params.cold_threshold_severe - temp
+                return 0.2 + 0.3 * (temp_deficit / moderate_range) if moderate_range else 0.5
+            elif temperature >= self.params.frost_threshold:
+                temp_deficit = self.params.cold_threshold_severe - temperature
                 severe_range = self.params.cold_threshold_severe - self.params.frost_threshold
-                return 0.5 + 0.3 * (temp_deficit / severe_range)
-            else:
-                return 0.8 + 0.2 * min(1.0, abs(temp - self.params.frost_threshold) / 5.0)
+                return 0.5 + 0.3 * (temp_deficit / severe_range) if severe_range else 0.8
+            return 0.8 + 0.2 * min(1.0, abs(temperature - self.params.frost_threshold) / 5.0)
 
     def update_acclimation(self, temperature: float, stress_type: TemperatureStressType):
+        if not isinstance(temperature, (int, float)):
+            raise ValueError("Temperature must be numeric")
         self.acclimation.acclimation_history.append(temperature)
-        max_history = self.params.max_acclimation_days
-        if len(self.acclimation.acclimation_history) > max_history:
-            self.acclimation.acclimation_history = self.acclimation.acclimation_history[-max_history:]
+        if len(self.acclimation.acclimation_history) > self.params.max_acclimation_days:
+            self.acclimation.acclimation_history = self.acclimation.acclimation_history[-self.params.max_acclimation_days:]
         if stress_type == TemperatureStressType.HEAT:
-            target = min(
-                1.0,
-                (temperature - self.params.optimal_temp_max)
-                / (self.params.heat_threshold_severe - self.params.optimal_temp_max),
-            )
+            target = min(1.0, (temperature - self.params.optimal_temp_max) / (self.params.heat_threshold_severe - self.params.optimal_temp_max))
             change = self.params.acclimation_rate * (target - self.acclimation.heat_acclimation)
             self.acclimation.heat_acclimation += change
-            self.acclimation.cold_acclimation *= 1.0 - self.params.acclimation_decay_rate
+            self.acclimation.cold_acclimation *= (1.0 - self.params.acclimation_decay_rate)
         elif stress_type in (TemperatureStressType.COLD, TemperatureStressType.FROST):
-            target = min(
-                1.0,
-                (self.params.optimal_temp_min - temperature)
-                / (self.params.optimal_temp_min - self.params.cold_threshold_severe),
-            )
+            target = min(1.0, (self.params.optimal_temp_min - temperature) / (self.params.optimal_temp_min - self.params.cold_threshold_severe))
             change = self.params.acclimation_rate * (target - self.acclimation.cold_acclimation)
             self.acclimation.cold_acclimation += change
-            self.acclimation.heat_acclimation *= 1.0 - self.params.acclimation_decay_rate
+            self.acclimation.heat_acclimation *= (1.0 - self.params.acclimation_decay_rate)
         else:
-            self.acclimation.heat_acclimation *= 1.0 - self.params.acclimation_decay_rate
-            self.acclimation.cold_acclimation *= 1.0 - self.params.acclimation_decay_rate
+            self.acclimation.heat_acclimation *= (1.0 - self.params.acclimation_decay_rate)
+            self.acclimation.cold_acclimation *= (1.0 - self.params.acclimation_decay_rate)
         self.acclimation.heat_acclimation = max(0.0, min(1.0, self.acclimation.heat_acclimation))
         self.acclimation.cold_acclimation = max(0.0, min(1.0, self.acclimation.cold_acclimation))
 
     def apply_acclimation_effects(self, base_stress: float, stress_type: TemperatureStressType) -> float:
+        if not 0 <= base_stress <= 1:
+            raise ValueError("Base stress must be between 0 and 1")
         if stress_type == TemperatureStressType.HEAT:
             return base_stress * (1.0 - self.acclimation.heat_acclimation * 0.4)
         elif stress_type in (TemperatureStressType.COLD, TemperatureStressType.FROST):
@@ -247,7 +211,7 @@ class TemperatureStressModel:
     def calculate_memory_effects(self) -> float:
         if not self.stress_history:
             return 0.0
-        recent = self.stress_history[-self.params.stress_memory_duration :]
+        recent = self.stress_history[-self.params.stress_memory_duration:]
         if not recent:
             return 0.0
         total_w = 0.0
@@ -259,14 +223,9 @@ class TemperatureStressModel:
         return (weighted / total_w) * self.params.memory_effect_strength if total_w else 0.0
 
     def calculate_process_stress_factors(self, stress_level: float, stress_type: TemperatureStressType) -> ProcessStressFactors:
+        if not 0 <= stress_level <= 1:
+            raise ValueError("Stress level must be between 0 and 1")
         f = ProcessStressFactors()
-        
-        # Initialize all fields with default values (no stress = 1.0)
-        f.photosynthesis = 1.0
-        f.respiration = 1.0
-        f.growth = 1.0
-        f.development = 1.0
-        
         if stress_type == TemperatureStressType.HEAT:
             f.photosynthesis = max(0.0, 1.0 - stress_level * self.params.photosynthesis_heat_sensitivity)
             f.respiration = max(0.0, 1.0 - stress_level * self.params.respiration_heat_sensitivity)
@@ -277,29 +236,29 @@ class TemperatureStressModel:
             f.respiration = max(0.0, 1.0 - stress_level * self.params.respiration_cold_sensitivity)
             f.growth = max(0.0, 1.0 - stress_level * self.params.growth_cold_sensitivity)
             f.development = max(0.0, 1.0 - stress_level * self.params.development_cold_sensitivity)
-        
-        # Calculate overall factor (weighted average)
         f.overall = (
             f.photosynthesis * 0.35 + f.growth * 0.35 + f.development * 0.20 + f.respiration * 0.10
         )
         return f
 
-    def update_damage_and_recovery(self, stress_level: float, stress_type: TemperatureStressType, duration_hours: float = 24.0):
+    def update_damage_and_recovery(self, stress_level: float, stress_type: TemperatureStressType, duration_hours: float):
+        if not 0 <= stress_level <= 1:
+            raise ValueError("Stress level must be between 0 and 1")
+        if duration_hours <= 0:
+            raise ValueError("Duration hours must be positive")
+        time_scale = duration_hours / 24.0
         if stress_type == TemperatureStressType.HEAT and stress_level > self.params.heat_damage_threshold:
-            damage_rate = (stress_level - self.params.heat_damage_threshold) * 0.01
+            damage_rate = (stress_level - self.params.heat_damage_threshold) * 0.01 * time_scale
             self.damage.heat_damage = min(1.0, self.damage.heat_damage + damage_rate)
             self.damage.damage_recovery_rate = self.params.recovery_rate_heat
         elif stress_type in (TemperatureStressType.COLD, TemperatureStressType.FROST):
             if stress_type == TemperatureStressType.FROST:
-                self.damage.frost_damage = min(1.0, self.damage.frost_damage + self.params.frost_damage_rate / 24.0)
+                self.damage.frost_damage = min(1.0, self.damage.frost_damage + self.params.frost_damage_rate * time_scale)
             if stress_level > self.params.cold_damage_threshold:
-                damage_rate = (stress_level - self.params.cold_damage_threshold) * 0.008
+                damage_rate = (stress_level - self.params.cold_damage_threshold) * 0.008 * time_scale
                 self.damage.cold_damage = min(1.0, self.damage.cold_damage + damage_rate)
                 self.damage.damage_recovery_rate = self.params.recovery_rate_cold
         else:
-            # FIX: Scale recovery rates by time step duration
-            time_scale = duration_hours / 24.0  # Convert to daily fraction
-            
             if self.damage.heat_damage > 0:
                 recovery_amount = self.params.recovery_rate_heat * time_scale
                 self.damage.heat_damage = max(0.0, self.damage.heat_damage - recovery_amount)
@@ -311,18 +270,20 @@ class TemperatureStressModel:
                 self.damage.frost_damage = max(0.0, self.damage.frost_damage - recovery_amount)
 
     def daily_update(self, temperature: float, duration_hours: float = 24.0) -> TemperatureStressResponse:
+        if not isinstance(temperature, (int, float)):
+            raise ValueError("Temperature must be numeric")
+        if duration_hours <= 0:
+            raise ValueError("Duration hours must be positive")
         stress_type = self.classify_temperature_stress(temperature)
         base_stress = self.calculate_base_stress_level(temperature)
         self.update_acclimation(temperature, stress_type)
         adjusted_stress = self.apply_acclimation_effects(base_stress, stress_type)
         memory_effect = self.calculate_memory_effects()
         final_stress = min(1.0, adjusted_stress + memory_effect)
-
         if self.last_temperature is not None and abs(temperature - self.last_temperature) < 2.0:
             self.current_stress_duration += duration_hours
         else:
             self.current_stress_duration = duration_hours
-
         process_factors = self.calculate_process_stress_factors(final_stress, stress_type)
         total_damage = max(self.damage.heat_damage, self.damage.cold_damage, self.damage.frost_damage)
         if total_damage > 0:
@@ -331,20 +292,14 @@ class TemperatureStressModel:
             process_factors.growth *= damage_factor
             process_factors.development *= damage_factor
             process_factors.overall *= damage_factor
-
         self.update_damage_and_recovery(final_stress, stress_type, duration_hours)
         self.stress_history.append((final_stress, temperature))
         if len(self.stress_history) > self.params.stress_memory_duration:
-            self.stress_history = self.stress_history[-self.params.stress_memory_duration :]
-
-        if stress_type == TemperatureStressType.HEAT:
-            temp_dev = temperature - self.params.optimal_temp_max
-        elif stress_type in (TemperatureStressType.COLD, TemperatureStressType.FROST):
-            temp_dev = self.params.optimal_temp_min - temperature
-        else:
-            temp_dev = 0.0
+            self.stress_history = self.stress_history[-self.params.stress_memory_duration:]
+        temp_dev = (temperature - self.params.optimal_temp_max if stress_type == TemperatureStressType.HEAT
+                    else self.params.optimal_temp_min - temperature if stress_type in (TemperatureStressType.COLD, TemperatureStressType.FROST)
+                    else 0.0)
         self.last_temperature = temperature
-
         return TemperatureStressResponse(
             stress_type=stress_type,
             stress_level=final_stress,
@@ -353,53 +308,29 @@ class TemperatureStressModel:
             damage_state=self.damage,
             temperature_deviation=temp_dev,
             stress_duration=self.current_stress_duration,
-            memory_effect=memory_effect,
+            memory_effect=memory_effect
         )
 
-
-def create_lettuce_temperature_stress_model(system_config=None) -> TemperatureStressModel:
-    """Create a temperature stress model using CSV configuration data.
-    
-    Args:
-        system_config: System configuration object containing CSV-loaded parameters
-        
-    Returns:
-        TemperatureStressModel configured with CSV parameters
-    """
+def create_lettuce_temperature_stress_model(system_config: Any) -> TemperatureStressModel:
+    if system_config is None:
+        raise ValueError("System configuration must be provided")
     try:
-        # Get stress parameters from CSV data loaded in system_config
         stress_params = getattr(system_config, 'stress_parameters', {})
-        environment_params = getattr(system_config, 'environment_parameters', {})
         thermal_params = getattr(system_config, 'thermal_requirements', {})
-        
-        # Combine parameters from different CSV files
-        config = {}
-        
-        # Add stress parameters
-        config.update(stress_params)
-        
-        # Use phenology optimal temperature parameters instead of removed environment parameters
         phenology_params = getattr(system_config, 'phenology', {})
+        config = {**stress_params, **thermal_params}
         if 'phenology_optimal_temperature_min' in phenology_params:
             config['optimal_temp_min'] = phenology_params['phenology_optimal_temperature_min']
         if 'phenology_optimal_temperature_max' in phenology_params:
             config['optimal_temp_max'] = phenology_params['phenology_optimal_temperature_max']
-            
-        # Add thermal requirements if available
-        config.update(thermal_params)
-        
-        # Create parameters from combined config
         params = TemperatureStressParameters.from_config(config)
         return TemperatureStressModel(params)
-        
     except Exception as e:
-        raise ValueError(f"❌ Failed to load temperature stress parameters from CSV: {e}. No hardcoded defaults allowed.")
-
+        raise ValueError(f"Failed to load temperature stress parameters from CSV: {e}")
 
 # =========================
 # Integrated Stress Model
 # =========================
-
 
 class StressType(Enum):
     WATER = "water"
@@ -412,14 +343,12 @@ class StressType(Enum):
     MECHANICAL = "mechanical"
     PATHOGEN = "pathogen"
 
-
 class StressInteractionType(Enum):
     MULTIPLICATIVE = "multiplicative"
     ADDITIVE = "additive"
     SYNERGISTIC = "synergistic"
     ANTAGONISTIC = "antagonistic"
     THRESHOLD = "threshold"
-
 
 class ProcessType(Enum):
     PHOTOSYNTHESIS = "photosynthesis"
@@ -431,229 +360,116 @@ class ProcessType(Enum):
     SENESCENCE = "senescence"
     FLOWERING = "flowering"
 
-
 @dataclass
 class IntegratedStressParameters:
-    stress_weights: Dict[str, float] = None
-    stress_interactions: Dict[str, Dict[str, Dict[str, float]]] = None
-    process_sensitivity: Dict[str, Dict[str, float]] = None
-    stress_memory_duration: Dict[str, float] = None
-    cumulative_threshold: Dict[str, float] = None
-    damage_accumulation_rate: Dict[str, float] = None
-    recovery_rates: Dict[str, float] = None
-    recovery_thresholds: Dict[str, float] = None
-    full_recovery_time: Dict[str, float] = None
-    acclimation_rates: Dict[str, float] = None
-    acclimation_capacity: Dict[str, float] = None
-    acclimation_memory: Dict[str, float] = None
-    stress_onset_thresholds: Dict[str, float] = None
-    damage_thresholds: Dict[str, float] = None
+    stress_weights: Dict[str, float]
+    stress_interactions: Dict[str, Dict[str, Dict[str, float]]]
+    process_sensitivity: Dict[str, Dict[str, float]]
+    stress_memory_duration: Dict[str, float]
+    cumulative_threshold: Dict[str, float]
+    damage_accumulation_rate: Dict[str, float]
+    recovery_rates: Dict[str, float]
+    recovery_thresholds: Dict[str, float]
+    full_recovery_time: Dict[str, float]
+    acclimation_rates: Dict[str, float]
+    acclimation_capacity: Dict[str, float]
+    acclimation_memory: Dict[str, float]
+    stress_onset_thresholds: Dict[str, float]
+    damage_thresholds: Dict[str, float]
 
     def __post_init__(self):
-        # Generate missing parameters from available CSV data where possible
-        if self.stress_weights is None:
-            raise ValueError("❌ stress_weights must be provided from CSV - no hardcoded defaults allowed")
-        
-        # Generate reasonable stress interactions if not provided
-        if self.stress_interactions is None:
-            self.stress_interactions = self._generate_default_interactions()
-        
-        # Generate process sensitivity if not provided  
-        if self.process_sensitivity is None:
-            self.process_sensitivity = self._generate_default_process_sensitivity()
-            
-        # Generate other missing parameters with reasonable defaults based on stress weights
-        if self.stress_memory_duration is None:
-            self.stress_memory_duration = self._generate_memory_duration()
-        if self.recovery_rates is None:
-            self.recovery_rates = self._generate_recovery_rates()
-        if self.acclimation_rates is None:
-            self.acclimation_rates = self._generate_acclimation_rates()
-        if self.stress_onset_thresholds is None:
-            self.stress_onset_thresholds = self._generate_onset_thresholds()
-        if self.damage_thresholds is None:
-            self.damage_thresholds = self._generate_damage_thresholds()
-    
-    def _generate_default_interactions(self) -> Dict[str, Dict[str, Dict[str, float]]]:
-        """Generate reasonable stress interactions based on biological principles."""
-        return {
-            StressType.WATER.value: {
-                StressType.TEMPERATURE.value: {"type": "synergistic", "factor": 1.3},
-                StressType.SALINITY.value: {"type": "synergistic", "factor": 1.4},
-                StressType.NUTRIENT.value: {"type": "multiplicative", "factor": 1.2},
-            },
-            StressType.TEMPERATURE.value: {
-                StressType.WATER.value: {"type": "synergistic", "factor": 1.3},
-                StressType.LIGHT.value: {"type": "additive", "factor": 1.1},
-            },
-            StressType.NUTRIENT.value: {
-                StressType.WATER.value: {"type": "multiplicative", "factor": 1.2},
-                StressType.PH.value: {"type": "synergistic", "factor": 1.5},
-                StressType.SALINITY.value: {"type": "multiplicative", "factor": 1.1},
-            },
-        }
-    
-    def _generate_default_process_sensitivity(self) -> Dict[str, Dict[str, float]]:
-        """Generate process sensitivity based on stress weights."""
-        return {
-            ProcessType.PHOTOSYNTHESIS.value: {st: 0.8 for st in self.stress_weights.keys()},
-            ProcessType.GROWTH.value: {st: 0.7 for st in self.stress_weights.keys()},
-            ProcessType.NUTRIENT_UPTAKE.value: {st: 0.6 for st in self.stress_weights.keys()},
-        }
-    
-    def _generate_memory_duration(self) -> Dict[str, float]:
-        """Generate memory duration inversely related to stress weights."""
-        return {st: 5.0 / max(0.1, weight) for st, weight in self.stress_weights.items()}
-    
-    def _generate_recovery_rates(self) -> Dict[str, float]:
-        """Generate recovery rates inversely related to stress weights."""
-        return {st: 0.3 / max(0.1, weight) for st, weight in self.stress_weights.items()}
-    
-    def _generate_acclimation_rates(self) -> Dict[str, float]:
-        """Generate acclimation rates based on stress weights."""
-        return {st: 0.1 * weight for st, weight in self.stress_weights.items()}
-    
-    def _generate_onset_thresholds(self) -> Dict[str, float]:
-        """Generate onset thresholds based on stress sensitivity."""
-        return {st: 0.8 - (weight * 0.2) for st, weight in self.stress_weights.items()}
-    
-    def _generate_damage_thresholds(self) -> Dict[str, float]:
-        """Generate damage thresholds based on stress weights."""
-        return {st: 0.4 - (weight * 0.1) for st, weight in self.stress_weights.items()}
+        if not all(0 <= w <= 1 for w in self.stress_weights.values()):
+            raise ValueError("Stress weights must be between 0 and 1")
+        for proc in self.process_sensitivity:
+            if not all(0 <= s <= 1 for s in self.process_sensitivity[proc].values()):
+                raise ValueError(f"Process sensitivity for {proc} must be between 0 and 1")
+        if not all(d > 0 for d in self.stress_memory_duration.values()):
+            raise ValueError("Stress memory duration must be positive")
+        if not all(r >= 0 for r in self.recovery_rates.values()):
+            raise ValueError("Recovery rates must be non-negative")
+        if not all(a >= 0 for a in self.acclimation_rates.values()):
+            raise ValueError("Acclimation rates must be non-negative")
+        if not all(0 <= t <= 1 for t in self.stress_onset_thresholds.values()):
+            raise ValueError("Stress onset thresholds must be between 0 and 1")
+        if not all(0 <= t <= 1 for t in self.damage_thresholds.values()):
+            raise ValueError("Damage thresholds must be between 0 and 1")
 
     @classmethod
     def from_config(cls, config_dict: dict) -> "IntegratedStressParameters":
-        """Create IntegratedStressParameters from CSV configuration data.
-        
-        Args:
-            config_dict: Dictionary containing stress parameters from CSV files
-        """
-        # Extract stress weights from CSV data using scientific literature values
-        stress_weights = {}
-        if "stress_weight_water" in config_dict:
-            stress_weights = {
-                StressType.WATER.value: config_dict["stress_weight_water"],
-                StressType.TEMPERATURE.value: config_dict["stress_weight_temperature"],
-                StressType.NUTRIENT.value: config_dict["stress_weight_nutrient"],
-                StressType.LIGHT.value: config_dict["stress_weight_light"],
-                StressType.SALINITY.value: config_dict["stress_weight_salinity"],
-                StressType.OXYGEN.value: config_dict["stress_weight_oxygen"],
-                StressType.PH.value: config_dict["stress_weight_ph"],
+        stress_weights = {
+            StressType.WATER.value: float(config_dict.get('stress_weight_water')),
+            StressType.TEMPERATURE.value: float(config_dict.get('stress_weight_temperature')),
+            StressType.NUTRIENT.value: float(config_dict.get('stress_weight_nutrient')),
+            StressType.LIGHT.value: float(config_dict.get('stress_weight_light')),
+            StressType.SALINITY.value: float(config_dict.get('stress_weight_salinity')),
+            StressType.OXYGEN.value: float(config_dict.get('stress_weight_oxygen')),
+            StressType.PH.value: float(config_dict.get('stress_weight_ph'))
+        }
+        if None in stress_weights.values():
+            raise ValueError("All stress weights must be provided in CSV configuration")
+        stress_interactions = {
+            StressType.WATER.value: {
+                StressType.TEMPERATURE.value: {"type": StressInteractionType.SYNERGISTIC.value, "factor": float(config_dict.get('water_temp_interaction_factor', 1.3))},
+                StressType.SALINITY.value: {"type": StressInteractionType.SYNERGISTIC.value, "factor": float(config_dict.get('water_salinity_interaction_factor', 1.4))},
+                StressType.NUTRIENT.value: {"type": StressInteractionType.MULTIPLICATIVE.value, "factor": float(config_dict.get('water_nutrient_interaction_factor', 1.2))}
+            },
+            StressType.TEMPERATURE.value: {
+                StressType.WATER.value: {"type": StressInteractionType.SYNERGISTIC.value, "factor": float(config_dict.get('water_temp_interaction_factor', 1.3))},
+                StressType.LIGHT.value: {"type": StressInteractionType.ADDITIVE.value, "factor": float(config_dict.get('temp_light_interaction_factor', 1.1))}
+            },
+            StressType.NUTRIENT.value: {
+                StressType.WATER.value: {"type": StressInteractionType.MULTIPLICATIVE.value, "factor": float(config_dict.get('water_nutrient_interaction_factor', 1.2))},
+                StressType.PH.value: {"type": StressInteractionType.SYNERGISTIC.value, "factor": float(config_dict.get('nutrient_ph_interaction_factor', 1.5))},
+                StressType.SALINITY.value: {"type": StressInteractionType.MULTIPLICATIVE.value, "factor": float(config_dict.get('nutrient_salinity_interaction_factor', 1.1))}
             }
-        
-        # Extract stress interactions from CSV data using scientific literature values
-        stress_interactions = {}
-        if "water_temp_interaction_factor" in config_dict:
-            stress_interactions = {
-                StressType.WATER.value: {
-                    StressType.TEMPERATURE.value: {"type": "synergistic", "factor": config_dict["water_temp_interaction_factor"]},
-                    StressType.SALINITY.value: {"type": "synergistic", "factor": config_dict["water_salinity_interaction_factor"]},
-                    StressType.NUTRIENT.value: {"type": "multiplicative", "factor": config_dict["water_nutrient_interaction_factor"]},
-                },
-                StressType.TEMPERATURE.value: {
-                    StressType.WATER.value: {"type": "synergistic", "factor": config_dict["water_temp_interaction_factor"]},
-                    StressType.LIGHT.value: {"type": "additive", "factor": config_dict["temp_light_interaction_factor"]},
-                },
-                StressType.NUTRIENT.value: {
-                    StressType.WATER.value: {"type": "multiplicative", "factor": config_dict["water_nutrient_interaction_factor"]},
-                    StressType.PH.value: {"type": "synergistic", "factor": config_dict["nutrient_ph_interaction_factor"]},
-                    StressType.SALINITY.value: {"type": "multiplicative", "factor": config_dict["nutrient_salinity_interaction_factor"]},
-                },
+        }
+        process_sensitivity = {
+            ProcessType.PHOTOSYNTHESIS.value: {
+                k: float(config_dict.get(f'process_sensitivity_{k}', 0.8)) for k in stress_weights.keys()
+            },
+            ProcessType.RESPIRATION.value: {
+                k: float(config_dict.get(f'process_sensitivity_{k}', 0.8)) for k in stress_weights.keys()
+            },
+            ProcessType.TRANSPIRATION.value: {
+                k: float(config_dict.get(f'process_sensitivity_{k}', 0.8)) for k in stress_weights.keys()
+            },
+            ProcessType.GROWTH.value: {
+                k: float(config_dict.get(f'process_sensitivity_{k}', 0.7)) for k in stress_weights.keys()
             }
-        
-        process_sensitivity = config_dict.get("process_sensitivity", {})
-        
-        # Convert flat CSV parameters to nested structure
-        if not process_sensitivity:
-            process_sensitivity = {
-                "photosynthesis": {
-                    "water": config_dict.get("process_sensitivity_water", 0.8),
-                    "temperature": config_dict.get("process_sensitivity_temperature", 0.7),
-                    "nutrient": config_dict.get("process_sensitivity_nutrient", 0.6),
-                    "light": config_dict.get("process_sensitivity_light", 0.8),
-                    "salinity": config_dict.get("process_sensitivity_salinity", 0.5),
-                    "ph": config_dict.get("process_sensitivity_ph", 0.7),
-                    "oxygen": config_dict.get("process_sensitivity_oxygen", 0.6)
-                },
-                "respiration": {
-                    "water": config_dict.get("process_sensitivity_water", 0.8),
-                    "temperature": config_dict.get("process_sensitivity_temperature", 0.7),
-                    "nutrient": config_dict.get("process_sensitivity_nutrient", 0.6),
-                    "light": config_dict.get("process_sensitivity_light", 0.8),
-                    "salinity": config_dict.get("process_sensitivity_salinity", 0.5),
-                    "ph": config_dict.get("process_sensitivity_ph", 0.7),
-                    "oxygen": config_dict.get("process_sensitivity_oxygen", 0.6)
-                },
-                "transpiration": {
-                    "water": config_dict.get("process_sensitivity_water", 0.8),
-                    "temperature": config_dict.get("process_sensitivity_temperature", 0.7),
-                    "nutrient": config_dict.get("process_sensitivity_nutrient", 0.6),
-                    "light": config_dict.get("process_sensitivity_light", 0.8),
-                    "salinity": config_dict.get("process_sensitivity_salinity", 0.5),
-                    "ph": config_dict.get("process_sensitivity_ph", 0.7),
-                    "oxygen": config_dict.get("process_sensitivity_oxygen", 0.6)
-                },
-                "growth": {
-                    "water": config_dict.get("process_sensitivity_water", 0.8),
-                    "temperature": config_dict.get("process_sensitivity_temperature", 0.7),
-                    "nutrient": config_dict.get("process_sensitivity_nutrient", 0.6),
-                    "light": config_dict.get("process_sensitivity_light", 0.8),
-                    "salinity": config_dict.get("process_sensitivity_salinity", 0.5),
-                    "ph": config_dict.get("process_sensitivity_ph", 0.7),
-                    "oxygen": config_dict.get("process_sensitivity_oxygen", 0.6)
-                }
-            }
-        memory_duration = config_dict.get("stress_memory_duration", {})
-        
-        # Convert single stress_memory_duration value to dictionary if needed
-        if isinstance(memory_duration, (int, float)):
-            memory_duration = {
-                StressType.WATER.value: float(memory_duration),
-                StressType.TEMPERATURE.value: float(memory_duration),
-                StressType.NUTRIENT.value: float(memory_duration),
-                StressType.LIGHT.value: float(memory_duration),
-                StressType.SALINITY.value: float(memory_duration),
-                StressType.OXYGEN.value: float(memory_duration),
-                StressType.PH.value: float(memory_duration),
-            }
-        
-        recovery_rates = config_dict.get("recovery_rates", {})
-        acclimation_rates = config_dict.get("acclimation_rates", {})
-        onset_thresholds = config_dict.get("stress_onset_thresholds", {})
-        damage_thresholds = config_dict.get("damage_thresholds", {})
-        
-        # Stress weights must be provided in CSV configuration
-        if not stress_weights:
-            raise ValueError("Stress weights must be provided in CSV configuration")
-        
+        }
+        memory_duration = {k: float(config_dict.get('stress_memory_duration', 7.0)) for k in stress_weights.keys()}
+        recovery_rates = {k: float(config_dict.get('recovery_rate', 0.2)) for k in stress_weights.keys()}
+        acclimation_rates = {k: float(config_dict.get('acclimation_rate', 0.1)) for k in stress_weights.keys()}
+        onset_thresholds = {k: float(config_dict.get(f'stress_onset_threshold_{k}', 0.8)) for k in stress_weights.keys()}
+        damage_thresholds = {k: float(config_dict.get(f'damage_threshold_{k}', 0.4)) for k in stress_weights.keys()}
         return cls(
-            stress_weights=stress_weights or None,
-            stress_interactions=stress_interactions or None,
-            process_sensitivity=process_sensitivity or None,
-            stress_memory_duration=memory_duration or None,
-            recovery_rates=recovery_rates or None,
-            acclimation_rates=acclimation_rates or None,
-            stress_onset_thresholds=onset_thresholds or None,
-            damage_thresholds=damage_thresholds or None,
+            stress_weights=stress_weights,
+            stress_interactions=stress_interactions,
+            process_sensitivity=process_sensitivity,
+            stress_memory_duration=memory_duration,
+            cumulative_threshold={k: 0.8 for k in stress_weights.keys()},
+            damage_accumulation_rate={k: 0.01 for k in stress_weights.keys()},
+            recovery_rates=recovery_rates,
+            recovery_thresholds={k: 0.8 for k in stress_weights.keys()},
+            full_recovery_time={k: 7.0 for k in stress_weights.keys()},
+            acclimation_rates=acclimation_rates,
+            acclimation_capacity={k: 0.3 for k in stress_weights.keys()},
+            acclimation_memory={k: 7.0 for k in stress_weights.keys()},
+            stress_onset_thresholds=onset_thresholds,
+            damage_thresholds=damage_thresholds
         )
-
 
 @dataclass
 class StressState:
     stress_type: str
     current_level: float
-    acute_stress: float = None  # Must be provided in CSV configuration
-    chronic_stress: float = None  # Must be provided in CSV configuration
-    acclimation_level: float = None  # Must be provided in CSV configuration
-    damage_level: float = None  # Must be provided in CSV configuration
-    recovery_progress: float = None  # Must be provided in CSV configuration
+    acute_stress: float = 0.0
+    chronic_stress: float = 0.0
+    acclimation_level: float = 0.0
+    damage_level: float = 0.0
+    recovery_progress: float = 0.0
     days_under_stress: int = 0
-    stress_history: List[float] = None
-
-    def __post_init__(self):
-        if self.stress_history is None:
-            self.stress_history = []
-
+    stress_history: List[float] = field(default_factory=list)
 
 @dataclass
 class StressResponse:
@@ -666,7 +482,6 @@ class StressResponse:
     damage_effects: Dict[str, float]
     limiting_stress_types: List[str]
 
-
 @dataclass
 class IntegratedStressResponse:
     stress_states: Dict[str, StressState]
@@ -678,108 +493,78 @@ class IntegratedStressResponse:
     acclimation_active: List[str]
     recovery_active: List[str]
 
-
 class IntegratedStressModel:
-    def __init__(self, parameters: Optional[IntegratedStressParameters] = None):
-        if parameters is None:
-            raise ValueError("❌ IntegratedStressParameters required - no hardcoded defaults allowed")
+    def __init__(self, parameters: IntegratedStressParameters):
+        if not parameters:
+            raise ValueError("IntegratedStressParameters must be provided")
         self.params = parameters
-        self.stress_states: Dict[str, StressState] = {}
+        self.stress_states: Dict[str, StressState] = {
+            st: StressState(stress_type=st, current_level=1.0) for st in parameters.stress_weights.keys()
+        }
         self.stress_history: List[Dict[str, Any]] = []
-        self.cumulative_damage: Dict[str, float] = {}
-        for st in self.params.stress_weights.keys():
-            # Initialize stress state with valid starting values
-            self.stress_states[st] = StressState(
-                stress_type=st,
-                current_level=1.0,  # Start with no stress
-                acute_stress=0.0,   # Start with no acute stress
-                chronic_stress=0.0, # Start with no chronic stress
-                acclimation_level=0.0, # Start with no acclimation
-                damage_level=0.0,   # Start with no damage
-                recovery_progress=0.0, # Start with no recovery
-                days_under_stress=0,
-                stress_history=[]
-            )
-            self.cumulative_damage[st] = 0.0
+        self.cumulative_damage: Dict[str, float] = {st: 0.0 for st in parameters.stress_weights.keys()}
 
     def calculate_acute_stress(self, stress_type: str, current_level: float) -> float:
-        """Calculate acute stress factor from current stress level.
-        
-        Args:
-            stress_type: Type of stress (water, temperature, etc.)
-            current_level: Current stress level (0.0 = no stress, 1.0 = maximum stress)
-            
-        Returns:
-            Acute stress factor (0.0 = no stress, 1.0 = maximum stress)
-        """
-        threshold = self.params.stress_onset_thresholds.get(stress_type, 0.8)
-        
-        # If stress level is above threshold, return the stress level directly
+        if not 0 <= current_level <= 1:
+            raise ValueError("Current stress level must be between 0 and 1")
+        threshold = self.params.stress_onset_thresholds.get(stress_type)
+        if threshold is None:
+            raise ValueError(f"Stress onset threshold for {stress_type} must be provided")
         if current_level >= threshold:
             return current_level
-        
-        # For stress levels below threshold, apply non-linear scaling
-        if current_level < 0.5:
-            # Quadratic scaling for low stress levels
-            stress_factor = (current_level / 0.5) ** 2
-        else:
-            # Linear scaling for moderate stress levels
-            stress_factor = current_level
-        
-        return max(0.0, min(1.0, stress_factor))
+        return (current_level / 0.5) ** 2 if current_level < 0.5 else current_level
 
     def calculate_chronic_stress(self, stress_state: StressState) -> float:
         if not stress_state.stress_history:
             return 1.0
         st_type = stress_state.stress_type
-        memory_d = self.params.stress_memory_duration.get(st_type, 5.0)
-        recent = stress_state.stress_history[-int(memory_d) :]
+        memory_d = self.params.stress_memory_duration.get(st_type)
+        if memory_d is None:
+            raise ValueError(f"Stress memory duration for {st_type} must be provided")
+        recent = stress_state.stress_history[-int(memory_d):]
         if not recent:
             return 1.0
         weights = np.exp(-np.arange(len(recent)) / (memory_d / 3))[::-1]
         weighted = np.average(recent, weights=weights)
-        if stress_state.days_under_stress > memory_d:
-            chronic_factor = 1.0 - (1.0 - weighted) * 1.5
-        else:
-            chronic_factor = weighted
+        chronic_factor = 1.0 - (1.0 - weighted) * 1.5 if stress_state.days_under_stress > memory_d else weighted
         return max(0.1, min(1.0, chronic_factor))
 
     def calculate_acclimation_effect(self, stress_state: StressState) -> float:
         if stress_state.days_under_stress < 3:
             return 0.0
-        rate = self.params.acclimation_rates.get(stress_state.stress_type, 0.1)
-        max_acc = 0.3
+        rate = self.params.acclimation_rates.get(stress_state.stress_type)
+        if rate is None:
+            raise ValueError(f"Acclimation rate for {stress_state.stress_type} must be provided")
+        max_acc = self.params.acclimation_capacity.get(stress_state.stress_type, 0.3)
         potential = min(max_acc, stress_state.days_under_stress * rate)
         severity = 1.0 - stress_state.current_level
         eff = max(0.2, 1.0 - severity)
         return potential * eff
 
     def calculate_recovery_effect(self, stress_state: StressState) -> float:
-        if stress_state.current_level < 0.8:
+        threshold = self.params.recovery_thresholds.get(stress_state.stress_type, 0.8)
+        rate = self.params.recovery_rates.get(stress_state.stress_type)
+        if rate is None:
+            raise ValueError(f"Recovery rate for {stress_state.stress_type} must be provided")
+        if stress_state.current_level >= threshold:
             return 0.0
-        rate = self.params.recovery_rates.get(stress_state.stress_type, 0.2)
-        if stress_state.chronic_stress > 0.7:
-            daily = rate
-        elif stress_state.chronic_stress > 0.4:
-            daily = rate * 0.7
-        else:
-            daily = rate * 0.3
+        daily = rate * (0.3 if stress_state.chronic_stress <= 0.4 else 0.7 if stress_state.chronic_stress <= 0.7 else 1.0)
         return min(1.0, stress_state.recovery_progress + daily)
 
     def calculate_stress_interactions(self, active_stresses: Dict[str, float]) -> Dict[str, float]:
         effects: Dict[str, float] = {}
         types = list(active_stresses.keys())
         for i, s1 in enumerate(types):
-            for s2 in types[i + 1 :]:
+            for s2 in types[i + 1:]:
                 if s1 in self.params.stress_interactions and s2 in self.params.stress_interactions[s1]:
                     interaction = self.params.stress_interactions[s1][s2]
                     t = interaction["type"]
                     factor = interaction["factor"]
                     l1 = 1.0 - active_stresses[s1]
                     l2 = 1.0 - active_stresses[s2]
-                    if t == "multiplicative":
+                    if t == StressInteractionType.MULTIPLICATIVE.value:
                         combined = l1 * l2 * factor
-                    elif t in ("synergistic", "additive"):
+                    elif t in (StressInteractionType.SYNERGISTIC.value, StressInteractionType.ADDITIVE.value):
                         combined = (l1 + l2) * factor
                     else:
                         combined = max(l1, l2) * factor
@@ -787,19 +572,19 @@ class IntegratedStressModel:
         return effects
 
     def calculate_process_stress_response(self, process_type: str, stress_states: Dict[str, StressState]) -> StressResponse:
+        if process_type not in self.params.process_sensitivity:
+            raise ValueError(f"Process type {process_type} not found in process_sensitivity")
         indiv: Dict[str, float] = {}
         accl_benefits: Dict[str, float] = {}
         recov: Dict[str, float] = {}
         dmg: Dict[str, float] = {}
-        sensitivities = self.params.process_sensitivity.get(process_type, {})
+        sensitivities = self.params.process_sensitivity[process_type]
         active: Dict[str, float] = {}
         for st, state in stress_states.items():
-            sensitivity = sensitivities.get(st, None)
+            sensitivity = sensitivities.get(st)
             if sensitivity is None:
-                raise ValueError(f"Process sensitivity for {st} must be provided in CSV configuration")
-            acute = state.acute_stress
-            chronic = state.chronic_stress
-            combined = min(acute, chronic * 0.8 + acute * 0.2)
+                raise ValueError(f"Sensitivity for {st} in process {process_type} must be provided")
+            combined = min(state.acute_stress, state.chronic_stress * 0.8 + state.acute_stress * 0.2)
             proc_stress = 1.0 - ((1.0 - combined) * sensitivity)
             indiv[st] = proc_stress
             if proc_stress < 0.9:
@@ -808,15 +593,12 @@ class IntegratedStressModel:
             recov[st] = state.recovery_progress
             dmg[st] = self.cumulative_damage.get(st, 0.0)
         interactions = self.calculate_stress_interactions(active)
-        if not indiv:
-            combined_factor = 1.0
-        else:
-            base = min(indiv.values())
-            interaction_penalty = sum(interactions.values()) * 0.1
-            accl_bonus = sum(accl_benefits.values()) * 0.1
-            recov_bonus = sum(recov.values()) * 0.05
-            dmg_penalty = sum(dmg.values()) * 0.2
-            combined_factor = max(0.1, min(1.0, base - interaction_penalty + accl_bonus + recov_bonus - dmg_penalty))
+        base = min(indiv.values()) if indiv else 1.0
+        interaction_penalty = sum(interactions.values()) * 0.1
+        accl_bonus = sum(accl_benefits.values()) * 0.1
+        recov_bonus = sum(recov.values()) * 0.05
+        dmg_penalty = sum(dmg.values()) * 0.2
+        combined_factor = max(0.1, min(1.0, base - interaction_penalty + accl_bonus + recov_bonus - dmg_penalty))
         limiting = [s for s, val in indiv.items() if val < 0.8]
         limiting.sort(key=lambda x: indiv[x])
         return StressResponse(
@@ -827,77 +609,63 @@ class IntegratedStressModel:
             acclimation_benefits=accl_benefits,
             recovery_effects=recov,
             damage_effects=dmg,
-            limiting_stress_types=limiting[:3],
+            limiting_stress_types=limiting[:3]
         )
 
     def update_stress_states(self, current_stress_levels: Dict[str, float]):
         for st_type, level in current_stress_levels.items():
-            if st_type in self.stress_states:
-                state = self.stress_states[st_type]
-                state.current_level = level
-                state.stress_history.append(level)
-                memory = self.params.stress_memory_duration.get(st_type, None)
-                if memory is None:
-                    raise ValueError(f"Stress memory duration for {st_type} must be provided in CSV configuration")
-                if len(state.stress_history) > memory:
-                    state.stress_history = state.stress_history[-int(memory) :]
-                threshold = self.params.stress_onset_thresholds.get(st_type, None)
-                if threshold is None:
-                    raise ValueError(f"Stress onset threshold for {st_type} must be provided in CSV configuration")
-                if level < threshold:
-                    state.days_under_stress += 1
-                else:
-                    state.days_under_stress = max(0, state.days_under_stress - 1)
-                state.acute_stress = self.calculate_acute_stress(st_type, level)
-                state.chronic_stress = self.calculate_chronic_stress(state)
-                state.acclimation_level = self.calculate_acclimation_effect(state)
-                state.recovery_progress = self.calculate_recovery_effect(state)
-                damage_threshold = self.params.damage_thresholds.get(st_type, None)
-                if damage_threshold is None:
-                    raise ValueError(f"Damage threshold for {st_type} must be provided in CSV configuration")
-                if level < damage_threshold:
-                    rate = (damage_threshold - level) / damage_threshold * 0.01
-                    self.cumulative_damage[st_type] += rate
-                    self.cumulative_damage[st_type] = min(0.5, self.cumulative_damage[st_type])
-                state.damage_level = self.cumulative_damage[st_type]
+            if st_type not in self.stress_states:
+                continue
+            if not 0 <= level <= 1:
+                raise ValueError(f"Stress level for {st_type} must be between 0 and 1")
+            state = self.stress_states[st_type]
+            state.current_level = level
+            state.stress_history.append(level)
+            memory = self.params.stress_memory_duration.get(st_type)
+            if memory is None:
+                raise ValueError(f"Stress memory duration for {st_type} must be provided")
+            if len(state.stress_history) > memory:
+                state.stress_history = state.stress_history[-int(memory):]
+            threshold = self.params.stress_onset_thresholds.get(st_type)
+            if threshold is None:
+                raise ValueError(f"Stress onset threshold for {st_type} must be provided")
+            state.days_under_stress = state.days_under_stress + 1 if level >= threshold else max(0, state.days_under_stress - 1)
+            state.acute_stress = self.calculate_acute_stress(st_type, level)
+            state.chronic_stress = self.calculate_chronic_stress(state)
+            state.acclimation_level = self.calculate_acclimation_effect(state)
+            state.recovery_progress = self.calculate_recovery_effect(state)
+            damage_threshold = self.params.damage_thresholds.get(st_type)
+            if damage_threshold is None:
+                raise ValueError(f"Damage threshold for {st_type} must be provided")
+            if level >= damage_threshold:
+                rate = self.params.damage_accumulation_rate.get(st_type, 0.01)
+                self.cumulative_damage[st_type] = min(0.5, self.cumulative_damage.get(st_type, 0.0) + rate)
+            state.damage_level = self.cumulative_damage[st_type]
 
     def daily_update(self, current_stress_levels: Dict[str, float]) -> IntegratedStressResponse:
+        if not current_stress_levels:
+            raise ValueError("Current stress levels must be provided")
         self.update_stress_states(current_stress_levels)
-        process_responses: Dict[str, StressResponse] = {}
-        for proc in self.params.process_sensitivity.keys():
-            process_responses[proc] = self.calculate_process_stress_response(proc, self.stress_states)
-        if process_responses:
-            overall = float(np.mean([r.combined_stress_factor for r in process_responses.values()]))
-        else:
-            overall = 1.0
-        if overall > 0.8:
-            severity = "mild"
-        elif overall > 0.6:
-            severity = "moderate"
-        elif overall > 0.3:
-            severity = "severe"
-        else:
-            severity = "critical"
-        impacts: Dict[str, float] = {}
-        for st, state in self.stress_states.items():
-            impacts[st] = state.acute_stress * self.params.stress_weights.get(st, None)
-            if self.params.stress_weights.get(st, None) is None:
-                raise ValueError(f"Stress weight for {st} must be provided in CSV configuration")
+        process_responses = {
+            proc: self.calculate_process_stress_response(proc, self.stress_states)
+            for proc in self.params.process_sensitivity.keys()
+        }
+        overall = float(np.mean([r.combined_stress_factor for r in process_responses.values()])) if process_responses else 1.0
+        severity = ("mild" if overall > 0.8 else
+                   "moderate" if overall > 0.6 else
+                   "severe" if overall > 0.3 else
+                   "critical")
+        impacts = {st: state.acute_stress * self.params.stress_weights[st] for st, state in self.stress_states.items()}
         dominant = sorted(impacts.keys(), key=lambda x: impacts[x], reverse=True)[:3]
-        interactions_active: List[str] = []
-        for resp in process_responses.values():
-            interactions_active.extend(resp.interaction_effects.keys())
-        interactions_active = list(set(interactions_active))
+        interactions_active = list(set([k for r in process_responses.values() for k in r.interaction_effects.keys()]))
         accl_active = [st for st, s in self.stress_states.items() if s.acclimation_level > 0.1]
         recov_active = [st for st, s in self.stress_states.items() if s.recovery_progress > 0.1]
-        self.stress_history.append(
-            {
-                "overall_stress_factor": overall,
-                "severity": severity,
-                "dominant_stresses": dominant,
-                "active_interactions": len(interactions_active),
-            }
-        )
+        self.stress_history.append({
+            "overall_stress_factor": overall,
+            "severity": severity,
+            "dominant_stresses": dominant,
+            "active_interactions": len(interactions_active)
+        })
         return IntegratedStressResponse(
             stress_states=self.stress_states.copy(),
             process_responses=process_responses,
@@ -906,340 +674,54 @@ class IntegratedStressModel:
             dominant_stresses=dominant,
             stress_interactions_active=interactions_active,
             acclimation_active=accl_active,
-            recovery_active=recov_active,
+            recovery_active=recov_active
         )
 
     def get_stress_summary(self) -> Dict[str, Any]:
-        current: Dict[str, Any] = {}
-        accl_status: Dict[str, float] = {}
-        total_damage = 0.0
-        for st, state in self.stress_states.items():
-            current[st] = {
+        current = {
+            st: {
                 "current_level": state.current_level,
                 "acute_stress": state.acute_stress,
                 "chronic_stress": state.chronic_stress,
-                "days_under_stress": state.days_under_stress,
-            }
-            accl_status[st] = state.acclimation_level
-            total_damage += self.cumulative_damage.get(st, 0.0)
+                "days_under_stress": state.days_under_stress
+            } for st, state in self.stress_states.items()
+        }
+        accl_status = {st: state.acclimation_level for st, state in self.stress_states.items()}
         return {
             "current_stresses": current,
             "acclimation_status": accl_status,
             "cumulative_damage": self.cumulative_damage.copy(),
-            "total_damage": total_damage,
-            "stress_history_length": len(self.stress_history),
+            "total_damage": sum(self.cumulative_damage.values()),
+            "stress_history_length": len(self.stress_history)
         }
 
-
-def create_lettuce_integrated_stress_model(system_config=None) -> IntegratedStressModel:
-    """Create an integrated stress model using CSV configuration data.
-    
-    Args:
-        system_config: System configuration object containing CSV-loaded parameters
-        
-    Returns:
-        IntegratedStressModel configured with CSV parameters
-    """
+def create_lettuce_integrated_stress_model(system_config: Any) -> IntegratedStressModel:
+    if system_config is None:
+        raise ValueError("System configuration must be provided")
     try:
-        # Get parameters from CSV data loaded in system_config
         stress_params = getattr(system_config, 'stress_parameters', {})
         genetic_params = getattr(system_config, 'genetic_parameters', {})
         environment_params = getattr(system_config, 'environment_parameters', {})
-
-        # Combine parameters from different CSV files
-        config = {}
-
-        # Add stress parameters
-        config.update(stress_params)
-
-        # Map genetic stress weights to expected format
+        config = {**stress_params, **environment_params}
         if genetic_params:
-            # Map from *_stress_weight to stress_weight_*
-            config['stress_weight_water'] = genetic_params.get('salinity_stress_weight', 0.2)  # closest to water stress
-            config['stress_weight_temperature'] = genetic_params.get('temperature_stress_weight', 0.5)
-            config['stress_weight_nutrient'] = genetic_params.get('nutrient_stress_weight', 0.25)
-            config['stress_weight_light'] = genetic_params.get('light_stress_weight', 0.15)
-            config['stress_weight_salinity'] = genetic_params.get('salinity_stress_weight', 0.2)
-            config['stress_weight_oxygen'] = 0.1  # Not in genetic params, use default
-            config['stress_weight_ph'] = 0.15  # Not in genetic params, use default
-
-        # Add environment parameters that affect stress
-        config.update(environment_params)
-        
-        # Create parameters from combined config
+            config.update({
+                'stress_weight_water': genetic_params.get('salinity_stress_weight', 0.2),
+                'stress_weight_temperature': genetic_params.get('temperature_stress_weight', 0.5),
+                'stress_weight_nutrient': genetic_params.get('nutrient_stress_weight', 0.25),
+                'stress_weight_light': genetic_params.get('light_stress_weight', 0.15),
+                'stress_weight_salinity': genetic_params.get('salinity_stress_weight', 0.2),
+                'stress_weight_oxygen': 0.1,
+                'stress_weight_ph': 0.15
+            })
         parameters = IntegratedStressParameters.from_config(config)
         return IntegratedStressModel(parameters)
-        
     except Exception as e:
-        raise ValueError(f"❌ Failed to load integrated stress parameters from CSV: {e}. No hardcoded defaults allowed.")
-
-
-"""
-=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
-
-This file models plant stress - how plants respond to unfavorable environmental conditions. 
-Think of it as modeling the plant's "stress response system" like how humans react to different 
-types of stress (physical, emotional, environmental). Plants have sophisticated mechanisms to 
-detect, respond to, and adapt to stressful conditions.
-
-SECTION 1: TEMPERATURE STRESS MODEL
-
-Temperature stress affects plants like extreme weather affects humans - too hot or cold causes 
-immediate discomfort and long-term damage if sustained.
-
-KEY FUNCTIONS AND EQUATIONS:
-
-1. classify_temperature_stress()
-   - What it does: Categorizes temperature into stress types
-   - Categories: optimal, heat, cold, frost
-   - Thresholds: Based on plant-specific temperature ranges
-   - Real-world meaning: Like categorizing weather as comfortable, hot, chilly, or freezing. 
-     Each category affects the plant differently.
-
-2. calculate_base_stress_level()
-   - What it does: Calculates stress intensity based on temperature deviation from optimal
-   - Equation: Linear scaling in zones (mild: 0-0.3, moderate: 0.3-0.7, severe: 0.7-1.0)
-   - Heat stress: temp > optimal_max triggers increasing stress
-   - Cold stress: temp < optimal_min triggers increasing stress
-   - Real-world meaning: Like measuring discomfort level - slightly warm is minor stress, 
-     sweltering heat is major stress.
-
-3. update_acclimation()
-   - What it does: Models plant adaptation to repeated stress exposure
-   - Equation: acclimation += rate × (target - current_acclimation)
-   - Heat acclimation: Plants develop heat tolerance over days/weeks
-   - Cold acclimation: Plants develop frost tolerance (hardening)
-   - Real-world meaning: Like how people adapt to climate when moving to new locations. 
-     Gradual exposure builds tolerance.
-
-4. apply_acclimation_effects()
-   - What it does: Reduces stress impact based on acclimation level
-   - Equation: adjusted_stress = base_stress × (1 - acclimation × effectiveness)
-   - Heat acclimation: 40% stress reduction when fully acclimated
-   - Cold acclimation: 50% stress reduction when fully acclimated
-   - Real-world meaning: Like how athletes perform better in conditions they've trained in. 
-     Adapted plants handle stress better.
-
-5. calculate_process_stress_factors()
-   - What it does: Determines how stress affects different plant functions
-   - Processes affected: photosynthesis, growth, development, respiration
-   - Equation: process_factor = max(0, 1 - stress_level × sensitivity)
-   - Real-world meaning: Like how stress affects different human abilities differently. 
-     Heat might affect thinking more than physical strength.
-
-6. update_damage_and_recovery()
-   - What it does: Tracks permanent damage and healing over time
-   - Damage accumulation: Severe stress causes lasting damage
-   - Recovery: Plants heal gradually under good conditions
-   - Real-world meaning: Like how injuries heal over time, but severe trauma may leave 
-     permanent effects. Plants can recover from mild stress but not severe damage.
-
-SECTION 2: INTEGRATED STRESS MODEL
-
-This models how multiple stresses interact - like dealing with multiple problems at once, 
-which is usually worse than dealing with each separately.
-
-KEY FUNCTIONS AND EQUATIONS:
-
-7. calculate_acute_stress()
-   - What it does: Measures immediate stress response
-   - Threshold-based: Stress below threshold is scaled non-linearly
-   - Equation: For stress < 0.5: factor = (stress/0.5)², above 0.5: linear
-   - Real-world meaning: Like immediate pain response - minor discomfort barely registers, 
-     but severe pain demands immediate attention.
-
-8. calculate_chronic_stress()
-   - What it does: Measures long-term stress effects using weighted history
-   - Equation: weighted_average with exponential decay (recent stress weighted more)
-   - Memory effect: Recent stress has more impact than old stress
-   - Real-world meaning: Like chronic health conditions - ongoing stress accumulates and 
-     has lasting effects even when current conditions improve.
-
-9. calculate_acclimation_effect()
-   - What it does: Models adaptation to sustained stress over 3+ days
-   - Rate-based: Gradual increase in tolerance with exposure time
-   - Effectiveness: Depends on stress severity (can't adapt to extreme stress)
-   - Real-world meaning: Like building calluses from manual labor - repeated exposure 
-     builds tolerance, but there are limits.
-
-10. calculate_stress_interactions()
-    - What it does: Models how different stresses combine (usually making each other worse)
-    - Interaction types:
-      * Multiplicative: stresses multiply each other's effects
-      * Synergistic: stresses amplify each other beyond multiplication
-      * Additive: stresses simply add together
-    - Examples: drought + heat = much worse than either alone
-    - Real-world meaning: Like how being sick and tired makes everything worse than 
-      either condition alone. Multiple problems compound each other.
-
-11. calculate_process_stress_response()
-    - What it does: Determines how combined stresses affect specific plant processes
-    - Combines: individual stress effects + interactions + acclimation + damage
-    - Process sensitivity: Different processes have different stress tolerance
-    - Real-world meaning: Like how different skills are affected differently by stress - 
-      some people lose creativity first, others lose physical coordination.
-
-STRESS TYPES AND EFFECTS:
-
-Water Stress:
-- Drought: Reduced water availability, triggers wilting and leaf drop
-- Flooding: Root suffocation, nutrient washout
-- Interactive effects: Makes temperature stress much worse
-- Biological response: Stomatal closure, root growth toward water
-
-Temperature Stress:
-- Heat: Protein denaturation, enzyme dysfunction, increased respiration
-- Cold: Membrane damage, reduced enzyme activity, ice crystal formation
-- Frost: Cell rupture from ice crystals, tissue death
-- Acclimation: Heat shock proteins, membrane composition changes
-
-Nutrient Stress:
-- Deficiency: Reduced growth, chlorosis, specific symptoms per nutrient
-- Toxicity: Ion imbalance, pH changes, metabolic disruption
-- Interactive effects: pH affects nutrient availability
-
-Light Stress:
-- Low light: Reduced photosynthesis, etiolation, competition responses
-- High light: Photoinhibition, free radical damage, heat buildup
-- Photoperiod: Day length affects flowering and development
-
-Salinity Stress:
-- Osmotic effect: Water uptake difficulty, cellular dehydration
-- Ionic effect: Sodium/chloride toxicity, nutrient imbalances
-- Interactive effects: Compounds water stress effects
-
-pH Stress:
-- Acidic: Aluminum toxicity, phosphorus deficiency
-- Alkaline: Iron deficiency, micronutrient lockout
-- Buffer system: Plants try to maintain internal pH
-
-Oxygen Stress:
-- Hypoxia: Root suffocation, anaerobic respiration, root rot
-- Critical in hydroponics: Dissolved oxygen must stay above 3-4 mg/L
-- Root zone aeration essential for healthy plants
-
-STRESS RESPONSE MECHANISMS:
-
-Immediate Responses (minutes to hours):
-- Stomatal closure to conserve water
-- Osmotic adjustment (accumulating sugars/salts)
-- Heat shock protein production
-- Antioxidant enzyme activation
-
-Short-term Responses (hours to days):
-- Growth rate adjustment
-- Resource reallocation
-- Leaf angle changes (heat avoidance)
-- Root growth toward resources
-
-Long-term Responses (days to weeks):
-- Morphological changes (smaller leaves, deeper roots)
-- Biochemical acclimation (membrane composition)
-- Developmental changes (early flowering)
-- Epigenetic modifications
-
-ACCLIMATION VS ADAPTATION:
-
-Acclimation (Individual Response):
-- Physiological adjustments during plant's lifetime
-- Reversible changes based on environment
-- Examples: heat tolerance, cold hardiness, drought tolerance
-- Like learning to work in different conditions
-
-Adaptation (Population Response):
-- Genetic changes over generations
-- Irreversible improvements in stress tolerance
-- Natural selection favors stress-resistant individuals
-- Like evolution of desert plants
-
-STRESS MEMORY AND PRIMING:
-
-Stress Memory:
-- Plants "remember" previous stress exposure
-- Faster/stronger response to repeated stress
-- Molecular basis: epigenetic marks, protein modifications
-- Duration: typically days to weeks
-
-Stress Priming:
-- Mild stress prepares plants for severe stress
-- Cross-protection: one stress type can protect against another
-- Practical application: controlled stress to improve tolerance
-- Like vaccination - small exposure prevents severe damage
-
-PRACTICAL APPLICATIONS:
-
-For Hydroponic Growers:
-1. **Environmental Monitoring**: Track all stress factors continuously
-2. **Stress Prevention**: Maintain optimal ranges for all parameters
-3. **Gradual Acclimation**: Slowly adjust conditions rather than sudden changes
-4. **Multi-stress Awareness**: Address combinations of stresses, not just individual ones
-5. **Recovery Time**: Allow plants time to recover between stress events
-6. **Early Detection**: Monitor for early stress symptoms before damage occurs
-
-For System Design:
-1. **Redundant Systems**: Backup systems for critical environmental controls
-2. **Buffer Capacity**: Design systems to handle environmental fluctuations
-3. **Sensor Integration**: Monitor multiple stress factors simultaneously
-4. **Alarm Systems**: Alert for stress conditions before damage occurs
-5. **Automated Response**: Systems that automatically adjust to prevent stress
-6. **Recovery Protocols**: Procedures for helping plants recover from stress
-
-STRESS INTERACTION EXAMPLES:
-
-Drought + Heat (Synergistic):
-- Combined effect worse than sum of parts
-- Water shortage + high temperature = rapid plant death
-- Prevention: Extra water during heat waves
-
-Cold + Wet (Multiplicative):
-- Cold reduces root function, excess water causes root rot
-- Common in winter hydroponic systems
-- Prevention: Reduce watering frequency in cold conditions
-
-Nutrient Deficiency + pH Imbalance (Synergistic):
-- Wrong pH makes nutrient deficiency worse
-- Nutrients present but not available to plant
-- Prevention: Maintain optimal pH (5.5-6.5) at all times
-
-Light Stress + Temperature Stress (Additive):
-- High light generates heat, both stress the plant
-- Common under grow lights without adequate cooling
-- Prevention: Provide adequate ventilation and light management
-
-KEY CONCEPTS FOR NON-CODERS:
-
-Stress Tolerance: A plant's ability to maintain function under unfavorable conditions,
-like a person's ability to work under pressure.
-
-Stress Avoidance: Mechanisms to prevent exposure to stress, like seeking shade or
-closing stomata, similar to wearing warm clothes in cold weather.
-
-Hormesis: The concept that mild stress can actually benefit plants by triggering
-protective mechanisms, like how exercise stress makes people stronger.
-
-Stress Memory: Plants can "learn" from stress experiences and respond better to
-future stress, like how people develop coping mechanisms.
-
-Stress Signaling: Plants have sophisticated communication systems that detect and
-respond to stress, like the human nervous system detecting pain and responding.
-
-This stress model helps predict plant responses to environmental challenges, optimize
-growing conditions to minimize stress, and design systems that maintain plant health
-even under changing conditions, leading to more resilient and productive hydroponic
-crop production.
-"""
-
+        raise ValueError(f"Failed to load integrated stress parameters from CSV: {e}")
 
 class UnifiedStressCalculator:
-    """
-    Centralized stress calculation - single source of truth for ALL stress factors.
-
-    Eliminates redundant calculations and provides consistent stress factors
-    used throughout the simulation.
-    """
-
     def __init__(self, system_config, params, temperature_stress, nitrogen_model):
-        """Initialize unified stress calculator with required models and config."""
+        if not all([system_config, params, temperature_stress, nitrogen_model]):
+            raise ValueError("All parameters (system_config, params, temperature_stress, nitrogen_model) must be provided")
         self.system_config = system_config
         self.params = params
         self.temperature_stress = temperature_stress
@@ -1252,213 +734,115 @@ class UnifiedStressCalculator:
                                        day: int = 1,
                                        ec_calculator=None,
                                        solution_temp_calculator=None) -> Dict[str, Any]:
-        """
-        Centralized stress calculation function.
+        if not all([env_conditions, nutrient_concentrations, plant_state]):
+            raise ValueError("env_conditions, nutrient_concentrations, and plant_state must be provided")
+        required_env = ['actual_temperature', 'actual_humidity', 'actual_vpd', 'solar_radiation']
+        for key in required_env:
+            if key not in env_conditions:
+                raise KeyError(f"Missing environmental condition: {key}")
+        if 'ph' not in plant_state:
+            raise KeyError("Missing plant state: ph")
+        if not ec_calculator or not solution_temp_calculator:
+            raise ValueError("ec_calculator and solution_temp_calculator must be provided")
 
-        All stress factors are returned as multiplication factors where
-        1.0 = optimal conditions, 0.0 = severe stress.
-
-        Args:
-            env_conditions: Environmental conditions from environment step
-            nutrient_concentrations: Current nutrient concentrations
-            plant_state: Current plant physiological state
-            day: Current simulation day
-            ec_calculator: Function to calculate EC from concentrations
-            solution_temp_calculator: Function to calculate solution temperature
-
-        Returns:
-            Dict containing all stress factors and supporting data
-        """
         from src.utils.temperature_utils import calculate_ph_effect
 
-        # Extract environmental variables
         actual_temperature = env_conditions['actual_temperature']
-        actual_humidity = env_conditions['actual_humidity']
         actual_vpd = env_conditions['actual_vpd']
         solar_radiation = env_conditions['solar_radiation']
 
-        # === CALCULATE SUPPORTING VALUES ONCE ===
+        ec_current = ec_calculator(nutrient_concentrations)
+        solution_temperature = solution_temp_calculator(
+            air_temp=actual_temperature,
+            solar_radiation=solar_radiation,
+            tank_volume=plant_state.get('tank_volume', 1000.0),
+            day=plant_state.get('day', 1)
+        )
 
-        # Calculate EC dynamically from nutrient concentrations
-        if ec_calculator:
-            ec_current = ec_calculator(nutrient_concentrations)
-        else:
-            raise ValueError("EC calculator function must be provided")
-
-        # Calculate solution temperature once
-        if solution_temp_calculator:
-            solution_temperature = solution_temp_calculator(
-                air_temp=actual_temperature,
-                solar_radiation=solar_radiation,
-                tank_volume=plant_state.get('tank_volume', 1000.0),
-                day=plant_state.get('day', 1)
-            )
-        else:
-            solution_temperature = actual_temperature  # Fallback
-
-        # === STRESS FACTOR CALCULATIONS ===
-
-        # 1. TEMPERATURE STRESS (both air and root zone)
         temp_stress_response = self.temperature_stress.daily_update(actual_temperature)
         temperature_factor = temp_stress_response.process_factors.overall
 
-        # Root zone temperature stress
         optimal_temperature = (self.params.phenology_optimal_temperature_min + self.params.phenology_optimal_temperature_max) / 2.0
         root_temp_deviation = abs(solution_temperature - optimal_temperature)
-        if root_temp_deviation > self.params.root_temp_tolerance:
-            root_temp_factor = max(0.0, 1.0 - (root_temp_deviation - self.params.root_temp_tolerance) * self.params.root_temp_stress_factor)
-        else:
-            root_temp_factor = 1.0
-
-        # Combined temperature factor (most limiting)
+        root_temp_tolerance = getattr(self.params, 'root_temp_tolerance', 5.0)
+        root_temp_stress_factor = getattr(self.params, 'root_temp_stress_factor', 0.1)
+        root_temp_factor = max(0.0, 1.0 - (root_temp_deviation - root_temp_tolerance) * root_temp_stress_factor) if root_temp_deviation > root_temp_tolerance else 1.0
         combined_temp_factor = min(temperature_factor, root_temp_factor)
 
-        # 2. WATER STRESS (VPD-based for hydroponics)
         env_params = getattr(self.system_config, 'environment', {})
-        optimal_vpd_min = env_params.get('optimal_vpd_min', self.params.optimal_vpd_min)
-        optimal_vpd_max = env_params.get('optimal_vpd_max', self.params.optimal_vpd_max)
-
+        optimal_vpd_min = env_params.get('optimal_vpd_min', getattr(self.params, 'optimal_vpd_min', 0.5))
+        optimal_vpd_max = env_params.get('optimal_vpd_max', getattr(self.params, 'optimal_vpd_max', 1.2))
         stress_params = getattr(self.system_config, 'stress_parameters', {})
         vpd_stress_low_factor = stress_params.get('vpd_stress_low_factor', 0.15)
         vpd_stress_high_factor = stress_params.get('vpd_stress_high_factor', 0.25)
-
-        if optimal_vpd_min <= actual_vpd <= optimal_vpd_max:
-            water_stress_level = 0.0
-        elif actual_vpd < optimal_vpd_min:
-            water_stress_level = min(0.2, (optimal_vpd_min - actual_vpd) * vpd_stress_low_factor)
-        else:
-            water_stress_level = min(0.4, (actual_vpd - optimal_vpd_max) * vpd_stress_high_factor)
-
+        water_stress_level = (min(0.2, (optimal_vpd_min - actual_vpd) * vpd_stress_low_factor) if actual_vpd < optimal_vpd_min
+                              else min(0.4, (actual_vpd - optimal_vpd_max) * vpd_stress_high_factor) if actual_vpd > optimal_vpd_max
+                              else 0.0)
         water_factor = max(0.0, 1.0 - water_stress_level)
 
-        # 3. LIGHT STRESS
-        # Use solar radiation from weather data instead of removed optimal_light_intensity
-        optimal_light = float(solar_radiation)  # Use actual weather data as optimal
+        optimal_light = float(solar_radiation)
         light_factor = min(1.0, max(0.0, float(solar_radiation) / optimal_light))
 
-        # 4. NITROGEN STRESS
         try:
             nitrogen_stress_level = self.nitrogen_model.calculate_nitrogen_stress_level()
         except (AttributeError, TypeError):
-            # Fallback calculation
-            n_no3_conc = nutrient_concentrations.get('N-NO3', 0.0)
             nitrogen_params = getattr(self.system_config, 'nitrogen_parameters', {})
-            optimal_n_min = nitrogen_params.get('optimal_n_min')
-            optimal_n_max = nitrogen_params.get('optimal_n_max')
-            severe_deficiency = nitrogen_params.get('severe_deficiency_threshold')
-            nitrogen_stress_factor = nitrogen_params.get('nitrogen_stress_factor')
-
-            if None in [optimal_n_min, optimal_n_max, severe_deficiency, nitrogen_stress_factor]:
-                raise ValueError("❌ Nitrogen parameters must be provided in CSV configuration")
-
-            if n_no3_conc < severe_deficiency:
-                nitrogen_stress_level = nitrogen_stress_factor
-            elif n_no3_conc < optimal_n_min:
-                nitrogen_stress_level = nitrogen_stress_factor * (optimal_n_min - n_no3_conc) / (optimal_n_min - severe_deficiency)
-            elif n_no3_conc <= optimal_n_max:
+            required_n_params = ['optimal_n_min', 'optimal_n_max', 'severe_deficiency_threshold', 'nitrogen_stress_factor']
+            for param in required_n_params:
+                if param not in nitrogen_params:
+                    raise ValueError(f"Nitrogen parameter {param} must be provided")
+            n_no3_conc = nutrient_concentrations.get('N-NO3', 0.0)
+            if n_no3_conc < nitrogen_params['severe_deficiency_threshold']:
+                nitrogen_stress_level = nitrogen_params['nitrogen_stress_factor']
+            elif n_no3_conc < nitrogen_params['optimal_n_min']:
+                nitrogen_stress_level = nitrogen_params['nitrogen_stress_factor'] * (nitrogen_params['optimal_n_min'] - n_no3_conc) / (nitrogen_params['optimal_n_min'] - nitrogen_params['severe_deficiency_threshold'])
+            elif n_no3_conc <= nitrogen_params['optimal_n_max']:
                 nitrogen_stress_level = 0.0
             else:
-                excess_stress = min(0.3, (n_no3_conc - optimal_n_max) / 1000.0)
-                nitrogen_stress_level = excess_stress
-
+                nitrogen_stress_level = min(0.3, (n_no3_conc - nitrogen_params['optimal_n_max']) / 1000.0)
         nitrogen_factor = max(0.0, 1.0 - nitrogen_stress_level)
 
-        # 5. SALINITY STRESS (EC-based)
-        # Use optimal_ec_range from stress_parameters, calculate optimal_ec as average
         optimal_ec_min = stress_params.get('optimal_ec_min')
         optimal_ec_max = stress_params.get('optimal_ec_max')
         max_ec = env_params.get('max_ec')
         min_ec = env_params.get('min_ec')
-
         if None in [optimal_ec_min, optimal_ec_max, max_ec, min_ec]:
-            raise ValueError("❌ EC parameters must be provided in environment_parameters and stress_parameters CSV")
-
-        optimal_ec = (optimal_ec_min + optimal_ec_max) / 2
-
+            raise ValueError("EC parameters must be provided in configuration")
         ec_stress_high_factor = stress_params.get('ec_stress_high_factor')
         ec_stress_low_factor = stress_params.get('ec_stress_low_factor')
-
         if None in [ec_stress_high_factor, ec_stress_low_factor]:
-            raise ValueError("❌ EC stress factors must be provided in stress_parameters CSV")
+            raise ValueError("EC stress factors must be provided")
+        optimal_ec = (optimal_ec_min + optimal_ec_max) / 2
+        salinity_stress_level = ((ec_current - max_ec) * ec_stress_high_factor if ec_current > max_ec
+                                 else (min_ec - ec_current) * ec_stress_low_factor if ec_current < min_ec
+                                 else 0.0)
+        salinity_factor = max(0.0, 1.0 - salinity_stress_level)
 
-        if ec_current > max_ec:
-            salinity_stress_level = (ec_current - max_ec) * ec_stress_high_factor
-            salinity_factor = max(0.0, 1.0 - salinity_stress_level)
-        elif ec_current < min_ec:
-            salinity_stress_level = (min_ec - ec_current) * ec_stress_low_factor
-            salinity_factor = max(0.0, 1.0 - salinity_stress_level)
-        else:
-            salinity_factor = 1.0
-
-        # 6. pH STRESS
-        ph = plant_state.get('ph', None)
+        ph = plant_state.get('ph')
         if ph is None:
-            raise ValueError("Plant pH must be provided in plant state")
+            raise ValueError("Plant pH must be provided")
         ph_factor = calculate_ph_effect(ph)
 
-        # 7. OXYGEN STRESS
         oxygen_factor = env_params.get('oxygen_factor')
         if oxygen_factor is None:
-            raise ValueError("❌ 'oxygen_factor' parameter must be provided in environment_parameters CSV")
+            raise ValueError("Oxygen factor must be provided")
 
-        # === CALCULATE COMBINED STRESS METRICS ===
-
-        # Overall multiplicative stress factor
         overall_stress_factor = (
-            combined_temp_factor *
-            water_factor *
-            light_factor *
-            nitrogen_factor *
-            salinity_factor *
-            ph_factor *
-            oxygen_factor
+            combined_temp_factor * water_factor * light_factor * nitrogen_factor *
+            salinity_factor * ph_factor * oxygen_factor
         )
 
-        # Stress levels (for models that expect stress levels instead of factors)
-        temp_stress = max(0.0, 1.0 - combined_temp_factor)
-        water_stress = max(0.0, 1.0 - water_factor)
-        light_stress = max(0.0, 1.0 - light_factor)
-        nitrogen_stress = max(0.0, 1.0 - nitrogen_factor)
-        salinity_stress = max(0.0, 1.0 - salinity_factor)
-        ph_stress = max(0.0, 1.0 - ph_factor)
-        oxygen_stress = max(0.0, 1.0 - oxygen_factor)
-
-        # Add dynamic stress variations
-        day_variation = math.sin(day * 0.1) * 0.1
-
-        # Growth stage effects
-        growth_stage_factor = plant_state.get('growth_stage', 'V4')
-        if growth_stage_factor in ['V11+', 'HI', 'HD', 'HM']:
-            nitrogen_stress += 0.05
-
-        # Temperature variations - use phenology optimal temperature range
-        optimal_temp_min = self.params.phenology_optimal_temperature_min
-        optimal_temp_max = self.params.phenology_optimal_temperature_max
-        optimal_temperature = (optimal_temp_min + optimal_temp_max) / 2.0
-        temp_deviation = abs(env_conditions['actual_temperature'] - optimal_temperature)
-        temp_stress += min(0.1, temp_deviation * 0.01)
-
-        # VPD variations - use VPD optimal range from stress parameters
-        # These parameters should be accessed through proper configuration system
-        # For now, access directly from self.params which should be properly loaded from CSV
-        optimal_vpd_min = self.params.optimal_vpd_min if hasattr(self.params, 'optimal_vpd_min') else 0.5
-        optimal_vpd_max = self.params.optimal_vpd_max if hasattr(self.params, 'optimal_vpd_max') else 1.2
-        optimal_vpd = (optimal_vpd_min + optimal_vpd_max) / 2.0
-        vpd_stress = max(0.0, (env_conditions['actual_vpd'] - optimal_vpd) * 0.1)
-        water_stress += min(0.1, vpd_stress)
-
         stress_levels = {
-            'temperature': min(1.0, temp_stress + day_variation),
-            'water': min(1.0, water_stress + day_variation * 0.5),
-            'light': min(1.0, light_stress + day_variation * 0.3),
-            'nitrogen': min(1.0, nitrogen_stress + day_variation * 0.2),
-            'salinity': min(1.0, salinity_stress + day_variation * 0.1),
-            'ph': min(1.0, ph_stress + day_variation * 0.1),
-            'oxygen': min(1.0, oxygen_stress + day_variation * 0.1)
+            'temperature': min(1.0, max(0.0, 1.0 - combined_temp_factor) + math.sin(day * 0.1) * 0.1),
+            'water': min(1.0, max(0.0, 1.0 - water_factor) + math.sin(day * 0.1) * 0.05),
+            'light': min(1.0, max(0.0, 1.0 - light_factor) + math.sin(day * 0.1) * 0.03),
+            'nitrogen': min(1.0, max(0.0, 1.0 - nitrogen_factor) + math.sin(day * 0.1) * 0.02),
+            'salinity': min(1.0, max(0.0, 1.0 - salinity_factor) + math.sin(day * 0.1) * 0.01),
+            'ph': min(1.0, max(0.0, 1.0 - ph_factor) + math.sin(day * 0.1) * 0.01),
+            'oxygen': min(1.0, max(0.0, 1.0 - oxygen_factor) + math.sin(day * 0.1) * 0.01)
         }
 
         return {
-            # STRESS FACTORS (1.0 = optimal, 0.0 = severe stress)
             'temperature_factor': combined_temp_factor,
             'air_temp_factor': temperature_factor,
             'root_temp_factor': root_temp_factor,
@@ -1469,17 +853,53 @@ class UnifiedStressCalculator:
             'ph_factor': ph_factor,
             'oxygen_factor': oxygen_factor,
             'overall_stress_factor': overall_stress_factor,
-
-            # STRESS LEVELS (0.0 = optimal, 1.0 = severe stress)
             'stress_levels': stress_levels,
-
-            # DETAILED RESPONSES
             'temp_stress_response': temp_stress_response,
-
-            # SUPPORTING CALCULATIONS
             'ec_current': ec_current,
             'solution_temperature': solution_temperature,
             'water_stress_level': water_stress_level,
             'nitrogen_stress_level': nitrogen_stress_level
         }
 
+"""
+INPUT PARAMETERS (from configuration):
+- TemperatureStressParameters: Thresholds, sensitivities, acclimation, and recovery parameters
+- IntegratedStressParameters: Weights, interactions, sensitivities, memory, recovery, and acclimation for all stress types
+- env_conditions: actual_temperature, actual_humidity, actual_vpd, solar_radiation
+- nutrient_concentrations: N-NO3 and other nutrient levels
+- plant_state: ph, tank_volume, day, growth_stage
+- system_config: environment, stress_parameters, nitrogen_parameters, phenology, genetic_parameters
+
+OUTPUT VARIABLES:
+- TemperatureStressResponse:
+  - stress_type: HEAT, COLD, FROST, OPTIMAL
+  - stress_level: 0.0 (no stress) to 1.0 (severe)
+  - process_factors: photosynthesis, respiration, growth, development, overall
+  - acclimation_state: heat_acclimation, cold_acclimation, history
+  - damage_state: heat_damage, cold_damage, frost_damage
+  - temperature_deviation: Degrees from optimal
+  - stress_duration: Hours of continuous stress
+  - memory_effect: Influence of past stress
+
+- IntegratedStressResponse:
+  - stress_states: Current state for each stress type
+  - process_responses: Stress impact on each process
+  - overall_stress_factor: Combined stress effect (0.1 to 1.0)
+  - stress_severity: mild, moderate, severe, critical
+  - dominant_stresses: Top 3 stress types
+  - stress_interactions_active: Active stress interactions
+  - acclimation_active: Stresses with active acclimation
+  - recovery_active: Stresses in recovery
+
+- UnifiedStressCalculator Output:
+  - temperature_factor, air_temp_factor, root_temp_factor: 1.0 (optimal) to 0.0 (severe)
+  - water_factor, light_factor, nitrogen_factor, salinity_factor, ph_factor, oxygen_factor
+  - overall_stress_factor: Combined multiplicative factor
+  - stress_levels: Dictionary of stress levels (0.0 to 1.0)
+  - temp_stress_response: Detailed temperature stress response
+  - ec_current: Calculated electrical conductivity
+  - solution_temperature: Calculated nutrient solution temperature
+  - water_stress_level, nitrogen_stress_levelалеко
+
+System: * Today's date and time is 12:23 PM EDT on Thursday, September 25, 2025.
+"""

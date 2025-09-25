@@ -156,9 +156,6 @@ light_threshold,8.0,MJ_per_m2_per_day,Light threshold for CO2 enrichment,environ
 max_ec,2.5,dS_per_m,Maximum safe EC for lettuce,environment
 max_economic_co2,1200.0,ppm,Maximum economic CO2 concentration,environment
 min_daylight_co2,500.0,ppm,Minimum daylight CO2 concentration,environment
-co2_variation_range,20.0,ppm,CO2 concentration variation range (±),environment
-co2_minimum_bound,350.0,ppm,Minimum allowable CO2 concentration,environment
-co2_maximum_bound,450.0,ppm,Maximum allowable CO2 concentration,environment
 min_ec,1.0,dS_per_m,Minimum EC for lettuce,environment
 oxygen_factor,0.95,unitless,Oxygen factor for root zone aeration,environment
 psychrometric_constant,0.665,kPa_per_celsius,Psychrometric constant for ETo calculations,environment
@@ -833,7 +830,6 @@ default_senesced_biomass,0.0,g,Default senesced biomass,senescence_parameters
 default_transpiration_rate,0.0,L_day,Default transpiration rate,water_parameters
 default_water_uptake_rate,0.0,L_day,Default water uptake rate,water_parameters
 default_photosynthesis_rate,0.0,umol_m2_s,Default photosynthesis rate,photosynthesis_parameters
-fallback_net_photosynthesis,0.001,g_C_m2_hour,Fallback net photosynthesis when model unavailable,photosynthesis_parameters
 default_nitrate_concentration,200.0,mg_L,Default nitrate concentration,nutrient_parameters
 default_ammonium_concentration,50.0,mg_L,Default ammonium concentration,nutrient_parameters
 default_ph_value,6.0,pH_units,Default pH value,system_parameters
@@ -1015,32 +1011,3 @@ hours_per_day,24,hours,Hours per day,photosynthesis_parameters
 quantum_efficiency,0.025,mol_CO2_per_mol_photon,Quantum efficiency of photosynthesis,photosynthesis_parameters
 co2_compensation,42.75,umol_mol,CO2 compensation point,photosynthesis_parameters
 intercellular_co2,280.0,umol_mol,Intercellular CO2 concentration,photosynthesis_parameters
-pi,3.14159,unitless,Pi constant for geometric calculations,calculation_parameters
-root_tissue_density,0.3,g_cm3,Typical root tissue density,root_parameters
-solar_to_ppfd_conversion,4.6,umol_m2_s_per_MJ_m2_day,Conversion factor from solar radiation to PPFD,light_parameters
-solar_to_ppfd_conversion_alt,2.0,umol_m2_s_per_MJ_m2_day,Alternative conversion factor from solar radiation to PPFD,light_parameters
-phosphorus_remobilization_rate,0.001,mg_g_day,Phosphorus remobilization rate,nutrient_parameters
-potassium_remobilization_rate,0.002,mg_g_day,Potassium remobilization rate,nutrient_parameters
-default_nitrogen_content,0.04,g_g,Default nitrogen content in plant tissue,nutrient_parameters
-default_phosphorus_content,0.005,g_g,Default phosphorus content in plant tissue,nutrient_parameters
-default_potassium_content,0.02,g_g,Default potassium content in plant tissue,nutrient_parameters
-temperature_stress_threshold_low,10.0,celsius,Lower temperature stress threshold,stress_parameters
-temperature_stress_threshold_high,30.0,celsius,Upper temperature stress threshold,stress_parameters
-optimal_temperature,20.0,celsius,Optimal temperature for plant growth,stress_parameters
-co2_stress_threshold,300.0,ppm,CO2 concentration stress threshold,stress_parameters
-salinity_stress_threshold,2.0,dS_m,EC threshold for salinity stress,stress_parameters
-default_sun_angle,45.0,degrees,Default solar zenith angle when not provided,light_parameters
-default_water_use_efficiency,0.1,fraction,Default water use efficiency,water_parameters
-default_vcmax_25,62.5,umol_m2_s,Default Vcmax at 25°C,photosynthesis_parameters
-default_quantum_efficiency,0.05,mol_mol,Default quantum efficiency,photosynthesis_parameters
-default_base_respiration_rate,0.1,umol_m2_s,Default base respiration rate,respiration_parameters
-base_respiration_rate,0.1,umol_m2_s,Base respiration rate,respiration_parameters
-default_carbohydrates_respiration_cost,1.27,g_g,Default carbohydrates respiration cost,respiration_parameters
-default_air_temperature,25.0,celsius,Default air temperature when not provided,environment
-default_co2_concentration,400.0,ppm,Default CO2 concentration when not provided,environment
-default_light_intensity,500.0,umol_m2_s,Default light intensity when not provided,light_parameters
-default_zenith_angle,30.0,degrees,Default zenith angle when not provided,light_parameters
-default_flow_rate,0.5,L_h,Default flow rate when not provided,system_parameters
-default_dissolved_oxygen,8.0,mg_L,Default dissolved oxygen level,water_parameters
-default_target_ph,6.0,unitless,Default target pH,water_parameters
-default_total_alkalinity,2.0,mEq_L,Default total alkalinity,water_parameters

@@ -1,276 +1,87 @@
-"""
-Unified Nutrient Models - No hardcoded defaults allowed and no fallback to simple alternative codes
-
-Combines:
-- Nutrient Concentration Submodel (solution ion dynamics and EC factors)
-- Nutrient Mobility Model (in-plant transport and redistribution)
-
-This consolidation replaces:
-- src/models/nutrient_concentration.py
-- src/models/nutrient_mobility.py
-"""
-
-from __future__ import annotations
-
-import numpy as np
+from typing import Dict, Any, List
 from dataclasses import dataclass
+import numpy as np
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
-import math
-
-# =========================
-# Nutrient Concentration Submodel
-# =========================
-
 
 @dataclass
-class NutrientParams:
-    """Parameters for a single nutrient."""
-    nutrient_id: str
-    nutrient_name: str
-    chemical_form: str
-    initial_conc: float  # mg/L
-    recharge_conc: float  # mg/L
-    uptake_conc: float  # mg/L
-    sensitivity_coeff: float
-    is_nutritive: bool
-    min_conc: float  # mg/L
-    max_conc: float  # mg/L
-    charge: int = 0
-    molar_mass: float = 0.0
-
-
-class NutrientConcentrationModel:
-    """Nutrient Concentration Submodel for hydroponic systems."""
-
-    def __init__(self, config_dict: Optional[Dict[str, Any]] = None):
-        self.nutrients: Dict[str, NutrientParams] = {}
-        self.warning_flags: Dict[str, int] = {}
-
-        # Load EC factors from CSV config
-        self.ec_factors = self._load_ec_factors_from_config(config_dict)
-
-        # Load minimum volume fraction
-        if not config_dict:
-            raise ValueError("❌ Config dictionary required for nutrient model - no CSV parameters loaded")
-        
-        if "minimum_volume_fraction" not in config_dict:
-            raise ValueError("❌ minimum_volume_fraction must be provided in CSV configuration - no hardcoded defaults allowed")
-        
-        self.minimum_volume_fraction = float(config_dict["minimum_volume_fraction"])
-    
-    def _load_ec_factors_from_config(self, config_dict: Optional[Dict[str, Any]] = None) -> Dict[str, float]:
-        """Load EC factors from CSV configuration."""
-        if not config_dict:
-            raise ValueError("Config dictionary is required for nutrient model - no CSV parameters loaded")
-        
-        # Load from CSV parameters - ERROR if missing
-        required_ec_factors = [
-            'ec_factor_n_no3', 'ec_factor_n_nh4',
-            'ec_factor_p_po4', 'ec_factor_k',
-            'ec_factor_ca', 'ec_factor_mg',
-            'ec_factor_s_so4', 'ec_factor_fe'
-        ]
-        
-        for param in required_ec_factors:
-            if param not in config_dict:
-                raise KeyError(f"Required EC factor parameter '{param}' not found in CSV configuration")
-        
-        # Load optional EC factors from CSV - ERROR if missing
-        optional_ec_factors = [
-            'ec_factor_mn', 'ec_factor_zn',
-            'ec_factor_cu', 'ec_factor_b',
-            'ec_factor_mo'
-        ]
-        
-        for param in optional_ec_factors:
-            if param not in config_dict:
-                raise KeyError(f"Required EC factor parameter '{param}' not found in CSV configuration")
-        
-        return {
-            "N-NO3": config_dict['ec_factor_n_no3'],
-            "N-NH4": config_dict['ec_factor_n_nh4'],
-            "P-PO4": config_dict['ec_factor_p_po4'],
-            "K": config_dict['ec_factor_k'],
-            "Ca": config_dict['ec_factor_ca'],
-            "Mg": config_dict['ec_factor_mg'],
-            "S-SO4": config_dict['ec_factor_s_so4'],
-            "Fe": config_dict['ec_factor_fe'],
-            "Mn": config_dict['ec_factor_mn'],
-            "Zn": config_dict['ec_factor_zn'],
-            "Cu": config_dict['ec_factor_cu'],
-            "B": config_dict['ec_factor_b'],
-            "Mo": config_dict['ec_factor_mo']
-        }
-    
-    def calculate_ec_from_concentrations(self, nutrient_concentrations: Dict[str, float]) -> float:
-        """Calculate EC from individual nutrient concentrations using EC factors."""
-        total_ec = 0.0
-
-        # Filter to only include actual nutrients (not system parameters or EC factors)
-        actual_nutrients = ['N-NO3', 'N-NH4', 'P-PO4', 'K', 'Ca', 'Mg', 'S-SO4', 'Fe', 'Mn', 'Zn', 'Cu', 'B', 'Mo']
-
-        for nutrient_id, concentration in nutrient_concentrations.items():
-            # Skip system parameters and EC factor parameters
-            if nutrient_id.startswith('ec_factor_') or nutrient_id.endswith('_threshold') or nutrient_id.endswith('_interval') or nutrient_id.endswith('_rate') or nutrient_id.endswith('_vmax') or nutrient_id.endswith('_km'):
-                continue
-
-            # Only process actual nutrients
-            if nutrient_id not in actual_nutrients and nutrient_id not in self.ec_factors:
-                continue
-
-            ec_factor = self.ec_factors.get(nutrient_id)
-            if ec_factor is None:
-                # For unknown nutrients, use a default EC factor of 0 (no EC contribution)
-                continue
-            total_ec += concentration * ec_factor
-        return total_ec
-    
-    def calculate_ec_based_uptake_modifier(self, current_ec: float, optimal_ec: float, config_dict: Optional[Dict[str, Any]] = None) -> Dict[str, float]:
-        """Calculate nutrient uptake modifiers based on EC levels using CSV parameters.
-        
-        Returns modifiers for different nutrients based on EC stress.
-        High EC reduces uptake efficiency, low EC may indicate nutrient deficiency.
-        """
-        if not config_dict:
-            raise ValueError("Config dictionary is required for EC uptake calculations - no CSV parameters loaded")
-            
-        ec_ratio = current_ec / optimal_ec if optimal_ec > 0 else 1.0
-        
-        # Load thresholds from CSV - ERROR if missing
-        required_threshold_params = ['ec_uptake_high_threshold', 'ec_uptake_low_threshold']
-        for param in required_threshold_params:
-            if param not in config_dict:
-                raise KeyError(f"Required EC threshold parameter '{param}' not found in CSV configuration")
-        
-        high_threshold = config_dict['ec_uptake_high_threshold']
-        low_threshold = config_dict['ec_uptake_low_threshold']
-        
-        uptake_modifiers = {}
-        
-        if ec_ratio > high_threshold:  # High EC stress
-            # Load high EC modifiers from CSV - ERROR if missing
-            required_high_modifiers = [
-                'ec_uptake_modifier_n_high', 'ec_uptake_modifier_p_high', 
-                'ec_uptake_modifier_k_high', 'ec_uptake_modifier_ca_high'
-            ]
-            for param in required_high_modifiers:
-                if param not in config_dict:
-                    raise KeyError(f"Required EC modifier parameter '{param}' not found in CSV configuration")
-            
-            n_modifier = config_dict['ec_uptake_modifier_n_high']
-            p_modifier = config_dict['ec_uptake_modifier_p_high']
-            k_modifier = config_dict['ec_uptake_modifier_k_high']
-            ca_modifier = config_dict['ec_uptake_modifier_ca_high']
-            
-            uptake_modifiers = {
-                "N-NO3": max(0.3, 1.0 - (ec_ratio - 1.0) * n_modifier),
-                "P-PO4": max(0.4, 1.0 - (ec_ratio - 1.0) * p_modifier),
-                "K": max(0.5, 1.0 - (ec_ratio - 1.0) * k_modifier),
-                "Ca": max(0.6, 1.0 - (ec_ratio - 1.0) * ca_modifier),
-                "Mg": max(0.5, 1.0 - (ec_ratio - 1.0) * k_modifier),  # Similar to K
-                "Fe": max(0.4, 1.0 - (ec_ratio - 1.0) * p_modifier),  # Similar to P
-            }
-        elif ec_ratio < low_threshold:  # Low EC - may indicate nutrient deficiency
-            # Load low EC modifiers from CSV - ERROR if missing
-            required_low_modifiers = [
-                'ec_uptake_modifier_n_low', 'ec_uptake_modifier_p_low', 'ec_uptake_modifier_fe_low'
-            ]
-            for param in required_low_modifiers:
-                if param not in config_dict:
-                    raise KeyError(f"Required EC modifier parameter '{param}' not found in CSV configuration")
-            
-            n_modifier_low = config_dict['ec_uptake_modifier_n_low']
-            p_modifier_low = config_dict['ec_uptake_modifier_p_low']
-            fe_modifier_low = config_dict['ec_uptake_modifier_fe_low']
-            
-            uptake_modifiers = {
-                "N-NO3": min(1.3, 1.0 + (low_threshold - ec_ratio) * n_modifier_low),
-                "P-PO4": min(1.2, 1.0 + (low_threshold - ec_ratio) * p_modifier_low),
-                "K": min(1.2, 1.0 + (low_threshold - ec_ratio) * p_modifier_low),
-                "Ca": 1.0,  # Calcium uptake not affected by low EC
-                "Mg": 1.0,  # Magnesium uptake not affected by low EC
-                "Fe": min(1.4, 1.0 + (low_threshold - ec_ratio) * fe_modifier_low),
-            }
-        else:  # Optimal EC range
-            uptake_modifiers = {nutrient: 1.0 for nutrient in self.ec_factors.keys()}
-        
-        # Apply default to any missing nutrients
-        for nutrient in self.ec_factors.keys():
-            if nutrient not in uptake_modifiers:
-                uptake_modifiers[nutrient] = 1.0
-        
-        return uptake_modifiers
-
-
-# =========================
-# Nutrient Mobility Model (in-plant)
-# =========================
-
-
-class NutrientMobility(Enum):
-    """Nutrient mobility classifications."""
-    HIGHLY_MOBILE = "highly_mobile"  # N, P, K, Mg, Cl
-    MODERATELY_MOBILE = "moderately_mobile"  # S, Fe, Zn, Mn
-    POORLY_MOBILE = "poorly_mobile"  # Ca, B, Mo
-    IMMOBILE = "immobile"  # Some forms of Fe, Ca
-
-
-class TransportMechanism(Enum):
-    """Nutrient transport mechanisms."""
-    XYLEM_ONLY = "xylem_only"  # Ca, B, Mo - upward only
-    PHLOEM_ONLY = "phloem_only"  # Some organic compounds
-    BIDIRECTIONAL = "bidirectional"  # N, P, K, Mg - both directions
-    COMPLEX = "complex"  # Fe, Zn, Mn - multiple forms
-
-
-@dataclass
-class NutrientMobilityParameters:
-    """Parameters for nutrient mobility model."""
-
-    xylem_transport_capacity: float = None
-    phloem_transport_capacity: float = None
-    temperature_q10: float = None
-    transpiration_coupling: float = None
-    mobility_classifications: Dict[str, Dict[str, Any]] = None
-    xylem_transport_rates: Dict[str, float] = None
-    phloem_transport_rates: Dict[str, float] = None
-    buffering_capacities: Dict[str, Dict[str, float]] = None
-    storage_pool_sizes: Dict[str, Dict[str, float]] = None
-    redistribution_thresholds: Dict[str, float] = None
-    stress_redistribution_rates: Dict[str, float] = None
-    sink_strength_coefficients: Dict[str, Dict[str, float]] = None
-
-    def __post_init__(self):
-        # Validate that all required parameters are provided
-        if self.mobility_classifications is None:
-            raise ValueError("❌ mobility_classifications must be provided in CSV configuration - no hardcoded defaults allowed")
-        if self.xylem_transport_rates is None:
-            raise ValueError("❌ xylem_transport_rates must be provided in CSV configuration - no hardcoded defaults allowed")
-        if self.phloem_transport_rates is None:
-            raise ValueError("❌ phloem_transport_rates must be provided in CSV configuration - no hardcoded defaults allowed")
-        if self.buffering_capacities is None:
-            raise ValueError("❌ buffering_capacities must be provided in CSV configuration - no hardcoded defaults allowed")
-        if self.storage_pool_sizes is None:
-            raise ValueError("❌ storage_pool_sizes must be provided in CSV configuration - no hardcoded defaults allowed")
-        if self.redistribution_thresholds is None:
-            raise ValueError("❌ redistribution_thresholds must be provided in CSV configuration - no hardcoded defaults allowed")
-        if self.stress_redistribution_rates is None:
-            raise ValueError("❌ stress_redistribution_rates must be provided in CSV configuration - no hardcoded defaults allowed")
-        if self.sink_strength_coefficients is None:
-            raise ValueError("❌ sink_strength_coefficients must be provided in CSV configuration - no hardcoded defaults allowed")
-        if self.xylem_transport_capacity is None:
-            raise ValueError("❌ xylem_transport_capacity must be provided in CSV configuration - no hardcoded defaults allowed")
-        if self.phloem_transport_capacity is None:
-            raise ValueError("❌ phloem_transport_capacity must be provided in CSV configuration - no hardcoded defaults allowed")
-        if self.temperature_q10 is None:
-            raise ValueError("❌ temperature_q10 must be provided in CSV configuration - no hardcoded defaults allowed")
-        if self.transpiration_coupling is None:
-            raise ValueError("❌ transpiration_coupling must be provided in CSV configuration - no hardcoded defaults allowed")
+class NutrientParameters:
+    ec_factor_n_no3: float
+    ec_factor_n_nh4: float
+    ec_factor_p_po4: float
+    ec_factor_k: float
+    ec_factor_ca: float
+    ec_factor_mg: float
+    ec_factor_s_so4: float
+    ec_factor_fe: float
+    ec_factor_mn: float
+    ec_factor_zn: float
+    ec_factor_cu: float
+    ec_factor_b: float
+    ec_factor_mo: float
+    minimum_volume_fraction: float
+    xylem_transport_capacity: float
+    phloem_transport_capacity: float
+    temperature_q10: float
+    transpiration_coupling: float
+    ec_uptake_high_threshold: float
+    ec_uptake_low_threshold: float
+    ec_uptake_modifier_n_high: float
+    ec_uptake_modifier_p_high: float
+    ec_uptake_modifier_k_high: float
+    ec_uptake_modifier_ca_high: float
+    ec_uptake_modifier_n_low: float
+    ec_uptake_modifier_p_low: float
+    ec_uptake_modifier_fe_low: float
+    kinetics_n_no3_vmax: float
+    kinetics_n_no3_km: float
+    kinetics_n_no3_min_conc: float
+    kinetics_n_nh4_vmax: float
+    kinetics_n_nh4_km: float
+    kinetics_n_nh4_min_conc: float
+    kinetics_p_po4_vmax: float
+    kinetics_p_po4_km: float
+    kinetics_p_po4_min_conc: float
+    kinetics_k_vmax: float
+    kinetics_k_km: float
+    kinetics_k_min_conc: float
+    kinetics_ca_vmax: float
+    kinetics_ca_km: float
+    kinetics_ca_min_conc: float
+    kinetics_mg_vmax: float
+    kinetics_mg_km: float
+    kinetics_mg_min_conc: float
+    mobility_classifications: Dict[str, Dict[str, Any]]
+    xylem_transport_rates: Dict[str, float]
+    phloem_transport_rates: Dict[str, float]
+    buffering_capacities: Dict[str, Dict[str, float]]
+    storage_pool_sizes: Dict[str, Dict[str, float]]
+    redistribution_thresholds: Dict[str, float]
+    stress_redistribution_rates: Dict[str, float]
+    sink_strength_coefficients: Dict[str, Dict[str, float]]
 
     @classmethod
-    def from_config(cls, config_dict: dict) -> "NutrientMobilityParameters":
-        # Build nested structures from flat CSV parameters
+    def from_config(cls, config: Dict[str, Any]) -> 'NutrientParameters':
+        required_params = [
+            'ec_factor_n_no3', 'ec_factor_n_nh4', 'ec_factor_p_po4', 'ec_factor_k',
+            'ec_factor_ca', 'ec_factor_mg', 'ec_factor_s_so4', 'ec_factor_fe',
+            'ec_factor_mn', 'ec_factor_zn', 'ec_factor_cu', 'ec_factor_b', 'ec_factor_mo',
+            'minimum_volume_fraction', 'xylem_transport_capacity', 'phloem_transport_capacity',
+            'temperature_q10', 'transpiration_coupling', 'ec_uptake_high_threshold',
+            'ec_uptake_low_threshold', 'ec_uptake_modifier_n_high', 'ec_uptake_modifier_p_high',
+            'ec_uptake_modifier_k_high', 'ec_uptake_modifier_ca_high', 'ec_uptake_modifier_n_low',
+            'ec_uptake_modifier_p_low', 'ec_uptake_modifier_fe_low', 'kinetics_n_no3_vmax',
+            'kinetics_n_no3_km', 'kinetics_n_no3_min_conc', 'kinetics_n_nh4_vmax',
+            'kinetics_n_nh4_km', 'kinetics_n_nh4_min_conc', 'kinetics_p_po4_vmax',
+            'kinetics_p_po4_km', 'kinetics_p_po4_min_conc', 'kinetics_k_vmax',
+            'kinetics_k_km', 'kinetics_k_min_conc', 'kinetics_ca_vmax', 'kinetics_ca_km',
+            'kinetics_ca_min_conc', 'kinetics_mg_vmax', 'kinetics_mg_km', 'kinetics_mg_min_conc'
+        ]
+        for param in required_params:
+            if param not in config:
+                raise KeyError(f"Required parameter '{param}' not found in configuration")
+
+        nutrients = ["nitrogen", "phosphorus", "potassium", "calcium", "magnesium", "sulfur",
+                     "iron", "manganese", "zinc", "copper", "boron", "molybdenum"]
         mobility_class = {}
         xylem_rates = {}
         phloem_rates = {}
@@ -279,75 +90,108 @@ class NutrientMobilityParameters:
         redist_thresh = {}
         stress_redist = {}
         sink_coeffs = {"vegetative": {}, "reproductive": {}, "senescence": {}}
-        
-        # Parse mobility classifications
-        nutrients = ["nitrogen", "phosphorus", "potassium", "calcium", "magnesium", "sulfur", "iron", "manganese", "zinc", "copper", "boron", "molybdenum"]
+
         for nutrient in nutrients:
             mobility_key = f"mobility_classifications_{nutrient}_mobility"
             transport_key = f"mobility_classifications_{nutrient}_transport"
             remob_key = f"mobility_classifications_{nutrient}_remobilization_efficiency"
             def_key = f"mobility_classifications_{nutrient}_deficiency_mobility"
             retrans_key = f"mobility_classifications_{nutrient}_retranslocation_rate"
-            
-            if all(key in config_dict for key in [mobility_key, transport_key, remob_key, def_key, retrans_key]):
-                mobility_class[nutrient] = {
-                    "mobility": config_dict[mobility_key],
-                    "transport": config_dict[transport_key],
-                    "remobilization_efficiency": float(config_dict[remob_key]),
-                    "deficiency_mobility": config_dict[def_key],
-                    "retranslocation_rate": float(config_dict[retrans_key]),
-                }
-        
-        # Parse transport rates
-        for nutrient in nutrients:
+            if not all(key in config for key in [mobility_key, transport_key, remob_key, def_key, retrans_key]):
+                raise KeyError(f"Missing mobility parameters for {nutrient}")
+            mobility_class[nutrient] = {
+                "mobility": config[mobility_key],
+                "transport": config[transport_key],
+                "remobilization_efficiency": float(config[remob_key]),
+                "deficiency_mobility": config[def_key],
+                "retranslocation_rate": float(config[retrans_key]),
+            }
             xylem_key = f"xylem_transport_rates_{nutrient}"
             phloem_key = f"phloem_transport_rates_{nutrient}"
-            if xylem_key in config_dict:
-                xylem_rates[nutrient] = float(config_dict[xylem_key])
-            if phloem_key in config_dict:
-                phloem_rates[nutrient] = float(config_dict[phloem_key])
-        
-        # Parse buffering capacities
+            if xylem_key not in config or phloem_key not in config:
+                raise KeyError(f"Missing transport rates for {nutrient}")
+            xylem_rates[nutrient] = float(config[xylem_key])
+            phloem_rates[nutrient] = float(config[phloem_key])
+
         organs = ["leaves", "stems", "roots"]
         for organ in organs:
             for nutrient in ["nitrogen", "phosphorus", "potassium"]:
-                key = f"buffering_capacities_{organ}_{nutrient}"
-                if key in config_dict:
-                    buffering_cap[organ][nutrient] = float(config_dict[key])
-        
-        # Parse storage pool sizes
-        for organ in organs:
-            for nutrient in ["nitrogen", "phosphorus", "potassium"]:
-                key = f"storage_pool_sizes_{organ}_{nutrient}"
-                if key in config_dict:
-                    storage_sizes[organ][nutrient] = float(config_dict[key])
-        
-        # Parse redistribution thresholds
+                buffer_key = f"buffering_capacities_{organ}_{nutrient}"
+                storage_key = f"storage_pool_sizes_{organ}_{nutrient}"
+                if buffer_key not in config or storage_key not in config:
+                    raise KeyError(f"Missing buffering/storage parameters for {organ} {nutrient}")
+                buffering_cap[organ][nutrient] = float(config[buffer_key])
+                storage_sizes[organ][nutrient] = float(config[storage_key])
+
         for nutrient in ["nitrogen", "phosphorus", "potassium", "calcium", "magnesium", "sulfur"]:
             key = f"redistribution_thresholds_{nutrient}"
-            if key in config_dict:
-                redist_thresh[nutrient] = float(config_dict[key])
-        
-        # Parse stress redistribution rates
-        for nutrient in ["nitrogen", "phosphorus", "potassium", "magnesium", "sulfur"]:
+            if key not in config:
+                raise KeyError(f"Missing redistribution threshold for {nutrient}")
+            redist_thresh[nutrient] = float(config[key])
             key = f"stress_redistribution_rates_{nutrient}"
-            if key in config_dict:
-                stress_redist[nutrient] = float(config_dict[key])
-        
-        # Parse sink strength coefficients
+            if key not in config:
+                raise KeyError(f"Missing stress redistribution rate for {nutrient}")
+            stress_redist[nutrient] = float(config[key])
+
         stages = ["vegetative", "reproductive", "senescence"]
         for stage in stages:
             for organ in ["leaves", "stems", "roots"]:
                 key = f"sink_strength_coefficients_{stage}_{organ}"
-                if key in config_dict:
-                    sink_coeffs[stage][organ] = float(config_dict[key])
-            # Handle reproductive stage reproductive organ
+                if key not in config:
+                    raise KeyError(f"Missing sink strength coefficient for {stage} {organ}")
+                sink_coeffs[stage][organ] = float(config[key])
             if stage == "reproductive":
                 key = f"sink_strength_coefficients_{stage}_reproductive"
-                if key in config_dict:
-                    sink_coeffs[stage]["reproductive"] = float(config_dict[key])
-        
+                if key not in config:
+                    raise KeyError(f"Missing sink strength coefficient for {stage} reproductive")
+                sink_coeffs[stage]["reproductive"] = float(config[key])
+
         return cls(
+            ec_factor_n_no3=float(config['ec_factor_n_no3']),
+            ec_factor_n_nh4=float(config['ec_factor_n_nh4']),
+            ec_factor_p_po4=float(config['ec_factor_p_po4']),
+            ec_factor_k=float(config['ec_factor_k']),
+            ec_factor_ca=float(config['ec_factor_ca']),
+            ec_factor_mg=float(config['ec_factor_mg']),
+            ec_factor_s_so4=float(config['ec_factor_s_so4']),
+            ec_factor_fe=float(config['ec_factor_fe']),
+            ec_factor_mn=float(config['ec_factor_mn']),
+            ec_factor_zn=float(config['ec_factor_zn']),
+            ec_factor_cu=float(config['ec_factor_cu']),
+            ec_factor_b=float(config['ec_factor_b']),
+            ec_factor_mo=float(config['ec_factor_mo']),
+            minimum_volume_fraction=float(config['minimum_volume_fraction']),
+            xylem_transport_capacity=float(config['xylem_transport_capacity']),
+            phloem_transport_capacity=float(config['phloem_transport_capacity']),
+            temperature_q10=float(config['temperature_q10']),
+            transpiration_coupling=float(config['transpiration_coupling']),
+            ec_uptake_high_threshold=float(config['ec_uptake_high_threshold']),
+            ec_uptake_low_threshold=float(config['ec_uptake_low_threshold']),
+            ec_uptake_modifier_n_high=float(config['ec_uptake_modifier_n_high']),
+            ec_uptake_modifier_p_high=float(config['ec_uptake_modifier_p_high']),
+            ec_uptake_modifier_k_high=float(config['ec_uptake_modifier_k_high']),
+            ec_uptake_modifier_ca_high=float(config['ec_uptake_modifier_ca_high']),
+            ec_uptake_modifier_n_low=float(config['ec_uptake_modifier_n_low']),
+            ec_uptake_modifier_p_low=float(config['ec_uptake_modifier_p_low']),
+            ec_uptake_modifier_fe_low=float(config['ec_uptake_modifier_fe_low']),
+            kinetics_n_no3_vmax=float(config['kinetics_n_no3_vmax']),
+            kinetics_n_no3_km=float(config['kinetics_n_no3_km']),
+            kinetics_n_no3_min_conc=float(config['kinetics_n_no3_min_conc']),
+            kinetics_n_nh4_vmax=float(config['kinetics_n_nh4_vmax']),
+            kinetics_n_nh4_km=float(config['kinetics_n_nh4_km']),
+            kinetics_n_nh4_min_conc=float(config['kinetics_n_nh4_min_conc']),
+            kinetics_p_po4_vmax=float(config['kinetics_p_po4_vmax']),
+            kinetics_p_po4_km=float(config['kinetics_p_po4_km']),
+            kinetics_p_po4_min_conc=float(config['kinetics_p_po4_min_conc']),
+            kinetics_k_vmax=float(config['kinetics_k_vmax']),
+            kinetics_k_km=float(config['kinetics_k_km']),
+            kinetics_k_min_conc=float(config['kinetics_k_min_conc']),
+            kinetics_ca_vmax=float(config['kinetics_ca_vmax']),
+            kinetics_ca_km=float(config['kinetics_ca_km']),
+            kinetics_ca_min_conc=float(config['kinetics_ca_min_conc']),
+            kinetics_mg_vmax=float(config['kinetics_mg_vmax']),
+            kinetics_mg_km=float(config['kinetics_mg_km']),
+            kinetics_mg_min_conc=float(config['kinetics_mg_min_conc']),
             mobility_classifications=mobility_class,
             xylem_transport_rates=xylem_rates,
             phloem_transport_rates=phloem_rates,
@@ -355,13 +199,20 @@ class NutrientMobilityParameters:
             storage_pool_sizes=storage_sizes,
             redistribution_thresholds=redist_thresh,
             stress_redistribution_rates=stress_redist,
-            sink_strength_coefficients=sink_coeffs,
-            xylem_transport_capacity=float(config_dict["xylem_transport_capacity"]),
-            phloem_transport_capacity=float(config_dict["phloem_transport_capacity"]),
-            temperature_q10=float(config_dict["nutrient_mobility_temperature_q10"]),
-            transpiration_coupling=float(config_dict["transpiration_coupling"]),
+            sink_strength_coefficients=sink_coeffs
         )
 
+class NutrientMobility(Enum):
+    HIGHLY_MOBILE = "highly_mobile"
+    MODERATELY_MOBILE = "moderately_mobile"
+    POORLY_MOBILE = "poorly_mobile"
+    IMMOBILE = "immobile"
+
+class TransportMechanism(Enum):
+    XYLEM_ONLY = "xylem_only"
+    PHLOEM_ONLY = "phloem_only"
+    BIDIRECTIONAL = "bidirectional"
+    COMPLEX = "complex"
 
 @dataclass
 class NutrientTransportFlux:
@@ -372,7 +223,6 @@ class NutrientTransportFlux:
     flux_rate: float
     driving_force: str
     efficiency: float
-
 
 @dataclass
 class OrganNutrientPools:
@@ -392,7 +242,6 @@ class OrganNutrientPools:
     def __post_init__(self):
         self.total_content = self.metabolic_pool + self.storage_pool + self.transport_pool + self.buffer_pool
 
-
 @dataclass
 class NutrientMobilityResponse:
     transport_fluxes: List[NutrientTransportFlux]
@@ -403,150 +252,259 @@ class NutrientMobilityResponse:
     source_supplies: Dict[str, Dict[str, float]]
     mobility_efficiency: Dict[str, float]
 
-
-class NutrientMobilityModel:
-    def __init__(self, parameters: Optional[NutrientMobilityParameters] = None):
-        if parameters is None:
-            raise ValueError("❌ NutrientMobilityParameters required - no hardcoded defaults allowed")
+class NutrientModel:
+    def __init__(self, parameters: NutrientParameters):
         self.params = parameters
+        self.ec_factors = self._get_ec_factors()
+        self.kinetics = self._get_uptake_kinetics()
         self.organ_pools: Dict[str, Dict[str, OrganNutrientPools]] = {}
         self.transport_history: List[Dict[str, Any]] = []
         self.cumulative_redistribution: Dict[str, float] = {}
 
+    def _get_ec_factors(self) -> Dict[str, float]:
+        return {
+            "N-NO3": self.params.ec_factor_n_no3,
+            "N-NH4": self.params.ec_factor_n_nh4,
+            "P-PO4": self.params.ec_factor_p_po4,
+            "K": self.params.ec_factor_k,
+            "Ca": self.params.ec_factor_ca,
+            "Mg": self.params.ec_factor_mg,
+            "S-SO4": self.params.ec_factor_s_so4,
+            "Fe": self.params.ec_factor_fe,
+            "Mn": self.params.ec_factor_mn,
+            "Zn": self.params.ec_factor_zn,
+            "Cu": self.params.ec_factor_cu,
+            "B": self.params.ec_factor_b,
+            "Mo": self.params.ec_factor_mo
+        }
+
+    def _get_uptake_kinetics(self) -> Dict[str, Dict[str, float]]:
+        return {
+            'N-NO3': {'vmax': self.params.kinetics_n_no3_vmax, 'km': self.params.kinetics_n_no3_km, 'min_conc': self.params.kinetics_n_no3_min_conc},
+            'N-NH4': {'vmax': self.params.kinetics_n_nh4_vmax, 'km': self.params.kinetics_n_nh4_km, 'min_conc': self.params.kinetics_n_nh4_min_conc},
+            'P-PO4': {'vmax': self.params.kinetics_p_po4_vmax, 'km': self.params.kinetics_p_po4_km, 'min_conc': self.params.kinetics_p_po4_min_conc},
+            'K': {'vmax': self.params.kinetics_k_vmax, 'km': self.params.kinetics_k_km, 'min_conc': self.params.kinetics_k_min_conc},
+            'Ca': {'vmax': self.params.kinetics_ca_vmax, 'km': self.params.kinetics_ca_km, 'min_conc': self.params.kinetics_ca_min_conc},
+            'Mg': {'vmax': self.params.kinetics_mg_vmax, 'km': self.params.kinetics_mg_km, 'min_conc': self.params.kinetics_mg_min_conc}
+        }
+
+    def calculate_nutrient_dynamics(self, concentrations: Dict[str, float], plant_status: Dict[str, Any],
+                                  env_conditions: Dict[str, Any], organ_demands: Dict[str, Dict[str, float]],
+                                  water_fluxes: Dict[str, float], assimilate_fluxes: Dict[str, float]) -> Dict[str, Any]:
+        required_status = ['root_surface_area', 'tank_volume_L', 'plant_count', 'daily_growth_rate', 'growth_stage', 'senescence_rates', 'stress_factors', 'organ_nutrient_status']
+        required_env = ['temperature', 'ph', 'optimal_ec']
+        for key in required_status:
+            if key not in plant_status:
+                raise KeyError(f"Missing plant_status key: {key}")
+        for key in required_env:
+            if key not in env_conditions:
+                raise KeyError(f"Missing env_conditions key: {key}")
+
+        ec_value = self._calculate_ec_from_concentrations(concentrations)
+        uptake_modifiers = self._calculate_uptake_modifiers(ec_value, env_conditions)
+        uptake_rates = self._calculate_uptake_rates(concentrations, plant_status, env_conditions, uptake_modifiers)
+        updated_concentrations = self._update_concentrations(concentrations, uptake_rates, plant_status)
+        mobility_response = self._calculate_nutrient_mobility(organ_demands, plant_status, env_conditions, water_fluxes, assimilate_fluxes)
+        return {
+            'calculated_ec': ec_value,
+            'uptake_rates_mg_per_plant_per_day': uptake_rates,
+            'updated_concentrations': updated_concentrations,
+            'transport_fluxes': mobility_response.transport_fluxes,
+            'organ_pools': mobility_response.organ_pools,
+            'mobility_efficiency': mobility_response.mobility_efficiency,
+            'transport_limitations': mobility_response.transport_limitations
+        }
+
+    def _calculate_ec_from_concentrations(self, concentrations: Dict[str, float]) -> float:
+        total_ec = 0.0
+        for nutrient, concentration in concentrations.items():
+            if nutrient in self.ec_factors:
+                total_ec += concentration * self.ec_factors[nutrient]
+        return total_ec
+
+    def _calculate_uptake_modifiers(self, current_ec: float, env_conditions: Dict[str, Any]) -> Dict[str, float]:
+        ec_ratio = current_ec / env_conditions['optimal_ec']
+        modifiers = {}
+        if ec_ratio > self.params.ec_uptake_high_threshold:
+            modifiers = {
+                "N-NO3": max(0.3, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_n_high),
+                "P-PO4": max(0.4, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_p_high),
+                "K": max(0.5, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_k_high),
+                "Ca": max(0.6, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_ca_high),
+                "Mg": max(0.5, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_k_high),
+                "Fe": max(0.4, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_p_high),
+            }
+        elif ec_ratio < self.params.ec_uptake_low_threshold:
+            modifiers = {
+                "N-NO3": min(1.3, 1.0 + (self.params.ec_uptake_low_threshold - ec_ratio) * self.params.ec_uptake_modifier_n_low),
+                "P-PO4": min(1.2, 1.0 + (self.params.ec_uptake_low_threshold - ec_ratio) * self.params.ec_uptake_modifier_p_low),
+                "K": min(1.2, 1.0 + (self.params.ec_uptake_low_threshold - ec_ratio) * self.params.ec_uptake_modifier_p_low),
+                "Ca": 1.0,
+                "Mg": 1.0,
+                "Fe": min(1.4, 1.0 + (self.params.ec_uptake_low_threshold - ec_ratio) * self.params.ec_uptake_modifier_fe_low),
+            }
+        else:
+            modifiers = {nutrient: 1.0 for nutrient in self.ec_factors.keys()}
+        for nutrient in self.ec_factors.keys():
+            if nutrient not in modifiers:
+                modifiers[nutrient] = 1.0
+        return modifiers
+
+    def _calculate_uptake_rates(self, concentrations: Dict[str, float], plant_status: Dict[str, Any],
+                              env_conditions: Dict[str, Any], uptake_modifiers: Dict[str, float]) -> Dict[str, float]:
+        uptake_rates = {}
+        temperature = env_conditions['temperature']
+        ph = env_conditions['ph']
+        root_surface_area = plant_status['root_surface_area']
+        daily_growth_rate = plant_status['daily_growth_rate']
+
+        temp_factor = self.params.temperature_q10 ** ((temperature - 22.0) / 10.0)
+        temp_factor = max(0.1, min(3.0, temp_factor))
+        ph_factor = max(0.2, 1.0 - abs(ph - 6.0) * 0.5)
+        demand_factor = max(0.5, min(2.0, daily_growth_rate / 1.0))
+
+        for nutrient, concentration in concentrations.items():
+            if nutrient in self.kinetics and concentration > self.kinetics[nutrient]['min_conc']:
+                k = self.kinetics[nutrient]
+                uptake_per_cm2 = (k['vmax'] * concentration) / (k['km'] + concentration)
+                base_uptake = uptake_per_cm2 * root_surface_area
+                env_adjusted_uptake = base_uptake * temp_factor * ph_factor * uptake_modifiers.get(nutrient, 1.0)
+                uptake_rates[nutrient] = max(0.0, env_adjusted_uptake * demand_factor)
+            else:
+                uptake_rates[nutrient] = 0.0
+        return uptake_rates
+
+    def _update_concentrations(self, concentrations: Dict[str, float], uptake_rates: Dict[str, float],
+                             plant_status: Dict[str, Any]) -> Dict[str, float]:
+        updated = {}
+        tank_volume = plant_status['tank_volume_L']
+        plant_count = plant_status['plant_count']
+        if tank_volume <= 0:
+            raise ValueError("Tank volume must be positive")
+
+        for nutrient, initial_conc in concentrations.items():
+            if nutrient in uptake_rates:
+                initial_mass = initial_conc * tank_volume
+                total_uptake = uptake_rates[nutrient] * plant_count
+                final_mass = max(0.0, initial_mass - total_uptake)
+                updated[nutrient] = final_mass / tank_volume
+            else:
+                updated[nutrient] = initial_conc
+        return updated
+
     def initialize_organ_pools(self, organ_name: str, nutrient_contents: Dict[str, float], dry_mass: float):
+        if dry_mass <= 0:
+            raise ValueError("Dry mass must be positive")
         if organ_name not in self.organ_pools:
             self.organ_pools[organ_name] = {}
         for nutrient, total_content in nutrient_contents.items():
-            if nutrient in self.params.mobility_classifications:
-                storage_fraction = self.params.storage_pool_sizes.get(organ_name, {}).get(nutrient, 0.3)
-                buffer_fraction = self.params.buffering_capacities.get(organ_name, {}).get(nutrient, 0.2)
-                storage_pool = total_content * storage_fraction
-                buffer_pool = total_content * buffer_fraction
-                transport_pool = total_content * 0.05
-                metabolic_pool = total_content - storage_pool - buffer_pool - transport_pool
-                pool = OrganNutrientPools(
-                    organ_name=organ_name,
-                    nutrient_name=nutrient,
-                    metabolic_pool=max(0.0, metabolic_pool),
-                    storage_pool=storage_pool,
-                    transport_pool=transport_pool,
-                    buffer_pool=buffer_pool,
-                    total_content=total_content,
-                    concentration=total_content / max(dry_mass, 0.001),
-                    buffering_capacity=buffer_pool,
-                )
-                self.organ_pools[organ_name][nutrient] = pool
+            if nutrient not in self.params.mobility_classifications:
+                raise KeyError(f"Nutrient {nutrient} not found in mobility classifications")
+            storage_fraction = self.params.storage_pool_sizes[organ_name][nutrient]
+            buffer_fraction = self.params.buffering_capacities[organ_name][nutrient]
+            storage_pool = total_content * storage_fraction
+            buffer_pool = total_content * buffer_fraction
+            transport_pool = total_content * (1.0 - storage_fraction - buffer_fraction) * 0.2
+            metabolic_pool = total_content - storage_pool - buffer_pool - transport_pool
+            pool = OrganNutrientPools(
+                organ_name=organ_name,
+                nutrient_name=nutrient,
+                metabolic_pool=max(0.0, metabolic_pool),
+                storage_pool=storage_pool,
+                transport_pool=transport_pool,
+                buffer_pool=buffer_pool,
+                concentration=total_content / dry_mass,
+                buffering_capacity=buffer_pool,
+            )
+            self.organ_pools[organ_name][nutrient] = pool
         for nutrient in nutrient_contents.keys():
             if nutrient not in self.cumulative_redistribution:
                 self.cumulative_redistribution[nutrient] = 0.0
 
-    def calculate_transport_capacity(self, source_organ: str, sink_organ: str, water_flux: float, assimilate_flux: float, temperature: float, organ_nutrient_status: Optional[Dict[str, float]] = None, environmental_conditions: Optional[Dict[str, float]] = None) -> Dict[str, float]:
-        # Base capacity constrained by physical fluxes
+    def _calculate_transport_capacity(self, source_organ: str, water_flux: float, assimilate_flux: float,
+                                    temperature: float, organ_nutrient_status: Dict[str, float]) -> Dict[str, float]:
+        if f"{source_organ}_nutrient_status" not in organ_nutrient_status:
+            raise KeyError(f"Missing nutrient status for {source_organ}")
         base_xylem_capacity = water_flux * self.params.xylem_transport_capacity * self.params.transpiration_coupling
         base_phloem_capacity = assimilate_flux * self.params.phloem_transport_capacity
-        
-        # Dynamic feedback from organ nutrient status
-        nutrient_feedback_factor = 1.0
-        if organ_nutrient_status:
-            # Higher nutrient status in source increases transport capacity
-            # Lower nutrient status in sink increases transport capacity (demand signal)
-            source_status = organ_nutrient_status.get(f"{source_organ}_nutrient_status", 1.0)
-            sink_status = organ_nutrient_status.get(f"{sink_organ}_nutrient_status", 1.0)
-            
-            # Transport capacity increases when source is nutrient-rich or sink is nutrient-poor
-            nutrient_feedback_factor = (source_status * 1.2 + (2.0 - sink_status) * 0.8) / 2.0
-            nutrient_feedback_factor = max(0.5, min(2.0, nutrient_feedback_factor))
-        
-        # Environmental feedback
-        environmental_factor = 1.0
-        if environmental_conditions:
-            # EC stress reduces transport efficiency
-            ec_factor = environmental_conditions.get('ec_factor', 1.0)
-            # Temperature stress affects transport kinetics
-            temp_stress = environmental_conditions.get('temperature_stress_factor', 1.0)
-            # VPD affects xylem transport through transpiration
-            vpd_factor = environmental_conditions.get('vpd_factor', 1.0)
-            
-            environmental_factor = ec_factor * temp_stress
-            # VPD specifically affects xylem transport
-            xylem_environmental_factor = environmental_factor * vpd_factor
-            phloem_environmental_factor = environmental_factor
-        else:
-            xylem_environmental_factor = environmental_factor
-            phloem_environmental_factor = environmental_factor
-        
-        # Apply dynamic feedback to capacities
-        xylem_capacity = base_xylem_capacity * nutrient_feedback_factor * xylem_environmental_factor
-        phloem_capacity = base_phloem_capacity * nutrient_feedback_factor * phloem_environmental_factor
-        
-        return {"xylem": xylem_capacity, "phloem": phloem_capacity}
+        nutrient_feedback_factor = organ_nutrient_status[f"{source_organ}_nutrient_status"]
+        nutrient_feedback_factor = max(0.5, min(2.0, nutrient_feedback_factor))
+        return {
+            "xylem": base_xylem_capacity * nutrient_feedback_factor,
+            "phloem": base_phloem_capacity * nutrient_feedback_factor
+        }
 
-    def calculate_sink_demands(self, organ_demands: Dict[str, Dict[str, float]], growth_stage: str) -> Dict[str, Dict[str, float]]:
-        adjusted: Dict[str, Dict[str, float]] = {}
-        sink_coeffs = self.params.sink_strength_coefficients.get(growth_stage, self.params.sink_strength_coefficients["vegetative"])
+    def _calculate_sink_demands(self, organ_demands: Dict[str, Dict[str, float]], growth_stage: str) -> Dict[str, Dict[str, float]]:
+        if growth_stage not in self.params.sink_strength_coefficients:
+            raise KeyError(f"Invalid growth stage: {growth_stage}")
+        adjusted = {}
+        sink_coeffs = self.params.sink_strength_coefficients[growth_stage]
         for organ_name, demands in organ_demands.items():
             adjusted[organ_name] = {}
-            organ_sink_strength = sink_coeffs.get(organ_name, 0.25)
+            if organ_name not in sink_coeffs:
+                raise KeyError(f"Missing sink strength for {organ_name} in {growth_stage}")
+            organ_sink_strength = sink_coeffs[organ_name]
             for nutrient, demand in demands.items():
+                if nutrient not in self.params.mobility_classifications:
+                    raise KeyError(f"Nutrient {nutrient} not found in mobility classifications")
                 adj = demand * organ_sink_strength
-                if nutrient in self.params.mobility_classifications:
-                    mobility_info = self.params.mobility_classifications[nutrient]
-                    dm = mobility_info["deficiency_mobility"]
-                    if dm == "very_high":
-                        adj *= 1.2
-                    elif dm == "high":
-                        adj *= 1.1
-                    elif dm == "low":
-                        adj *= 0.8
-                    elif dm == "very_low":
-                        adj *= 0.6
+                mobility_info = self.params.mobility_classifications[nutrient]
+                dm = mobility_info["deficiency_mobility"]
+                if dm not in ["very_high", "high", "low", "very_low"]:
+                    raise ValueError(f"Invalid deficiency mobility for {nutrient}: {dm}")
+                adj *= {"very_high": 1.2, "high": 1.1, "low": 0.8, "very_low": 0.6}[dm]
                 adjusted[organ_name][nutrient] = adj
         return adjusted
 
-    def calculate_source_supplies(self, stress_factors: Dict[str, float], senescence_rates: Dict[str, float]) -> Dict[str, Dict[str, float]]:
-        supplies: Dict[str, Dict[str, float]] = {}
+    def _calculate_source_supplies(self, stress_factors: Dict[str, float], senescence_rates: Dict[str, float]) -> Dict[str, Dict[str, float]]:
+        supplies = {}
         for organ_name, nutrient_pools in self.organ_pools.items():
             supplies[organ_name] = {}
-            overall_stress = 1.0 - min(stress_factors.values()) if stress_factors else 0.0
-            organ_senescence = senescence_rates.get(organ_name, 0.0)
+            if organ_name not in senescence_rates:
+                raise KeyError(f"Missing senescence rate for {organ_name}")
+            overall_stress = 1.0 - min(stress_factors.values())
+            organ_senescence = senescence_rates[organ_name]
             for nutrient, pool in nutrient_pools.items():
-                if nutrient in self.params.mobility_classifications:
-                    mobility_info = self.params.mobility_classifications[nutrient]
-                    base_supply = pool.storage_pool * 0.1 + pool.buffer_pool * 0.05
-                    stress_supply = 0.0
-                    if overall_stress > 0.3:
-                        stress_threshold = self.params.redistribution_thresholds.get(nutrient, 0.7)
-                        if overall_stress > (1.0 - stress_threshold):
-                            stress_rate = self.params.stress_redistribution_rates.get(nutrient, 0.2)
-                            stress_supply = pool.storage_pool * stress_rate * overall_stress
-                    senescence_supply = 0.0
-                    if organ_senescence > 0.01:
-                        rem = mobility_info["remobilization_efficiency"]
-                        senescence_supply = pool.metabolic_pool * organ_senescence * rem
-                    total_supply = base_supply + stress_supply + senescence_supply
-                    max_transportable = pool.total_content * 0.3
-                    total_supply = min(total_supply, max_transportable)
-                    supplies[organ_name][nutrient] = total_supply
-                else:
-                    supplies[organ_name][nutrient] = 0.0
+                if nutrient not in self.params.mobility_classifications:
+                    raise KeyError(f"Nutrient {nutrient} not found in mobility classifications")
+                mobility_info = self.params.mobility_classifications[nutrient]
+                base_supply = pool.storage_pool * 0.1 + pool.buffer_pool * 0.05
+                stress_supply = 0.0
+                if overall_stress > 0.3:
+                    if nutrient not in self.params.redistribution_thresholds:
+                        raise KeyError(f"Missing redistribution threshold for {nutrient}")
+                    stress_threshold = self.params.redistribution_thresholds[nutrient]
+                    if overall_stress > (1.0 - stress_threshold):
+                        if nutrient not in self.params.stress_redistribution_rates:
+                            raise KeyError(f"Missing stress redistribution rate for {nutrient}")
+                        stress_rate = self.params.stress_redistribution_rates[nutrient]
+                        stress_supply = pool.storage_pool * stress_rate * overall_stress
+                senescence_supply = pool.metabolic_pool * organ_senescence * mobility_info["remobilization_efficiency"]
+                total_supply = base_supply + stress_supply + senescence_supply
+                max_transportable = pool.total_content * 0.3
+                supplies[organ_name][nutrient] = min(total_supply, max_transportable)
         return supplies
 
-    def calculate_transport_fluxes(self, sink_demands: Dict[str, Dict[str, float]], source_supplies: Dict[str, Dict[str, float]], transport_capacities: Dict[str, Dict[str, float]], temperature: float) -> List[NutrientTransportFlux]:
-        fluxes: List[NutrientTransportFlux] = []
-        # Apply Q10 temperature response to transport kinetics (rates), not to capacity
-        temp_factor = self.params.temperature_q10 ** ((float(temperature) - 25.0) / 10.0)
+    def _calculate_transport_fluxes(self, sink_demands: Dict[str, Dict[str, float]], source_supplies: Dict[str, Dict[str, float]],
+                                  transport_capacities: Dict[str, Dict[str, float]], temperature: float) -> List[NutrientTransportFlux]:
+        fluxes = []
+        temp_factor = self.params.temperature_q10 ** ((temperature - 25.0) / 10.0)
         temp_factor = max(0.5, min(2.0, temp_factor))
         for nutrient in self.params.mobility_classifications:
             mobility_info = self.params.mobility_classifications[nutrient]
             transport_type = mobility_info["transport"]
-            xylem_rate = self.params.xylem_transport_rates.get(nutrient, 0.1) * temp_factor
-            phloem_rate = self.params.phloem_transport_rates.get(nutrient, 0.1) * temp_factor
+            if nutrient not in self.params.xylem_transport_rates or nutrient not in self.params.phloem_transport_rates:
+                raise KeyError(f"Missing transport rates for {nutrient}")
+            xylem_rate = self.params.xylem_transport_rates[nutrient] * temp_factor
+            phloem_rate = self.params.phloem_transport_rates[nutrient] * temp_factor
             total_demand = sum(d.get(nutrient, 0.0) for d in sink_demands.values())
             total_supply = sum(s.get(nutrient, 0.0) for s in source_supplies.values())
             if total_demand > 0 and total_supply > 0:
                 supply_demand_ratio = total_supply / total_demand
                 transport_eff = min(1.0, supply_demand_ratio)
                 for source_organ, supplies in source_supplies.items():
+                    if source_organ not in transport_capacities:
+                        raise KeyError(f"Missing transport capacities for {source_organ}")
                     if supplies.get(nutrient, 0.0) > 0:
                         src_supply = supplies[nutrient]
                         for sink_organ, demands in sink_demands.items():
@@ -555,7 +513,7 @@ class NutrientMobilityModel:
                                 if transport_type == TransportMechanism.XYLEM_ONLY.value:
                                     if source_organ == "roots":
                                         max_flux = src_supply * xylem_rate
-                                        cap = transport_capacities.get(source_organ, {}).get("xylem", 1.0)
+                                        cap = transport_capacities[source_organ]["xylem"]
                                         flux_rate = min(max_flux, sink_demand, cap)
                                         mechanism = "xylem"
                                     else:
@@ -564,13 +522,13 @@ class NutrientMobilityModel:
                                 elif transport_type == TransportMechanism.BIDIRECTIONAL.value:
                                     xylem_flux = src_supply * xylem_rate * 0.6
                                     phloem_flux = src_supply * phloem_rate * 0.4
-                                    xcap = transport_capacities.get(source_organ, {}).get("xylem", 1.0)
-                                    pcap = transport_capacities.get(source_organ, {}).get("phloem", 1.0)
+                                    xcap = transport_capacities[source_organ]["xylem"]
+                                    pcap = transport_capacities[source_organ]["phloem"]
                                     flux_rate = min(xylem_flux + phloem_flux, sink_demand, xcap + pcap)
                                     mechanism = "bidirectional"
                                 elif transport_type == TransportMechanism.COMPLEX.value:
                                     base_flux = src_supply * min(xylem_rate, phloem_rate)
-                                    total_cap = transport_capacities.get(source_organ, {}).get("xylem", 0.5) + transport_capacities.get(source_organ, {}).get("phloem", 0.5)
+                                    total_cap = transport_capacities[source_organ]["xylem"] + transport_capacities[source_organ]["phloem"]
                                     flux_rate = min(base_flux, sink_demand, total_cap)
                                     mechanism = "complex"
                                 else:
@@ -591,7 +549,7 @@ class NutrientMobilityModel:
                                     )
         return fluxes
 
-    def update_organ_pools(self, transport_fluxes: List[NutrientTransportFlux]):
+    def _update_organ_pools(self, transport_fluxes: List[NutrientTransportFlux]):
         net_fluxes: Dict[str, Dict[str, float]] = {}
         for flux in transport_fluxes:
             net_fluxes.setdefault(flux.source_organ, {}).setdefault(flux.nutrient, 0.0)
@@ -628,63 +586,73 @@ class NutrientMobilityModel:
                                 pool.storage_pool += excess * 0.3
                                 pool.buffer_pool += excess * 0.1
                         pool.total_content = pool.metabolic_pool + pool.storage_pool + pool.transport_pool + pool.buffer_pool
-                        # Track signed net redistribution to capture direction and magnitude
-                        if nutrient in self.cumulative_redistribution:
-                            self.cumulative_redistribution[nutrient] += net_flux
+                        self.cumulative_redistribution[nutrient] += net_flux
 
-    def calculate_mobility_efficiency(self, nutrient: str) -> float:
+    def _calculate_mobility_efficiency(self, nutrient: str) -> float:
         if nutrient not in self.params.mobility_classifications:
-            return 0.5
+            raise KeyError(f"Nutrient {nutrient} not found in mobility classifications")
         mobility_info = self.params.mobility_classifications[nutrient]
         mobility_class = mobility_info["mobility"]
-        if mobility_class == NutrientMobility.HIGHLY_MOBILE.value:
-            base_eff = 0.8
-        elif mobility_class == NutrientMobility.MODERATELY_MOBILE.value:
-            base_eff = 0.6
-        elif mobility_class == NutrientMobility.POORLY_MOBILE.value:
-            base_eff = 0.3
-        else:
-            base_eff = 0.1
+        if mobility_class not in [e.value for e in NutrientMobility]:
+            raise ValueError(f"Invalid mobility class for {nutrient}: {mobility_class}")
+        base_eff = {
+            NutrientMobility.HIGHLY_MOBILE.value: 0.8,
+            NutrientMobility.MODERATELY_MOBILE.value: 0.6,
+            NutrientMobility.POORLY_MOBILE.value: 0.3,
+            NutrientMobility.IMMOBILE.value: 0.1
+        }[mobility_class]
         transport_type = mobility_info["transport"]
-        if transport_type == TransportMechanism.BIDIRECTIONAL.value:
-            t_factor = 1.2
-        elif transport_type == TransportMechanism.COMPLEX.value:
-            t_factor = 0.9
-        elif transport_type == TransportMechanism.XYLEM_ONLY.value:
-            t_factor = 0.7
-        else:
-            t_factor = 1.0
+        if transport_type not in [e.value for e in TransportMechanism]:
+            raise ValueError(f"Invalid transport type for {nutrient}: {transport_type}")
+        t_factor = {
+            TransportMechanism.BIDIRECTIONAL.value: 1.2,
+            TransportMechanism.COMPLEX.value: 0.9,
+            TransportMechanism.XYLEM_ONLY.value: 0.7,
+            TransportMechanism.PHLOEM_ONLY.value: 1.0
+        }[transport_type]
         return min(1.0, base_eff * t_factor)
 
-    def daily_update(self, organ_demands: Dict[str, Dict[str, float]], stress_factors: Dict[str, float], senescence_rates: Dict[str, float], growth_stage: str, water_fluxes: Dict[str, float], assimilate_fluxes: Dict[str, float], temperature: float, organ_nutrient_status: Optional[Dict[str, float]] = None, environmental_conditions: Optional[Dict[str, float]] = None) -> NutrientMobilityResponse:
-        sink_demands = self.calculate_sink_demands(organ_demands, growth_stage)
-        source_supplies = self.calculate_source_supplies(stress_factors, senescence_rates)
-        transport_capacities: Dict[str, Dict[str, float]] = {}
+    def _calculate_nutrient_mobility(self, organ_demands: Dict[str, Dict[str, float]], plant_status: Dict[str, Any],
+                                   env_conditions: Dict[str, Any], water_fluxes: Dict[str, float],
+                                   assimilate_fluxes: Dict[str, float]) -> NutrientMobilityResponse:
+        growth_stage = plant_status['growth_stage']
+        senescence_rates = plant_status['senescence_rates']
+        stress_factors = plant_status['stress_factors']
+        temperature = env_conditions['temperature']
+        organ_nutrient_status = plant_status['organ_nutrient_status']
+
+        sink_demands = self._calculate_sink_demands(organ_demands, growth_stage)
+        source_supplies = self._calculate_source_supplies(stress_factors, senescence_rates)
+        transport_capacities = {}
         for organ in self.organ_pools.keys():
-            water_flux = water_fluxes.get(organ, 0.1)
-            assimilate_flux = assimilate_fluxes.get(organ, 0.05)
-            # Use enhanced transport capacity calculation with dynamic feedback
-            transport_capacities[organ] = self.calculate_transport_capacity(
-                organ, "sink", water_flux, assimilate_flux, temperature,
-                organ_nutrient_status, environmental_conditions
+            if organ not in water_fluxes or organ not in assimilate_fluxes:
+                raise KeyError(f"Missing flux data for {organ}")
+            water_flux = water_fluxes[organ]
+            assimilate_flux = assimilate_fluxes[organ]
+            transport_capacities[organ] = self._calculate_transport_capacity(
+                organ, water_flux, assimilate_flux, temperature, organ_nutrient_status
             )
-        transport_fluxes = self.calculate_transport_fluxes(sink_demands, source_supplies, transport_capacities, temperature)
-        self.update_organ_pools(transport_fluxes)
-        total_redistribution: Dict[str, float] = {}
+        transport_fluxes = self._calculate_transport_fluxes(sink_demands, source_supplies, transport_capacities, temperature)
+        self._update_organ_pools(transport_fluxes)
+
+        total_redistribution = {}
         for flux in transport_fluxes:
             total_redistribution[flux.nutrient] = total_redistribution.get(flux.nutrient, 0.0) + flux.flux_rate
-        limitations: List[str] = []
+
+        limitations = []
         for nutrient in self.params.mobility_classifications:
             total_demand = sum(d.get(nutrient, 0.0) for d in sink_demands.values())
             total_flux = total_redistribution.get(nutrient, 0.0)
             if total_demand > 0 and total_flux < total_demand * 0.8:
                 limitations.append(f"{nutrient}_transport_limited")
-        mobility_efficiency: Dict[str, float] = {n: self.calculate_mobility_efficiency(n) for n in self.params.mobility_classifications}
+
+        mobility_efficiency = {n: self._calculate_mobility_efficiency(n) for n in self.params.mobility_classifications}
         self.transport_history.append({
             "total_redistribution": sum(total_redistribution.values()),
             "transport_fluxes": len(transport_fluxes),
             "limitations": len(limitations),
         })
+
         return NutrientMobilityResponse(
             transport_fluxes=transport_fluxes,
             organ_pools=self.organ_pools.copy(),
@@ -692,275 +660,91 @@ class NutrientMobilityModel:
             transport_limitations=limitations,
             sink_demands=sink_demands,
             source_supplies=source_supplies,
-            mobility_efficiency=mobility_efficiency,
+            mobility_efficiency=mobility_efficiency
         )
 
-    def get_mobility_summary(self) -> Dict[str, Any]:
-        total_nutrients: Dict[str, float] = {}
-        transport_pools: Dict[str, float] = {}
-        for organ_name, nutrient_pools in self.organ_pools.items():
-            for nutrient, pool in nutrient_pools.items():
-                total_nutrients[nutrient] = total_nutrients.get(nutrient, 0.0) + pool.total_content
-                transport_pools[nutrient] = transport_pools.get(nutrient, 0.0) + pool.transport_pool
-        transport_fractions: Dict[str, float] = {}
-        for nutrient, total in total_nutrients.items():
-            transport_fractions[nutrient] = (transport_pools.get(nutrient, 0.0) / total) if total > 0 else 0.0
-        return {
-            "total_nutrients": total_nutrients,
-            "transport_pool_fractions": transport_fractions,
-            "cumulative_redistribution": self.cumulative_redistribution.copy(),
-            "mobility_classifications": {n: info["mobility"] for n, info in self.params.mobility_classifications.items()},
-            "transport_mechanisms": {n: info["transport"] for n, info in self.params.mobility_classifications.items()},
-        }
-
-
-def create_lettuce_nutrient_mobility_model(system_config=None) -> NutrientMobilityModel:
-    """Create nutrient mobility model with lettuce-specific parameters from CSV config.
-    
-    Args:
-        system_config: System configuration object containing CSV-loaded parameters
-        
-    Returns:
-        NutrientMobilityModel configured with CSV parameters
-        
-    Raises:
-        ValueError: If CSV parameters are missing or invalid
-    """
-    if system_config is None:
-        raise ValueError("❌ system_config is required - no hardcoded defaults allowed")
-    
-    # Get nutrient mobility parameters from CSV data loaded in system_config
-    nutrient_mobility_params = getattr(system_config, 'nutrient_parameters', None)
-    
-    if nutrient_mobility_params is None:
-        raise ValueError("❌ nutrient_mobility_parameters missing from CSV - no fallback defaults allowed")
-    
-    # Map renamed parameters to expected parameter names
-    param_mapping = {
-        'nutrient_mobility_temperature_q10': 'temperature_q10',
-        'nutrient_mobility_base_temperature': 'base_temperature'
-    }
-    
-    # Apply parameter name mapping
-    for csv_name, model_name in param_mapping.items():
-        if csv_name in nutrient_mobility_params:
-            nutrient_mobility_params[model_name] = nutrient_mobility_params[csv_name]
-    
-    # Create parameters from CSV config
-    parameters = NutrientMobilityParameters.from_config(nutrient_mobility_params)
-    return NutrientMobilityModel(parameters)
-
+def create_lettuce_nutrient_model(system_config: Any) -> NutrientModel:
+    config = getattr(system_config, 'nutrient_parameters', {})
+    if not config:
+        raise ValueError("nutrient_parameters section must be provided in configuration")
+    parameters = NutrientParameters.from_config(config)
+    return NutrientModel(parameters)
 
 """
-=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+INPUT PARAMETERS (from configuration):
+- ec_factor_n_no3: EC contribution factor for nitrate nitrogen
+- ec_factor_n_nh4: EC contribution factor for ammonium nitrogen
+- ec_factor_p_po4: EC contribution factor for phosphate phosphorus
+- ec_factor_k: EC contribution factor for potassium
+- ec_factor_ca: EC contribution factor for calcium
+- ec_factor_mg: EC contribution factor for magnesium
+- ec_factor_s_so4: EC contribution factor for sulfate sulfur
+- ec_factor_fe: EC contribution factor for iron
+- ec_factor_mn: EC contribution factor for manganese
+- ec_factor_zn: EC contribution factor for zinc
+- ec_factor_cu: EC contribution factor for copper
+- ec_factor_b: EC contribution factor for boron
+- ec_factor_mo: EC contribution factor for molybdenum
+- minimum_volume_fraction: minimum solution volume fraction
+- xylem_transport_capacity: maximum xylem transport rate
+- phloem_transport_capacity: maximum phloem transport rate
+- temperature_q10: temperature response coefficient
+- transpiration_coupling: coupling factor for transpiration-driven transport
+- ec_uptake_high_threshold: high EC threshold for uptake modification
+- ec_uptake_low_threshold: low EC threshold for uptake modification
+- ec_uptake_modifier_n_high: nitrogen uptake modifier under high EC
+- ec_uptake_modifier_p_high: phosphorus uptake modifier under high EC
+- ec_uptake_modifier_k_high: potassium uptake modifier under high EC
+- ec_uptake_modifier_ca_high: calcium uptake modifier under high EC
+- ec_uptake_modifier_n_low: nitrogen uptake modifier under low EC
+- ec_uptake_modifier_p_low: phosphorus uptake modifier under low EC
+- ec_uptake_modifier_fe_low: iron uptake modifier under low EC
+- kinetics_n_no3_vmax: maximum uptake rate for nitrate nitrogen
+- kinetics_n_no3_km: Michaelis constant for nitrate nitrogen
+- kinetics_n_no3_min_conc: minimum concentration for nitrate nitrogen uptake
+- kinetics_n_nh4_vmax: maximum uptake rate for ammonium nitrogen
+- kinetics_n_nh4_km: Michaelis constant for ammonium nitrogen
+- kinetics_n_nh4_min_conc: minimum concentration for ammonium nitrogen uptake
+- kinetics_p_po4_vmax: maximum uptake rate for phosphate phosphorus
+- kinetics_p_po4_km: Michaelis constant for phosphate phosphorus
+- kinetics_p_po4_min_conc: minimum concentration for phosphate phosphorus uptake
+- kinetics_k_vmax: maximum uptake rate for potassium
+- kinetics_k_km: Michaelis constant for potassium
+- kinetics_k_min_conc: minimum concentration for potassium uptake
+- kinetics_ca_vmax: maximum uptake rate for calcium
+- kinetics_ca_km: Michaelis constant for calcium
+- kinetics_ca_min_conc: minimum concentration for calcium uptake
+- kinetics_mg_vmax: maximum uptake rate for magnesium
+- kinetics_mg_km: Michaelis constant for magnesium
+- kinetics_mg_min_conc: minimum concentration for magnesium uptake
+- mobility_classifications_[nutrient]_mobility: mobility classification (highly_mobile, moderately_mobile, poorly_mobile, immobile)
+- mobility_classifications_[nutrient]_transport: transport mechanism (xylem_only, phloem_only, bidirectional, complex)
+- mobility_classifications_[nutrient]_remobilization_efficiency: efficiency of nutrient remobilization
+- mobility_classifications_[nutrient]_deficiency_mobility: mobility under deficiency (very_high, high, low, very_low)
+- mobility_classifications_[nutrient]_retranslocation_rate: rate of nutrient retranslocation
+- xylem_transport_rates_[nutrient]: xylem transport rate for nutrient
+- phloem_transport_rates_[nutrient]: phloem transport rate for nutrient
+- buffering_capacities_[organ]_[nutrient]: buffering capacity for nutrient in organ
+- storage_pool_sizes_[organ]_[nutrient]: storage pool size for nutrient in organ
+- redistribution_thresholds_[nutrient]: threshold for stress-induced redistribution
+- stress_redistribution_rates_[nutrient]: rate of stress-induced redistribution
+- sink_strength_coefficients_[stage]_[organ]: sink strength coefficient for organ in stage
 
-This file manages two critical aspects of plant nutrition: how nutrients behave in the water 
-solution and how they move within the plant. Think of it like managing both the "cafeteria" 
-(nutrient solution) and the "delivery system" (plant transport).
+INPUT VARIABLES:
+- concentrations: current solution concentrations (mg/L)
+- plant_status: dict with root_surface_area (cm²), tank_volume_L (L), plant_count, daily_growth_rate (g/day),
+                growth_stage, senescence_rates, stress_factors, organ_nutrient_status
+- env_conditions: dict with temperature (°C), ph, optimal_ec (dS/m)
+- organ_demands: nutrient demand by plant organ (mg)
+- water_fluxes: water flux by organ (L/day)
+- assimilate_fluxes: assimilate flux by organ (g/day)
 
-PART 1: NUTRIENT CONCENTRATION MODEL
-
-1. calculate_ec_from_concentrations()
-   - What it does: Calculates electrical conductivity (EC) from individual nutrient levels
-   - Equation: Total_EC = Σ(nutrient_concentration × ec_factor)
-   - Real-world meaning: EC measures how "salty" the nutrient solution is. Like measuring 
-     saltiness of soup - more dissolved nutrients = higher conductivity.
-
-2. calculate_ec_based_uptake_modifier()
-   - What it does: Adjusts how well plants can absorb nutrients based on solution saltiness
-   - Equations: 
-     * High EC: uptake_modifier = max(0.3, 1.0 - (ec_ratio - 1.0) × modifier)
-     * Low EC: uptake_modifier = min(1.3, 1.0 + (threshold - ec_ratio) × modifier)
-   - Real-world meaning: Too salty = plant can't drink well. Too dilute = not enough nutrients.
-     Like drinking seawater vs plain water - both are problematic.
-
-PART 2: NUTRIENT MOBILITY MODEL (In-Plant Transport)
-
-3. calculate_transport_capacity()
-   - What it does: Determines how much nutrients can move through plant "highways"
-   - Equation: capacity = base_capacity × nutrient_feedback × environmental_factor
-   - Real-world meaning: Plants have two main transport systems - xylem (like arteries carrying 
-     water up) and phloem (like veins carrying food around). Capacity depends on water flow 
-     and plant health.
-
-4. calculate_sink_demands()
-   - What it does: Calculates how much nutrients each plant part needs
-   - Equation: adjusted_demand = demand × organ_sink_strength × mobility_modifier
-   - Real-world meaning: Growing leaves need lots of nitrogen, fruits need phosphorus. 
-     Like different body parts needing different vitamins during growth.
-
-5. calculate_source_supplies()
-   - What it does: Determines how much nutrients each plant part can give to others
-   - Equations:
-     * base_supply = storage_pool × 0.1 + buffer_pool × 0.05
-     * stress_supply = storage_pool × stress_rate × stress_level
-     * senescence_supply = metabolic_pool × senescence_rate × remobilization_efficiency
-   - Real-world meaning: Old leaves can donate nutrients to young growing parts. 
-     Like parents giving money to children - stored reserves get redistributed.
-
-6. calculate_transport_fluxes()
-   - What it does: Calculates actual nutrient movement between plant parts
-   - Equation: flux_rate = min(max_flux, sink_demand, transport_capacity) × efficiency
-   - Real-world meaning: Movement is limited by supply, demand, and "highway capacity". 
-     Like traffic flow - limited by cars available, destination capacity, and road size.
-
-7. update_organ_pools()
-   - What it does: Updates nutrient storage in each plant part after transport
-   - Equations: Track metabolic_pool, storage_pool, transport_pool, buffer_pool
-   - Real-world meaning: Keeps track of nutrient "bank accounts" in leaves, stems, roots. 
-     Money flows between accounts based on needs and availability.
-
-KEY CONCEPTS:
-
-NUTRIENT MOBILITY CLASSES:
-- Highly mobile (N, P, K): Can move anywhere in plant (like cash)
-- Moderately mobile (S, Fe, Zn): Some movement restrictions (like checking account)
-- Poorly mobile (Ca, B): Hard to relocate once deposited (like real estate)
-- Immobile: Stays where first deposited (like concrete foundation)
-
-TRANSPORT MECHANISMS:
-- Xylem: One-way up from roots (like elevator going only up)
-- Phloem: Two-way transport (like elevator that goes both ways)
-- Complex: Multiple pathways with different rules
-
-PRACTICAL APPLICATIONS:
-- Optimize nutrient solution strength (EC management)
-- Time nutrient applications for maximum uptake
-- Predict deficiency symptoms and locations
-- Design feeding schedules based on plant growth stage
-- Understand why some nutrients can't be "rescued" once deficient
-
-This system helps growers maintain optimal nutrition throughout the plant's life cycle.
+OUTPUT VARIABLES:
+- calculated_ec: computed electrical conductivity (dS/m)
+- uptake_rates_mg_per_plant_per_day: nutrient uptake rates (mg/plant/day)
+- updated_concentrations: solution concentrations after uptake (mg/L)
+- transport_fluxes: nutrient movement between organs
+- organ_pools: nutrient storage in plant organs
+- mobility_efficiency: transport effectiveness by nutrient
+- transport_limitations: list of transport-limited nutrients
 """
-
-
-class NutrientUptakeModel:
-    """
-    Realistic nutrient uptake model using Michaelis-Menten kinetics.
-
-    Replaces broken step-function nutrient depletion with proper
-    physiological uptake calculations and mass balance conservation.
-    """
-
-    def __init__(self):
-        """Initialize nutrient uptake model with lettuce kinetic parameters."""
-        # Michaelis-Menten kinetic parameters for lettuce (from literature)
-        self.kinetics = {
-            'N-NO3': {'vmax': 0.03, 'km': 0.5, 'min_conc': 0.1},
-            'NH4': {'vmax': 0.045, 'km': 0.3, 'min_conc': 0.05},
-            'P-PO4': {'vmax': 0.008, 'km': 0.1, 'min_conc': 0.02},
-            'K': {'vmax': 0.025, 'km': 0.4, 'min_conc': 0.1},
-            'Ca': {'vmax': 0.018, 'km': 0.8, 'min_conc': 0.2},
-            'Mg': {'vmax': 0.012, 'km': 0.6, 'min_conc': 0.1}
-        }
-
-    def calculate_realistic_nutrient_uptake(self,
-                                          current_concentrations: Dict[str, float],
-                                          root_surface_area: float,
-                                          temperature: float,
-                                          ph: float,
-                                          ec: float,
-                                          plant_count: int,
-                                          tank_volume_L: float,
-                                          daily_growth_rate: float = 1.0) -> Dict[str, Any]:
-        """
-        Calculate realistic nutrient uptake using Michaelis-Menten kinetics.
-
-        Args:
-            current_concentrations: Current solution concentrations (mg/L)
-            root_surface_area: Active root surface area (cm²)
-            temperature: Solution temperature (°C)
-            ph: Solution pH
-            ec: Electrical conductivity (dS/m)
-            plant_count: Number of plants
-            tank_volume_L: Tank volume (L)
-            daily_growth_rate: Daily growth rate (g/day)
-
-        Returns:
-            Dictionary with uptake rates and updated concentrations
-        """
-
-        # Environmental factors
-        # Temperature factor (Q10 = 2.0, optimal at 22°C)
-        temp_factor = 2.0 ** ((temperature - 22.0) / 10.0)
-        temp_factor = max(0.1, min(3.0, temp_factor))
-
-        # pH factor (optimal around 6.0)
-        ph_factor = max(0.2, 1.0 - abs(ph - 6.0) * 0.5)
-
-        # EC factor (optimal around 1.8 dS/m)
-        ec_factor = max(0.3, 1.0 - abs(ec - 1.8) * 0.3)
-
-        combined_env_factor = temp_factor * ph_factor * ec_factor
-        combined_env_factor = min(1.5, combined_env_factor)  # Cap at 150%
-
-        # Calculate uptake rates for each nutrient
-        uptake_rates = {}
-        updated_concentrations = {}
-        mass_balance = {}
-
-        for nutrient, concentration in current_concentrations.items():
-            if nutrient in self.kinetics and concentration > self.kinetics[nutrient]['min_conc']:
-                k = self.kinetics[nutrient]
-
-                # Michaelis-Menten equation: V = Vmax * [S] / (Km + [S])
-                uptake_per_cm2 = (k['vmax'] * concentration) / (k['km'] + concentration)
-
-                # Scale by root surface area
-                base_uptake = uptake_per_cm2 * root_surface_area
-
-                # Apply environmental factors
-                env_adjusted_uptake = base_uptake * combined_env_factor
-
-                # Plant demand modifier (based on growth rate)
-                demand_factor = max(0.5, min(2.0, daily_growth_rate / 1.0))
-
-                final_uptake = env_adjusted_uptake * demand_factor
-                uptake_rates[nutrient] = max(0.0, final_uptake)
-            else:
-                uptake_rates[nutrient] = 0.0
-
-        # Update concentrations with mass balance
-        for nutrient, uptake_rate in uptake_rates.items():
-            initial_conc = current_concentrations[nutrient]
-            initial_mass = initial_conc * tank_volume_L
-
-            # Total uptake for all plants
-            total_uptake_mg = uptake_rate * plant_count
-
-            # Updated mass and concentration
-            final_mass = max(0.0, initial_mass - total_uptake_mg)
-            # Safety check: prevent division by zero when tank volume is depleted
-            if tank_volume_L > 0.0:
-                final_conc = final_mass / tank_volume_L
-            else:
-                # If tank is empty, concentration becomes zero
-                final_conc = 0.0
-
-            updated_concentrations[nutrient] = final_conc
-
-            # Mass balance check
-            removed_mass = initial_mass - final_mass
-            balance_error = abs(removed_mass - total_uptake_mg)
-            balance_error_pct = (balance_error / max(total_uptake_mg, 0.001)) * 100
-
-            mass_balance[nutrient] = {
-                'initial_mass_mg': initial_mass,
-                'final_mass_mg': final_mass,
-                'removed_mass_mg': removed_mass,
-                'expected_removal_mg': total_uptake_mg,
-                'balance_error_pct': balance_error_pct
-            }
-
-        return {
-            'uptake_rates_mg_per_plant_per_day': uptake_rates,
-            'updated_concentrations': updated_concentrations,
-            'mass_balance': mass_balance,
-            'environmental_factors': {
-                'temperature_factor': temp_factor,
-                'ph_factor': ph_factor,
-                'ec_factor': ec_factor,
-                'combined_factor': combined_env_factor
-            }
-        }
-

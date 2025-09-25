@@ -1,6 +1,7 @@
 # Code Quality Rules
 
 ## Parameter Management
+- dont put values on csv which should come out from each model file. 
 - no fallback code
 - dont make premature success claims 
 - no default value in code

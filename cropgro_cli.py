@@ -618,8 +618,8 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
 
     for daily_res in results.daily_results:
         water_daily = getattr(daily_res, 'water_uptake_total', 0.0)
-        # Use a scaled transpiration or alternative field - transpiration seems to be in wrong units
-        transp_daily = getattr(daily_res, 'water_uptake_total', 0.0) * 0.8  # Assume 80% of water uptake becomes transpiration
+        # Use actual transpiration from the sophisticated transpiration model
+        transp_daily = getattr(daily_res, 'transpiration', 0.0)
 
         if water_daily is not None and not isinstance(water_daily, str):
             total_water_uptake += float(water_daily)
@@ -726,7 +726,9 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
         # Estimate days to harvest for plants still growing
         final_gdd = getattr(final_result, 'accumulated_gdd', None)
         if final_gdd is not None:
-            harvest_gdd = 520.0  # Updated to correct GDD for lettuce harvest
+            # Get harvest GDD from phenology parameters CSV
+            phenology_params = getattr(system_config, 'phenology', {})
+            harvest_gdd = phenology_params.get('harvest_gdd', 2400.0)  # From phenology CSV
             remaining_gdd = max(0, harvest_gdd - final_gdd)
 
             # Estimate days based on thermal time

@@ -1,13 +1,11 @@
 """
-Advanced Genetic Parameters System for Hydroponic Lettuce Production - No hardcoded defaults allowed and no fallback to simple alternative codes
+Genetic Parameters System
 
-Implements DSSAT-style cultivar-specific modeling with:
-- Genetic coefficients for multiple lettuce varieties
-- Genotype × Environment (G×E) interaction modeling
-- Trait-based physiological modeling
-- Breeding applications and parameter estimation
-
-Based on DSSAT CROPGRO framework adapted for Lactuca sativa cultivars.
+Key equations:
+- adaptation_index = base_score - Σ(stress × (1 - tolerance) × weight)
+- phenotype_expression = base_trait × environmental_modifier
+- hybrid_trait = (parent1_trait + parent2_trait) / 2 × heterosis_factor
+- performance_index = Σ(trait_value × weight)
 """
 
 import math
@@ -18,7 +16,6 @@ import numpy as np
 
 
 class LettuceType(Enum):
-    """Lettuce morphological types"""
     BUTTERHEAD = "butterhead"
     ROMAINE = "romaine"
     LOOSE_LEAF = "loose_leaf"
@@ -28,25 +25,17 @@ class LettuceType(Enum):
 
 
 class GeneticTrait(Enum):
-    """Key genetic traits for lettuce breeding"""
-    # Phenological traits
     DAYS_TO_EMERGENCE = "days_to_emergence"
     DAYS_TO_HARVEST = "days_to_harvest"
     BOLTING_TOLERANCE = "bolting_tolerance"
-    
-    # Growth traits
     LEAF_SIZE = "leaf_size"
     PLANT_ARCHITECTURE = "plant_architecture"
     ROOT_DEVELOPMENT = "root_development"
     YIELD_POTENTIAL = "yield_potential"
-    
-    # Quality traits
     CHLOROPHYLL_CONTENT = "chlorophyll_content"
     CAROTENOID_CONTENT = "carotenoid_content"
     VITAMIN_C_CONTENT = "vitamin_c_content"
     NITRATE_ACCUMULATION = "nitrate_accumulation"
-    
-    # Stress tolerance
     HEAT_TOLERANCE = "heat_tolerance"
     COLD_TOLERANCE = "cold_tolerance"
     SALINITY_TOLERANCE = "salinity_tolerance"
@@ -55,99 +44,71 @@ class GeneticTrait(Enum):
 
 @dataclass
 class GeneticCoefficients:
-    """
-    DSSAT-style genetic coefficients for lettuce cultivars
-    Similar to CROPGRO cultivar files (.CUL files)
-    """
-    # Phenological development parameters
-    EM_FL: float = 0.0      # Days from emergence to first flower (GDD)
-    FL_SH: float = 0.0      # Days from first flower to first seed (GDD)  
-    FL_SD: float = 0.0      # Days from first flower to first pod (GDD)
-    SD_PM: float = 0.0      # Days from first seed to physiological maturity (GDD)
-    FL_LF: float = 0.0      # Days from first flower to end of leaf expansion (GDD)
-    
-    # Temperature response parameters
-    LFMAX: float = 0.0       # Maximum leaf photosynthesis rate (mg CO2/m²/s)
-    SLAVR: float = 0.0     # Specific leaf area of cultivar under standard growth conditions (cm²/g)
-    SIZLF: float = 0.0      # Maximum size of full leaf (three leaflets) (cm²)
-    XFRT: float = 0.0        # Maximum fraction of daily growth that is partitioned to reproductive growth
-    SFDUR: float = 0.0      # Seed filling duration for cultivar (GDD)
-    SDPDV: float = 0.0       # Average seed per pod under standard growing conditions
-    PODUR: float = 0.0       # Time required for cultivar to reach final pod load (GDD)
-    WTPSD: float = 0.0      # Maximum weight per seed (g)
-    
-    # Stress tolerance coefficients
-    THRSH: float = 0.0      # The maximum ratio of seed/(seed+shell) at maturity
-    SDPRO: float = 0.0      # Fraction protein in seeds
-    SDLIP: float = 0.0      # Fraction oil in seeds
-    
-    # Hydroponic-specific parameters
-    EC_TOLERANCE: float = 0.0    # Maximum EC tolerance (dS/m)
-    ROOT_ACTIVITY: float = 0.0   # Root activity coefficient
-    PHOTOSYNTHETIC_CAPACITY: float = 0.0  # Relative photosynthetic capacity
-    NITRATE_EFFICIENCY: float = 0.0  # Nitrogen use efficiency factor
+    EM_FL: float
+    FL_SH: float
+    FL_SD: float
+    SD_PM: float
+    FL_LF: float
+    LFMAX: float
+    SLAVR: float
+    SIZLF: float
+    XFRT: float
+    SFDUR: float
+    SDPDV: float
+    PODUR: float
+    WTPSD: float
+    THRSH: float
+    SDPRO: float
+    SDLIP: float
+    EC_TOLERANCE: float
+    ROOT_ACTIVITY: float
+    PHOTOSYNTHETIC_CAPACITY: float
+    NITRATE_EFFICIENCY: float
 
 
 @dataclass
 class CultivarProfile:
-    """Complete profile for a lettuce cultivar including genetics and performance"""
     cultivar_id: str
     cultivar_name: str
     lettuce_type: LettuceType
     breeder: str
     year_released: int
-    
-    # Genetic coefficients
     genetic_coefficients: GeneticCoefficients
-    
-    # Performance characteristics (must come from CSV)
-    yield_potential: float = None       # Relative yield potential
-    adaptation_score: float = None      # Environmental adaptation score
-    
-    # Trait values (0.0-1.0 scale, 1.0 = excellent)
-    trait_values: Dict[GeneticTrait, float] = field(default_factory=dict)
-    
-    # Breeding information
-    pedigree: List[str] = field(default_factory=list)
-    breeding_notes: str = ""
+    yield_potential: float
+    adaptation_score: float
+    trait_values: Dict[GeneticTrait, float]
+    pedigree: List[str]
+    breeding_notes: str
     
     def calculate_adaptation_index(self, environment_factors: Dict[str, float]) -> float:
-        """Calculate G×E adaptation index for specific environment"""
         base_adaptation = self.adaptation_score
-        
-        # Environmental stress adjustments
         stress_adjustments = 0.0
-        
-        # Temperature stress
-        temp_stress = environment_factors.get('temperature_stress', 0.0)
-        heat_tolerance = self.trait_values.get(GeneticTrait.HEAT_TOLERANCE, 0.5)
-        cold_tolerance = self.trait_values.get(GeneticTrait.COLD_TOLERANCE, 0.5)
-        
-        if temp_stress > 0:  # Heat stress
-            weight = environment_factors.get('heat_stress_weight', 0.3)  # Heat stress weight from CSV
+
+        temp_stress = environment_factors['temperature_stress']
+        heat_tolerance = self.trait_values[GeneticTrait.HEAT_TOLERANCE]
+        cold_tolerance = self.trait_values[GeneticTrait.COLD_TOLERANCE]
+
+        if temp_stress > 0:
+            weight = environment_factors['heat_stress_weight']
             stress_adjustments += temp_stress * (1.0 - heat_tolerance) * weight
-        else:  # Cold stress
-            weight = environment_factors.get('cold_stress_weight', 0.25)  # Cold stress weight from CSV
+        else:
+            weight = environment_factors['cold_stress_weight']
             stress_adjustments += abs(temp_stress) * (1.0 - cold_tolerance) * weight
-        
-        # Salinity stress
-        salinity_stress = environment_factors.get('salinity_stress', 0.0)
-        salinity_tolerance = self.trait_values.get(GeneticTrait.SALINITY_TOLERANCE, 0.5)
-        weight = environment_factors.get('salinity_stress_weight', 0.2)  # Salinity stress weight from CSV
+
+        salinity_stress = environment_factors['salinity_stress']
+        salinity_tolerance = self.trait_values[GeneticTrait.SALINITY_TOLERANCE]
+        weight = environment_factors['salinity_stress_weight']
         stress_adjustments += salinity_stress * (1.0 - salinity_tolerance) * weight
-        
-        # Light stress
-        light_stress = environment_factors.get('light_stress', 0.0)
-        weight = environment_factors.get('light_stress_weight', 0.15)  # Light stress weight from CSV
+
+        light_stress = environment_factors['light_stress']
+        weight = environment_factors['light_stress_weight']
         stress_adjustments += light_stress * weight
-        
-        # Nutrient stress
-        nutrient_stress = environment_factors.get('nutrient_stress', 0.0)
+
+        nutrient_stress = environment_factors['nutrient_stress']
         nitrate_efficiency = self.genetic_coefficients.NITRATE_EFFICIENCY
-        weight = environment_factors.get('nutrient_stress_weight', 0.25)  # Nutrient stress weight from CSV
+        weight = environment_factors['nutrient_stress_weight']
         stress_adjustments += nutrient_stress * (1.0 - nitrate_efficiency) * weight
-        
-        # Calculate final adaptation index
+
         adaptation_index = base_adaptation - stress_adjustments
         return max(0.1, min(1.0, adaptation_index))
 
@@ -460,124 +421,113 @@ class BreedingAssistant:
         return performance
 
 
-def create_lettuce_genetic_system(system_config=None, cultivar_id="DEFAULT_CSV_CULTIVAR") -> Tuple[GeneticParameterDatabase, GenotypeEnvironmentModel, BreedingAssistant]:
-    """Create complete genetic parameter system for lettuce using CSV configuration.
-    
-    Args:
-        system_config: System configuration object containing CSV-loaded parameters
-        cultivar_id: The cultivar ID to use for the genetic profile
-        
-    Returns:
-        Tuple of (GeneticParameterDatabase, GenotypeEnvironmentModel, BreedingAssistant)
-    """
-    try:
-        if system_config is None:
-            raise ValueError("❌ System configuration is required - no hardcoded defaults allowed")
-        
-        # Get genetic parameters from CSV configuration
-        genetic_params = getattr(system_config, 'genetic_parameters', {})
-        if not genetic_params:
-            raise ValueError("❌ No genetic parameters found in system configuration - CSV data required")
-        
-        # Create genetic database
-        genetic_db = GeneticParameterDatabase()
-        
-        # Use the provided cultivar ID instead of hardcoded default
-        
-        # Create genetic coefficients from CSV data
-        genetic_coeffs = GeneticCoefficients()
-        for param_name, param_value in genetic_params.items():
-            if hasattr(genetic_coeffs, param_name):
-                setattr(genetic_coeffs, param_name, param_value)
-        
-        # Create cultivar profile with required parameters from CSV
-        cultivar_profile = CultivarProfile(
-            cultivar_id=cultivar_id,
-            cultivar_name=f"CSV Configured {cultivar_id}",
-            lettuce_type=LettuceType.BUTTERHEAD,
-            breeder="CSV Configuration",
-            year_released=2024,
-            genetic_coefficients=genetic_coeffs,
-            yield_potential=genetic_params.get('yield_potential', None),  # Must be provided in CSV
-            adaptation_score=genetic_params.get('adaptation_score', None),  # Must be provided in CSV
-            trait_values={},  # Empty trait values - can be populated later
-            pedigree=["CSV configured"],
-            breeding_notes=f"Cultivar {cultivar_id} created from CSV genetic parameters"
-        )
-        
-        # Validate required performance parameters
-        if cultivar_profile.yield_potential is None:
-            raise ValueError("❌ yield_potential must be provided in CSV genetic parameters - no hardcoded defaults allowed")
-        if cultivar_profile.adaptation_score is None:
-            raise ValueError("❌ adaptation_score must be provided in CSV genetic parameters - no hardcoded defaults allowed")
-        
-        genetic_db.add_cultivar(cultivar_profile)
-        
-        # Create models
-        ge_model = GenotypeEnvironmentModel(genetic_db)
-        breeding_assistant = BreedingAssistant(genetic_db, ge_model)
-        
-        return genetic_db, ge_model, breeding_assistant
-        
-    except Exception as e:
-        raise ValueError(f"❌ Failed to load CSV genetic parameters: {e}. System requires CSV data - no hardcoded defaults allowed.")
+def create_lettuce_genetic_system(system_config, cultivar_id) -> Tuple[GeneticParameterDatabase, GenotypeEnvironmentModel, BreedingAssistant]:
+    genetic_params = getattr(system_config, 'genetic_parameters', {})
+
+    genetic_db = GeneticParameterDatabase()
+
+    genetic_coeffs = GeneticCoefficients(
+        EM_FL=genetic_params['EM_FL'],
+        FL_SH=genetic_params['FL_SH'],
+        FL_SD=genetic_params['FL_SD'],
+        SD_PM=genetic_params['SD_PM'],
+        FL_LF=genetic_params['FL_LF'],
+        LFMAX=genetic_params['LFMAX'],
+        SLAVR=genetic_params['SLAVR'],
+        SIZLF=genetic_params['SIZLF'],
+        XFRT=genetic_params['XFRT'],
+        SFDUR=genetic_params['SFDUR'],
+        SDPDV=genetic_params['SDPDV'],
+        PODUR=genetic_params['PODUR'],
+        WTPSD=genetic_params['WTPSD'],
+        THRSH=genetic_params['THRSH'],
+        SDPRO=genetic_params['SDPRO'],
+        SDLIP=genetic_params['SDLIP'],
+        EC_TOLERANCE=genetic_params['EC_TOLERANCE'],
+        ROOT_ACTIVITY=genetic_params['ROOT_ACTIVITY'],
+        PHOTOSYNTHETIC_CAPACITY=genetic_params['PHOTOSYNTHETIC_CAPACITY'],
+        NITRATE_EFFICIENCY=genetic_params['NITRATE_EFFICIENCY']
+    )
+
+    cultivar_profile = CultivarProfile(
+        cultivar_id=cultivar_id,
+        cultivar_name=genetic_params['cultivar_name'],
+        lettuce_type=LettuceType(genetic_params['lettuce_type']),
+        breeder=genetic_params['breeder'],
+        year_released=genetic_params['year_released'],
+        genetic_coefficients=genetic_coeffs,
+        yield_potential=genetic_params['yield_potential'],
+        adaptation_score=genetic_params['adaptation_score'],
+        trait_values=genetic_params['trait_values'],
+        pedigree=genetic_params['pedigree'],
+        breeding_notes=genetic_params['breeding_notes']
+    )
+
+    genetic_db.add_cultivar(cultivar_profile)
+
+    ge_model = GenotypeEnvironmentModel(genetic_db)
+    breeding_assistant = BreedingAssistant(genetic_db, ge_model)
+
+    return genetic_db, ge_model, breeding_assistant
 
 
 """
-=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+INPUT PARAMETERS (from CSV):
+- EM_FL: days from emergence to first flower (GDD)
+- FL_SH: days from first flower to first seed (GDD)
+- FL_SD: days from first flower to first pod (GDD)
+- SD_PM: days from first seed to physiological maturity (GDD)
+- FL_LF: days from first flower to end of leaf expansion (GDD)
+- LFMAX: maximum leaf photosynthesis rate (mg CO2/m²/s)
+- SLAVR: specific leaf area under standard conditions (cm²/g)
+- SIZLF: maximum size of full leaf (cm²)
+- XFRT: maximum fraction of growth to reproductive growth
+- SFDUR: seed filling duration (GDD)
+- SDPDV: average seed per pod under standard conditions
+- PODUR: time to reach final pod load (GDD)
+- WTPSD: maximum weight per seed (g)
+- THRSH: maximum ratio of seed/(seed+shell) at maturity
+- SDPRO: fraction protein in seeds
+- SDLIP: fraction oil in seeds
+- EC_TOLERANCE: maximum EC tolerance (dS/m)
+- ROOT_ACTIVITY: root activity coefficient
+- PHOTOSYNTHETIC_CAPACITY: relative photosynthetic capacity
+- NITRATE_EFFICIENCY: nitrogen use efficiency factor
+- yield_potential: relative yield potential
+- adaptation_score: environmental adaptation score
+- heat_stress_weight: weight for heat stress calculations
+- cold_stress_weight: weight for cold stress calculations
+- salinity_stress_weight: weight for salinity stress calculations
+- light_stress_weight: weight for light stress calculations
+- nutrient_stress_weight: weight for nutrient stress calculations
+- adaptation_weight: weight for adaptation scoring
+- yield_weight: weight for yield scoring
+- heterosis_factor: hybrid vigor enhancement factor
 
-This file manages the genetic "blueprint" of different lettuce varieties. It's like having a database
-of different dog breeds - each has unique characteristics that determine how they look and behave.
+INPUT VARIABLES:
+- environment_factors['temperature_stress']: temperature stress level
+- environment_factors['salinity_stress']: salinity stress level
+- environment_factors['light_stress']: light stress level
+- environment_factors['nutrient_stress']: nutrient stress level
+- environment_factors['light_intensity']: light intensity level
+- environment_factors['nitrogen_status']: nitrogen status level
+- environment_factors['water_stress']: water stress level
+- trait_values[GeneticTrait]: genetic trait values (0.0-1.0)
+- cultivar_id: cultivar identifier
+- parent1_id: first parent cultivar ID
+- parent2_id: second parent cultivar ID
 
-KEY FUNCTIONS AND EQUATIONS:
-
-1. calculate_adaptation_index()
-   - What it does: Scores how well a lettuce variety will perform in specific conditions
-   - Equation: adaptation = base_score - Σ(stress × (1 - tolerance) × weight)
-   - Real-world meaning: Like rating how well a person from a cold climate would handle 
-     living in a desert. Some lettuce varieties handle heat better, others handle cold better.
-
-2. calculate_phenotype_expression()
-   - What it does: Predicts how genetic traits actually show up under environmental conditions
-   - Equation: expression = base_trait × environmental_modifier
-   - Real-world meaning: Your genetic height potential might be 6 feet, but poor nutrition 
-     during childhood might result in only 5'8". Same with plants - genes set potential,
-     environment determines actual expression.
-
-3. predict_cultivar_performance()
-   - What it does: Combines multiple trait predictions to forecast overall plant performance
-   - Equations: 
-     * yield_index = Σ(trait_value × weight) for yield-related traits
-     * quality_index = Σ(trait_value × weight) for quality-related traits
-   - Real-world meaning: Like predicting a student's GPA based on individual subject scores.
-     Different traits contribute different amounts to overall success.
-
-4. identify_breeding_targets()
-   - What it does: Finds the best "parent" plants for creating new varieties
-   - Equation: overall_score = adaptation_score × adaptation_weight + yield_potential × yield_weight
-   - Real-world meaning: Like matchmaking for plants - finding parents that complement 
-     each other's strengths to create better offspring.
-
-5. estimate_hybrid_performance()
-   - What it does: Predicts how good a "child" plant would be from two specific "parents"
-   - Equation: hybrid_trait = (parent1_trait + parent2_trait) / 2 × heterosis_factor
-   - Real-world meaning: Children often get traits that are average of both parents, 
-     sometimes with "hybrid vigor" making them even better than expected.
-
-KEY GENETIC COEFFICIENTS:
-- LFMAX: Maximum photosynthesis rate (like engine horsepower)
-- SLAVR: Leaf area per weight (like surface area to mass ratio)
-- SIZLF: Maximum leaf size (self-explanatory)
-- EC_TOLERANCE: Salt tolerance (how much salt the plant can handle)
-- NITRATE_EFFICIENCY: How well the plant uses nitrogen fertilizer
-
-BREEDING APPLICATIONS:
-- Identify best varieties for specific growing conditions
-- Predict which parent combinations will produce superior offspring  
-- Design breeding programs to develop new varieties with desired traits
-- Optimize variety selection for different markets (yield vs quality focus)
-
-This is essentially a sophisticated plant genetics database that helps predict performance 
-and guide breeding decisions, similar to how animal breeders choose breeding pairs.
+OUTPUT VARIABLES:
+- adaptation_index: calculated adaptation index (0.1-1.0)
+- phenotype_expression: expressed trait value (0.0-1.0)
+- performance_metrics['yield_index']: yield performance index
+- performance_metrics['quality_index']: quality performance index
+- performance_metrics['stress_tolerance']: stress tolerance index
+- performance_metrics['time_to_harvest']: predicted harvest time (days)
+- performance_metrics['bolting_resistance']: bolting resistance score
+- cultivar_scores: list of (cultivar_id, score) tuples
+- breeding_targets: identified breeding target traits
+- parent_candidates: list of suitable parent cultivars
+- hybrid_performance: predicted hybrid trait values
 """
 

@@ -1,13 +1,21 @@
-"""
-Hydroponic System Data Classes and Configuration - No hardcoded defaults allowed and no fallback to simple alternative codes
-"""
-
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+\from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
+from typing import Dict, List, Optional
 import pandas as pd
 import math
 
+# =========================
+# Hydroponic System Data Classes and Configuration
+# =========================
+
+class SystemType(Enum):
+    """Enum for hydroponic system types."""
+    NFT = "NFT"
+    DWC = "DWC"
+    AERO = "AERO"
+    WICK = "WICK"
+    EBB = "EBB"
 
 @dataclass
 class HydroSystemConfig:
@@ -16,24 +24,89 @@ class HydroSystemConfig:
     crop_id: str
     location_id: str
     tank_volume: float  # L
-    flow_rate: float  # L/h
-    system_type: str  # NFT, DWC, AERO, WICK, EBB
-    system_area: float  # m²
+    flow_rate: float   # L/h
+    system_type: str   # NFT, DWC, AERO, WICK, EBB
+    system_area: float # m²
     n_plants: int
     description: str
 
+    def __post_init__(self):
+        """Validate system configuration parameters."""
+        if not all(isinstance(x, str) and x.strip() for x in [self.system_id, self.crop_id, self.location_id, self.description]):
+            raise ValueError("System ID, crop ID, location ID, and description must be non-empty strings")
+        if self.tank_volume < 0:
+            raise ValueError("Tank volume must be non-negative")
+        if self.flow_rate < 0:
+            raise ValueError("Flow rate must be non-negative")
+        if self.system_area <= 0:
+            raise ValueError("System area must be positive")
+        if self.n_plants < 0:
+            raise ValueError("Number of plants must be non-negative")
+        if self.system_type not in [e.value for e in SystemType]:
+            raise ValueError(f"System type must be one of {[e.value for e in SystemType]}")
+
+    @classmethod
+    def from_config(cls, config: Dict[str, Any]) -> 'HydroSystemConfig':
+        """Create configuration from dictionary."""
+        required_fields = ['system_id', 'crop_id', 'location_id', 'tank_volume', 'flow_rate',
+                          'system_type', 'system_area', 'n_plants', 'description']
+        for field in required_fields:
+            if field not in config:
+                raise ValueError(f"Missing required configuration field: {field}")
+        return cls(
+            system_id=str(config['system_id']),
+            crop_id=str(config['crop_id']),
+            location_id=str(config['location_id']),
+            tank_volume=float(config['tank_volume']),
+            flow_rate=float(config['flow_rate']),
+            system_type=str(config['system_type']),
+            system_area=float(config['system_area']),
+            n_plants=int(config['n_plants']),
+            description=str(config['description'])
+        )
 
 @dataclass
 class CropParameters:
     """Crop-specific parameters."""
     crop_id: str
     crop_name: str
-    kcb: float  # Basal crop coefficient
-    phi: float  # Density index
-    crop_height: float  # m
-    root_zone_depth: float  # m
-    laid: float  # Leaf area index
+    kcb: float        # Basal crop coefficient
+    phi: float        # Density index
+    crop_height: float # m
+    root_zone_depth: float # m
+    lai: float        # Leaf area index
 
+    def __post_init__(self):
+        """Validate crop parameters."""
+        if not all(isinstance(x, str) and x.strip() for x in [self.crop_id, self.crop_name]):
+            raise ValueError("Crop ID and name must be non-empty strings")
+        if self.kcb <= 0:
+            raise ValueError("Basal crop coefficient must be positive")
+        if self.phi <= 0:
+            raise ValueError("Density index must be positive")
+        if self.crop_height <= 0:
+            raise ValueError("Crop height must be positive")
+        if self.root_zone_depth <= 0:
+            raise ValueError("Root zone depth must be positive")
+        if self.lai < 0:
+            raise ValueError("Leaf area index must be non-negative")
+
+    @classmethod
+    def from_config(cls, config: Dict[str, Any]) -> 'CropParameters':
+        """Create crop parameters from dictionary."""
+        required_fields = ['crop_id', 'crop_name', 'kcb', 'phi', 'crop_height', 'root_zone_depth', 'lai']
+        for field in required_fields:
+            if field not in config:
+                raise ValueError(f"Missing required configuration field: {field}")
+        return cls(
+            crop_id=str(config['crop_id']),
+            crop_name=str(config['crop_name']),
+            kcb=float(config['kcb']),
+            phi=float(config['phi']),
+            crop_height=float(config['crop_height']),
+            root_zone_depth=float(config['root_zone_depth']),
+            lai=float(config['lai'])
+        )
 
 @dataclass
 class WeatherData:
@@ -43,10 +116,44 @@ class WeatherData:
     temp_min: float  # °C
     temp_max: float  # °C
     solar_radiation: float  # MJ/m²/day
-    rel_humidity: float  # %
-    wind_speed: float  # m/s
-    rainfall: float = None  # mm
+    rel_humidity: float     # %
+    wind_speed: float       # m/s
+    rainfall: Optional[float] = None  # mm
 
+    def __post_init__(self):
+        """Validate weather data."""
+        if not isinstance(self.date, datetime):
+            raise ValueError("Date must be a datetime object")
+        if not -50 <= self.temp_avg <= 60 or not -50 <= self.temp_min <= 60 or not -50 <= self.temp_max <= 60:
+            raise ValueError("Temperatures must be between -50 and 60°C")
+        if self.temp_min > self.temp_max:
+            raise ValueError("Minimum temperature cannot exceed maximum temperature")
+        if self.solar_radiation < 0:
+            raise ValueError("Solar radiation must be non-negative")
+        if not 0 <= self.rel_humidity <= 100:
+            raise ValueError("Relative humidity must be between 0 and 100%")
+        if self.wind_speed < 0:
+            raise ValueError("Wind speed must be non-negative")
+        if self.rainfall is not None and self.rainfall < 0:
+            raise ValueError("Rainfall must be non-negative")
+
+    @classmethod
+    def from_config(cls, config: Dict[str, Any]) -> 'WeatherData':
+        """Create weather data from dictionary."""
+        required_fields = ['date', 'temp_avg', 'temp_min', 'temp_max', 'solar_radiation', 'rel_humidity', 'wind_speed']
+        for field in required_fields:
+            if field not in config:
+                raise ValueError(f"Missing required weather data field: {field}")
+        return cls(
+            date=pd.to_datetime(config['date']),
+            temp_avg=float(config['temp_avg']),
+            temp_min=float(config['temp_min']),
+            temp_max=float(config['temp_max']),
+            solar_radiation=float(config['solar_radiation']),
+            rel_humidity=float(config['rel_humidity']),
+            wind_speed=float(config['wind_speed']),
+            rainfall=float(config['rainfall']) if config.get('rainfall') is not None else None
+        )
 
 @dataclass
 class HydroInputData:
@@ -54,9 +161,21 @@ class HydroInputData:
     system_config: HydroSystemConfig
     crop_params: CropParameters
     weather_data: List[WeatherData]
-    nutrient_params: Dict = field(default_factory=dict)
-    simulation_days: int = 30
+    nutrient_params: Dict[str, float] = field(default_factory=dict)
+    simulation_days: int = field(default=30)
 
+    def __post_init__(self):
+        """Validate input data."""
+        if not isinstance(self.system_config, HydroSystemConfig):
+            raise ValueError("System config must be a HydroSystemConfig instance")
+        if not isinstance(self.crop_params, CropParameters):
+            raise ValueError("Crop parameters must be a CropParameters instance")
+        if not self.weather_data or not all(isinstance(w, WeatherData) for w in self.weather_data):
+            raise ValueError("Weather data must be a non-empty list of WeatherData instances")
+        if not isinstance(self.nutrient_params, dict):
+            raise ValueError("Nutrient parameters must be a dictionary")
+        if self.simulation_days <= 0:
+            raise ValueError("Simulation days must be positive")
 
 @dataclass
 class DailyResults:
@@ -73,211 +192,187 @@ class DailyResults:
     solar_radiation: float  # MJ/m²/day
     vpd: float  # kPa
     water_use_efficiency: float  # L/kg
-    ph: float = None
-    ec: float = None
-    rzt: float = None  # Root zone temperature (°C)
-    rzt_growth_factor: float = None  # RZT growth effect
-    rzt_nutrient_factor: float = None  # RZT nutrient uptake effect
-    v_stage: float = None  # Vegetative stage (number of leaves)
-    leaf_number: int = None  # Current number of active leaves
-    leaf_area_m2: float = None  # Total leaf area per plant (m²)
-    average_leaf_area_cm2: float = None  # Average leaf area (cm²)
-    co2_concentration: float = None  # CO2 concentration (μmol/mol) - will be overridden by simulation
-    vpd_actual: float = None  # Actual VPD (kPa) - will be overridden by simulation
-    env_photosynthesis_factor: float = None  # Environmental photosynthesis enhancement
-    env_transpiration_factor: float = None  # Environmental transpiration factor
-    
-    # === DETAILED PHOTOSYNTHESIS MODEL RESULTS ===
-    vcmax_25: float = None  # Maximum carboxylation rate at 25°C (μmol/m²/s)
-    jmax_25: float = None   # Maximum electron transport rate at 25°C (μmol/m²/s)
-    quantum_efficiency: float = None  # Quantum efficiency of photosystem II
-    rubisco_limited: float = None  # Rubisco-limited photosynthesis rate
-    light_limited: float = None    # Light-limited photosynthesis rate
-    co2_compensation: float = None  # CO2 compensation point (μmol/mol)
-    intercellular_co2: float = None  # Intercellular CO2 concentration
-    
-    # === DETAILED RESPIRATION MODEL RESULTS ===
-    maintenance_resp_leaves: float = None  # Leaf maintenance respiration
-    maintenance_resp_stems: float = None   # Stem maintenance respiration  
-    maintenance_resp_roots: float = None   # Root maintenance respiration
-    growth_resp_leaves: float = None       # Leaf growth respiration
-    growth_resp_stems: float = None        # Stem growth respiration
-    growth_resp_roots: float = None        # Root growth respiration
-    temperature_acclimation: float = None   # Temperature acclimation factor
-    age_factor: float = None               # Age effects on respiration
-    
-    # === DETAILED ROOT ARCHITECTURE RESULTS ===
-    fine_root_length: float = None    # Fine root length (cm)
-    coarse_root_length: float = None  # Coarse root length (cm) 
-    root_cohorts: int = None            # Number of active root cohorts
-    root_activity_young: float = None # Activity of young roots
-    root_activity_old: float = None   # Activity of old roots
-    root_surface_active: float = None # Active root surface area
-    root_turnover_rate: float = None  # Daily root turnover rate
-    
-    # === DETAILED CANOPY ARCHITECTURE RESULTS ===
-    sunlit_lai: float = None          # Sunlit leaf area index
-    shaded_lai: float = None          # Shaded leaf area index
-    canopy_layers: int = None           # Number of canopy layers
-    ppfd_top: float = None           # PPFD at top of canopy
-    ppfd_bottom: float = None        # PPFD at bottom of canopy
-    light_extinction: float = None    # Light extinction coefficient
-    
-    # === DETAILED NITROGEN DYNAMICS RESULTS ===
-    n_pool_structural: float = None   # Structural nitrogen pool (g)
-    n_pool_metabolic: float = None    # Metabolic nitrogen pool (g)
-    n_pool_storage: float = None      # Storage nitrogen pool (g)
-    n_pool_transport: float = None    # Transport nitrogen pool (g)
-    n_remobilization: float = None    # Daily N remobilization (g)
-    n_critical_conc: float = None     # Critical nitrogen concentration
-    
-    # === DETAILED STRESS INTEGRATION RESULTS ===
-    stress_interactions: Dict[str, float] = field(default_factory=dict)  # Stress interaction effects
-    acclimation_levels: Dict[str, float] = field(default_factory=dict)   # Acclimation to each stress
-    cumulative_damage: Dict[str, float] = field(default_factory=dict)    # Cumulative damage by stress type
-    
-    # === ADDITIONAL CROPGRO MODEL RESULTS ===
-    # Genetic parameters
-    cultivar_adaptation_index: float = None
-    cultivar_yield_potential: float = None
-    genetic_photosynthesis_capacity: float = None
-    genetic_ec_tolerance: float = None
-    genetic_nitrate_efficiency: float = None
-    
-    # Phenology
-    accumulated_gdd: float = None
-    development_rate: float = None
-    growth_stage: str = None
-    thermal_time_daily: float = None
-    is_vegetative: bool = None
-    is_reproductive: bool = None
-    
-    # Growth and biomass
-    total_biomass: float = None
-    leaf_biomass: float = None
-    stem_biomass: float = None
-    root_biomass: float = None
-    daily_growth_rate: float = None
-    leaf_growth_rate: float = None
-    stem_growth_rate: float = None
-    root_growth_rate: float = None
-    
-    # Canopy architecture
-    lai: float = None
-    canopy_height_cm: float = None
-    light_interception: float = None
-    total_absorbed_ppfd: float = None
-    canopy_photosynthesis: float = None
-    
-    # Photosynthesis detailed
-    photosynthesis_rate: float = None
-    net_assimilation: float = None
-    
-    # Respiration detailed
-    maintenance_respiration: float = None
-    growth_respiration: float = None
-    respiration_rate: float = None
-    
-    # Root architecture detailed
-    root_surface_area: float = None
-    root_length_density: float = None
-    root_volume: float = None
-    
-    # Nitrogen dynamics detailed
-    nitrogen_uptake_mg: float = None
-    nitrogen_demand_mg: float = None
-    nitrogen_stress_factor: float = None
-    leaf_nitrogen_conc: float = None
-    root_nitrogen_conc: float = None
-    nitrogen_remobilization: float = None
-    
-    # Phosphorus dynamics detailed
-    phosphorus_uptake_mg: float = None
-    potassium_uptake_mg: float = None
-    
-    # Nutrient remobilization
-    phosphorus_remobilization: float = None
-    potassium_remobilization: float = None
-    
-    # Senescence 
-    senescence_rate: float = None
-    leaf_senescence_rate: float = None
-    
-    # Stress factors (0 = no stress, 1 = full stress)
-    integrated_stress_factor: float = None
-    temperature_stress_level: float = None
-    temperature_stress_photosynthesis: float = None
-    temperature_stress_growth: float = None
-    water_stress: float = None
-    nutrient_stress: float = None
-    salinity_stress: float = None
-    
-    # Environmental control
-    controlled_temperature: float = None
-    controlled_humidity: float = None
-    controlled_co2: float = None
-    vpd_target: float = None
-    environmental_cost: float = None
-    
-    # Temperature stress (implemented)
-    cold_stress_factor: float = None  # 0 = no cold stress, 1 = severe cold stress
-    heat_stress_factor: float = None  # 0 = no heat stress, 1 = severe heat stress
-    temperature_stress_factor: float = None  # 0 = no temperature stress, 1 = severe temperature stress
-    solution_ph: float = None
-    
-    # Comprehensive pH modeling results
-    ph_change_from_uptake: float = None
-    ph_change_from_drift: float = None
-    acid_dosed_ml_per_L: float = None
-    base_dosed_ml_per_L: float = None
-    buffer_capacity: float = None
-    phosphate_h2po4_mg_L: float = None
-    phosphate_hpo4_mg_L: float = None
-    phosphate_po4_mg_L: float = None
-    nutrient_precipitation_mg_L: float = None
-    solution_ec: float = None
-    
-    # === ADVANCED ROOT ZONE TEMPERATURE PARAMETERS ===
-    rzt_water_factor: float = None
-    rzt_photosynthesis_factor: float = None
-    rzt_root_metabolism_factor: float = None
-    rzt_stress_factor: float = None
-    rzt_optimal_factor: float = None
-    rzt_daily_range: float = None
+    ph: Optional[float] = None  # Solution pH
+    ec: Optional[float] = None  # dS/m
+    rzt: Optional[float] = None  # Root zone temperature (°C)
+    rzt_growth_factor: Optional[float] = None  # RZT growth effect
+    rzt_nutrient_factor: Optional[float] = None  # RZT nutrient uptake effect
+    v_stage: Optional[float] = None  # Vegetative stage (number of leaves)
+    leaf_number: Optional[int] = None  # Current number of active leaves
+    leaf_area_m2: Optional[float] = None  # Total leaf area per plant (m²)
+    average_leaf_area_cm2: Optional[float] = None  # Average leaf area (cm²)
+    co2_concentration: Optional[float] = None  # CO2 concentration (μmol/mol)
+    vpd_actual: Optional[float] = None  # Actual VPD (kPa)
+    env_photosynthesis_factor: Optional[float] = None  # Environmental photosynthesis enhancement
+    env_transpiration_factor: Optional[float] = None  # Environmental transpiration factor
+    # Photosynthesis model results
+    vcmax_25: Optional[float] = None  # Maximum carboxylation rate at 25°C (μmol/m²/s)
+    jmax_25: Optional[float] = None  # Maximum electron transport rate at 25°C (μmol/m²/s)
+    quantum_efficiency: Optional[float] = None  # Quantum efficiency of photosystem II
+    rubisco_limited: Optional[float] = None  # Rubisco-limited photosynthesis rate
+    light_limited: Optional[float] = None  # Light-limited photosynthesis rate
+    co2_compensation: Optional[float] = None  # CO2 compensation point (μmol/mol)
+    intercellular_co2: Optional[float] = None  # Intercellular CO2 concentration
+    # Respiration model results
+    maintenance_resp_leaves: Optional[float] = None  # Leaf maintenance respiration
+    maintenance_resp_stems: Optional[float] = None  # Stem maintenance respiration
+    maintenance_resp_roots: Optional[float] = None  # Root maintenance respiration
+    growth_resp_leaves: Optional[float] = None  # Leaf growth respiration
+    growth_resp_stems: Optional[float] = None  # Stem growth respiration
+    growth_resp_roots: Optional[float] = None  # Root growth respiration
+    temperature_acclimation: Optional[float] = None  # Temperature acclimation factor
+    age_factor: Optional[float] = None  # Age effects on respiration
+    # Root architecture results
+    fine_root_length: Optional[float] = None  # Fine root length (cm)
+    coarse_root_length: Optional[float] = None  # Coarse root length (cm)
+    root_cohorts: Optional[int] = None  # Number of active root cohorts
+    root_activity_young: Optional[float] = None  # Activity of young roots
+    root_activity_old: Optional[float] = None  # Activity of old roots
+    root_surface_active: Optional[float] = None  # Active root surface area (cm²)
+    root_turnover_rate: Optional[float] = None  # Daily root turnover rate
+    # Canopy architecture results
+    sunlit_lai: Optional[float] = None  # Sunlit leaf area index
+    shaded_lai: Optional[float] = None  # Shaded leaf area index
+    canopy_layers: Optional[int] = None  # Number of canopy layers
+    ppfd_top: Optional[float] = None  # PPFD at top of canopy (μmol/m²/s)
+    ppfd_bottom: Optional[float] = None  # PPFD at bottom of canopy (μmol/m²/s)
+    light_extinction: Optional[float] = None  # Light extinction coefficient
+    # Nitrogen dynamics results
+    n_pool_structural: Optional[float] = None  # Structural nitrogen pool (g)
+    n_pool_metabolic: Optional[float] = None  # Metabolic nitrogen pool (g)
+    n_pool_storage: Optional[float] = None  # Storage nitrogen pool (g)
+    n_pool_transport: Optional[float] = None  # Transport nitrogen pool (g)
+    n_remobilization: Optional[float] = None  # Daily N remobilization (g)
+    n_critical_conc: Optional[float] = None  # Critical nitrogen concentration
+    # Stress integration results
+    stress_interactions: Dict[str, float] = field(default_factory=dict)
+    acclimation_levels: Dict[str, float] = field(default_factory=dict)
+    cumulative_damage: Dict[str, float] = field(default_factory=dict)
+    # Crop growth model results
+    cultivar_adaptation_index: Optional[float] = None
+    cultivar_yield_potential: Optional[float] = None
+    genetic_photosynthesis_capacity: Optional[float] = None
+    genetic_ec_tolerance: Optional[float] = None
+    genetic_nitrate_efficiency: Optional[float] = None
+    accumulated_gdd: Optional[float] = None
+    development_rate: Optional[float] = None
+    growth_stage: Optional[str] = None
+    thermal_time_daily: Optional[float] = None
+    is_vegetative: Optional[bool] = None
+    is_reproductive: Optional[bool] = None
+    total_biomass: Optional[float] = None
+    leaf_biomass: Optional[float] = None
+    stem_biomass: Optional[float] = None
+    root_biomass: Optional[float] = None
+    daily_growth_rate: Optional[float] = None
+    leaf_growth_rate: Optional[float] = None
+    stem_growth_rate: Optional[float] = None
+    root_growth_rate: Optional[float] = None
+    lai: Optional[float] = None
+    canopy_height_cm: Optional[float] = None
+    light_interception: Optional[float] = None
+    total_absorbed_ppfd: Optional[float] = None
+    canopy_photosynthesis: Optional[float] = None
+    photosynthesis_rate: Optional[float] = None
+    net_assimilation: Optional[float] = None
+    maintenance_respiration: Optional[float] = None
+    growth_respiration: Optional[float] = None
+    respiration_rate: Optional[float] = None
+    root_surface_area: Optional[float] = None
+    root_length_density: Optional[float] = None
+    root_volume: Optional[float] = None
+    nitrogen_uptake_mg: Optional[float] = None
+    nitrogen_demand_mg: Optional[float] = None
+    nitrogen_stress_factor: Optional[float] = None
+    leaf_nitrogen_conc: Optional[float] = None
+    root_nitrogen_conc: Optional[float] = None
+    nitrogen_remobilization: Optional[float] = None
+    phosphorus_uptake_mg: Optional[float] = None
+    potassium_uptake_mg: Optional[float] = None
+    phosphorus_remobilization: Optional[float] = None
+    potassium_remobilization: Optional[float] = None
+    senescence_rate: Optional[float] = None
+    leaf_senescence_rate: Optional[float] = None
+    integrated_stress_factor: Optional[float] = None
+    temperature_stress_level: Optional[float] = None
+    temperature_stress_photosynthesis: Optional[float] = None
+    temperature_stress_growth: Optional[float] = None
+    water_stress: Optional[float] = None
+    nutrient_stress: Optional[float] = None
+    salinity_stress: Optional[float] = None
+    controlled_temperature: Optional[float] = None
+    controlled_humidity: Optional[float] = None
+    controlled_co2: Optional[float] = None
+    vpd_target: Optional[float] = None
+    environmental_cost: Optional[float] = None
+    cold_stress_factor: Optional[float] = None
+    heat_stress_factor: Optional[float] = None
+    temperature_stress_factor: Optional[float] = None
+    solution_ph: Optional[float] = None
+    ph_change_from_uptake: Optional[float] = None
+    ph_change_from_drift: Optional[float] = None
+    acid_dosed_ml_per_L: Optional[float] = None
+    base_dosed_ml_per_L: Optional[float] = None
+    buffer_capacity: Optional[float] = None
+    phosphate_h2po4_mg_L: Optional[float] = None
+    phosphate_hpo4_mg_L: Optional[float] = None
+    phosphate_po4_mg_L: Optional[float] = None
+    nutrient_precipitation_mg_L: Optional[float] = None
+    solution_ec: Optional[float] = None
+    rzt_water_factor: Optional[float] = None
+    rzt_photosynthesis_factor: Optional[float] = None
+    rzt_root_metabolism_factor: Optional[float] = None
+    rzt_stress_factor: Optional[float] = None
+    rzt_optimal_factor: Optional[float] = None
+    rzt_daily_range: Optional[float] = None
     individual_rzt_factors: Dict[str, float] = field(default_factory=dict)
-    root_temp_stress: float = None
-    
-    # === ADVANCED SENESCENCE PARAMETERS ===
-    senesced_area: float = None
-    senesced_biomass: float = None
-    average_senescence_stage: str = None
+    root_temp_stress: Optional[float] = None
+    senesced_area: Optional[float] = None
+    senesced_biomass: Optional[float] = None
+    average_senescence_stage: Optional[str] = None
     active_senescence_types: List[str] = field(default_factory=list)
     remobilization_pool: Dict[str, float] = field(default_factory=dict)
-    
-    # === ADVANCED STRESS INTERACTION PARAMETERS ===
-    ph_stress: float = None
-    oxygen_stress: float = None
-    stress_severity: str = None
+    ph_stress: Optional[float] = None
+    oxygen_stress: Optional[float] = None
+    stress_severity: Optional[str] = None
     dominant_stresses: List[str] = field(default_factory=list)
     stress_interactions_active: List[str] = field(default_factory=list)
     acclimation_active: List[str] = field(default_factory=list)
     recovery_active: List[str] = field(default_factory=list)
-    total_damage: float = None
-    
-    # === ADVANCED NUTRIENT TRANSPORT PARAMETERS ===
+    total_damage: Optional[float] = None
     nutrient_transport_fluxes: Dict[str, float] = field(default_factory=dict)
     transport_limitations: List[str] = field(default_factory=list)
     mobility_efficiency: Dict[str, float] = field(default_factory=dict)
     nutrient_redistribution: Dict[str, float] = field(default_factory=dict)
     transport_pool_fractions: Dict[str, float] = field(default_factory=dict)
     cumulative_redistribution: Dict[str, float] = field(default_factory=dict)
-    
-    # === ADVANCED PH CONTROL PARAMETERS ===
-    henderson_hasselbalch_ph: float = None
-    controlled_ph: float = None
-    acid_dosing_rate: float = None
-    base_dosing_rate: float = None
+    henderson_hasselbalch_ph: Optional[float] = None
+    controlled_ph: Optional[float] = None
+    acid_dosing_rate: Optional[float] = None
+    base_dosing_rate: Optional[float] = None
 
+    def __post_init__(self):
+        """Validate core daily results fields."""
+        if not isinstance(self.date, datetime):
+            raise ValueError("Date must be a datetime object")
+        if self.day < 0:
+            raise ValueError("Day must be non-negative")
+        if any(x < 0 for x in [self.eto_ref, self.etc_prime, self.transpiration, self.water_uptake_total, self.tank_volume] if x is not None):
+            raise ValueError("Water-related fields must be non-negative")
+        if not -50 <= self.temp_avg <= 60:
+            raise ValueError("Average temperature must be between -50 and 60°C")
+        if self.solar_radiation < 0:
+            raise ValueError("Solar radiation must be non-negative")
+        if self.vpd < 0:
+            raise ValueError("VPD must be non-negative")
+        if self.water_use_efficiency < 0:
+            raise ValueError("Water use efficiency must be non-negative")
+        if self.ph is not None and not 0 <= self.ph <= 14:
+            raise ValueError("pH must be between 0 and 14")
+        if self.ec is not None and self.ec < 0:
+            raise ValueError("EC must be non-negative")
+        if self.rzt is not None and not -10 <= self.rzt <= 50:
+            raise ValueError("Root zone temperature must be between -10 and 50°C")
 
 @dataclass
 class SimulationResults:
@@ -289,64 +384,56 @@ class SimulationResults:
     end_date: datetime
     total_days: int
     daily_results: List[DailyResults]
-    summary_stats: Dict = field(default_factory=dict)
-    treatment_id: str = None  # Added for batch experiment tracking
-    
+    transplanting_period_days: int
+    treatment_id: Optional[str] = None
+    summary_stats: Dict[str, float] = field(default_factory=dict)
+
+    def __post_init__(self):
+        """Validate simulation results."""
+        if not all(isinstance(x, str) and x.strip() for x in [self.system_id, self.crop_id, self.location_id]):
+            raise ValueError("System ID, crop ID, and location ID must be non-empty strings")
+        if not isinstance(self.start_date, datetime) or not isinstance(self.end_date, datetime):
+            raise ValueError("Start and end dates must be datetime objects")
+        if self.start_date > self.end_date:
+            raise ValueError("Start date must precede end date")
+        if self.total_days <= 0:
+            raise ValueError("Total days must be positive")
+        if not self.daily_results or not all(isinstance(d, DailyResults) for d in self.daily_results):
+            raise ValueError("Daily results must be a non-empty list of DailyResults instances")
+        if self.transplanting_period_days < 0:
+            raise ValueError("Transplanting period days must be non-negative")
+        if self.treatment_id is not None and not isinstance(self.treatment_id, str):
+            raise ValueError("Treatment ID must be a string or None")
+
     def to_dataframe(self) -> pd.DataFrame:
         """Convert results to pandas DataFrame for analysis."""
         data = []
         for result in self.daily_results:
-            # Calculate DAS (Days After Sowing) and DAT (Days After Transplanting)
-            # Get transplanting period from the simulation (passed dynamically)
-            if not hasattr(self, 'transplanting_period_days'):
-                raise AttributeError("transplanting_period_days not found in results - check experiment settings CSV")
-            
-            das = result.day + self.transplanting_period_days  # Add transplanting period
-            dat = result.day  # Days since transplanting (simulation starts from transplant)
-            
-            # === ORGANIZED ROW WITH FUNCTIONAL GROUPS ===
-            row = {}
-            
-            # === GROUP 1: EXPERIMENT METADATA ===
-            row.update({
+            das = result.day + self.transplanting_period_days
+            dat = result.day
+            row = {
+                # Experiment metadata
                 'Date': result.date.strftime('%Y-%m-%d'),
                 'Day': result.day,
                 'DAS': das,
                 'DAT': dat,
-                'Treatment_ID': self.treatment_id if self.treatment_id else 'DEFAULT',
+                'Treatment_ID': self.treatment_id or 'DEFAULT',
                 'System_ID': self.system_id,
                 'Crop_ID': self.crop_id,
                 'Location_ID': self.location_id,
-                'System_Type': getattr(self, 'system_type', 'Unknown'),
-                'System_Area_m2': getattr(self, 'system_area', 0.0),
-                'Plant_Count': getattr(self, 'plant_count', 0),
-                'Flow_Rate_L_h': getattr(self, 'flow_rate', 0.0),
-                'System_Description': getattr(self, 'system_description', ''),
-                '': '',  # Separator
-            })
-            
-            # === GROUP 2: ENVIRONMENTAL CONDITIONS ===
-            row.update({
+                # Environmental conditions
                 'Temp_C': result.temp_avg,
                 'Solar_Rad_MJ': result.solar_radiation,
                 'VPD_kPa': result.vpd,
                 'CO2_umol_mol': result.co2_concentration,
-                ' ': '',  # Separator
-            })
-            
-            # === GROUP 3: WATER DYNAMICS ===
-            row.update({
+                # Water dynamics
                 'ETO_Ref_mm': result.eto_ref,
                 'ETC_Prime_mm': result.etc_prime,
                 'Transpiration_mm': result.transpiration,
                 'Water_Total_L': result.water_uptake_total,
                 'Tank_Volume_L': result.tank_volume,
                 'WUE_L_kg': result.water_use_efficiency,
-                '  ': '',  # Separator
-            })
-            
-            # === GROUP 4: SOLUTION CHEMISTRY ===
-            row.update({
+                # Solution chemistry
                 'pH': result.ph,
                 'EC': result.ec,
                 'pH_Change_Uptake': result.ph_change_from_uptake,
@@ -354,733 +441,338 @@ class SimulationResults:
                 'Acid_Dosed_mL_L': result.acid_dosed_ml_per_L,
                 'Base_Dosed_mL_L': result.base_dosed_ml_per_L,
                 'Buffer_Capacity': result.buffer_capacity,
-                '   ': '',  # Separator
-            })
-            
-            # === GROUP 5: NUTRIENT CONCENTRATIONS ===
-            row.update({
+                # Nutrient concentrations
                 'N-NO3_mg_L': result.nutrient_concentrations.get('N-NO3', 0.0),
                 'P-PO4_mg_L': result.nutrient_concentrations.get('P-PO4', 0.0),
                 'K_mg_L': result.nutrient_concentrations.get('K', 0.0),
                 'Ca_mg_L': result.nutrient_concentrations.get('Ca', 0.0),
                 'Mg_mg_L': result.nutrient_concentrations.get('Mg', 0.0),
-                '    ': '',  # Separator
-            })
-            
-            # === GROUP 6: ROOT ZONE CONDITIONS ===
-            row.update({
+                # Root zone conditions
                 'RZT_C': result.rzt,
                 'RZT_Growth_Factor': result.rzt_growth_factor,
                 'RZT_Nutrient_Factor': result.rzt_nutrient_factor,
                 'Env_Photo_Factor': result.env_photosynthesis_factor,
                 'Env_Transp_Factor': result.env_transpiration_factor,
-                '     ': '',  # Separator
-            })
-            
-            # === GROUP 7: PLANT DEVELOPMENT ===
-            row.update({
+                # Plant development
                 'V_Stage': result.v_stage,
                 'Leaf_Number': result.leaf_number,
                 'Leaf_Area_m2': result.leaf_area_m2,
                 'Avg_Leaf_Area_cm2': result.average_leaf_area_cm2,
-                '      ': '',  # Separator
-            })
-            
-            # === GROUP 8: GROWTH & BIOMASS ===
-            biomass_group = {}
-            if hasattr(result, 'growth_stage'):
-                biomass_group['Growth_Stage'] = result.growth_stage
-            if hasattr(result, 'total_biomass'):
-                biomass_group['Total_Biomass_g'] = result.total_biomass
-            if hasattr(result, 'lai'):
-                biomass_group['LAI'] = result.lai
-            if hasattr(result, 'canopy_height_cm'):
-                biomass_group['Plant_Height_cm'] = result.canopy_height_cm
-            if hasattr(result, 'daily_growth_rate'):
-                biomass_group['Daily_Growth_Rate_g_day'] = result.daily_growth_rate
-            biomass_group['       '] = ''  # Separator
-            row.update(biomass_group)
-            
-            # === GROUP 9: STRESS FACTORS ===
-            stress_group = {}
-            if hasattr(result, 'integrated_stress_factor'):
-                stress_group['Integrated_Stress'] = result.integrated_stress_factor
-            if hasattr(result, 'temperature_stress_level'):
-                stress_group['Temperature_Stress'] = result.temperature_stress_level
-            if hasattr(result, 'water_stress'):
-                stress_group['Water_Stress'] = result.water_stress
-            if hasattr(result, 'nutrient_stress'):
-                stress_group['Nutrient_Stress'] = result.nutrient_stress
-            if hasattr(result, 'nitrogen_stress_factor'):
-                stress_group['Nitrogen_Stress'] = result.nitrogen_stress_factor
-            if hasattr(result, 'salinity_stress'):
-                stress_group['Salinity_Stress'] = result.salinity_stress
-            stress_group['        '] = ''  # Separator
-            row.update(stress_group)
-            
-            # === GROUP 10: BIOMASS COMPONENTS ===
-            biomass_detail_group = {}
-            if hasattr(result, 'leaf_biomass'):
-                biomass_detail_group['Shoot_Dry_Weight_g'] = getattr(result, 'leaf_biomass', 0.0) + getattr(result, 'stem_biomass', 0.0)
-                biomass_detail_group['Leaf_Dry_Weight_g'] = result.leaf_biomass
-                biomass_detail_group['Stem_Dry_Weight_g'] = getattr(result, 'stem_biomass', 0.0)
-                # Calculate fresh weight using dynamic dry matter content
-                shoot_dry_matter = calculate_dynamic_dry_matter_content(result, 'shoot')
-                leaf_dry_matter = calculate_dynamic_dry_matter_content(result, 'leaf')
-                stem_dry_matter = calculate_dynamic_dry_matter_content(result, 'stem')
-                biomass_detail_group['Shoot_Fresh_Weight_g'] = biomass_detail_group['Shoot_Dry_Weight_g'] / shoot_dry_matter
-                biomass_detail_group['Leaf_Fresh_Weight_g'] = result.leaf_biomass / leaf_dry_matter
-                biomass_detail_group['Stem_Fresh_Weight_g'] = getattr(result, 'stem_biomass', 0.0) / stem_dry_matter
-            if hasattr(result, 'root_biomass'):
-                biomass_detail_group['Root_Dry_Weight_g'] = result.root_biomass
-                root_dry_matter = calculate_dynamic_dry_matter_content(result, 'root')
-                biomass_detail_group['Root_Fresh_Weight_g'] = result.root_biomass / root_dry_matter
-            if hasattr(result, 'leaf_growth_rate'):
-                biomass_detail_group['Leaf_Growth_Rate_g_day'] = result.leaf_growth_rate
-            if hasattr(result, 'stem_growth_rate'):
-                biomass_detail_group['Stem_Growth_Rate_g_day'] = result.stem_growth_rate
-            if hasattr(result, 'root_growth_rate'):
-                biomass_detail_group['Root_Growth_Rate_g_day'] = result.root_growth_rate
-            biomass_detail_group['         '] = ''  # Separator
-            row.update(biomass_detail_group)
-            
-            # === GROUP 11: ROOT ARCHITECTURE ===
-            root_group = {}
-            if hasattr(result, 'fine_root_length'):
-                root_group['Fine_Root_Length_cm'] = result.fine_root_length
-            if hasattr(result, 'coarse_root_length'):
-                root_group['Coarse_Root_Length_cm'] = result.coarse_root_length
-            if hasattr(result, 'root_length_density'):
-                root_group['Root_Length_Density_cm_cm3'] = result.root_length_density
-            if hasattr(result, 'root_surface_area'):
-                root_group['Root_Surface_Area_cm2'] = result.root_surface_area
-            if hasattr(result, 'root_volume'):
-                root_group['Root_Volume_cm3'] = result.root_volume
-            root_group['          '] = ''  # Separator
-            row.update(root_group)
-
-            # === GROUP 12: PHOTOSYNTHESIS ===
-            photo_group = {}
-            if hasattr(result, 'vcmax_25'):
-                photo_group['Vcmax_25_umol_m2_s'] = result.vcmax_25
-            if hasattr(result, 'jmax_25'):
-                row['Jmax_25_umol_m2_s'] = result.jmax_25
-            if hasattr(result, 'quantum_efficiency'):
-                row['Quantum_Efficiency'] = result.quantum_efficiency
-            if hasattr(result, 'rubisco_limited'):
-                row['Rubisco_Limited_umol_m2_s'] = result.rubisco_limited
-            if hasattr(result, 'light_limited'):
-                row['Light_Limited_umol_m2_s'] = result.light_limited
-            if hasattr(result, 'co2_compensation'):
-                row['CO2_Compensation_umol_mol'] = result.co2_compensation
-            if hasattr(result, 'intercellular_co2'):
-                row['Intercellular_CO2_umol_mol'] = result.intercellular_co2
-            if hasattr(result, 'photosynthesis_rate'):
-                row['Photosynthesis_Rate'] = result.photosynthesis_rate
-            if hasattr(result, 'net_assimilation'):
-                row['Net_Assimilation'] = result.net_assimilation
-
-            # === RESPIRATION DETAIL ===
-            if hasattr(result, 'maintenance_respiration'):
-                row['Maintenance_Respiration'] = result.maintenance_respiration
-            if hasattr(result, 'growth_respiration'):
-                row['Growth_Respiration'] = result.growth_respiration
-            if hasattr(result, 'respiration_rate'):
-                row['Respiration_Rate'] = result.respiration_rate
-            if hasattr(result, 'maintenance_resp_leaves'):
-                row['Maint_Resp_Leaves'] = result.maintenance_resp_leaves
-            if hasattr(result, 'maintenance_resp_stems'):
-                row['Maint_Resp_Stems'] = result.maintenance_resp_stems
-            if hasattr(result, 'maintenance_resp_roots'):
-                row['Maint_Resp_Roots'] = result.maintenance_resp_roots
-            if hasattr(result, 'growth_resp_leaves'):
-                row['Growth_Resp_Leaves'] = result.growth_resp_leaves
-            if hasattr(result, 'growth_resp_stems'):
-                row['Growth_Resp_Stems'] = result.growth_resp_stems
-            if hasattr(result, 'growth_resp_roots'):
-                row['Growth_Resp_Roots'] = result.growth_resp_roots
-            if hasattr(result, 'temperature_acclimation'):
-                row['Temperature_Acclimation'] = result.temperature_acclimation
-            if hasattr(result, 'age_factor'):
-                row['Age_Factor'] = result.age_factor
-
-            # === CANOPY DETAIL ===
-            if hasattr(result, 'light_interception'):
-                row['Light_Interception'] = result.light_interception
-            if hasattr(result, 'sunlit_lai'):
-                row['Sunlit_LAI'] = result.sunlit_lai
-            if hasattr(result, 'shaded_lai'):
-                row['Shaded_LAI'] = result.shaded_lai
-            if hasattr(result, 'total_absorbed_ppfd'):
-                row['Total_Absorbed_PPFD_umol_m2_s'] = result.total_absorbed_ppfd
-            if hasattr(result, 'canopy_photosynthesis'):
-                row['Canopy_Photosynthesis_umol_m2_s'] = result.canopy_photosynthesis
-            if hasattr(result, 'canopy_layers'):
-                row['Canopy_Layers'] = result.canopy_layers
-            if hasattr(result, 'ppfd_top'):
-                row['PPFD_Top_umol_m2_s'] = result.ppfd_top
-            if hasattr(result, 'ppfd_bottom'):
-                row['PPFD_Bottom_umol_m2_s'] = result.ppfd_bottom
-            if hasattr(result, 'light_extinction'):
-                row['Light_Extinction_Coeff'] = result.light_extinction
-
-            # === NITROGEN DYNAMICS ===
-            if hasattr(result, 'n_pool_structural'):
-                row['N_Pool_Structural_g'] = result.n_pool_structural
-            if hasattr(result, 'n_pool_metabolic'):
-                row['N_Pool_Metabolic_g'] = result.n_pool_metabolic
-            if hasattr(result, 'n_pool_storage'):
-                row['N_Pool_Storage_g'] = result.n_pool_storage
-            if hasattr(result, 'n_pool_transport'):
-                row['N_Pool_Transport_g'] = result.n_pool_transport
-            if hasattr(result, 'n_remobilization'):
-                row['N_Remobilization_g'] = result.n_remobilization
-            if hasattr(result, 'n_critical_conc'):
-                row['N_Critical_Conc'] = result.n_critical_conc
-            if hasattr(result, 'nitrogen_uptake_mg'):
-                row['Nitrogen_Uptake_mg'] = result.nitrogen_uptake_mg
-            if hasattr(result, 'nitrogen_demand_mg'):
-                row['Nitrogen_Demand_mg'] = result.nitrogen_demand_mg
-            if hasattr(result, 'leaf_nitrogen_conc'):
-                row['Leaf_Nitrogen_Conc'] = result.leaf_nitrogen_conc
-            if hasattr(result, 'root_nitrogen_conc'):
-                row['Root_Nitrogen_Conc'] = result.root_nitrogen_conc
-            if hasattr(result, 'nitrogen_remobilization'):
-                row['Nitrogen_Remobilization'] = result.nitrogen_remobilization
-
-            # === GROWTH RATES ===
-            if hasattr(result, 'daily_growth_rate'):
-                row['Daily_Growth_Rate_g_day'] = result.daily_growth_rate
-            if hasattr(result, 'leaf_growth_rate'):
-                row['Leaf_Growth_Rate_g_day'] = result.leaf_growth_rate
-            if hasattr(result, 'stem_growth_rate'):
-                row['Stem_Growth_Rate_g_day'] = result.stem_growth_rate
-            if hasattr(result, 'root_growth_rate'):
-                row['Root_Growth_Rate_g_day'] = result.root_growth_rate
-
-            # === PHENOLOGY DETAIL ===
-            if hasattr(result, 'accumulated_gdd'):
-                row['Accumulated_GDD'] = result.accumulated_gdd
-            if hasattr(result, 'thermal_time_daily'):
-                row['Thermal_Time_Daily'] = result.thermal_time_daily
-            if hasattr(result, 'development_rate'):
-                row['Development_Rate'] = result.development_rate
-            if hasattr(result, 'is_vegetative'):
-                row['Is_Vegetative'] = result.is_vegetative
-            if hasattr(result, 'is_reproductive'):
-                row['Is_Reproductive'] = result.is_reproductive
-
-            # === ROOT ARCHITECTURE DETAIL ===
-            if hasattr(result, 'root_surface_area'):
-                row['Root_Surface_Area_cm2'] = result.root_surface_area
-            if hasattr(result, 'root_volume'):
-                row['Root_Volume_cm3'] = result.root_volume
-            if hasattr(result, 'root_cohorts'):
-                row['Root_Cohorts'] = result.root_cohorts
-            if hasattr(result, 'root_activity_young'):
-                row['Root_Activity_Young'] = result.root_activity_young
-            if hasattr(result, 'root_activity_old'):
-                row['Root_Activity_Old'] = result.root_activity_old
-            if hasattr(result, 'root_surface_active'):
-                row['Root_Surface_Active_cm2'] = result.root_surface_active
-            if hasattr(result, 'root_turnover_rate'):
-                row['Root_Turnover_Rate'] = result.root_turnover_rate
-
-            # === GENETIC PARAMETERS ===
-            if hasattr(result, 'cultivar_adaptation_index'):
-                row['Cultivar_Adaptation_Index'] = result.cultivar_adaptation_index
-            if hasattr(result, 'cultivar_yield_potential'):
-                row['Cultivar_Yield_Potential'] = result.cultivar_yield_potential
-            if hasattr(result, 'genetic_photosynthesis_capacity'):
-                row['Genetic_Photosynthesis_Capacity'] = result.genetic_photosynthesis_capacity
-            if hasattr(result, 'genetic_ec_tolerance'):
-                row['Genetic_EC_Tolerance'] = result.genetic_ec_tolerance
-            if hasattr(result, 'genetic_nitrate_efficiency'):
-                row['Genetic_Nitrate_Efficiency'] = result.genetic_nitrate_efficiency
-
-            # === NUTRIENT REMOBILIZATION ===
-            if hasattr(result, 'phosphorus_uptake_mg'):
-                row['Phosphorus_Uptake_mg'] = result.phosphorus_uptake_mg
-            if hasattr(result, 'phosphorus_remobilization'):
-                row['Phosphorus_Remobilization'] = result.phosphorus_remobilization
-            if hasattr(result, 'potassium_remobilization'):
-                row['Potassium_Remobilization'] = result.potassium_remobilization
-
-            # === SENESCENCE ===
-            if hasattr(result, 'senescence_rate'):
-                row['Senescence_Rate'] = result.senescence_rate
-            if hasattr(result, 'leaf_senescence_rate'):
-                row['Leaf_Senescence_Rate'] = result.leaf_senescence_rate
-
-            # === DETAILED STRESS FACTORS ===
-            if hasattr(result, 'temperature_stress_photosynthesis'):
-                row['Temperature_Stress_Photosynthesis'] = result.temperature_stress_photosynthesis
-            if hasattr(result, 'temperature_stress_growth'):
-                row['Temperature_Stress_Growth'] = result.temperature_stress_growth
-            if hasattr(result, 'cold_stress_factor'):
-                row['Cold_Stress_Factor'] = result.cold_stress_factor
-            if hasattr(result, 'heat_stress_factor'):
-                row['Heat_Stress_Factor'] = result.heat_stress_factor
-            if hasattr(result, 'temperature_stress_factor'):
-                row['Temperature_Stress_Factor'] = result.temperature_stress_factor
-
-            # === ENVIRONMENTAL CONTROL ===
-            # Controlled_Temperature_C removed - using main Temp_C column instead
-            if hasattr(result, 'controlled_humidity'):
-                row['Controlled_Humidity_pct'] = result.controlled_humidity
-            # Controlled_CO2_umol_mol removed - using main CO2_umol_mol column instead
-            if hasattr(result, 'vpd_target'):
-                row['VPD_Target_kPa'] = result.vpd_target
-            if hasattr(result, 'environmental_cost'):
-                row['Environmental_Cost'] = result.environmental_cost
-
-            # === TEMPERATURE DETAIL ===
-            if hasattr(result, 'air_temperature'):
-                row['Air_Temperature_C'] = result.air_temperature
-            if hasattr(result, 'min_temperature'):
-                row['Min_Temperature_C'] = result.min_temperature
-            if hasattr(result, 'max_temperature'):
-                row['Max_Temperature_C'] = result.max_temperature
-            if hasattr(result, 'leaf_temperature'):
-                row['Leaf_Temperature_C'] = result.leaf_temperature
-            if hasattr(result, 'canopy_temperature'):
-                row['Canopy_Temperature_C'] = result.canopy_temperature
-
-            # === WATER DYNAMICS ===
-            if hasattr(result, 'transpiration_rate'):
-                row['Transpiration_Rate'] = result.transpiration_rate
-            if hasattr(result, 'total_water_uptake'):
-                row['Total_Water_Uptake'] = result.total_water_uptake
-            # Solution_pH removed - using main pH column instead
-
-            # === COMPREHENSIVE pH MODELING ===
-            if hasattr(result, 'phosphate_h2po4_mg_L'):
-                row['Phosphate_H2PO4_mg_L'] = result.phosphate_h2po4_mg_L
-            if hasattr(result, 'phosphate_hpo4_mg_L'):
-                row['Phosphate_HPO4_mg_L'] = result.phosphate_hpo4_mg_L
-            if hasattr(result, 'nutrient_precipitation_mg_L'):
-                row['Nutrient_Precipitation_mg_L'] = result.nutrient_precipitation_mg_L
-            # Solution_EC_dS_m removed - using main EC column instead
-
-            # === STRESS INTERACTIONS ===
-            if hasattr(result, 'stress_interactions'):
-                for stress_type, interaction_value in result.stress_interactions.items():
-                    row[f'Stress_Interaction_{stress_type}'] = interaction_value
-            if hasattr(result, 'acclimation_levels'):
-                for stress_type, acclimation_value in result.acclimation_levels.items():
-                    row[f'Acclimation_{stress_type}'] = acclimation_value
-            if hasattr(result, 'cumulative_damage'):
-                for stress_type, damage_value in result.cumulative_damage.items():
-                    row[f'Cumulative_Damage_{stress_type}'] = damage_value
-
-            # Round floats with field-specific precision to preserve signal
-            precision_overrides = {
-                'WUE_kg_m3': 3,
-                'Leaf_Area_m2': 3,
-                'LAI': 3,
-                'EC': 2,
-                'pH': 2,
-                'Water_Total_L': 2,
-                'Tank_Volume_L': 2,
-                'Fine_Root_Length_cm': 1,
-                'Coarse_Root_Length_cm': 1,
-                'Root_Length_Density_cm_cm3': 3,
-                'Shoot_Dry_Weight_g': 2,
-                'Shoot_Fresh_Weight_g': 1,
-                'Leaf_Dry_Weight_g': 2,
-                'Leaf_Fresh_Weight_g': 1,
-                'Stem_Dry_Weight_g': 2,
-                'Stem_Fresh_Weight_g': 1,
-                'Root_Dry_Weight_g': 2,
-                'Root_Fresh_Weight_g': 1,
-                'Plant_Height_cm': 1,
+                'Growth_Stage': result.growth_stage,
+                'Total_Biomass_g': result.total_biomass,
+                'LAI': result.lai,
+                'Plant_Height_cm': result.canopy_height_cm,
+                'Daily_Growth_Rate_g_day': result.daily_growth_rate,
+                # Stress factors
+                'Integrated_Stress': result.integrated_stress_factor,
+                'Temperature_Stress': result.temperature_stress_level,
+                'Water_Stress': result.water_stress,
+                'Nutrient_Stress': result.nutrient_stress,
+                'Nitrogen_Stress': result.nitrogen_stress_factor,
+                'Salinity_Stress': result.salinity_stress,
+                # Biomass components
+                'Shoot_Dry_Weight_g': (result.leaf_biomass or 0.0) + (result.stem_biomass or 0.0),
+                'Leaf_Dry_Weight_g': result.leaf_biomass,
+                'Stem_Dry_Weight_g': result.stem_biomass,
+                'Root_Dry_Weight_g': result.root_biomass,
+                'Shoot_Fresh_Weight_g': ((result.leaf_biomass or 0.0) + (result.stem_biomass or 0.0)) / calculate_dynamic_dry_matter_content(result, 'shoot', strict_validation=True) if result.leaf_biomass and result.stem_biomass else None,
+                'Leaf_Fresh_Weight_g': result.leaf_biomass / calculate_dynamic_dry_matter_content(result, 'leaf', strict_validation=True) if result.leaf_biomass else None,
+                'Stem_Fresh_Weight_g': result.stem_biomass / calculate_dynamic_dry_matter_content(result, 'stem', strict_validation=True) if result.stem_biomass else None,
+                'Root_Fresh_Weight_g': result.root_biomass / calculate_dynamic_dry_matter_content(result, 'root', strict_validation=True) if result.root_biomass else None,
+                'Leaf_Growth_Rate_g_day': result.leaf_growth_rate,
+                'Stem_Growth_Rate_g_day': result.stem_growth_rate,
+                'Root_Growth_Rate_g_day': result.root_growth_rate,
+                # Root architecture
+                'Fine_Root_Length_cm': result.fine_root_length,
+                'Coarse_Root_Length_cm': result.coarse_root_length,
+                'Root_Length_Density_cm_cm3': result.root_length_density,
+                'Root_Surface_Area_cm2': result.root_surface_area,
+                'Root_Volume_cm3': result.root_volume,
+                'Root_Cohorts': result.root_cohorts,
+                'Root_Activity_Young': result.root_activity_young,
+                'Root_Activity_Old': result.root_activity_old,
+                'Root_Surface_Active_cm2': result.root_surface_active,
+                'Root_Turnover_Rate': result.root_turnover_rate,
+                # Photosynthesis
+                'Vcmax_25_umol_m2_s': result.vcmax_25,
+                'Jmax_25_umol_m2_s': result.jmax_25,
+                'Quantum_Efficiency': result.quantum_efficiency,
+                'Rubisco_Limited_umol_m2_s': result.rubisco_limited,
+                'Light_Limited_umol_m2_s': result.light_limited,
+                'CO2_Compensation_umol_mol': result.co2_compensation,
+                'Intercellular_CO2_umol_mol': result.intercellular_co2,
+                'Photosynthesis_Rate': result.photosynthesis_rate,
+                'Net_Assimilation': result.net_assimilation,
+                # Respiration
+                'Maintenance_Respiration': result.maintenance_respiration,
+                'Growth_Respiration': result.growth_respiration,
+                'Respiration_Rate': result.respiration_rate,
+                'Maint_Resp_Leaves': result.maintenance_resp_leaves,
+                'Maint_Resp_Stems': result.maintenance_resp_stems,
+                'Maint_Resp_Roots': result.maintenance_resp_roots,
+                'Growth_Resp_Leaves': result.growth_resp_leaves,
+                'Growth_Resp_Stems': result.growth_resp_stems,
+                'Growth_Resp_Roots': result.growth_resp_roots,
+                'Temperature_Acclimation': result.temperature_acclimation,
+                'Age_Factor': result.age_factor,
+                # Canopy
+                'Light_Interception': result.light_interception,
+                'Sunlit_LAI': result.sunlit_lai,
+                'Shaded_LAI': result.shaded_lai,
+                'Total_Absorbed_PPFD_umol_m2_s': result.total_absorbed_ppfd,
+                'Canopy_Photosynthesis_umol_m2_s': result.canopy_photosynthesis,
+                'Canopy_Layers': result.canopy_layers,
+                'PPFD_Top_umol_m2_s': result.ppfd_top,
+                'PPFD_Bottom_umol_m2_s': result.ppfd_bottom,
+                'Light_Extinction_Coeff': result.light_extinction,
+                # Nitrogen dynamics
+                'N_Pool_Structural_g': result.n_pool_structural,
+                'N_Pool_Metabolic_g': result.n_pool_metabolic,
+                'N_Pool_Storage_g': result.n_pool_storage,
+                'N_Pool_Transport_g': result.n_pool_transport,
+                'N_Remobilization_g': result.n_remobilization,
+                'N_Critical_Conc': result.n_critical_conc,
+                'Nitrogen_Uptake_mg': result.nitrogen_uptake_mg,
+                'Nitrogen_Demand_mg': result.nitrogen_demand_mg,
+                'Leaf_Nitrogen_Conc': result.leaf_nitrogen_conc,
+                'Root_Nitrogen_Conc': result.root_nitrogen_conc,
+                'Nitrogen_Remobilization': result.nitrogen_remobilization,
+                # Other nutrients
+                'Phosphorus_Uptake_mg': result.phosphorus_uptake_mg,
+                'Phosphorus_Remobilization': result.phosphorus_remobilization,
+                'Potassium_Remobilization': result.potassium_remobilization,
+                # Senescence
+                'Senescence_Rate': result.senescence_rate,
+                'Leaf_Senescence_Rate': result.leaf_senescence_rate,
+                # Detailed stress
+                'Temperature_Stress_Photosynthesis': result.temperature_stress_photosynthesis,
+                'Temperature_Stress_Growth': result.temperature_stress_growth,
+                'Cold_Stress_Factor': result.cold_stress_factor,
+                'Heat_Stress_Factor': result.heat_stress_factor,
+                'Temperature_Stress_Factor': result.temperature_stress_factor,
+                # Environmental control
+                'Controlled_Humidity_pct': result.controlled_humidity,
+                'VPD_Target_kPa': result.vpd_target,
+                'Environmental_Cost': result.environmental_cost,
+                # pH modeling
+                'Phosphate_H2PO4_mg_L': result.phosphate_h2po4_mg_L,
+                'Phosphate_HPO4_mg_L': result.phosphate_hpo4_mg_L,
+                'Nutrient_Precipitation_mg_L': result.nutrient_precipitation_mg_L
             }
-            # Convert complex numbers to real values and round all numeric values to 2 decimal places
+            # Stress interactions
+            for stress_type, value in result.stress_interactions.items():
+                row[f'Stress_Interaction_{stress_type}'] = value
+            for stress_type, value in result.acclimation_levels.items():
+                row[f'Acclimation_{stress_type}'] = value
+            for stress_type, value in result.cumulative_damage.items():
+                row[f'Cumulative_Damage_{stress_type}'] = value
+            # Round floats to 2 decimal places
             for key, value in row.items():
-                if isinstance(value, complex):
-                    row[key] = round(value.real, 2)
-                elif isinstance(value, float):
-                    row[key] = round(value, 2)
-
+                if isinstance(value, float):
+                    row[key] = round(value, 2) if value is not None else None
             data.append(row)
-            
+
         df = pd.DataFrame(data)
-        
-        # Format all numeric columns to 2 decimal places
+        # Ensure consistent numeric formatting
         for col in df.columns:
             if df[col].dtype in ['float64', 'float32']:
                 df[col] = df[col].round(2)
-        
         return df
-    
-    def calculate_summary_stats(self):
+
+    def calculate_summary_stats(self) -> Dict[str, float]:
         """Calculate summary statistics for the simulation."""
         df = self.to_dataframe()
-        
         self.summary_stats = {
             'total_water_consumption_L': df['Water_Total_L'].sum(),
             'average_daily_consumption_L': df['Water_Total_L'].mean(),
-            'final_tank_volume_L': df['Tank_Volume_L'].iloc[-1],
-            'volume_reduction_L': df['Tank_Volume_L'].iloc[0] - df['Tank_Volume_L'].iloc[-1],
+            'final_tank_volume_L': df['Tank_Volume_L'].iloc[-1] if len(df) > 0 else 0.0,
+            'volume_reduction_L': df['Tank_Volume_L'].iloc[0] - df['Tank_Volume_L'].iloc[-1] if len(df) > 0 else 0.0,
             'average_eto_mm': df['ETO_Ref_mm'].mean(),
             'average_transpiration_mm': df['Transpiration_mm'].mean(),
             'max_temperature_C': df['Temp_C'].max(),
             'min_temperature_C': df['Temp_C'].min(),
-            'average_wue_kg_m3': df['WUE_kg_m3'].mean(),
+            'average_wue_L_kg': df['WUE_L_kg'].mean(),
             'simulation_period_days': self.total_days
         }
+        return self.summary_stats
 
-
-class DefaultConfigurations:
-    """Default configurations for common hydroponic systems - CSV data required."""
-    
-    @staticmethod
-    def get_nft_lettuce_system() -> HydroSystemConfig:
-        """Create empty system config - CSV data will be loaded separately."""
-        return HydroSystemConfig(
-            system_id="",
-            crop_id="",
-            location_id="",
-            tank_volume=0.0,
-            flow_rate=0.0,
-            system_type="",
-            system_area=0.0,
-            n_plants=0,
-            description=""
-        )
-    
-    @staticmethod
-    def get_lettuce_parameters() -> CropParameters:
-        """Create empty crop parameters - CSV data will be loaded separately."""
-        return CropParameters(
-            crop_id="",
-            crop_name="",
-            kcb=0.0,
-            phi=0.0,
-            crop_height=0.0,
-            root_zone_depth=0.0,
-            laid=0.0
-        )
-    
-    @staticmethod
-    def get_default_nutrients():
-        """Return empty dict - nutrient parameters will be loaded from CSV only."""
-        return {}
-
-
-def calculate_dynamic_dry_matter_content(result, plant_part: str, strict_validation: bool = False) -> float:
+def calculate_dynamic_dry_matter_content(result: DailyResults, plant_part: str, strict_validation: bool = True) -> float:
     """
     Calculate dynamic dry matter content based on plant development, environment, and plant part.
-    Dry matter content varies with:
-    1. Plant development stage (young vs mature)
-    2. Environmental stress (water, temperature, salinity)
-    3. Plant part (leaves, stems, roots have different water contents)
-    4. Growth rate (fast growth = higher water content)
-    
+
     Args:
-        result: Simulation result object
+        result: DailyResults object
         plant_part: Plant part ('leaf', 'stem', 'shoot', 'root')
-        strict_validation: If True, raises errors for missing parameters. If False, uses defaults for output.
-    
-    Returns fraction (0.0-1.0) of dry matter in fresh weight.
+        strict_validation: If True, raises errors for missing parameters
+
+    Returns:
+        Fraction (0.0-1.0) of dry matter in fresh weight
     """
-    
-    # Get development stage information
-    day = getattr(result, 'day', None)
-    growth_stage = getattr(result, 'growth_stage', None)
-    total_biomass = getattr(result, 'total_biomass', None)
-    
-    # Get stress factors if available
-    water_stress = getattr(result, 'water_stress', None)
-    temperature_stress = getattr(result, 'temperature_stress_factor', None)
-    integrated_stress = getattr(result, 'integrated_stress_factor', None)
-    
-    # For output purposes, use defaults if parameters are missing
-    if not strict_validation:
-        day = day if day is not None else 1
-        growth_stage = growth_stage if growth_stage is not None else 'V4'
-        total_biomass = total_biomass if total_biomass is not None else 1.0
-        water_stress = water_stress if water_stress is not None else 0.0
-        temperature_stress = temperature_stress if temperature_stress is not None else 0.0
-        integrated_stress = integrated_stress if integrated_stress is not None else 0.0
-    else:
-        # Validate that required parameters are provided
+    if plant_part not in ['leaf', 'stem', 'shoot', 'root']:
+        raise ValueError("Plant part must be 'leaf', 'stem', 'shoot', or 'root'")
+
+    # Required parameters
+    day = result.day
+    growth_stage = result.growth_stage
+    total_biomass = result.total_biomass
+    water_stress = result.water_stress
+    temperature_stress = result.temperature_stress_factor
+    integrated_stress = result.integrated_stress_factor
+
+    # Strict validation
+    if strict_validation:
         if day is None:
-            raise ValueError("❌ 'day' parameter must be provided in CSV configuration - no hardcoded defaults allowed")
+            raise ValueError("Day must be provided in DailyResults")
         if growth_stage is None:
-            raise ValueError("❌ 'growth_stage' parameter must be provided in CSV configuration - no hardcoded defaults allowed")
+            raise ValueError("Growth stage must be provided in DailyResults")
         if total_biomass is None:
-            raise ValueError("❌ 'total_biomass' parameter must be provided in CSV configuration - no hardcoded defaults allowed")
+            raise ValueError("Total biomass must be provided in DailyResults")
         if water_stress is None:
-            raise ValueError("❌ 'water_stress' parameter must be provided in CSV configuration - no hardcoded defaults allowed")
+            raise ValueError("Water stress must be provided in DailyResults")
         if temperature_stress is None:
-            raise ValueError("❌ 'temperature_stress_factor' parameter must be provided in CSV configuration - no hardcoded defaults allowed")
+            raise ValueError("Temperature stress factor must be provided in DailyResults")
         if integrated_stress is None:
-            raise ValueError("❌ 'integrated_stress_factor' parameter must be provided in CSV configuration - no hardcoded defaults allowed")
-    
+            raise ValueError("Integrated stress factor must be provided in DailyResults")
+    else:
+        day = day or 1
+        growth_stage = growth_stage or 'V4'
+        total_biomass = total_biomass or 1.0
+        water_stress = water_stress or 0.0
+        temperature_stress = temperature_stress or 0.0
+        integrated_stress = integrated_stress or 0.0
+
     # Base dry matter content by plant part (mature, unstressed conditions)
     base_dry_matter = {
-        'leaf': 0.06,    # Young lettuce leaves: 5-7%
-        'stem': 0.05,    # Lettuce stems/petioles: 4-6% 
+        'leaf': 0.06,    # 5-7% for lettuce leaves
+        'stem': 0.05,    # 4-6% for lettuce stems/petioles
         'shoot': 0.055,  # Combined shoot
-        'root': 0.09     # Root tissue: 8-10%
+        'root': 0.09     # 8-10% for roots
     }
-    
-    # Development factor: young plants have higher water content (lower dry matter)
+
+    # Development factor
     if day <= 10:
-        development_factor = 0.7 + (day / 10) * 0.3  # 70-100% of mature dry matter
+        development_factor = 0.7 + (day / 10) * 0.3
     elif day <= 30:
-        development_factor = 1.0  # Peak dry matter content
+        development_factor = 1.0
     else:
-        development_factor = 1.0 + min(0.2, (day - 30) * 0.005)  # Slight increase with age
-    
-    # Growth stage factor: different stages accumulate water differently
+        development_factor = 1.0 + min(0.2, (day - 30) * 0.005)
+
+    # Growth stage factor
     stage_factors = {
         'VE': 0.6, 'V1': 0.7, 'V2': 0.8, 'V3': 0.85, 'V4': 0.9,
         'V5': 0.95, 'V6': 1.0, 'V7': 1.0, 'V8': 1.0, 'V9': 1.0, 'V10': 1.0,
-        'V11+': 1.05, 'HI': 1.1, 'HD': 1.15, 'HM': 1.2  # Head formation increases dry matter
+        'V11+': 1.05, 'HI': 1.1, 'HD': 1.15, 'HM': 1.2
     }
     stage_factor = stage_factors.get(growth_stage, 1.0)
-    
-    # Stress effects on water content
-    # Water stress increases dry matter content (less water uptake)
-    water_stress_factor = 1.0 + water_stress * 0.3  # Up to 30% increase in dry matter
-    
-    # Temperature stress affects cellular water content
-    temp_stress_factor = 1.0 + temperature_stress * 0.2  # Up to 20% increase
-    
-    # Integrated stress combines all factors
-    stress_factor = 1.0 + integrated_stress * 0.25  # Up to 25% increase
-    
-    # Growth rate factor: fast growing tissue has more water
-    biomass_growth_rate = total_biomass / max(1, day)  # g/day
-    if biomass_growth_rate > 3.0:  # Fast growth
-        growth_rate_factor = 0.9
-    elif biomass_growth_rate < 1.0:  # Slow growth
-        growth_rate_factor = 1.1
-    else:
-        growth_rate_factor = 1.0
-    
-    # Plant part specific adjustments
+
+    # Stress effects
+    water_stress_factor = 1.0 + water_stress * 0.3
+    temp_stress_factor = 1.0 + temperature_stress * 0.2
+    stress_factor = 1.0 + integrated_stress * 0.25
+
+    # Growth rate factor
+    biomass_growth_rate = total_biomass / max(1, day)
+    growth_rate_factor = 0.9 if biomass_growth_rate > 3.0 else 1.1 if biomass_growth_rate < 1.0 else 1.0
+
+    # Plant part adjustment
     part_adjustment = {
-        'leaf': 1.0,     # Base reference
-        'stem': 0.85,    # Stems have more water (petioles, midribs)
-        'shoot': 0.92,   # Combined shoot average
-        'root': 1.5      # Roots have much higher dry matter content
+        'leaf': 1.0,
+        'stem': 0.85,
+        'shoot': 0.92,
+        'root': 1.5
     }
-    
+
     # Calculate final dry matter content
     base_dm = base_dry_matter.get(plant_part, 0.06)
-    
-    final_dry_matter = (base_dm * 
-                       development_factor * 
-                       stage_factor * 
-                       water_stress_factor * 
-                       temp_stress_factor * 
-                       stress_factor * 
-                       growth_rate_factor * 
-                       part_adjustment.get(plant_part, 1.0))
-    
-    # Biological limits: lettuce dry matter content ranges
-    if plant_part == 'root':
-        final_dry_matter = max(0.07, min(0.15, final_dry_matter))  # 7-15% for roots
-    else:
-        final_dry_matter = max(0.035, min(0.10, final_dry_matter))  # 3.5-10% for shoots
-    
-    return final_dry_matter
+    final_dry_matter = (base_dm * development_factor * stage_factor *
+                        water_stress_factor * temp_stress_factor * stress_factor *
+                        growth_rate_factor * part_adjustment.get(plant_part, 1.0))
 
+    # Enforce biological limits
+    if plant_part == 'root':
+        final_dry_matter = max(0.07, min(0.15, final_dry_matter))
+    else:
+        final_dry_matter = max(0.035, min(0.10, final_dry_matter))
+
+    return final_dry_matter
 
 """
 === FUNCTION EXPLANATIONS ===
 
-This file defines the data structures and configuration for the hydroponic simulation system. 
-Think of it as the digital blueprint and result storage system for your hydroponic farm. 
-It's like having a comprehensive logbook that records every detail about your growing system, 
-from the physical setup to daily plant measurements.
+This module defines data structures and configuration for hydroponic system simulations, providing a comprehensive framework for storing system specifications, crop parameters, weather data, and simulation results.
 
-KEY DATA STRUCTURES AND THEIR PURPOSE:
+KEY DATA STRUCTURES:
 
 1. HydroSystemConfig
-   - What it does: Stores the physical specifications of your hydroponic system
-   - Contains: tank size, flow rate, system type, growing area, number of plants
-   - Real-world meaning: Like the specifications sheet for your hydroponic system - tells you 
-     the tank capacity, pump flow rate, whether it's NFT/DWC/Aeroponics, and how many plants 
-     it can grow.
+   - Purpose: Stores physical specifications of the hydroponic system.
+   - Fields: System ID, crop ID, location ID, tank volume (L), flow rate (L/h), system type (NFT/DWC/AERO/WICK/EBB), system area (m²), number of plants, description.
+   - Real-world analogy: A specification sheet for your hydroponic setup, detailing tank size, pump capacity, and plant capacity.
 
 2. CropParameters
-   - What it does: Stores plant-specific characteristics for the crop being grown
-   - Contains: crop coefficients, plant height, root depth, leaf area index
-   - Real-world meaning: Like a plant profile card that describes how big the plant gets, 
-     how much water it needs, and its growing characteristics. Different crops (lettuce, 
-     tomatoes, herbs) have different profiles.
+   - Purpose: Stores crop-specific characteristics.
+   - Fields: Crop ID, crop name, basal crop coefficient (kcb), density index (phi), crop height (m), root zone depth (m), leaf area index (LAI).
+   - Real-world analogy: A profile card for the crop, describing its growth habits and water needs.
 
 3. WeatherData
-   - What it does: Stores daily environmental conditions
-   - Contains: temperature (min/max/average), solar radiation, humidity, wind speed
-   - Real-world meaning: Like a weather station log that records all the environmental 
-     conditions that affect plant growth. This data drives the simulation calculations.
+   - Purpose: Stores daily environmental conditions.
+   - Fields: Date, average/min/max temperature (°C), solar radiation (MJ/m²/day), relative humidity (%), wind speed (m/s), optional rainfall (mm).
+   - Real-world analogy: A weather station log driving plant growth calculations.
 
-4. DailyResults
-   - What it does: Stores all the calculated results for each day of simulation
-   - Contains: Over 100+ different measurements and calculations
-   - Real-world meaning: Like a comprehensive daily report card for your plants, recording 
-     everything from how much water they drank to how much they grew, their stress levels, 
-     and nutrient concentrations.
+4. HydroInputData
+   - Purpose: Combines all input data for the simulation.
+   - Fields: System configuration, crop parameters, weather data, nutrient parameters, simulation days.
+   - Real-world analogy: A complete setup package for running a grow cycle simulation.
 
-5. SimulationResults
-   - What it does: Combines all daily results into a complete simulation report
-   - Contains: All daily data plus summary statistics and metadata
-   - Real-world meaning: Like a complete grow cycle report that documents the entire 
-     journey from planting to harvest, with detailed analytics and summaries.
+5. DailyResults
+   - Purpose: Stores comprehensive results for each simulation day.
+   - Fields: Over 100 variables covering water dynamics, solution chemistry, plant development, stress factors, photosynthesis, respiration, root/canopy architecture, and nutrient dynamics.
+   - Real-world analogy: A daily report card capturing all aspects of plant and system performance.
 
-KEY FUNCTIONS AND CALCULATIONS:
+6. SimulationResults
+   - Purpose: Aggregates all daily results with metadata and summary statistics.
+   - Fields: System/crop/location IDs, start/end dates, total days, daily results, transplanting period, optional treatment ID, summary statistics.
+   - Real-world analogy: A full grow cycle report with detailed analytics.
 
-6. to_dataframe()
-   - What it does: Converts simulation results into a spreadsheet format for analysis
-   - Process: Takes all daily results and organizes them into logical groups
-   - Groups created:
-     * Experiment metadata (dates, system info, treatment IDs)
-     * Environmental conditions (temperature, light, humidity)
-     * Water dynamics (consumption, transpiration, tank levels)
-     * Solution chemistry (pH, EC, nutrient concentrations)
-     * Plant development (growth stages, leaf number, biomass)
-     * Stress factors (temperature, water, nutrient stress)
-     * Root architecture (root length, surface area, activity)
-     * Photosynthesis details (carbon fixation rates, efficiency)
-     * Respiration details (energy consumption by plant parts)
-   - Real-world meaning: Like converting a messy pile of daily logs into an organized 
-     spreadsheet where you can easily analyze trends, compare treatments, and identify 
-     optimal growing conditions.
+KEY FUNCTIONS:
 
-7. calculate_summary_stats()
-   - What it does: Calculates key performance indicators for the entire grow cycle
-   - Metrics calculated:
-     * Total water consumption
-     * Average daily consumption
-     * Tank volume changes
-     * Temperature extremes
-     * Water use efficiency
-   - Real-world meaning: Like calculating your farm's efficiency report card - how much 
-     water did you use per kilogram of crop produced? What were the temperature extremes? 
-     How efficiently did your system operate?
+7. to_dataframe()
+   - Purpose: Converts simulation results to a pandas DataFrame for analysis.
+   - Process: Organizes data into functional groups (metadata, environment, water, chemistry, development, stress, biomass, roots, photosynthesis, respiration, canopy, nutrients).
+   - Real-world analogy: Converting daily logs into an organized spreadsheet for trend analysis and comparisons.
 
-8. calculate_dynamic_dry_matter_content()
-   - What it does: Calculates what percentage of the plant is dry matter vs. water
-   - Factors considered:
-     * Plant age (young plants have more water)
-     * Growth stage (different stages accumulate water differently)
-     * Environmental stress (stress increases dry matter concentration)
-     * Plant part (leaves vs stems vs roots have different water content)
-     * Growth rate (fast growth = more water content)
+8. calculate_summary_stats()
+   - Purpose: Calculates key performance indicators for the simulation.
+   - Metrics: Total/average water consumption, tank volume changes, average ET0/transpiration, temperature extremes, water use efficiency, simulation duration.
+   - Real-world analogy: A farm efficiency report summarizing resource use and performance.
+
+9. calculate_dynamic_dry_matter_content()
+   - Purpose: Calculates dry matter content (fraction of dry weight in fresh weight) based on plant part, development, and environmental conditions.
+   - Factors: Plant age, growth stage, water/temperature/integrated stress, growth rate, plant part (leaf/stem/shoot/root).
    - Equation: final_dry_matter = base × development × stage × stress × growth_rate × part_adjustment
-   - Real-world meaning: Like knowing that fresh lettuce is about 95% water and 5% dry matter, 
-     but this ratio changes based on growing conditions. Young, fast-growing lettuce under 
-     ideal conditions might be 97% water, while stressed, mature lettuce might be 90% water.
+   - Real-world analogy: Determining that fresh lettuce is ~95% water, with variations based on growing conditions (e.g., young lettuce ~97% water, stressed ~90%).
 
 SIMULATION DATA ORGANIZATION:
-
-The simulation tracks over 100 different variables organized into functional groups:
-
-**Environmental Monitoring:**
-- Air temperature, humidity, CO2 levels
-- Solar radiation and light conditions
-- VPD (Vapor Pressure Deficit) - the "thirst" of the air
-
-**Plant Development:**
-- Growth stages (V1, V2, V3... through harvest)
-- Leaf number and size
-- Plant height and biomass accumulation
-- Root development and architecture
-
-**Physiological Processes:**
-- Photosynthesis rates and efficiency
-- Respiration (energy consumption)
-- Transpiration (water loss through leaves)
-- Nutrient uptake rates
-
-**Solution Chemistry:**
-- pH levels and automatic control
-- EC (electrical conductivity) - nutrient concentration
-- Individual nutrient concentrations (N, P, K, Ca, Mg, etc.)
-- Buffer capacity and chemical changes
-
-**Stress Monitoring:**
-- Temperature stress (heat and cold)
-- Water stress (drought conditions)
-- Nutrient stress (deficiencies)
-- Integrated stress interactions
-
-**System Performance:**
-- Water consumption and efficiency
-- Tank level changes
-- Flow rates and circulation
-- Energy costs for environmental control
-
-PRACTICAL APPLICATIONS:
-
-For Hydroponic Growers:
-1. **Performance Tracking**: Monitor daily plant growth and system efficiency
-2. **Problem Diagnosis**: Identify stress factors and their impacts on growth
-3. **Optimization**: Compare different growing conditions to find optimal settings
-4. **Yield Prediction**: Predict harvest timing and expected yields
-5. **Resource Management**: Track water and nutrient consumption
-6. **Quality Control**: Monitor factors affecting crop quality
-
-For Researchers:
-1. **Experiment Design**: Set up controlled experiments with different treatments
-2. **Data Analysis**: Export data to spreadsheets for statistical analysis
-3. **Model Validation**: Compare simulation results with real measurements
-4. **Parameter Calibration**: Adjust model parameters based on experimental data
-5. **Publication**: Generate comprehensive datasets for scientific papers
-
-For System Designers:
-1. **Sizing Systems**: Determine optimal tank size, pump capacity, growing area
-2. **Performance Prediction**: Predict how systems will perform under different conditions
-3. **Cost Analysis**: Calculate operational costs for water, nutrients, energy
-4. **Automation Design**: Design control systems based on plant response patterns
-5. **Scale-up Planning**: Use small-scale data to design larger commercial systems
-
-DATA EXPORT AND ANALYSIS:
-
-The system exports data with intelligent column organization:
-- **Grouped by function**: Related measurements are grouped together
-- **Standardized units**: Consistent units throughout (mg/L, cm, g, etc.)
-- **Time series**: Daily progression from planting to harvest
-- **Treatment comparison**: Multiple treatments can be compared side-by-side
-- **Statistical ready**: Data formatted for statistical analysis software
+- Groups: Metadata, environmental conditions, water dynamics, solution chemistry, plant development, stress factors, biomass, root architecture, photosynthesis, respiration, canopy, nutrient dynamics.
+- Units: Standardized (e.g., mg/L, cm, g, μmol/m²/s).
+- Time series: Tracks daily progression from transplanting to harvest.
+- Treatment comparison: Supports multiple treatments via treatment_id.
+- Statistical readiness: Formatted for analysis in statistical software.
 
 BIOLOGICAL ACCURACY:
+- Dry matter: Lettuce typically 4-10% dry matter, varying with conditions.
+- Growth: Reflects realistic lettuce development (vegetative to harvest).
+- Stress: Models plant responses to temperature, water, and nutrient stress.
+- Nutrients: Based on uptake kinetics and plant physiology.
+- Water: Captures transpiration and water use efficiency accurately.
 
-The simulation captures realistic plant responses:
-- **Dry matter content**: Lettuce typically 4-6% dry matter, varies with conditions
-- **Growth patterns**: Follows real lettuce development from seedling to harvest
-- **Stress responses**: Models how plants actually respond to environmental stress
-- **Nutrient dynamics**: Based on real nutrient uptake kinetics and plant physiology
-- **Water use**: Reflects actual transpiration patterns and water use efficiency
+PRACTICAL APPLICATIONS:
+- Growers: Track performance, diagnose issues, optimize conditions, predict yields, manage resources.
+- Researchers: Design experiments, validate models, calibrate parameters, generate publication datasets.
+- Designers: Size systems, predict performance, analyze costs, design automation, plan scale-up.
 
-KEY CONCEPTS FOR NON-CODERS:
+DATA VALIDATION:
+- Ensures all required fields are provided via configuration (no hardcoded defaults).
+- Validates ranges (e.g., temperatures, pH, EC) for physical realism.
+- Supports strict validation to enforce configuration-driven inputs.
 
-Data Structure: The organized way information is stored in the computer, like filing 
-cabinets with specific folders for different types of information.
-
-Metadata: Information about information - like writing the date, location, and 
-experimental conditions on a research notebook page.
-
-Time Series Data: Information collected over time, like daily temperature readings 
-or weekly plant measurements, that shows how things change.
-
-Data Validation: Checking that all required information is present and makes sense, 
-like proofreading a form before submitting it.
-
-Export Format: Converting computer data into formats (like spreadsheets) that 
-humans can easily read and analyze.
-
-Dynamic Calculation: Values that change based on current conditions rather than 
-being fixed constants, like how your car's fuel efficiency changes with driving 
-conditions.
-
-This hydroponic system data structure provides a comprehensive framework for 
-recording, analyzing, and understanding every aspect of plant growth in controlled 
-environment agriculture, enabling precise management and optimization of growing 
-conditions for maximum productivity and resource efficiency.
 """

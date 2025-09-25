@@ -1,11 +1,11 @@
 """
-Environmental Control System for Hydroponic Lettuce Production - No hardcoded defaults allowed and no fallback to simple alternative codes
-Includes VPD optimization, humidity control, and CO2 enrichment strategies
+Environmental Control System
 
-Based on recent research (2021-2024):
-- Optimal VPD range: 0.7-0.85 kPa for lettuce
-- CO2 enrichment: 1000-1500 μmol/mol optimal
-- Temperature-humidity interactions for growth optimization
+Key equations:
+- VPD = saturated_vapor_pressure - actual_vapor_pressure
+- optimal_humidity = (target_vapor_pressure / saturated_vapor_pressure) × 100
+- CO2_factor = (Vmax × CO2) / (Km + CO2)
+- PID_output = Kp×error + Ki×∫error + Kd×(d/dt)error
 """
 
 import numpy as np
@@ -17,82 +17,67 @@ from src.utils.temperature_utils import calculate_vpd
 
 
 class ControlStrategy(Enum):
-    """Environmental control strategies."""
-    PASSIVE = "passive"           # No active control
-    BASIC = "basic"              # Simple on/off control
-    PROPORTIONAL = "proportional" # P controller
-    PID = "pid"                  # PID controller
+    PASSIVE = "passive"
+    BASIC = "basic"
+    PROPORTIONAL = "proportional"
+    PID = "pid"
 
 
 @dataclass
 class EnvironmentalSetpoints:
-    """Target environmental conditions."""
-    # VPD and humidity targets
-    target_vpd: float        # kPa - optimal for lettuce
-    vpd_tolerance: float     # ±0.1 kPa acceptable range
-    min_humidity: float     # % minimum to prevent stress
-    max_humidity: float     # % maximum to prevent disease
-    
-    # Temperature targets
-    day_temp: float         # °C optimal day temperature
-    night_temp: float       # °C optimal night temperature
-    temp_tolerance: float    # acceptable temperature range
-    
-    # CO2 targets
-    target_co2: float     # μmol/mol optimal enrichment
-    ambient_co2: float     # μmol/mol ambient level
-    co2_tolerance: float   # acceptable CO2 tolerance
-    
-    # Photoperiod settings
-    light_hours: float      # hours per day
-    light_intensity: float # μmol/m²/s PPFD
-    co2_enrichment_start_hour: float  # hour to start CO2 enrichment
-    
-    # Additional control parameters
-    humidity_deadband: float = None      # Humidity control deadband
-    max_temperature_change_per_hour: float = None  # Max temp change per hour
-    ambient_temperature: float = None    # External ambient temperature
-    thermal_mass_factor: float = None    # Building thermal inertia
-    base_co2_loss_rate: float = None     # Baseline CO2 loss rate
-    min_co2_concentration: float = None  # Minimum CO2 concentration
-    max_co2_concentration: float = None  # Maximum CO2 concentration
-    light_saturation_threshold: float = None  # Light saturation threshold
-    co2_response_vmax: float = None      # CO2 response maximum
-    co2_response_km: float = None        # CO2 response half-saturation
-    max_co2_enhancement_factor: float = None  # Max CO2 enhancement
-    
-    # PID parameters
-    pid_parameters: dict = None  # PID controller parameters
+    target_vpd: float
+    vpd_tolerance: float
+    min_humidity: float
+    max_humidity: float
+    day_temp: float
+    night_temp: float
+    temp_tolerance: float
+    target_co2: float
+    ambient_co2: float
+    co2_tolerance: float
+    light_hours: float
+    light_intensity: float
+    co2_enrichment_start_hour: float
+    humidity_deadband: float
+    max_temperature_change_per_hour: float
+    ambient_temperature: float
+    thermal_mass_factor: float
+    base_co2_loss_rate: float
+    min_co2_concentration: float
+    max_co2_concentration: float
+    light_saturation_threshold: float
+    co2_response_vmax: float
+    co2_response_km: float
+    max_co2_enhancement_factor: float
+    pid_parameters: dict
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'EnvironmentalSetpoints':
-        """Create EnvironmentalSetpoints from configuration dictionary."""
-        # Load PID parameters
         pid_parameters = {
             'humidity': {
-                'kp': float(config_dict.get('pid_humidity_kp', 0.0)),
-                'ki': float(config_dict.get('pid_humidity_ki', 0.0)),
-                'kd': float(config_dict.get('pid_humidity_kd', 0.0))
+                'kp': float(config_dict['pid_humidity_kp']),
+                'ki': float(config_dict['pid_humidity_ki']),
+                'kd': float(config_dict['pid_humidity_kd'])
             },
             'co2': {
-                'kp': float(config_dict.get('pid_co2_kp', 0.0)),
-                'ki': float(config_dict.get('pid_co2_ki', 0.0)),
-                'kd': float(config_dict.get('pid_co2_kd', 0.0))
+                'kp': float(config_dict['pid_co2_kp']),
+                'ki': float(config_dict['pid_co2_ki']),
+                'kd': float(config_dict['pid_co2_kd'])
             },
             'temperature': {
-                'kp': float(config_dict.get('pid_temperature_kp', 0.0)),
-                'ki': float(config_dict.get('pid_temperature_ki', 0.0)),
-                'kd': float(config_dict.get('pid_temperature_kd', 0.0))
+                'kp': float(config_dict['pid_temperature_kp']),
+                'ki': float(config_dict['pid_temperature_ki']),
+                'kd': float(config_dict['pid_temperature_kd'])
             }
         }
-        
+
         return cls(
             target_vpd=float(config_dict['target_vpd']),
             vpd_tolerance=float(config_dict['vpd_tolerance']),
             min_humidity=float(config_dict['min_humidity']),
             max_humidity=float(config_dict['max_humidity']),
-            day_temp=float(config_dict.get('day_temp', 23.0)),  # Default if using weather data
-            night_temp=float(config_dict.get('night_temp', 19.0)),  # Default if using weather data
+            day_temp=float(config_dict['day_temp']),
+            night_temp=float(config_dict['night_temp']),
             temp_tolerance=float(config_dict['temp_tolerance']),
             target_co2=float(config_dict['target_co2']),
             ambient_co2=float(config_dict['ambient_co2']),
@@ -100,55 +85,36 @@ class EnvironmentalSetpoints:
             light_hours=float(config_dict['light_hours']),
             light_intensity=float(config_dict['light_intensity_control']),
             co2_enrichment_start_hour=float(config_dict['co2_enrichment_start_hour']),
-            # Additional control parameters
-            humidity_deadband=float(config_dict.get('humidity_deadband', 0.0)),
-            max_temperature_change_per_hour=float(config_dict.get('max_temperature_change_per_hour', 0.0)),
-            ambient_temperature=float(config_dict.get('ambient_temperature', 0.0)),
-            thermal_mass_factor=float(config_dict.get('thermal_mass_factor', 0.0)),
-            base_co2_loss_rate=float(config_dict.get('base_co2_loss_rate', 0.0)),
-            min_co2_concentration=float(config_dict.get('min_co2_concentration', 0.0)),
-            max_co2_concentration=float(config_dict.get('max_co2_concentration', 0.0)),
-            light_saturation_threshold=float(config_dict.get('light_saturation_threshold', 0.0)),
-            co2_response_vmax=float(config_dict.get('co2_response_vmax', 0.0)),
-            co2_response_km=float(config_dict.get('co2_response_km', 0.0)),
-            max_co2_enhancement_factor=float(config_dict.get('max_co2_enhancement_factor', 0.0)),
-            # PID parameters
+            humidity_deadband=float(config_dict['humidity_deadband']),
+            max_temperature_change_per_hour=float(config_dict['max_temperature_change_per_hour']),
+            ambient_temperature=float(config_dict['ambient_temperature']),
+            thermal_mass_factor=float(config_dict['thermal_mass_factor']),
+            base_co2_loss_rate=float(config_dict['base_co2_loss_rate']),
+            min_co2_concentration=float(config_dict['min_co2_concentration']),
+            max_co2_concentration=float(config_dict['max_co2_concentration']),
+            light_saturation_threshold=float(config_dict['light_saturation_threshold']),
+            co2_response_vmax=float(config_dict['co2_response_vmax']),
+            co2_response_km=float(config_dict['co2_response_km']),
+            max_co2_enhancement_factor=float(config_dict['max_co2_enhancement_factor']),
             pid_parameters=pid_parameters
         )
 
 
 @dataclass
 class ControlEquipment:
-    """Equipment specifications for environmental control."""
-    # Humidity control equipment
-    humidifier_capacity: float = None     # L/h water addition rate
-    dehumidifier_capacity: float = None   # L/h water removal rate
-    co2_injection_rate: float = None      # μmol/mol/min maximum injection
-    co2_sensor_accuracy: float = None     # ±μmol/mol sensor precision
-    co2_mixing_time: float = None         # minutes for full mixing
-    circulation_fan_power: float = None   # W power consumption
-    
-    humidifier_efficiency: float = None   # Efficiency factor
-    dehumidifier_efficiency: float = None # Efficiency factor
-    
-    # Ventilation and air circulation
-    air_exchange_rate: float = None        # air changes per hour
+    humidifier_capacity: float
+    dehumidifier_capacity: float
+    co2_injection_rate: float
+    co2_sensor_accuracy: float
+    co2_mixing_time: float
+    circulation_fan_power: float
+    humidifier_efficiency: float
+    dehumidifier_efficiency: float
+    air_exchange_rate: float
     
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'ControlEquipment':
-        """Create ControlEquipment from configuration dictionary."""
-        # Validate required parameters
-        required_params = [
-            'humidifier_capacity', 'dehumidifier_capacity', 'humidifier_efficiency',
-            'dehumidifier_efficiency', 'co2_injection_rate', 'co2_sensor_accuracy',
-            'co2_mixing_time', 'air_exchange_rate', 'circulation_fan_power'
-        ]
-        
-        missing_params = [p for p in required_params if p not in config_dict]
-        if missing_params:
-            raise ValueError(f"❌ Missing required control equipment parameters in CSV: {missing_params}")
-        
         return cls(
             humidifier_capacity=float(config_dict['humidifier_capacity']),
             dehumidifier_capacity=float(config_dict['dehumidifier_capacity']),
@@ -163,40 +129,21 @@ class ControlEquipment:
 
 
 class EnvironmentalControlSystem:
-    """
-    Comprehensive environmental control system for hydroponic production.
-    Manages VPD, humidity, CO2, and their interactions.
-    """
-    
-    def __init__(self, setpoints: Optional[EnvironmentalSetpoints] = None,
-                 equipment: Optional[ControlEquipment] = None):
-        if setpoints is None:
-            raise ValueError("❌ EnvironmentalSetpoints required - no hardcoded defaults allowed")
-        if equipment is None:
-            raise ValueError("❌ ControlEquipment required - no hardcoded defaults allowed")
-        
+    def __init__(self, setpoints: EnvironmentalSetpoints, equipment: ControlEquipment):
         self.setpoints = setpoints
         self.equipment = equipment
-        
-        # PID controller parameters (must be loaded from CSV config)
+
         self.pid_params = {
             'humidity': {'kp': None, 'ki': None, 'kd': None},
             'co2': {'kp': None, 'ki': None, 'kd': None},
             'temperature': {'kp': None, 'ki': None, 'kd': None}
         }
-        
-        # Load PID parameters from CSV if available
-        if hasattr(setpoints, 'pid_parameters'):
-            self._load_pid_parameters(setpoints.pid_parameters)
-        else:
-            # Validate that PID parameters are provided
-            raise ValueError("❌ PID parameters must be provided in CSV configuration - no hardcoded defaults allowed")
-        
-        # Controller state tracking
+
+        self._load_pid_parameters(setpoints.pid_parameters)
+
         self.integral_errors = {'humidity': 0.0, 'co2': 0.0, 'temperature': 0.0}
         self.previous_errors = {'humidity': 0.0, 'co2': 0.0, 'temperature': 0.0}
-        
-        # Equipment state
+
         self.equipment_status = {
             'humidifier_active': False,
             'dehumidifier_active': False,
@@ -206,46 +153,16 @@ class EnvironmentalControlSystem:
         }
     
     def _load_pid_parameters(self, pid_config: dict):
-        """Load PID parameters from CSV configuration."""
-        required_params = ['kp', 'ki', 'kd']
-        
         for control_type in ['humidity', 'co2', 'temperature']:
-            if control_type not in pid_config:
-                raise ValueError(f"❌ PID parameters for {control_type} must be provided in CSV configuration")
-            
-            for param in required_params:
-                if param not in pid_config[control_type]:
-                    raise ValueError(f"❌ PID parameter {param} for {control_type} must be provided in CSV configuration")
-                
-                value = pid_config[control_type][param]
-                if value is None:
-                    raise ValueError(f"❌ PID parameter {param} for {control_type} cannot be None - CSV configuration required")
-                
-                self.pid_params[control_type][param] = float(value)
+            for param in ['kp', 'ki', 'kd']:
+                self.pid_params[control_type][param] = float(pid_config[control_type][param])
     
     
     def calculate_optimal_humidity(self, temperature: float, target_vpd: float) -> float:
-        """
-        Calculate optimal humidity for target VPD at given temperature.
-        
-        Args:
-            temperature: Air temperature (°C)
-            target_vpd: Target VPD (kPa)
-            
-        Returns:
-            Optimal relative humidity (%)
-        """
-        # Saturation vapor pressure at temperature
         es = 0.6108 * math.exp(17.27 * temperature / (temperature + 237.3))
-        
-        # Required actual vapor pressure for target VPD
         ea = es - target_vpd
-        
-        # Convert to relative humidity
         rh = (ea / es) * 100.0
-        
-        # Constrain within practical limits
-        return max(30.0, min(95.0, rh))
+        return max(self.setpoints.min_humidity, min(self.setpoints.max_humidity, rh))
     
     def calculate_co2_photosynthesis_factor(self, co2_concentration: float, 
                                           temperature: float, light_intensity: float) -> float:
@@ -873,129 +790,81 @@ class EnvironmentalControlSystem:
         return min(50.0, (max_efficiency / current_efficiency - 1.0) * 100.0)
 
 
-def create_lettuce_environmental_control_system(system_config=None) -> EnvironmentalControlSystem:
-    """Create environmental control system with lettuce-specific parameters from CSV config.
-    
-    Args:
-        system_config: System configuration object containing CSV-loaded parameters
-        
-    Returns:
-        EnvironmentalControlSystem configured with CSV parameters
-    """
-    try:
-        setpoints = None
-        equipment = None
-        
-        # Get environmental control parameters from CSV data loaded in system_config
-        if system_config:
-            env_setpoints = getattr(system_config, 'environment', {})
-            env_params = getattr(system_config, 'environment', {})
-            
-            # Combine environmental control and environment parameters
-            combined_params = env_setpoints.copy()
-            combined_params.update(env_params)
-            
-            if combined_params:
-                setpoints = EnvironmentalSetpoints.from_config(combined_params)
-                
-            env_equipment = getattr(system_config, 'control_equipment_parameters', {})
-            if env_equipment:
-                equipment = ControlEquipment.from_config(env_equipment)
-        
-        return EnvironmentalControlSystem(setpoints, equipment)
-        
-    except Exception as e:
-        print(f"Warning: Could not load CSV environmental control parameters: {e}")
-        print("Using default environmental control parameters")
-        return EnvironmentalControlSystem()
+def create_lettuce_environmental_control_system(system_config) -> EnvironmentalControlSystem:
+    env_setpoints = getattr(system_config, 'environment', {})
+    env_params = getattr(system_config, 'environment', {})
+
+    combined_params = env_setpoints.copy()
+    combined_params.update(env_params)
+
+    setpoints = EnvironmentalSetpoints.from_config(combined_params)
+
+    env_equipment = getattr(system_config, 'control_equipment_parameters', {})
+    equipment = ControlEquipment.from_config(env_equipment)
+
+    return EnvironmentalControlSystem(setpoints, equipment)
 
 
 """
-=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+INPUT PARAMETERS (from CSV):
+- target_vpd: target vapor pressure deficit (kPa)
+- vpd_tolerance: acceptable VPD range (kPa)
+- min_humidity: minimum relative humidity (%)
+- max_humidity: maximum relative humidity (%)
+- day_temp: optimal day temperature (°C)
+- night_temp: optimal night temperature (°C)
+- temp_tolerance: acceptable temperature range (°C)
+- target_co2: optimal CO2 concentration (μmol/mol)
+- ambient_co2: ambient CO2 level (μmol/mol)
+- co2_tolerance: acceptable CO2 tolerance (μmol/mol)
+- light_hours: photoperiod duration (hours)
+- light_intensity_control: light intensity setpoint (μmol/m²/s)
+- co2_enrichment_start_hour: hour to start CO2 enrichment
+- humidity_deadband: humidity control deadband
+- max_temperature_change_per_hour: maximum temperature change rate (°C/h)
+- ambient_temperature: external ambient temperature (°C)
+- thermal_mass_factor: building thermal inertia factor
+- base_co2_loss_rate: baseline CO2 loss rate (μmol/mol/h)
+- min_co2_concentration: minimum CO2 concentration (μmol/mol)
+- max_co2_concentration: maximum CO2 concentration (μmol/mol)
+- light_saturation_threshold: light saturation threshold (μmol/m²/s)
+- co2_response_vmax: CO2 response maximum enhancement factor
+- co2_response_km: CO2 response half-saturation constant (μmol/mol)
+- max_co2_enhancement_factor: maximum CO2 enhancement factor
+- pid_humidity_kp/ki/kd: PID parameters for humidity control
+- pid_co2_kp/ki/kd: PID parameters for CO2 control
+- pid_temperature_kp/ki/kd: PID parameters for temperature control
+- humidifier_capacity: humidifier water addition rate (L/h)
+- dehumidifier_capacity: dehumidifier water removal rate (L/h)
+- humidifier_efficiency: humidifier efficiency factor
+- dehumidifier_efficiency: dehumidifier efficiency factor
+- co2_injection_rate: maximum CO2 injection rate (μmol/mol/min)
+- co2_sensor_accuracy: CO2 sensor precision (±μmol/mol)
+- co2_mixing_time: CO2 mixing time (minutes)
+- air_exchange_rate: air changes per hour
+- circulation_fan_power: fan power consumption (W)
 
-This file manages the environmental control systems for hydroponic facilities - basically the 
-"climate control" for plants. Think of it as a very sophisticated HVAC system that controls 
-humidity, CO2, and temperature to create perfect growing conditions.
+INPUT VARIABLES:
+- current_conditions['temperature']: current air temperature (°C)
+- current_conditions['humidity']: current relative humidity (%)
+- current_conditions['co2']: current CO2 concentration (μmol/mol)
+- current_conditions['light_intensity']: current light intensity (μmol/m²/s)
+- light_schedule['light_on']: light status (boolean)
+- hour: current hour of day (0-23)
+- dt_hours: time step duration (hours)
+- strategy: control strategy (ControlStrategy enum)
 
-KEY FUNCTIONS AND EQUATIONS:
-
-1. calculate_vpd() and calculate_optimal_humidity()
-   - What it does: Manages Vapor Pressure Deficit (VPD) - the "thirst" level of the air
-   - Equations: 
-     * VPD = saturated_vapor_pressure - actual_vapor_pressure
-     * optimal_humidity = (target_vapor_pressure / saturated_vapor_pressure) × 100
-   - Real-world meaning: VPD is like measuring how "thirsty" the air is. Too low = muggy (plants 
-     can't breathe), too high = desert-dry (plants stress from water loss). Perfect VPD = plants 
-     transpire optimally and stay healthy.
-
-2. calculate_co2_photosynthesis_factor()
-   - What it does: Calculates how CO2 levels affect plant food production (photosynthesis)
-   - Equation: Uses Michaelis-Menten kinetics: factor = (Vmax × CO2) / (Km + CO2)
-   - Real-world meaning: More CO2 = more plant food production, but with diminishing returns. 
-     Like feeding people - first few meals make huge difference, but there's a limit to benefit.
-
-3. calculate_vpd_stress_factor()
-   - What it does: Determines how VPD affects plant stress and performance
-   - Equations: Stress factors based on deviation from optimal VPD range
-   - Real-world meaning: Plants have a "comfort zone" for humidity. Outside this zone, they 
-     either struggle with water loss (too dry) or can't regulate temperature (too humid).
-
-4. calculate_humidity_control_action()
-   - What it does: Determines when and how much to humidify or dehumidify
-   - Equations: Uses PID control: output = Kp×error + Ki×∫error + Kd×(d/dt)error
-   - Real-world meaning: Like a smart thermostat but for humidity. It "learns" how much 
-     adjustment is needed and responds smoothly without overshooting.
-
-5. calculate_co2_control_action()
-   - What it does: Manages CO2 injection systems for optimal photosynthesis
-   - Equations: PID control with time-based strategies (morning vs afternoon targets)
-   - Real-world meaning: Plants need more CO2 when they're actively photosynthesizing (lights on). 
-     System injects CO2 during light hours, stops at night to save money.
-
-6. _calculate_time_based_co2_target()
-   - What it does: Adjusts CO2 targets throughout the day based on plant needs
-   - Strategies: Morning-only, full-day, or adaptive enrichment
-   - Real-world meaning: Plants are hungriest for CO2 in the morning when photosynthesis 
-     starts ramping up. Smart systems give them more then, less later to save cost.
-
-7. hourly_update() and comprehensive_control()
-   - What it does: Coordinates all environmental systems working together
-   - Real-world meaning: Like a conductor orchestrating a symphony - humidity, CO2, and 
-     temperature must work together harmoniously for optimal plant growth.
-
-KEY ENVIRONMENTAL CONCEPTS:
-
-VPD (VAPOR PRESSURE DEFICIT):
-- Optimal range: 0.7-0.85 kPa for lettuce
-- Too low (<0.5 kPa): Plants can't transpire, risk of disease
-- Too high (>1.2 kPa): Plants lose too much water, stress out
-- Perfect VPD: Plants transpire just right, stay healthy and productive
-
-CO2 ENRICHMENT:
-- Ambient: ~400 ppm (parts per million)
-- Optimal: 1000-1500 ppm during light hours
-- Effect: 20-30% yield improvement when done correctly
-- Cost: Must balance against energy and CO2 costs
-
-CONTROL STRATEGIES:
-- Passive: No control (cheapest, least optimal)
-- Basic: Simple on/off (moderate cost and performance) 
-- PID: Smooth, intelligent control (higher cost, best performance)
-
-EQUIPMENT INTEGRATION:
-- Humidifiers/Dehumidifiers: Control humidity levels
-- CO2 Injectors: Add CO2 during photosynthesis periods
-- Ventilation: Remove excess heat and humidity, control CO2
-- Sensors: Monitor conditions and provide feedback
-
-PRACTICAL APPLICATIONS:
-- Optimize plant growth rates and yields
-- Prevent plant diseases (humidity control)
-- Maximize photosynthesis efficiency (CO2 and VPD optimization)  
-- Reduce energy costs through smart scheduling
-- Maintain consistent growing conditions regardless of weather
-- Predict and prevent environmental stress before it affects plants
-
-This system creates a "plant paradise" - perfect growing conditions that maximize health, 
-growth rate, and harvest quality while minimizing resource waste and operating costs.
+OUTPUT VARIABLES:
+- temperature: adjusted temperature (°C)
+- humidity: adjusted humidity (%)
+- co2: adjusted CO2 concentration (μmol/mol)
+- vpd: calculated vapor pressure deficit (kPa)
+- light_on: light status (boolean)
+- photoperiod_time: hours elapsed since photoperiod start
+- control_actions: dictionary of control actions and power consumption
+- energy_consumption_kWh: total energy consumption (kWh)
+- co2_photosynthesis_factor: CO2 enhancement factor for photosynthesis
+- vpd_transpiration_factor: VPD effect on transpiration
+- vpd_photosynthesis_factor: VPD effect on photosynthesis
+- environmental_stress_level: plant stress level classification
 """

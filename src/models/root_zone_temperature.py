@@ -1,23 +1,6 @@
-"""
-Root Zone Temperature (RZT) Model for Hydroponic Systems - No hardcoded defaults allowed and no fallback to simple alternative codes
-
-Based on scientific findings from:
-1. "Raising root zone temperature improves plant productivity and metabolites 
-   in hydroponic lettuce production" (2024)
-2. "Controlling root zone temperature improves plant growth and pigments 
-   in hydroponic lettuce" (2023)
-
-Key findings:
-- Linear growth increase with RZT up to optimum temperature
-- Rapid decrease beyond optimum
-- RZT affects root physiological processes, nutrient uptake, and photosynthesis
-- Optimal RZT is typically 3°C above air temperature
-"""
-
-import numpy as np
-from typing import Dict, Tuple, Optional
+from typing import Dict, Any
 from dataclasses import dataclass
-
+import math
 
 @dataclass
 class RZTParameters:
@@ -28,8 +11,6 @@ class RZTParameters:
     linear_growth_slope: float  # Growth factor per °C below optimum
     rapid_decline_slope: float  # Decline factor per °C above optimum
     base_growth_factor: float  # Baseline at optimal temperature
-    
-    # Sensitivity parameters for different processes
     nutrient_uptake_sensitivity_low: float  # per °C below optimum
     nutrient_uptake_sensitivity_high: float  # per °C above optimum
     water_uptake_sensitivity_low: float  # per °C below optimum
@@ -38,9 +19,16 @@ class RZTParameters:
     photosynthesis_sensitivity_high: float  # per °C above optimum
     root_metabolism_sensitivity_low: float  # per °C below optimum
     root_metabolism_sensitivity_high: float  # per °C above optimum
-    
-    # Advanced thermal dynamics parameters
     min_growth_factor: float  # Minimum growth factor below effective temperature
+    max_growth_factor: float  # Maximum growth factor
+    min_nutrient_uptake_factor: float  # Minimum nutrient uptake factor
+    max_nutrient_uptake_factor: float  # Maximum nutrient uptake factor
+    min_water_uptake_factor: float  # Minimum water uptake factor
+    max_water_uptake_factor: float  # Maximum water uptake factor
+    min_photosynthesis_factor: float  # Minimum photosynthesis factor
+    max_photosynthesis_factor: float  # Maximum photosynthesis factor
+    min_root_metabolism_factor: float  # Minimum root metabolism factor
+    max_root_metabolism_factor: float  # Maximum root metabolism factor
     thermal_mass_factor: float  # How quickly RZT responds to changes
     ambient_temp_amplitude: float  # Amplitude of diurnal temperature variation
     root_respiration_heat: float  # Heat generation from root respiration
@@ -48,291 +36,319 @@ class RZTParameters:
     ambient_exchange_factor: float  # Factor for ambient temperature exchange
     thermal_response_time: float  # Thermal response time constant (hours)
     heat_transfer_coefficient: float  # Heat transfer coefficient for calculations
-    
+
+    def __post_init__(self):
+        if any(x is None for x in [
+            self.optimal_rzt_offset, self.min_effective_rzt, self.max_effective_rzt,
+            self.linear_growth_slope, self.rapid_decline_slope, self.base_growth_factor,
+            self.nutrient_uptake_sensitivity_low, self.nutrient_uptake_sensitivity_high,
+            self.water_uptake_sensitivity_low, self.water_uptake_sensitivity_high,
+            self.photosynthesis_sensitivity_low, self.photosynthesis_sensitivity_high,
+            self.root_metabolism_sensitivity_low, self.root_metabolism_sensitivity_high,
+            self.min_growth_factor, self.max_growth_factor, self.min_nutrient_uptake_factor,
+            self.max_nutrient_uptake_factor, self.min_water_uptake_factor, self.max_water_uptake_factor,
+            self.min_photosynthesis_factor, self.max_photosynthesis_factor,
+            self.min_root_metabolism_factor, self.max_root_metabolism_factor,
+            self.thermal_mass_factor, self.ambient_temp_amplitude, self.root_respiration_heat,
+            self.pump_heat_generation, self.ambient_exchange_factor, self.thermal_response_time,
+            self.heat_transfer_coefficient
+        ]):
+            raise ValueError("All RZTParameters fields must be provided")
+        if self.min_effective_rzt >= self.max_effective_rzt:
+            raise ValueError("min_effective_rzt must be less than max_effective_rzt")
+        if self.linear_growth_slope < 0 or self.rapid_decline_slope < 0:
+            raise ValueError("linear_growth_slope and rapid_decline_slope must be non-negative")
+        if self.min_growth_factor >= self.max_growth_factor:
+            raise ValueError("min_growth_factor must be less than max_growth_factor")
+        if any(min_val >= max_val for min_val, max_val in [
+            (self.min_nutrient_uptake_factor, self.max_nutrient_uptake_factor),
+            (self.min_water_uptake_factor, self.max_water_uptake_factor),
+            (self.min_photosynthesis_factor, self.max_photosynthesis_factor),
+            (self.min_root_metabolism_factor, self.max_root_metabolism_factor)
+        ]):
+            raise ValueError("Minimum factors must be less than maximum factors")
+        if self.thermal_response_time <= 0:
+            raise ValueError("thermal_response_time must be positive")
+        if self.heat_transfer_coefficient < 0:
+            raise ValueError("heat_transfer_coefficient must be non-negative")
+
     @classmethod
-    def from_config(cls, config_dict: dict) -> 'RZTParameters':
+    def from_config(cls, config: Dict[str, Any]) -> 'RZTParameters':
         """Create RZTParameters from configuration dictionary."""
+        required_params = [
+            'optimal_rzt_offset', 'min_effective_rzt', 'max_effective_rzt',
+            'linear_growth_slope', 'rapid_decline_slope', 'base_growth_factor',
+            'nutrient_uptake_sensitivity_low', 'nutrient_uptake_sensitivity_high',
+            'water_uptake_sensitivity_low', 'water_uptake_sensitivity_high',
+            'photosynthesis_sensitivity_low', 'photosynthesis_sensitivity_high',
+            'root_metabolism_sensitivity_low', 'root_metabolism_sensitivity_high',
+            'min_growth_factor', 'max_growth_factor', 'min_nutrient_uptake_factor',
+            'max_nutrient_uptake_factor', 'min_water_uptake_factor', 'max_water_uptake_factor',
+            'min_photosynthesis_factor', 'max_photosynthesis_factor',
+            'min_root_metabolism_factor', 'max_root_metabolism_factor',
+            'thermal_mass_factor', 'ambient_temp_amplitude', 'root_respiration_heat',
+            'pump_heat_generation', 'ambient_exchange_factor', 'thermal_response_time',
+            'heat_transfer_coefficient'
+        ]
+        for param in required_params:
+            if param not in config:
+                raise KeyError(f"Missing required parameter: {param}")
         return cls(
-            optimal_rzt_offset=config_dict['optimal_rzt_offset'],
-            min_effective_rzt=config_dict['min_effective_rzt'],
-            max_effective_rzt=config_dict['max_effective_rzt'],
-            linear_growth_slope=config_dict['linear_growth_slope'],
-            rapid_decline_slope=config_dict['rapid_decline_slope'],
-            base_growth_factor=config_dict['base_growth_factor'],
-            nutrient_uptake_sensitivity_low=config_dict['nutrient_uptake_sensitivity_low'],
-            nutrient_uptake_sensitivity_high=config_dict['nutrient_uptake_sensitivity_high'],
-            water_uptake_sensitivity_low=config_dict['water_uptake_sensitivity_low'],
-            water_uptake_sensitivity_high=config_dict['water_uptake_sensitivity_high'],
-            photosynthesis_sensitivity_low=config_dict['photosynthesis_sensitivity_low'],
-            photosynthesis_sensitivity_high=config_dict['photosynthesis_sensitivity_high'],
-            root_metabolism_sensitivity_low=config_dict['root_metabolism_sensitivity_low'],
-            root_metabolism_sensitivity_high=config_dict['root_metabolism_sensitivity_high'],
-            min_growth_factor=config_dict['min_growth_factor'],
-            thermal_mass_factor=config_dict['thermal_mass_factor'],
-            ambient_temp_amplitude=config_dict['ambient_temp_amplitude'],
-            root_respiration_heat=config_dict['root_respiration_heat'],
-            pump_heat_generation=config_dict['pump_heat_generation'],
-            ambient_exchange_factor=config_dict['ambient_exchange_factor'],
-            thermal_response_time=config_dict['thermal_response_time'],
-            heat_transfer_coefficient=config_dict['heat_transfer_coefficient']
+            optimal_rzt_offset=float(config['optimal_rzt_offset']),
+            min_effective_rzt=float(config['min_effective_rzt']),
+            max_effective_rzt=float(config['max_effective_rzt']),
+            linear_growth_slope=float(config['linear_growth_slope']),
+            rapid_decline_slope=float(config['rapid_decline_slope']),
+            base_growth_factor=float(config['base_growth_factor']),
+            nutrient_uptake_sensitivity_low=float(config['nutrient_uptake_sensitivity_low']),
+            nutrient_uptake_sensitivity_high=float(config['nutrient_uptake_sensitivity_high']),
+            water_uptake_sensitivity_low=float(config['water_uptake_sensitivity_low']),
+            water_uptake_sensitivity_high=float(config['water_uptake_sensitivity_high']),
+            photosynthesis_sensitivity_low=float(config['photosynthesis_sensitivity_low']),
+            photosynthesis_sensitivity_high=float(config['photosynthesis_sensitivity_high']),
+            root_metabolism_sensitivity_low=float(config['root_metabolism_sensitivity_low']),
+            root_metabolism_sensitivity_high=float(config['root_metabolism_sensitivity_high']),
+            min_growth_factor=float(config['min_growth_factor']),
+            max_growth_factor=float(config['max_growth_factor']),
+            min_nutrient_uptake_factor=float(config['min_nutrient_uptake_factor']),
+            max_nutrient_uptake_factor=float(config['max_nutrient_uptake_factor']),
+            min_water_uptake_factor=float(config['min_water_uptake_factor']),
+            max_water_uptake_factor=float(config['max_water_uptake_factor']),
+            min_photosynthesis_factor=float(config['min_photosynthesis_factor']),
+            max_photosynthesis_factor=float(config['max_photosynthesis_factor']),
+            min_root_metabolism_factor=float(config['min_root_metabolism_factor']),
+            max_root_metabolism_factor=float(config['max_root_metabolism_factor']),
+            thermal_mass_factor=float(config['thermal_mass_factor']),
+            ambient_temp_amplitude=float(config['ambient_temp_amplitude']),
+            root_respiration_heat=float(config['root_respiration_heat']),
+            pump_heat_generation=float(config['pump_heat_generation']),
+            ambient_exchange_factor=float(config['ambient_exchange_factor']),
+            thermal_response_time=float(config['thermal_response_time']),
+            heat_transfer_coefficient=float(config['heat_transfer_coefficient'])
         )
 
+@dataclass
+class RZTModelOutput:
+    """Output structure for root zone temperature model calculations."""
+    current_rzt: float  # Current root zone temperature (°C)
+    optimal_rzt: float  # Optimal root zone temperature (°C)
+    rzt_deviation: float  # Deviation from optimal RZT (°C)
+    growth_factor: float  # Growth factor due to RZT
+    nutrient_uptake_factor: float  # Nutrient uptake efficiency factor
+    water_uptake_factor: float  # Water uptake capacity factor
+    photosynthesis_factor: float  # Photosynthesis efficiency factor
+    root_metabolism_factor: float  # Root metabolism activity factor
+    thermal_stress: float  # Normalized thermal stress
+    target_rzt: float  # Target RZT considering heat sources (°C)
+    thermal_lag: float  # Difference between current and target RZT (°C)
+    heat_transfer_rate: float  # Heat transfer rate (W/m²)
+    heating_required: float  # Heating needed to reach target RZT (°C)
+    cooling_required: float  # Cooling needed to reach target RZT (°C)
 
 class RootZoneTemperatureModel:
     """
     Model for root zone temperature effects on hydroponic plant growth.
-    
-    The model implements temperature-dependent factors affecting:
+
+    Implements temperature-dependent factors affecting:
     1. Root physiological processes
     2. Nutrient uptake efficiency
     3. Water uptake capacity
-    4. Root metabolism
+    4. Photosynthesis efficiency
+    5. Root metabolism
+
+    Based on scientific findings:
+    - Linear growth increase up to optimum temperature (typically 3°C above air temperature)
+    - Rapid decline beyond optimum
+    - RZT affects nutrient uptake (Mg, K, Fe, Cu, Se, Rb), water uptake, photosynthesis, and root metabolism
     """
-    
-    def __init__(self, parameters: Optional[RZTParameters] = None):
-        if parameters is None:
-            raise ValueError("❌ RZTParameters required - no hardcoded defaults allowed")
+    def __init__(self, parameters: RZTParameters):
+        if not isinstance(parameters, RZTParameters):
+            raise ValueError("RZTParameters must be provided")
         self.params = parameters
-    
+        self._previous_rzt: float = None  # Initialize as None, set in first update
+
     def calculate_optimal_rzt(self, air_temperature: float) -> float:
         """
         Calculate optimal root zone temperature based on air temperature.
-        
+
         Args:
             air_temperature: Air temperature (°C)
-            
+
         Returns:
             Optimal RZT (°C)
         """
+        if air_temperature is None:
+            raise ValueError("air_temperature must be provided")
         optimal_rzt = air_temperature + self.params.optimal_rzt_offset
-        return np.clip(optimal_rzt, self.params.min_effective_rzt, self.params.max_effective_rzt)
-    
+        return max(self.params.min_effective_rzt, min(self.params.max_effective_rzt, optimal_rzt))
+
     def calculate_rzt_growth_factor(self, current_rzt: float, air_temperature: float) -> float:
         """
-        Calculate RZT-based growth factor following the scientific findings:
+        Calculate RZT-based growth factor:
         - Linear increase up to optimum
-        - Rapid decrease beyond optimum
-        
+        - Rapid decline beyond optimum
+
         Args:
             current_rzt: Current root zone temperature (°C)
             air_temperature: Current air temperature (°C)
-            
+
         Returns:
-            Growth factor (0.2 to 1.5)
+            Growth factor
         """
+        if current_rzt is None or air_temperature is None:
+            raise ValueError("current_rzt and air_temperature must be provided")
         optimal_rzt = self.calculate_optimal_rzt(air_temperature)
-        
         if current_rzt <= optimal_rzt:
-            # Linear growth up to optimum
             if current_rzt >= self.params.min_effective_rzt:
                 temperature_diff = optimal_rzt - current_rzt
                 factor = self.params.base_growth_factor + (temperature_diff * self.params.linear_growth_slope)
             else:
-                # Below minimum effective temperature
                 factor = self.params.min_growth_factor
         else:
-            # Rapid decline above optimum
             temperature_excess = current_rzt - optimal_rzt
             factor = self.params.base_growth_factor - (temperature_excess * self.params.rapid_decline_slope)
-        
-        # Constrain factor within reasonable bounds
-        return np.clip(factor, 0.2, 1.5)
-    
+        return max(self.params.min_growth_factor, min(self.params.max_growth_factor, factor))
+
     def calculate_nutrient_uptake_factor(self, current_rzt: float, air_temperature: float) -> float:
         """
-        Calculate RZT effect on nutrient uptake efficiency.
-        
-        Based on findings that RZT affects Mg, K, Fe, Cu, Se, Rb uptake.
-        
+        Calculate RZT effect on nutrient uptake efficiency (affects Mg, K, Fe, Cu, Se, Rb).
+
         Args:
             current_rzt: Current root zone temperature (°C)
             air_temperature: Current air temperature (°C)
-            
+
         Returns:
-            Nutrient uptake efficiency factor (0.3 to 1.4)
+            Nutrient uptake efficiency factor
         """
+        if current_rzt is None or air_temperature is None:
+            raise ValueError("current_rzt and air_temperature must be provided")
         optimal_rzt = self.calculate_optimal_rzt(air_temperature)
-        
-        # Uptake efficiency follows similar pattern but with different sensitivity
         if current_rzt <= optimal_rzt:
             temperature_diff = optimal_rzt - current_rzt
             factor = 1.0 + (temperature_diff * self.params.nutrient_uptake_sensitivity_low)
         else:
             temperature_excess = current_rzt - optimal_rzt
             factor = 1.0 - (temperature_excess * self.params.nutrient_uptake_sensitivity_high)
-        
-        return np.clip(factor, 0.3, 1.4)
-    
+        return max(self.params.min_nutrient_uptake_factor, min(self.params.max_nutrient_uptake_factor, factor))
+
     def calculate_water_uptake_factor(self, current_rzt: float, air_temperature: float) -> float:
         """
         Calculate RZT effect on water uptake capacity.
-        
+
         Args:
             current_rzt: Current root zone temperature (°C)
             air_temperature: Current air temperature (°C)
-            
+
         Returns:
-            Water uptake factor (0.4 to 1.3)
+            Water uptake factor
         """
+        if current_rzt is None or air_temperature is None:
+            raise ValueError("current_rzt and air_temperature must be provided")
         optimal_rzt = self.calculate_optimal_rzt(air_temperature)
-        
-        # Water uptake is less sensitive to temperature than growth
         if current_rzt <= optimal_rzt:
             temperature_diff = optimal_rzt - current_rzt
             factor = 1.0 + (temperature_diff * self.params.water_uptake_sensitivity_low)
         else:
             temperature_excess = current_rzt - optimal_rzt
             factor = 1.0 - (temperature_excess * self.params.water_uptake_sensitivity_high)
-        
-        return np.clip(factor, 0.4, 1.3)
-    
+        return max(self.params.min_water_uptake_factor, min(self.params.max_water_uptake_factor, factor))
+
     def calculate_photosynthesis_factor(self, current_rzt: float, air_temperature: float) -> float:
         """
         Calculate RZT effect on photosynthesis and assimilate distribution.
-        
+
         Args:
             current_rzt: Current root zone temperature (°C)
             air_temperature: Current air temperature (°C)
-            
+
         Returns:
-            Photosynthesis factor (0.5 to 1.2)
+            Photosynthesis factor
         """
+        if current_rzt is None or air_temperature is None:
+            raise ValueError("current_rzt and air_temperature must be provided")
         optimal_rzt = self.calculate_optimal_rzt(air_temperature)
-        
-        # Photosynthesis has moderate sensitivity to RZT
         if current_rzt <= optimal_rzt:
             temperature_diff = optimal_rzt - current_rzt
             factor = 1.0 + (temperature_diff * self.params.photosynthesis_sensitivity_low)
         else:
             temperature_excess = current_rzt - optimal_rzt
             factor = 1.0 - (temperature_excess * self.params.photosynthesis_sensitivity_high)
-        
-        return np.clip(factor, 0.5, 1.2)
-    
+        return max(self.params.min_photosynthesis_factor, min(self.params.max_photosynthesis_factor, factor))
+
     def calculate_root_metabolism_factor(self, current_rzt: float, air_temperature: float) -> float:
         """
         Calculate RZT effect on root metabolism and activity.
-        
-        Based on findings that RZT activates root metabolism.
-        
+
         Args:
-            current_rzt: Current root zone temperature (°C)  
+            current_rzt: Current root zone temperature (°C)
             air_temperature: Current air temperature (°C)
-            
+
         Returns:
-            Root metabolism factor (0.3 to 1.6)
+            Root metabolism factor
         """
+        if current_rzt is None or air_temperature is None:
+            raise ValueError("current_rzt and air_temperature must be provided")
         optimal_rzt = self.calculate_optimal_rzt(air_temperature)
-        
-        # Root metabolism is highly sensitive to temperature
         if current_rzt <= optimal_rzt:
             temperature_diff = optimal_rzt - current_rzt
             factor = 1.0 + (temperature_diff * self.params.root_metabolism_sensitivity_low)
         else:
             temperature_excess = current_rzt - optimal_rzt
             factor = 1.0 - (temperature_excess * self.params.root_metabolism_sensitivity_high)
-        
-        return np.clip(factor, 0.3, 1.6)
-    
-    def hourly_update(self, environmental_conditions: Dict[str, float], 
-                     hour: int, dt_hours: float = 1.0) -> Dict[str, float]:
-        """
-        Hourly root zone temperature model update.
-        
-        Temperature in hydroponic systems can change rapidly with:
-        - Air temperature fluctuations
-        - Solution heating/cooling systems
-        - Thermal mass effects
-        
-        Args:
-            environmental_conditions: Current conditions including air and solution temps
-            hour: Hour of day (0-23)
-            dt_hours: Time step in hours
-            
-        Returns:
-            Dict with temperature effects and factors
-        """
-        air_temp = environmental_conditions.get('air_temperature', None)
-        if air_temp is None:
-            raise ValueError("❌ Air temperature must be provided in environmental conditions - no hardcoded defaults allowed")
-        
-        solution_temp = environmental_conditions.get('solution_temperature', None)
-        if solution_temp is None:
-            raise ValueError("❌ Solution temperature must be provided in environmental conditions - no hardcoded defaults allowed")
-        
-        # Calculate thermal dynamics
-        thermal_response = self._calculate_thermal_dynamics(
-            air_temp, solution_temp, hour, dt_hours
-        )
-        
-        # Current effective RZT (solution temperature affects roots directly)
-        current_rzt = thermal_response['effective_rzt']
-        optimal_rzt = self.calculate_optimal_rzt(air_temp)
-        
-        # Calculate all temperature-dependent factors
-        growth_factor = self.calculate_rzt_growth_factor(current_rzt, air_temp)
-        nutrient_factor = self.calculate_nutrient_uptake_factor(current_rzt, air_temp)
-        water_factor = self.calculate_water_uptake_factor(current_rzt, air_temp)
-        photosynthesis_factor = self.calculate_photosynthesis_factor(current_rzt, air_temp)
-        metabolism_factor = self.calculate_root_metabolism_factor(current_rzt, air_temp)
-        
-        return {
-            'current_rzt': current_rzt,
-            'optimal_rzt': optimal_rzt,
-            'rzt_deviation': current_rzt - optimal_rzt,
-            'growth_factor': growth_factor,
-            'nutrient_uptake_factor': nutrient_factor,
-            'water_uptake_factor': water_factor,
-            'photosynthesis_factor': photosynthesis_factor,
-            'root_metabolism_factor': metabolism_factor,
-            'thermal_stress': abs(current_rzt - optimal_rzt) / 5.0,  # Normalized stress
-            **thermal_response
-        }
-    
-    def _calculate_thermal_dynamics(self, air_temp: float, solution_temp: float, 
-                                   hour: int, dt_hours: float) -> Dict[str, float]:
+        return max(self.params.min_root_metabolism_factor, min(self.params.max_root_metabolism_factor, factor))
+
+    def calculate_thermal_dynamics(self, air_temp: float, solution_temp: float, hour: int, dt_hours: float) -> Dict[str, float]:
         """
         Calculate thermal dynamics in the hydroponic system.
-        
+
         Factors affecting root zone temperature:
         - Solution temperature (direct contact)
-        - Air temperature (convective exchange)  
+        - Air temperature (convective exchange)
         - Thermal mass of system
         - External ambient conditions
+
+        Args:
+            air_temp: Air temperature (°C)
+            solution_temp: Solution temperature (°C)
+            hour: Hour of day (0-23)
+            dt_hours: Time step in hours
+
+        Returns:
+            Dictionary with thermal dynamics metrics
         """
-        # Time-dependent thermal effects
-        # Root zones have thermal inertia - don't change instantly
-        thermal_mass_factor = self.params.thermal_mass_factor  # How quickly RZT responds to changes
-        
-        # Diurnal temperature variation (outdoor effects)
-        ambient_temp_variation = self.params.ambient_temp_amplitude * np.sin(2 * np.pi * (hour - 6) / 24)  # Peak at 18:00
-        
+        if any(x is None for x in [air_temp, solution_temp, hour, dt_hours]):
+            raise ValueError("air_temp, solution_temp, hour, and dt_hours must be provided")
+        if dt_hours <= 0:
+            raise ValueError("dt_hours must be positive")
+        if not 0 <= hour <= 23:
+            raise ValueError("hour must be between 0 and 23")
+
+        # Diurnal temperature variation (peaks at 18:00)
+        ambient_temp_variation = self.params.ambient_temp_amplitude * math.sin(2 * math.pi * (hour - 6) / 24)
+
         # Heat sources/sinks
         heat_sources = {
-            'solution_heating': 0.0,  # Would be controlled by system
-            'root_respiration': self.params.root_respiration_heat,  # Small heat generation from roots
-            'pump_heat': self.params.pump_heat_generation,        # Heat from circulation pumps
+            'solution_heating': 0.0,  # Controlled by external system
+            'root_respiration': self.params.root_respiration_heat,
+            'pump_heat': self.params.pump_heat_generation,
             'ambient_exchange': ambient_temp_variation * self.params.ambient_exchange_factor
         }
-        
+
         # Calculate equilibrium temperature
-        # In real systems, this involves heat transfer equations
         target_rzt = solution_temp + sum(heat_sources.values())
-        
-        # Current state (with thermal inertia)
-        if not hasattr(self, '_previous_rzt'):
+
+        # Initialize previous RZT if first call
+        if self._previous_rzt is None:
             self._previous_rzt = solution_temp
-        
+
         # Exponential approach to target with time constant
-        time_constant = self.params.thermal_response_time  # hours (thermal response time)
-        response_rate = 1.0 - np.exp(-dt_hours / time_constant)
-        
+        response_rate = 1.0 - math.exp(-dt_hours / self.params.thermal_response_time)
         new_rzt = self._previous_rzt + (target_rzt - self._previous_rzt) * response_rate
         self._previous_rzt = new_rzt
-        
-        # Heat transfer rate (W/m² - for energy calculations)
-        heat_transfer_rate = abs(new_rzt - air_temp) * self.params.heat_transfer_coefficient  # Simplified
-        
+
+        # Heat transfer rate (W/m²)
+        heat_transfer_rate = abs(new_rzt - air_temp) * self.params.heat_transfer_coefficient
+
         return {
             'effective_rzt': new_rzt,
             'target_rzt': target_rzt,
@@ -342,150 +358,209 @@ class RootZoneTemperatureModel:
             'cooling_required': max(0.0, new_rzt - target_rzt)
         }
 
-    def daily_update(self, environmental_conditions: Dict[str, float]) -> Dict[str, float]:
+    def calculate_hourly_metrics(self, environmental_conditions: Dict[str, float], hour: int, dt_hours: float) -> RZTModelOutput:
         """
-        Daily root zone temperature update for backward compatibility.
-        
-        Uses average daily conditions for systems that don't need hourly precision.
+        Calculate hourly root zone temperature effects.
+
+        Args:
+            environmental_conditions: Dictionary with 'air_temperature' and 'solution_temperature' (°C)
+            hour: Hour of day (0-23)
+            dt_hours: Time step in hours
+
+        Returns:
+            RZTModelOutput with temperature effects and factors
         """
-        air_temp = environmental_conditions.get('air_temperature', None)
-        if air_temp is None:
-            raise ValueError("❌ Air temperature must be provided in environmental conditions - no hardcoded defaults allowed")
-        
-        solution_temp = environmental_conditions.get('solution_temperature', None)
-        if solution_temp is None:
-            raise ValueError("❌ Solution temperature must be provided in environmental conditions - no hardcoded defaults allowed")
-        
-        # Use noon hour (12) as representative for daily calculation
-        return self.hourly_update(environmental_conditions, hour=12, dt_hours=24.0)
+        air_temp = environmental_conditions.get('air_temperature')
+        solution_temp = environmental_conditions.get('solution_temperature')
+        if any(x is None for x in [air_temp, solution_temp]):
+            raise ValueError("air_temperature and solution_temperature must be provided in environmental_conditions")
 
+        # Calculate thermal dynamics
+        thermal_response = self.calculate_thermal_dynamics(air_temp, solution_temp, hour, dt_hours)
+        current_rzt = thermal_response['effective_rzt']
+        optimal_rzt = self.calculate_optimal_rzt(air_temp)
 
-def create_lettuce_rzt_model(system_config=None) -> RootZoneTemperatureModel:
-    """Create root zone temperature model with lettuce-specific parameters from CSV config.
-    
-    Args:
-        system_config: System configuration object containing CSV-loaded parameters
-        
-    Returns:
-        RootZoneTemperatureModel configured with CSV parameters
+        # Calculate temperature-dependent factors
+        growth_factor = self.calculate_rzt_growth_factor(current_rzt, air_temp)
+        nutrient_factor = self.calculate_nutrient_uptake_factor(current_rzt, air_temp)
+        water_factor = self.calculate_water_uptake_factor(current_rzt, air_temp)
+        photosynthesis_factor = self.calculate_photosynthesis_factor(current_rzt, air_temp)
+        metabolism_factor = self.calculate_root_metabolism_factor(current_rzt, air_temp)
+
+        return RZTModelOutput(
+            current_rzt=current_rzt,
+            optimal_rzt=optimal_rzt,
+            rzt_deviation=current_rzt - optimal_rzt,
+            growth_factor=growth_factor,
+            nutrient_uptake_factor=nutrient_factor,
+            water_uptake_factor=water_factor,
+            photosynthesis_factor=photosynthesis_factor,
+            root_metabolism_factor=metabolism_factor,
+            thermal_stress=abs(current_rzt - optimal_rzt) / 5.0,
+            target_rzt=thermal_response['target_rzt'],
+            thermal_lag=thermal_response['thermal_lag'],
+            heat_transfer_rate=thermal_response['heat_transfer_rate'],
+            heating_required=thermal_response['heating_required'],
+            cooling_required=thermal_response['cooling_required']
+        )
+
+    def calculate_daily_metrics(self, environmental_conditions: Dict[str, float]) -> RZTModelOutput:
+        """
+        Calculate daily root zone temperature effects using noon as representative hour.
+
+        Args:
+            environmental_conditions: Dictionary with 'air_temperature' and 'solution_temperature' (°C)
+
+        Returns:
+            RZTModelOutput with temperature effects and factors
+        """
+        return self.calculate_hourly_metrics(environmental_conditions, hour=12, dt_hours=24.0)
+
+def create_lettuce_rzt_model(system_config: Any) -> RootZoneTemperatureModel:
     """
-    try:
-        # Get root zone temperature parameters from CSV data loaded in system_config
-        rzt_params = getattr(system_config, 'root_zone_temperature_parameters', {}).copy()
-        water_params = getattr(system_config, 'water_parameters', {})
+    Create root zone temperature model with lettuce-specific parameters from configuration.
 
-        # Get water uptake sensitivity from water parameters since RZT duplicates were removed
-        if 'water_uptake_sensitivity_low' not in rzt_params and 'water_uptake_sensitivity_low' in water_params:
-            rzt_params['water_uptake_sensitivity_low'] = water_params['water_uptake_sensitivity_low']
-        if 'water_uptake_sensitivity_high' not in rzt_params and 'water_uptake_sensitivity_high' in water_params:
-            rzt_params['water_uptake_sensitivity_high'] = water_params['water_uptake_sensitivity_high']
+    Args:
+        system_config: Configuration object containing RZT and water parameters
 
-        # Map renamed parameters to expected parameter names
-        param_mapping = {
-            'rzt_min_growth_factor': 'min_growth_factor',
-            'rzt_thermal_mass_factor': 'thermal_mass_factor',
-            'rzt_ambient_temp_amplitude': 'ambient_temp_amplitude',
-            'rzt_root_respiration_heat': 'root_respiration_heat',
-            'rzt_pump_heat_generation': 'pump_heat_generation',
-            'rzt_ambient_exchange_factor': 'ambient_exchange_factor',
-            'rzt_thermal_response_time': 'thermal_response_time',
-            'rzt_heat_transfer_coefficient': 'heat_transfer_coefficient'
-        }
-        
-        # Apply parameter name mapping
-        for csv_name, model_name in param_mapping.items():
-            if csv_name in rzt_params:
-                rzt_params[model_name] = rzt_params[csv_name]
-        
-        # Create parameters from CSV config
-        parameters = RZTParameters.from_config(rzt_params)
-        return RootZoneTemperatureModel(parameters)
-        
-    except Exception as e:
-        raise ValueError(f"❌ Failed to load CSV root zone temperature parameters: {e}. No hardcoded defaults allowed.")
+    Returns:
+        RootZoneTemperatureModel configured with parameters
+    """
+    if not system_config:
+        raise ValueError("System configuration must be provided")
+    rzt_params = getattr(system_config, 'root_zone_temperature_parameters', None)
+    water_params = getattr(system_config, 'water_parameters', None)
+    if not rzt_params:
+        raise ValueError("root_zone_temperature_parameters must be provided in configuration")
+    if not water_params:
+        raise ValueError("water_parameters must be provided in configuration")
 
+    # Map renamed parameters
+    param_mapping = {
+        'rzt_min_growth_factor': 'min_growth_factor',
+        'rzt_thermal_mass_factor': 'thermal_mass_factor',
+        'rzt_ambient_temp_amplitude': 'ambient_temp_amplitude',
+        'rzt_root_respiration_heat': 'root_respiration_heat',
+        'rzt_pump_heat_generation': 'pump_heat_generation',
+        'rzt_ambient_exchange_factor': 'ambient_exchange_factor',
+        'rzt_thermal_response_time': 'thermal_response_time',
+        'rzt_heat_transfer_coefficient': 'heat_transfer_coefficient'
+    }
+    config_dict = rzt_params.copy()
+    for csv_name, model_name in param_mapping.items():
+        if csv_name in config_dict:
+            config_dict[model_name] = config_dict[csv_name]
+
+    # Incorporate water uptake sensitivities from water parameters
+    config_dict['water_uptake_sensitivity_low'] = water_params.get('water_uptake_sensitivity_low')
+    config_dict['water_uptake_sensitivity_high'] = water_params.get('water_uptake_sensitivity_high')
+    if any(x is None for x in [config_dict['water_uptake_sensitivity_low'], config_dict['water_uptake_sensitivity_high']]):
+        raise ValueError("water_uptake_sensitivity_low and water_uptake_sensitivity_high must be provided in water_parameters")
+
+    parameters = RZTParameters.from_config(config_dict)
+    return RootZoneTemperatureModel(parameters)
 
 """
-=== FUNCTION EXPLANATIONS FOR NON-CODERS ===
+INPUT PARAMETERS (from configuration):
+- optimal_rzt_offset: °C above air temperature (typically 3°C)
+- min_effective_rzt: Minimum effective RZT (°C, e.g., 15°C)
+- max_effective_rzt: Maximum effective RZT (°C, e.g., 28°C)
+- linear_growth_slope: Growth factor increase per °C below optimum
+- rapid_decline_slope: Growth factor decrease per °C above optimum
+- base_growth_factor: Growth factor at optimal RZT
+- nutrient_uptake_sensitivity_low: Nutrient uptake sensitivity per °C below optimum
+- nutrient_uptake_sensitivity_high: Nutrient uptake sensitivity per °C above optimum
+- water_uptake_sensitivity_low: Water uptake sensitivity per °C below optimum
+- water_uptake_sensitivity_high: Water uptake sensitivity per °C above optimum
+- photosynthesis_sensitivity_low: Photosynthesis sensitivity per °C below optimum
+- photosynthesis_sensitivity_high: Photosynthesis sensitivity per °C above optimum
+- root_metabolism_sensitivity_low: Root metabolism sensitivity per °C below optimum
+- root_metabolism_sensitivity_high: Root metabolism sensitivity per °C above optimum
+- min_growth_factor: Minimum growth factor
+- max_growth_factor: Maximum growth factor
+- min_nutrient_uptake_factor: Minimum nutrient uptake factor
+- max_nutrient_uptake_factor: Maximum nutrient uptake factor
+- min_water_uptake_factor: Minimum water uptake factor
+- max_water_uptake_factor: Maximum water uptake factor
+- min_photosynthesis_factor: Minimum photosynthesis factor
+- max_photosynthesis_factor: Maximum photosynthesis factor
+- min_root_metabolism_factor: Minimum root metabolism factor
+- max_root_metabolism_factor: Maximum root metabolism factor
+- thermal_mass_factor: How quickly RZT responds to changes
+- ambient_temp_amplitude: Amplitude of diurnal temperature variation (°C)
+- root_respiration_heat: Heat from root respiration (°C)
+- pump_heat_generation: Heat from circulation pumps (°C)
+- ambient_exchange_factor: Factor for ambient temperature exchange
+- thermal_response_time: Thermal response time constant (hours)
+- heat_transfer_coefficient: Heat transfer coefficient (W/m²/°C)
 
-This file manages root zone temperature (RZT) - the temperature around plant roots in hydroponic 
-systems. Think of it like controlling the water temperature in a fish tank - it affects everything 
-the roots do, from absorbing nutrients to growing.
+INPUT VARIABLES:
+- environmental_conditions: Dictionary with 'air_temperature' (°C) and 'solution_temperature' (°C)
+- hour: Hour of day (0-23) for hourly updates
+- dt_hours: Time step in hours for hourly updates
 
-KEY FUNCTIONS AND EQUATIONS:
+OUTPUT VARIABLES (RZTModelOutput):
+- current_rzt: Current root zone temperature (°C)
+- optimal_rzt: Optimal root zone temperature (°C)
+- rzt_deviation: Deviation from optimal RZT (°C)
+- growth_factor: Growth factor due to RZT
+- nutrient_uptake_factor: Nutrient uptake efficiency factor
+- water_uptake_factor: Water uptake capacity factor
+- photosynthesis_factor: Photosynthesis efficiency factor
+- root_metabolism_factor: Root metabolism activity factor
+- thermal_stress: Normalized thermal stress
+- target_rzt: Target RZT considering heat sources (°C)
+- thermal_lag: Difference between current and target RZT (°C)
+- heat_transfer_rate: Heat transfer rate (W/m²)
+- heating_required: Heating needed to reach target RZT (°C)
+- cooling_required: Cooling needed to reach target RZT (°C)
 
-1. calculate_optimal_rzt()
-   - What it does: Determines the ideal root temperature based on air temperature
-   - Equation: optimal_RZT = air_temperature + offset (typically +3°C)
-   - Real-world meaning: Plants like their roots slightly warmer than the air around their leaves.
-     Like how your feet feel better when they're warmer than your head in cold weather.
+FUNCTION EXPLANATIONS FOR NON-CODERS:
+This model manages root zone temperature (RZT) in hydroponic systems, like controlling the water temperature in a fish tank, which affects how well plant roots grow and function.
 
-2. calculate_rzt_growth_factor()
-   - What it does: Calculates how root temperature affects overall plant growth
-   - Equations:
-     * Below optimal: factor = base_factor + (optimal_temp - current_temp) × linear_slope
-     * Above optimal: factor = base_factor - (current_temp - optimal_temp) × decline_slope
-   - Real-world meaning: Growth increases linearly until optimal temperature, then drops rapidly 
-     if too hot. Like Goldilocks - there's a "just right" temperature zone.
+1. calculate_optimal_rzt:
+   - Determines the ideal root temperature: `optimal_RZT = air_temperature + offset`.
+   - Like setting the thermostat for your feet to be slightly warmer than the room for comfort.
 
-3. calculate_nutrient_uptake_factor()
-   - What it does: Calculates how root temperature affects nutrient absorption efficiency
-   - Equation: factor = 1.0 ± temperature_difference × sensitivity
-   - Real-world meaning: Cold roots can't absorb nutrients well (like trying to drink a thick 
-     shake through a straw). Too hot and they get damaged and also can't absorb properly.
+2. calculate_rzt_growth_factor:
+   - Calculates how RZT affects plant growth:
+     - Below optimum: `factor = base + (optimal - current) * slope`
+     - Above optimum: `factor = base - (current - optimal) * decline_slope`
+   - Like how your energy increases in comfortable weather but drops if it's too hot or cold.
 
-4. calculate_water_uptake_factor()
-   - What it does: Determines how root temperature affects water absorption
-   - Similar equations to nutrient uptake but different sensitivity
-   - Real-world meaning: Root temperature affects how efficiently roots can pump water up to 
-     the leaves. Cold = sluggish pumping, too hot = damage and poor pumping.
+3. calculate_nutrient_uptake_factor:
+   - Determines how RZT affects nutrient absorption: `factor = 1.0 ± (difference * sensitivity)`.
+   - Like how a straw works better at the right temperature to sip nutrients; too cold or hot makes it harder.
 
-5. calculate_photosynthesis_factor()
-   - What it does: Shows how root temperature indirectly affects photosynthesis (food production)
-   - Real-world meaning: Happy roots = healthy plant = better photosynthesis. It's all connected - 
-     roots are like the foundation of a house, affecting everything above.
+4. calculate_water_uptake_factor:
+   - Calculates RZT effect on water uptake: similar to nutrient uptake but with different sensitivity.
+   - Like how roots pump water to leaves, which slows down if too cold or gets damaged if too hot.
 
-6. calculate_root_metabolism_factor()
-   - What it does: Calculates how temperature affects root cellular activity
-   - Real-world meaning: Root cells need to be active to do their job. Cold = sluggish cells, 
-     optimal = active cells, too hot = damaged cells.
+5. calculate_photosynthesis_factor:
+   - Shows how RZT impacts photosynthesis: `factor = 1.0 ± (difference * sensitivity)`.
+   - Like how healthy roots support better food production in leaves; root stress affects the whole plant.
 
-7. _calculate_thermal_dynamics()
-   - What it does: Models how root zone temperature changes over time with various heat sources/sinks
-   - Equations: Uses exponential approach to target temperature with time constants
-   - Real-world meaning: Root zones don't change temperature instantly - they have "thermal mass" 
-     like how a pot of water takes time to heat up or cool down.
+6. calculate_root_metabolism_factor:
+   - Calculates RZT effect on root cell activity: `factor = 1.0 ± (difference * sensitivity)`.
+   - Like how active your body is at different temperatures; roots need the right temperature to stay active.
 
-KEY TEMPERATURE CONCEPTS:
+7. calculate_thermal_dynamics:
+   - Models how RZT changes over time: `new_RZT = previous + (target - previous) * response_rate`.
+   - Like how a pot of water takes time to heat or cool due to its mass, affected by pumps and air.
 
-OPTIMAL RANGE:
-- Usually 3-5°C warmer than air temperature
-- For lettuce: typically 18-25°C root zone
-- Too cold (<15°C): Slow growth, poor nutrient uptake
-- Too hot (>28°C): Root damage, stress, poor growth
+8. calculate_hourly_metrics:
+   - Updates RZT effects hourly, combining thermal dynamics and factor calculations.
+   - Like checking a weather forecast hourly to adjust your plans for plant care.
 
-THERMAL DYNAMICS:
-- Thermal mass: How quickly temperature changes (large systems = slow changes)
-- Heat sources: Pumps, ambient air, heaters
-- Heat sinks: Cooling systems, evaporation, cold ambient air
-
-RESPONSE PATTERNS:
-- Linear increase up to optimal (more heat = better growth)
-- Rapid decline above optimal (overheating = damage)
-- Different sensitivities for different processes (growth vs nutrient uptake)
+9. calculate_daily_metrics:
+   - Provides daily RZT effects using noon as a representative hour.
+   - Like a daily summary of how root temperature affects plant health.
 
 PRACTICAL APPLICATIONS:
-- Optimize root zone heating systems for maximum efficiency
-- Predict plant performance based on root temperature
-- Adjust nutrient concentrations based on uptake efficiency
-- Schedule irrigation based on water uptake capacity  
-- Design thermal management systems for hydroponic facilities
-- Understand why plants perform poorly in certain seasons
-
-This system helps growers maintain the "happy zone" for roots, which is the foundation 
-for healthy, productive plants. Like keeping your feet warm in winter - it affects 
-your whole body's comfort and performance.
+- Optimize heating/cooling systems to maintain ideal RZT (e.g., 18-25°C for lettuce).
+- Predict plant growth based on RZT to adjust nutrient or water delivery.
+- Diagnose poor plant performance due to RZT stress (e.g., <15°C or >28°C).
+- Design hydroponic systems with proper thermal mass and heat management.
+- Schedule irrigation or nutrient dosing based on uptake efficiencies.
+- Improve photosynthesis and yield by maintaining optimal RZT.
 """
-
-
-
