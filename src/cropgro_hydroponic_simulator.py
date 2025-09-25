@@ -639,6 +639,8 @@ class CROPGROHydroponicSimulator:
                 # Phosphorus dynamics
                 phosphorus_uptake_mg=plant_state['nutrient_uptake'].get('P-PO4', 0),
                 phosphorus_remobilization=self._calculate_phosphorus_remobilization(plant_state),
+                # Potassium dynamics
+                potassium_uptake_mg=plant_state['nutrient_uptake'].get('K', 0),
                 potassium_remobilization=self._calculate_potassium_remobilization(plant_state),
                 # Senescence - Enhanced with comprehensive senescence model
                 senescence_rate=plant_state['senescence_rate'],

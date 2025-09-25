@@ -660,8 +660,8 @@ ec_uptake_modifier_p_high,0.15,unitless,High EC phosphorus uptake modifier,nutri
 ec_uptake_modifier_p_low,0.2,unitless,Low EC phosphorus uptake modifier,nutrient_parameters
 ionic_strength,0.02,molar,Solution ionic strength,nutrient_parameters
 iron_solubility_data,"{'4.0': 50.0, '5.0': 20.0, '5.5': 8.0, '6.0': 3.0, '6.5': 1.0, '7.0': 0.3, '7.5': 0.1, '8.0': 0.03}",mg_per_L,pH-dependent iron solubility,nutrient_parameters
-k_uptake_km,0.4,mg_per_L,Michaelis-Menten constant for K uptake,nutrient_parameters
-k_uptake_vmax,0.25,mg_per_cm2_per_day,Maximum K uptake rate per root surface area,nutrient_parameters
+k_uptake_km,0.2,mg_per_L,Michaelis-Menten constant for K uptake,nutrient_parameters
+k_uptake_vmax,0.5,mg_per_cm2_per_day,Maximum K uptake rate per root surface area,nutrient_parameters
 magnesium_phosphate_ksp,1.04e-24,unitless,Solubility product constant for Mg3(PO4)2,nutrient_parameters
 mg_uptake_km,0.6,mg_per_L,Michaelis-Menten constant for Mg uptake,nutrient_parameters
 mg_uptake_vmax,0.12,mg_per_cm2_per_day,Maximum Mg uptake rate per root surface area,nutrient_parameters

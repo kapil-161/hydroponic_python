@@ -193,6 +193,7 @@ class DailyResults:
     
     # Phosphorus dynamics detailed
     phosphorus_uptake_mg: float = None
+    potassium_uptake_mg: float = None
     
     # Nutrient remobilization
     phosphorus_remobilization: float = None

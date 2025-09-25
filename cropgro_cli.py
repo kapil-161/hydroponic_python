@@ -575,7 +575,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
     for daily_res in results.daily_results:
         n_daily = getattr(daily_res, 'nitrogen_uptake_mg', 0.0)
         p_daily = getattr(daily_res, 'phosphorus_uptake_mg', 0.0)
-        k_daily = getattr(daily_res, 'potassium_remobilization', 0.0)
+        k_daily = getattr(daily_res, 'potassium_uptake_mg', 0.0)
 
         if n_daily is not None and not isinstance(n_daily, str):
             total_n_uptake += float(n_daily)
@@ -603,7 +603,7 @@ def run_simulation(days: int, cultivar_id: str, system_type: str, print_daily: b
         print(f"  {'P Status':<20} {'Sufficient':<15} {'--':<15} {'--':<15}")
 
     if total_k_uptake > 0:
-        print(f"  {'K Remobilization':<20} {total_k_uptake*plant_count:<15.1f} mg {total_k_uptake:<15.2f} mg {total_k_uptake/total_days:<15.3f} mg/day")
+        print(f"  {'K Uptake (actual)':<20} {total_k_uptake*plant_count:<15.1f} mg {total_k_uptake:<15.2f} mg {total_k_uptake/total_days:<15.3f} mg/day")
     else:
         print(f"  {'K Status':<20} {'Sufficient':<15} {'--':<15} {'--':<15}")
 
