@@ -352,6 +352,7 @@ genetic_parameters,EC_TOLERANCE,3.5,dS_m,Maximum EC tolerance
 genetic_parameters,ROOT_ACTIVITY,0.8,dimensionless,Root activity coefficient
 genetic_parameters,PHOTOSYNTHETIC_CAPACITY,0.9,dimensionless,Relative photosynthetic capacity
 genetic_parameters,NITRATE_EFFICIENCY,0.7,dimensionless,Nitrogen use efficiency factor
+genetic_parameters,cultivar_id,BOSTON_BIBB_001,text,Cultivar identifier
 genetic_parameters,cultivar_name,Boston Bibb,text,Cultivar name
 genetic_parameters,lettuce_type,butterhead,text,Type of lettuce
 genetic_parameters,breeder,Generic,text,Breeding company or program

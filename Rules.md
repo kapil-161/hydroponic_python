@@ -23,6 +23,7 @@
 - no fallback to default value 
 -should raise error if anything doesnot work
 - should work according to plan
+ -If parameter is missing from CSV, dont create minimal default based on parameter type
 ## Code Structure
 - no duplicate code and parameters
 - no two functions or codes for same calculation (like simple and complex)
@@ -53,4 +54,5 @@
     ☒ Remove unused imports and variables throughout the codebase
     ☒ Update all model references after parameter consolidation
     ☒ Verify simulation runs correctly after parameter cleanup
-    ☒ Confirm same performance metrics after cleanup
+    ☒ Confirm same performance metrics after cleanup, 
+    95 classes total
