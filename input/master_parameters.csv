@@ -1022,3 +1022,387 @@ leaf_development,opt_temp_min,18.0,°C,Lower optimal temperature for leaf develo
 leaf_development,opt_temp_max,24.0,°C,Upper optimal temperature for leaf development
 leaf_development,max_temp,35.0,°C,Maximum temperature for leaf development
 leaf_development,specific_leaf_area,250.0,cm2_g,Specific leaf area (cm²/g dry weight)
+
+# Initial State Parameters
+initial_state,initial_day,0,days,Initial simulation day
+initial_state,initial_hour,6,hours,Initial simulation hour
+initial_state,initial_leaf_biomass,0.01,g,Initial leaf biomass
+initial_state,initial_stem_biomass,0.005,g,Initial stem biomass
+initial_state,initial_root_biomass,0.005,g,Initial root biomass
+initial_state,initial_total_biomass,0.02,g,Initial total biomass
+initial_state,initial_lai,0.001,dimensionless,Initial leaf area index
+initial_state,initial_leaf_area,2.5,cm2,Initial leaf area
+initial_state,initial_canopy_height,1.0,cm,Initial canopy height
+initial_state,initial_photosynthesis_rate,0.0,umol_CO2_m2_s,Initial photosynthesis rate
+initial_state,initial_respiration_rate,0.0,umol_CO2_m2_s,Initial respiration rate
+initial_state,initial_net_assimilation,0.0,umol_CO2_m2_s,Initial net assimilation
+initial_state,initial_thermal_time,0.0,GDD,Initial thermal time
+initial_state,initial_growth_stage,emergence,string,Initial growth stage
+initial_state,initial_development_index,0.0,dimensionless,Initial development index
+initial_state,initial_temperature_stress,0.0,dimensionless,Initial temperature stress
+initial_state,initial_water_stress,0.0,dimensionless,Initial water stress
+initial_state,initial_nutrient_stress,0.0,dimensionless,Initial nutrient stress
+initial_state,initial_light_stress,0.0,dimensionless,Initial light stress
+initial_state,initial_n_content,0.03,g_N_g_dry_mass,Initial nitrogen content
+initial_state,initial_p_content,0.005,g_P_g_dry_mass,Initial phosphorus content
+initial_state,initial_k_content,0.02,g_K_g_dry_mass,Initial potassium content
+initial_state,initial_water_uptake,0.0,ml_day,Initial water uptake
+initial_state,initial_transpiration,0.0,ml_day,Initial transpiration
+initial_state,initial_root_depth,1.0,cm,Initial root depth
+initial_state,initial_root_distribution,"{'zone1': 0.4, 'zone2': 0.4, 'zone3': 0.2}",dict,Initial root distribution by zone
+initial_state,initial_air_temperature,20.0,°C,Initial air temperature
+initial_state,initial_solution_temperature,18.0,°C,Initial solution temperature
+initial_state,initial_humidity,70.0,%,Initial humidity
+initial_state,initial_co2_concentration,400.0,ppm,Initial CO2 concentration
+initial_state,initial_light_intensity,200.0,umol_m2_s,Initial light intensity
+initial_state,initial_ph,6.0,pH,Initial pH
+
+# Control Strategy Parameters
+control_parameters,control_strategy,PID,string,Control strategy for environmental control system
+
+# Logging and Validation Parameters
+system_parameters,enable_logging,true,boolean,Enable detailed logging during simulation
+system_parameters,validation_mode,false,boolean,Enable validation mode for parameter checking
+
+# Initial Nitrogen Content Parameters
+initial_nitrogen,initial_leaf_nitrogen_content,0.035,g_N_g_dry_mass,Initial nitrogen content in leaves
+initial_nitrogen,initial_stem_nitrogen_content,0.020,g_N_g_dry_mass,Initial nitrogen content in stems
+initial_nitrogen,initial_root_nitrogen_content,0.025,g_N_g_dry_mass,Initial nitrogen content in roots
+
+# Initial Water Parameters
+initial_water,initial_water_growth_stage,vegetative,string,Initial water growth stage
+
+# Nutrient Mobility Classifications - Nitrogen
+nutrient_mobility,mobility_classifications_nitrogen_mobility,highly_mobile,string,Mobility classification for nitrogen
+nutrient_mobility,mobility_classifications_nitrogen_transport,bidirectional,string,Transport classification for nitrogen
+nutrient_mobility,remobilization_efficiency_nitrogen,0.8,dimensionless,Remobilization efficiency for nitrogen
+nutrient_mobility,deficiency_mobility_nitrogen,very_high,string,Deficiency mobility for nitrogen
+nutrient_mobility,retranslocation_rate_nitrogen,0.05,g_g_day,Retranslocation rate for nitrogen
+nutrient_mobility,xylem_transport_rates_nitrogen,0.15,g_g_day,Xylem transport rate for nitrogen
+
+# Nutrient Mobility Classifications - Phosphorus
+nutrient_mobility,mobility_classifications_phosphorus_mobility,immobile,string,Mobility classification for phosphorus
+nutrient_mobility,mobility_classifications_phosphorus_transport,phloem_only,string,Transport classification for phosphorus
+nutrient_mobility,remobilization_efficiency_phosphorus,0.6,dimensionless,Remobilization efficiency for phosphorus
+nutrient_mobility,deficiency_mobility_phosphorus,low,string,Deficiency mobility for phosphorus
+nutrient_mobility,retranslocation_rate_phosphorus,0.02,g_g_day,Retranslocation rate for phosphorus
+nutrient_mobility,xylem_transport_rates_phosphorus,0.08,g_g_day,Xylem transport rate for phosphorus
+
+# Nutrient Mobility Classifications - Potassium
+nutrient_mobility,mobility_classifications_potassium_mobility,highly_mobile,string,Mobility classification for potassium
+nutrient_mobility,mobility_classifications_potassium_transport,bidirectional,string,Transport classification for potassium
+nutrient_mobility,remobilization_efficiency_potassium,0.7,dimensionless,Remobilization efficiency for potassium
+nutrient_mobility,deficiency_mobility_potassium,very_high,string,Deficiency mobility for potassium
+nutrient_mobility,retranslocation_rate_potassium,0.04,g_g_day,Retranslocation rate for potassium
+nutrient_mobility,xylem_transport_rates_potassium,0.12,g_g_day,Xylem transport rate for potassium
+
+# Nutrient Mobility Classifications - Calcium
+nutrient_mobility,mobility_classifications_calcium_mobility,immobile,string,Mobility classification for calcium
+nutrient_mobility,mobility_classifications_calcium_transport,xylem_only,string,Transport classification for calcium
+nutrient_mobility,remobilization_efficiency_calcium,0.1,dimensionless,Remobilization efficiency for calcium
+nutrient_mobility,deficiency_mobility_calcium,very_low,string,Deficiency mobility for calcium
+nutrient_mobility,retranslocation_rate_calcium,0.001,g_g_day,Retranslocation rate for calcium
+nutrient_mobility,xylem_transport_rates_calcium,0.06,g_g_day,Xylem transport rate for calcium
+
+# Nutrient Mobility Classifications - Magnesium
+nutrient_mobility,mobility_classifications_magnesium_mobility,moderately_mobile,string,Mobility classification for magnesium
+nutrient_mobility,mobility_classifications_magnesium_transport,bidirectional,string,Transport classification for magnesium
+nutrient_mobility,remobilization_efficiency_magnesium,0.5,dimensionless,Remobilization efficiency for magnesium
+nutrient_mobility,deficiency_mobility_magnesium,high,string,Deficiency mobility for magnesium
+nutrient_mobility,retranslocation_rate_magnesium,0.02,g_g_day,Retranslocation rate for magnesium
+nutrient_mobility,xylem_transport_rates_magnesium,0.08,g_g_day,Xylem transport rate for magnesium
+
+# Nutrient Mobility Classifications - Sulfur
+nutrient_mobility,mobility_classifications_sulfur_mobility,moderately_mobile,string,Mobility classification for sulfur
+nutrient_mobility,mobility_classifications_sulfur_transport,bidirectional,string,Transport classification for sulfur
+nutrient_mobility,remobilization_efficiency_sulfur,0.4,dimensionless,Remobilization efficiency for sulfur
+nutrient_mobility,deficiency_mobility_sulfur,high,string,Deficiency mobility for sulfur
+nutrient_mobility,retranslocation_rate_sulfur,0.015,g_g_day,Retranslocation rate for sulfur
+nutrient_mobility,xylem_transport_rates_sulfur,0.07,g_g_day,Xylem transport rate for sulfur
+
+# Nutrient Mobility Classifications - Iron
+nutrient_mobility,mobility_classifications_iron_mobility,immobile,string,Mobility classification for iron
+nutrient_mobility,mobility_classifications_iron_transport,xylem_only,string,Transport classification for iron
+nutrient_mobility,remobilization_efficiency_iron,0.2,dimensionless,Remobilization efficiency for iron
+nutrient_mobility,deficiency_mobility_iron,very_low,string,Deficiency mobility for iron
+nutrient_mobility,retranslocation_rate_iron,0.005,g_g_day,Retranslocation rate for iron
+nutrient_mobility,xylem_transport_rates_iron,0.03,g_g_day,Xylem transport rate for iron
+
+# Nutrient Mobility Classifications - Manganese
+nutrient_mobility,mobility_classifications_manganese_mobility,immobile,string,Mobility classification for manganese
+nutrient_mobility,mobility_classifications_manganese_transport,xylem_only,string,Transport classification for manganese
+nutrient_mobility,remobilization_efficiency_manganese,0.15,dimensionless,Remobilization efficiency for manganese
+nutrient_mobility,deficiency_mobility_manganese,very_low,string,Deficiency mobility for manganese
+nutrient_mobility,retranslocation_rate_manganese,0.003,g_g_day,Retranslocation rate for manganese
+nutrient_mobility,xylem_transport_rates_manganese,0.025,g_g_day,Xylem transport rate for manganese
+
+# Nutrient Mobility Classifications - Zinc
+nutrient_mobility,mobility_classifications_zinc_mobility,immobile,string,Mobility classification for zinc
+nutrient_mobility,mobility_classifications_zinc_transport,xylem_only,string,Transport classification for zinc
+nutrient_mobility,remobilization_efficiency_zinc,0.3,dimensionless,Remobilization efficiency for zinc
+nutrient_mobility,deficiency_mobility_zinc,very_low,string,Deficiency mobility for zinc
+nutrient_mobility,retranslocation_rate_zinc,0.008,g_g_day,Retranslocation rate for zinc
+nutrient_mobility,xylem_transport_rates_zinc,0.04,g_g_day,Xylem transport rate for zinc
+
+# Nutrient Mobility Classifications - Copper
+nutrient_mobility,mobility_classifications_copper_mobility,immobile,string,Mobility classification for copper
+nutrient_mobility,mobility_classifications_copper_transport,xylem_only,string,Transport classification for copper
+nutrient_mobility,remobilization_efficiency_copper,0.25,dimensionless,Remobilization efficiency for copper
+nutrient_mobility,deficiency_mobility_copper,very_low,string,Deficiency mobility for copper
+nutrient_mobility,retranslocation_rate_copper,0.006,g_g_day,Retranslocation rate for copper
+nutrient_mobility,xylem_transport_rates_copper,0.035,g_g_day,Xylem transport rate for copper
+
+# Nutrient Mobility Classifications - Boron
+nutrient_mobility,mobility_classifications_boron_mobility,immobile,string,Mobility classification for boron
+nutrient_mobility,mobility_classifications_boron_transport,xylem_only,string,Transport classification for boron
+nutrient_mobility,remobilization_efficiency_boron,0.1,dimensionless,Remobilization efficiency for boron
+nutrient_mobility,deficiency_mobility_boron,very_low,string,Deficiency mobility for boron
+nutrient_mobility,retranslocation_rate_boron,0.002,g_g_day,Retranslocation rate for boron
+nutrient_mobility,xylem_transport_rates_boron,0.02,g_g_day,Xylem transport rate for boron
+
+# Nutrient Mobility Classifications - Molybdenum
+nutrient_mobility,mobility_classifications_molybdenum_mobility,moderately_mobile,string,Mobility classification for molybdenum
+nutrient_mobility,mobility_classifications_molybdenum_transport,bidirectional,string,Transport classification for molybdenum
+nutrient_mobility,remobilization_efficiency_molybdenum,0.6,dimensionless,Remobilization efficiency for molybdenum
+nutrient_mobility,deficiency_mobility_molybdenum,high,string,Deficiency mobility for molybdenum
+nutrient_mobility,retranslocation_rate_molybdenum,0.01,g_g_day,Retranslocation rate for molybdenum
+nutrient_mobility,xylem_transport_rates_molybdenum,0.05,g_g_day,Xylem transport rate for molybdenum
+
+# Phloem Transport Rates
+phloem_transport,phloem_transport_rates_nitrogen,0.12,g_g_day,Phloem transport rate for nitrogen
+phloem_transport,phloem_transport_rates_phosphorus,0.06,g_g_day,Phloem transport rate for phosphorus
+phloem_transport,phloem_transport_rates_potassium,0.10,g_g_day,Phloem transport rate for potassium
+phloem_transport,phloem_transport_rates_calcium,0.02,g_g_day,Phloem transport rate for calcium
+phloem_transport,phloem_transport_rates_magnesium,0.06,g_g_day,Phloem transport rate for magnesium
+phloem_transport,phloem_transport_rates_sulfur,0.05,g_g_day,Phloem transport rate for sulfur
+phloem_transport,phloem_transport_rates_iron,0.02,g_g_day,Phloem transport rate for iron
+phloem_transport,phloem_transport_rates_manganese,0.015,g_g_day,Phloem transport rate for manganese
+phloem_transport,phloem_transport_rates_zinc,0.03,g_g_day,Phloem transport rate for zinc
+phloem_transport,phloem_transport_rates_copper,0.025,g_g_day,Phloem transport rate for copper
+phloem_transport,phloem_transport_rates_boron,0.01,g_g_day,Phloem transport rate for boron
+phloem_transport,phloem_transport_rates_molybdenum,0.04,g_g_day,Phloem transport rate for molybdenum
+
+# Buffering Capacities
+buffering,buffering_capacities_leaves_nitrogen,0.8,dimensionless,Buffering capacity for nitrogen in leaves
+buffering,buffering_capacities_leaves_phosphorus,0.6,dimensionless,Buffering capacity for phosphorus in leaves
+buffering,buffering_capacities_leaves_potassium,0.7,dimensionless,Buffering capacity for potassium in leaves
+buffering,buffering_capacities_stems_nitrogen,0.5,dimensionless,Buffering capacity for nitrogen in stems
+buffering,buffering_capacities_stems_phosphorus,0.4,dimensionless,Buffering capacity for phosphorus in stems
+buffering,buffering_capacities_stems_potassium,0.6,dimensionless,Buffering capacity for potassium in stems
+buffering,buffering_capacities_roots_nitrogen,0.6,dimensionless,Buffering capacity for nitrogen in roots
+buffering,buffering_capacities_roots_phosphorus,0.7,dimensionless,Buffering capacity for phosphorus in roots
+buffering,buffering_capacities_roots_potassium,0.8,dimensionless,Buffering capacity for potassium in roots
+
+# Storage Pool Sizes
+storage,storage_pool_sizes_leaves_nitrogen,0.15,g_g_dry_mass,Storage pool size for nitrogen in leaves
+storage,storage_pool_sizes_leaves_phosphorus,0.05,g_g_dry_mass,Storage pool size for phosphorus in leaves
+storage,storage_pool_sizes_leaves_potassium,0.10,g_g_dry_mass,Storage pool size for potassium in leaves
+storage,storage_pool_sizes_stems_nitrogen,0.10,g_g_dry_mass,Storage pool size for nitrogen in stems
+storage,storage_pool_sizes_stems_phosphorus,0.03,g_g_dry_mass,Storage pool size for phosphorus in stems
+storage,storage_pool_sizes_stems_potassium,0.08,g_g_dry_mass,Storage pool size for potassium in stems
+storage,storage_pool_sizes_roots_nitrogen,0.12,g_g_dry_mass,Storage pool size for nitrogen in roots
+storage,storage_pool_sizes_roots_phosphorus,0.06,g_g_dry_mass,Storage pool size for phosphorus in roots
+storage,storage_pool_sizes_roots_potassium,0.12,g_g_dry_mass,Storage pool size for potassium in roots
+
+# Redistribution Parameters
+redistribution,redistribution_thresholds_nitrogen,0.7,dimensionless,Redistribution threshold for nitrogen
+redistribution,redistribution_thresholds_phosphorus,0.8,dimensionless,Redistribution threshold for phosphorus
+redistribution,redistribution_thresholds_potassium,0.75,dimensionless,Redistribution threshold for potassium
+redistribution,redistribution_thresholds_calcium,0.6,dimensionless,Redistribution threshold for calcium
+redistribution,redistribution_thresholds_magnesium,0.65,dimensionless,Redistribution threshold for magnesium
+redistribution,redistribution_thresholds_sulfur,0.7,dimensionless,Redistribution threshold for sulfur
+redistribution,stress_redistribution_rates_nitrogen,0.3,g_g_day,Stress redistribution rate for nitrogen
+redistribution,stress_redistribution_rates_phosphorus,0.2,g_g_day,Stress redistribution rate for phosphorus
+redistribution,stress_redistribution_rates_potassium,0.25,g_g_day,Stress redistribution rate for potassium
+redistribution,stress_redistribution_rates_calcium,0.1,g_g_day,Stress redistribution rate for calcium
+redistribution,stress_redistribution_rates_magnesium,0.15,g_g_day,Stress redistribution rate for magnesium
+redistribution,stress_redistribution_rates_sulfur,0.2,g_g_day,Stress redistribution rate for sulfur
+
+# Sink Strength Coefficients
+sink_strength,sink_strength_coefficients_vegetative_leaves,0.6,dimensionless,Sink strength coefficient for leaves in vegetative stage
+sink_strength,sink_strength_coefficients_vegetative_stems,0.3,dimensionless,Sink strength coefficient for stems in vegetative stage
+sink_strength,sink_strength_coefficients_vegetative_roots,0.4,dimensionless,Sink strength coefficient for roots in vegetative stage
+sink_strength,sink_strength_coefficients_reproductive_leaves,0.4,dimensionless,Sink strength coefficient for leaves in reproductive stage
+sink_strength,sink_strength_coefficients_reproductive_stems,0.2,dimensionless,Sink strength coefficient for stems in reproductive stage
+sink_strength,sink_strength_coefficients_reproductive_roots,0.3,dimensionless,Sink strength coefficient for roots in reproductive stage
+sink_strength,sink_strength_coefficients_reproductive_reproductive,0.8,dimensionless,Sink strength coefficient for reproductive organs
+sink_strength,sink_strength_coefficients_senescence_leaves,0.1,dimensionless,Sink strength coefficient for leaves in senescence stage
+sink_strength,sink_strength_coefficients_senescence_stems,0.2,dimensionless,Sink strength coefficient for stems in senescence stage
+sink_strength,sink_strength_coefficients_senescence_roots,0.3,dimensionless,Sink strength coefficient for roots in senescence stage
+
+# Additional Nutrient Parameters
+nutrient_system,nutrient_mobility,highly_mobile,string,Nutrient mobility classification
+nutrient_system,transport_mechanism,bidirectional,string,Transport mechanism type
+nutrient_system,initial_organ_name,leaves,string,Initial organ name for nutrient pools
+nutrient_system,initial_nutrient_name,nitrogen,string,Initial nutrient name for nutrient pools
+
+# pH Buffer System Parameters
+ph_system,buffer_system,phosphate,string,pH buffer system type
+ph_system,initial_temperature,20.0,°C,Initial temperature for pH calculations
+
+# Leaf Development Parameters
+leaf_development,initial_leaf_stage,emerging,string,Initial leaf development stage
+leaf_development,initial_leaf_angle_distribution,planophile,string,Initial leaf angle distribution
+leaf_development,initial_ppfd_above_canopy,200.0,umol_m2_s,Initial PPFD above canopy
+leaf_development,initial_direct_beam_fraction,0.7,dimensionless,Initial direct beam fraction
+leaf_development,initial_diffuse_fraction,0.3,dimensionless,Initial diffuse fraction
+leaf_development,initial_solar_zenith_angle,30.0,degrees,Initial solar zenith angle
+leaf_development,initial_solar_azimuth_angle,180.0,degrees,Initial solar azimuth angle
+
+# Senescence Parameters
+senescence,initial_senescence_type,age_based,string,Initial senescence type
+senescence,initial_senescence_stage,healthy,string,Initial senescence stage
+
+# Root System Initial Parameters
+root_system,initial_total_root_length,10.0,cm,Initial total root length
+root_system,initial_total_root_surface_area,5.0,cm2,Initial total root surface area
+root_system,initial_total_root_biomass,0.005,g,Initial total root biomass
+root_system,initial_total_root_volume,2.0,cm3,Initial total root volume
+root_system,initial_root_length_density,5.0,cm_cm3,Initial root length density
+root_system,initial_root_surface_area_density,2.5,cm2_cm3,Initial root surface area density
+root_system,initial_specific_root_length,2000.0,cm_g,Initial specific root length
+root_system,initial_average_root_activity,1.0,dimensionless,Initial average root activity
+root_system,initial_fine_root_length,6.0,cm,Initial fine root length
+root_system,initial_medium_root_length,3.0,cm,Initial medium root length
+root_system,initial_coarse_root_length,1.0,cm,Initial coarse root length
+root_system,initial_fine_root_fraction,0.6,dimensionless,Initial fine root fraction
+root_system,initial_root_age_days,0,days,Initial root age in days
+root_system,initial_cumulative_growth,0.0,cm,Initial cumulative growth
+root_system,initial_total_nutrient_uptake,0.0,g,Initial total nutrient uptake
+root_system,initial_uptake_per_surface_area,0.0,g_cm2,Initial uptake per surface area
+root_system,initial_uptake_temperature_factor,1.0,dimensionless,Initial uptake temperature factor
+root_system,initial_uptake_flow_factor,1.0,dimensionless,Initial uptake flow factor
+root_system,initial_effective_root_surface_area,5.0,cm2,Initial effective root surface area
+root_system,initial_total_uptake_g_per_day,0.0,g_day,Initial total uptake per day
+root_system,initial_nitrogen_uptake_g_per_day,0.0,g_day,Initial nitrogen uptake per day
+
+# Model State Parameters
+model_state,initial_model_state,initialized,string,Initial model state
+
+# Initial Nutrient Concentrations
+nutrient_concentrations,initial_no3_conc,200.0,mg_L,Initial NO3 concentration
+nutrient_concentrations,initial_nh4_conc,50.0,mg_L,Initial NH4 concentration
+nutrient_concentrations,initial_po4_conc,50.0,mg_L,Initial PO4 concentration
+nutrient_concentrations,initial_k_conc,200.0,mg_L,Initial K concentration
+nutrient_concentrations,initial_ca_conc,150.0,mg_L,Initial Ca concentration
+nutrient_concentrations,initial_mg_conc,50.0,mg_L,Initial Mg concentration
+nutrient_concentrations,initial_s_conc,50.0,mg_L,Initial S concentration
+nutrient_concentrations,initial_fe_conc,5.0,mg_L,Initial Fe concentration
+nutrient_concentrations,initial_mn_conc,2.0,mg_L,Initial Mn concentration
+nutrient_concentrations,initial_zn_conc,0.5,mg_L,Initial Zn concentration
+nutrient_concentrations,initial_cu_conc,0.1,mg_L,Initial Cu concentration
+nutrient_concentrations,initial_b_conc,0.5,mg_L,Initial B concentration
+nutrient_concentrations,initial_mo_conc,0.05,mg_L,Initial Mo concentration
+nutrient_concentrations,initial_so4_conc,50.0,mg_L,Initial SO4 concentration
+
+# Simulation Parameters
+simulation,simulation_days,35,days,Number of days to simulate
+simulation,representative_hour,12,hours,Representative hour for simulation
+simulation,dt_hours,1.0,hours,Time step in hours
+simulation,ambient_co2,400.0,ppm,Ambient CO2 concentration
+simulation,photoperiod_hours,16,hours,Photoperiod hours per day
+
+# Thermal Requirements for Phenology Transitions
+thermal_requirements,GE_to_VE,25.0,degC-day,Thermal time from germination to emergence
+thermal_requirements,VE_to_V1,15.0,degC-day,Thermal time from emergence to first leaf
+thermal_requirements,V1_to_V2,12.0,degC-day,Thermal time from first to second leaf
+thermal_requirements,V2_to_V3,12.0,degC-day,Thermal time from second to third leaf
+thermal_requirements,V3_to_V4,12.0,degC-day,Thermal time from third to fourth leaf
+thermal_requirements,V4_to_V5,12.0,degC-day,Thermal time from fourth to fifth leaf
+thermal_requirements,V5_to_V6,12.0,degC-day,Thermal time from fifth to sixth leaf
+thermal_requirements,V6_to_V7,12.0,degC-day,Thermal time from sixth to seventh leaf
+thermal_requirements,V7_to_V8,12.0,degC-day,Thermal time from seventh to eighth leaf
+thermal_requirements,V8_to_V9,12.0,degC-day,Thermal time from eighth to ninth leaf
+thermal_requirements,V9_to_V10,12.0,degC-day,Thermal time from ninth to tenth leaf
+thermal_requirements,V10_to_V11+,12.0,degC-day,Thermal time from tenth leaf to mature vegetative
+thermal_requirements,V11+_to_HI,50.0,degC-day,Thermal time from mature vegetative to head initiation
+thermal_requirements,HI_to_HD,30.0,degC-day,Thermal time from head initiation to head development
+thermal_requirements,HD_to_HM,25.0,degC-day,Thermal time from head development to harvest maturity
+thermal_requirements,HM_to_BI,40.0,degC-day,Thermal time from harvest maturity to bolting initiation
+thermal_requirements,BI_to_FL,20.0,degC-day,Thermal time from bolting initiation to flowering
+thermal_requirements,FL_to_AN,15.0,degC-day,Thermal time from flowering to anthesis
+thermal_requirements,AN_to_SD,25.0,degC-day,Thermal time from anthesis to seed development
+thermal_requirements,SD_to_PM,30.0,degC-day,Thermal time from seed development to physiological maturity
+
+# Initial Nutrient Uptake Parameters
+nutrient_uptake,initial_no3_uptake,0.5,mg_per_day,Initial NO3 uptake rate
+nutrient_uptake,initial_nh4_uptake,0.3,mg_per_day,Initial NH4 uptake rate
+nutrient_uptake,initial_po4_uptake,0.2,mg_per_day,Initial PO4 uptake rate
+nutrient_uptake,initial_k_uptake,1.0,mg_per_day,Initial K uptake rate
+nutrient_uptake,initial_ca_uptake,0.8,mg_per_day,Initial Ca uptake rate
+nutrient_uptake,initial_mg_uptake,0.4,mg_per_day,Initial Mg uptake rate
+nutrient_uptake,initial_s_uptake,0.3,mg_per_day,Initial S uptake rate
+nutrient_uptake,initial_fe_uptake,0.05,mg_per_day,Initial Fe uptake rate
+nutrient_uptake,initial_mn_uptake,0.02,mg_per_day,Initial Mn uptake rate
+nutrient_uptake,initial_zn_uptake,0.01,mg_per_day,Initial Zn uptake rate
+nutrient_uptake,initial_cu_uptake,0.005,mg_per_day,Initial Cu uptake rate
+nutrient_uptake,initial_b_uptake,0.01,mg_per_day,Initial B uptake rate
+nutrient_uptake,initial_mo_uptake,0.002,mg_per_day,Initial Mo uptake rate
+
+# Additional Initial Nutrient Concentration Parameters
+nutrient_concentrations,initial_p_po4_conc,30.0,mg_L,Initial P-PO4 concentration
+
+# Initial System Parameters
+system,initial_ec,1.2,mS_cm,Initial electrical conductivity
+
+# Light and PAR Parameters
+light,solar_to_par_conversion,0.47,fraction,Solar radiation to PAR conversion factor
+
+# EC and Nutrient Parameters
+nutrient,ec_factor,1.0,factor,EC factor for nutrient calculations
+
+# Canopy and Light Parameters
+canopy,sunlit_fraction,0.8,fraction,Sunlit fraction of canopy
+
+# Tissue Nitrogen Content Parameters
+tissue,leaf_nitrogen_content,4.5,percent,Nitrogen content in leaves
+tissue,stem_nitrogen_content,2.5,percent,Nitrogen content in stems
+tissue,root_nitrogen_content,3.0,percent,Nitrogen content in roots
+
+# Growth Parameters
+growth,new_growth_fraction,0.8,fraction,Fraction of new growth
+
+# Protein and Carbohydrate Fractions
+biomass,growth_proteins_fraction,0.25,fraction,Protein fraction in new growth
+biomass,growth_carbohydrates_fraction,0.60,fraction,Carbohydrate fraction in new growth
+biomass,growth_lipids_fraction,0.05,fraction,Lipid fraction in new growth
+biomass,growth_minerals_fraction,0.10,fraction,Mineral fraction in new growth
+
+# Root Parameters
+root,root_specific_area,200.0,cm2_g,Specific root surface area
+
+# System Volume Parameters
+system,tank_volume_L,100.0,L,Nutrient solution tank volume
+
+# Plant Count Parameters
+system,plant_count,12,count,Number of plants in the system
+
+# EC Parameters
+nutrient,optimal_ec,1.2,mS_cm,Optimal electrical conductivity
+
+# Nutrient Demand Parameters
+demand,leaf_n_demand,0.05,mg_per_day,Leaf nitrogen demand
+demand,leaf_p_demand,0.02,mg_per_day,Leaf phosphorus demand
+demand,leaf_k_demand,0.08,mg_per_day,Leaf potassium demand
+demand,stem_n_demand,0.03,mg_per_day,Stem nitrogen demand
+demand,stem_p_demand,0.01,mg_per_day,Stem phosphorus demand
+demand,stem_k_demand,0.05,mg_per_day,Stem potassium demand
+demand,root_n_demand,0.02,mg_per_day,Root nitrogen demand
+demand,root_p_demand,0.01,mg_per_day,Root phosphorus demand
+demand,root_k_demand,0.03,mg_per_day,Root potassium demand
+
+# Transport Efficiency Parameters
+transport,n_transport_efficiency,0.8,fraction,Nitrogen transport efficiency
+transport,p_transport_efficiency,0.6,fraction,Phosphorus transport efficiency
+transport,k_transport_efficiency,0.7,fraction,Potassium transport efficiency
+
+# Stress Parameters
+stress,stress_threshold,0.5,fraction,Stress threshold for limiting stress types
+
+# Leaf Development Parameters
+leaf,new_leaf_cohort_interval,5,days,Interval for creating new leaf cohorts
+leaf,max_leaf_area,0.1,m2,Maximum leaf area per leaf
+
+# Solar and Light Parameters
+solar,solar_angle,45,degrees,Solar angle for canopy calculations
+light,diffuse_fraction,0.3,fraction,Diffuse light fraction
