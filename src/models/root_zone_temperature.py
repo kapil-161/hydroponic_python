@@ -354,7 +354,7 @@ class RootZoneTemperatureModel:
             self._previous_rzt = solution_temp
 
         # Exponential approach to target with time constant
-        response_rate = self.params.base_factor_constant - math.exp(-dt_hours / self.params.thermal_response_time)
+        response_rate = 1 - math.exp(-dt_hours / self.params.thermal_response_time)
         new_rzt = self._previous_rzt + (target_rzt - self._previous_rzt) * response_rate
         self._previous_rzt = new_rzt
 

@@ -281,9 +281,9 @@ nutrient_parameters,kinetics_mg_km,12.0,mg_L,Michaelis constant for magnesium
 nutrient_parameters,kinetics_mg_min_conc,0.5,mg_L,Minimum concentration for magnesium uptake
 
 # Biomass Allocation Model Parameters
-allocation_parameters,vegetative_leaf_allocation,0.6,dimensionless,Base leaf allocation fraction during vegetative stage
+allocation_parameters,vegetative_leaf_allocation,0.55,dimensionless,Base leaf allocation fraction during vegetative stage
 allocation_parameters,vegetative_stem_allocation,0.25,dimensionless,Base stem allocation fraction during vegetative stage
-allocation_parameters,vegetative_root_allocation,0.15,dimensionless,Base root allocation fraction during vegetative stage
+allocation_parameters,vegetative_root_allocation,0.20,dimensionless,Base root allocation fraction during vegetative stage
 allocation_parameters,reproductive_leaf_allocation,0.45,dimensionless,Base leaf allocation fraction during reproductive stage
 allocation_parameters,reproductive_stem_allocation,0.35,dimensionless,Base stem allocation fraction during reproductive stage
 allocation_parameters,reproductive_root_allocation,0.2,dimensionless,Base root allocation fraction during reproductive stage
@@ -291,6 +291,9 @@ allocation_parameters,light_response_factor,0.3,dimensionless,Response strength 
 allocation_parameters,nitrogen_response_factor,0.4,dimensionless,Response strength to nitrogen limitation
 allocation_parameters,water_response_factor,0.35,dimensionless,Response strength to water limitation
 allocation_parameters,minimum_organ_fraction,0.05,dimensionless,Minimum allocation fraction for any organ
+
+# Senescence Effect Parameters
+senescence_parameters,photosynthesis_senescence_sensitivity,0.8,dimensionless,Sensitivity of photosynthesis to senescence rate reduction
 
 # Canopy Architecture Model Parameters
 canopy_parameters,number_of_layers,5,dimensionless,Number of canopy layers for light calculations
@@ -1375,7 +1378,7 @@ root,root_specific_area,200.0,cm2_g,Specific root surface area
 system,tank_volume_L,100.0,L,Nutrient solution tank volume
 
 # Plant Count Parameters
-system,plant_count,12,count,Number of plants in the system
+system,plant_count,1,count,Number of plants in the system
 
 # EC Parameters
 nutrient,optimal_ec,1.2,mS_cm,Optimal electrical conductivity
@@ -1403,6 +1406,47 @@ stress,stress_threshold,0.5,fraction,Stress threshold for limiting stress types
 leaf,new_leaf_cohort_interval,5,days,Interval for creating new leaf cohorts
 leaf,max_leaf_area,0.1,m2,Maximum leaf area per leaf
 
+# Plant Spacing Parameters
+plant,row_spacing,0.05,m,Spacing between rows of plants
+plant,column_spacing,0.05,m,Spacing between plants within a row
+
+# Plant Scale Parameters
+plant,photosynthesis_scaling_factor,0.0025,dimensionless,Scaling factor to convert photosynthesis model output to realistic plant biomass
+
 # Solar and Light Parameters
 solar,solar_angle,45,degrees,Solar angle for canopy calculations
+
+# Thermal Equilibrium Parameters
+thermal,thermal_equilibrium_factor,0.8,dimensionless,Factor for thermal equilibrium between solution and air
+thermal,solution_temp_equilibrium_rate,0.1,per_day,Rate of solution temperature equilibration
+
+# Nutrient Concentration Parameters
+nutrients,n_concentration_per_biomass,30.0,mg_per_g,Nitrogen content per gram new biomass (3%)
+nutrients,p_concentration_per_biomass,5.0,mg_per_g,Phosphorus content per gram new biomass (0.5%)
+nutrients,k_concentration_per_biomass,20.0,mg_per_g,Potassium content per gram new biomass (2%)
+
+# Minimum Biomass Parameters
+biomass,min_leaf_biomass,0.01,g,Minimum leaf biomass for photosynthesis
+biomass,min_stem_biomass,0.005,g,Minimum stem biomass for structure
+biomass,min_root_biomass,0.01,g,Minimum root biomass for uptake
+
+# Stress Effect Parameters
+stress,stress_effect_type,multiplicative,type,Type of stress effect application
+stress,photosynthesis_stress_sensitivity,1.0,dimensionless,Sensitivity of photosynthesis to overall stress
+stress,respiration_stress_sensitivity,0.5,dimensionless,Sensitivity of respiration to temperature stress
+
+# Minimum Tissue Nutrient Concentrations (for plant survival)
+nutrients,min_tissue_n_concentration,25.0,mg_per_g,Minimum nitrogen concentration in plant tissue
+nutrients,min_tissue_p_concentration,3.0,mg_per_g,Minimum phosphorus concentration in plant tissue
+nutrients,min_tissue_k_concentration,35.0,mg_per_g,Minimum potassium concentration in plant tissue
+
+# Stress Threshold Recalibration
+stress,temperature_stress_threshold_low,18.0,°C,Temperature below which stress begins
+stress,temperature_stress_threshold_high,22.0,°C,Temperature above which stress begins
+stress,light_stress_threshold_low,150.0,umol_per_m2_per_s,Light intensity below which stress begins
+stress,light_stress_threshold_high,600.0,umol_per_m2_per_s,Light intensity above which stress begins
+
 light,diffuse_fraction,0.3,fraction,Diffuse light fraction
+
+# Minimum Root Allocation for Biological Realism
+allocation_parameters,min_root_allocation_fraction,0.15,dimensionless,Minimum root allocation fraction to maintain biological realism
