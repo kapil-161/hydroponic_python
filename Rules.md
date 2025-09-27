@@ -14,7 +14,15 @@
 - dont add weather parameters again in masters parameter, weather daily parameter should be used
 -strictly follows the "no shortcuts, no defaults, all 
   from CSV" rule. Every critical parameter comes from the CSV files
-
+## for simulator
+- should use daily weather file for simulation
+- should use all model file and their functions 
+- all parameters value should be in csv file 
+- no default or hardcoded value in code file
+- no fallback to simple formula instead of model file formula 
+- no fallback to default value 
+-should raise error if anything doesnot work
+- should work according to plan
 ## Code Structure
 - no duplicate code and parameters
 - no two functions or codes for same calculation (like simple and complex)

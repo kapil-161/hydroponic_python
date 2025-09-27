@@ -63,6 +63,14 @@ class LeafParameters:
     minimum_active_leaf_area: float   # Minimum area for active leaf counting (from CSV)
     minimum_visible_leaf_area: float  # Minimum area for visible leaf counting (from CSV)
 
+    # V-stage and position thresholds (from CSV)
+    late_leaf_vstage_threshold: float       # V-stage threshold for late leaf classification
+    very_late_leaf_vstage_threshold: float  # V-stage threshold for very late leaf classification
+    early_leaf_position_threshold: float    # V-stage threshold for early leaf position classification
+    middle_leaf_position_threshold: float   # V-stage threshold for middle leaf position classification
+    early_position_scaling_factor: float    # Scaling factor for early leaf position calculation
+    late_position_scaling_factor: float     # Scaling factor for late leaf position calculation
+
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'LeafParameters':
         leaf_params = config['leaf_development']
@@ -70,11 +78,24 @@ class LeafParameters:
         phenology_params = config.get('phenology', {})
         nitrogen_params = config.get('nitrogen_parameters', {})
         
-        # Merge parameters from different sections
+        # Merge parameters from different sections, handling duplicates
         merged_params = leaf_params.copy()
-        merged_params['specific_leaf_area'] = canopy_params['specific_leaf_area']
-        merged_params['drought_threshold'] = phenology_params.get('drought_threshold', leaf_params['drought_threshold'])
-        merged_params['n_stress_threshold'] = nitrogen_params.get('n_stress_threshold', leaf_params['n_stress_threshold'])
+
+        # Use existing SLAVR from genetic_parameters (avoid duplicate parameters)
+        genetic_params = config.get('genetic_parameters', {})
+        merged_params['specific_leaf_area'] = genetic_params['SLAVR']
+
+        # Use existing thermal time parameters (avoid duplicate parameters)
+        thermal_params = config.get('thermal_time', {})
+        merged_params['min_temp'] = thermal_params['base_temp']
+        merged_params['opt_temp_min'] = thermal_params['optimal_temp_min']
+        merged_params['opt_temp_max'] = thermal_params['optimal_temp_max']
+        merged_params['max_temp'] = thermal_params['max_temp']
+
+        # Use leaf_development stress thresholds (specific to this model)
+        # Note: drought_threshold exists in phenology_parameters but has different meaning
+        merged_params['drought_threshold'] = leaf_params['drought_threshold']
+        merged_params['n_stress_threshold'] = leaf_params['n_stress_threshold']
         
         return cls(
             base_phyllochron=merged_params['base_phyllochron'],
@@ -103,7 +124,13 @@ class LeafParameters:
             senescence_threshold_age=merged_params['senescence_threshold_age'],
             senescence_rate_base=merged_params['senescence_rate_base'],
             minimum_active_leaf_area=merged_params['minimum_active_leaf_area'],
-            minimum_visible_leaf_area=merged_params['minimum_visible_leaf_area']
+            minimum_visible_leaf_area=merged_params['minimum_visible_leaf_area'],
+            late_leaf_vstage_threshold=merged_params['late_leaf_vstage_threshold'],
+            very_late_leaf_vstage_threshold=merged_params['very_late_leaf_vstage_threshold'],
+            early_leaf_position_threshold=merged_params['early_leaf_position_threshold'],
+            middle_leaf_position_threshold=merged_params['middle_leaf_position_threshold'],
+            early_position_scaling_factor=merged_params['early_position_scaling_factor'],
+            late_position_scaling_factor=merged_params['late_position_scaling_factor']
         )
 
 
@@ -132,6 +159,9 @@ class LeafDevelopmentModel:
         # Initialize with initial leaves
         for i in range(int(self.params.initial_leaf_number)):
             self._create_initial_leaf_cohort(i + 1)
+
+        # Set next cohort ID to be after all initial cohorts
+        self.next_cohort_id = int(self.params.initial_leaf_number) + 1
     
     def calculate_thermal_time(self, temperature_list: list) -> list:
         """Use consolidated thermal time calculation from core_utils."""
@@ -177,7 +207,7 @@ class LeafDevelopmentModel:
                 nitrogen_factor = max(self.params.minimum_visible_leaf_area, nitrogen_stress_list[i] / self.params.nitrogen_stress_threshold)
             
             # Temperature stress effect
-            temp_factor = max(self.params.minimum_active_leaf_area, 1.0 - (1.0 - temperature_stress_list[i]) * self.params.temperature_stress_sensitivity)
+            temp_factor = max(self.params.minimum_active_leaf_area, 1.0 - temperature_stress_list[i] * self.params.temperature_stress_sensitivity)
             
             water_factors.append(water_factor)
             nitrogen_factors.append(nitrogen_factor)
@@ -208,11 +238,11 @@ class LeafDevelopmentModel:
             # Check if enough thermal time accumulated for new leaf
             thermal_time_for_next_leaf = self.params.base_phyllochron
             
-            # Adjust phyllochron based on current development stage
-            if self.current_v_stage > 15:  # Later leaves appear more slowly
-                thermal_time_for_next_leaf *= self.params.late_leaf_phyllochron_factor
-            elif self.current_v_stage > 20:  # Very late leaves
+            # Adjust phyllochron based on current development stage using CSV parameters
+            if self.current_v_stage > self.params.very_late_leaf_vstage_threshold:  # Very late leaves (20+)
                 thermal_time_for_next_leaf *= self.params.very_late_leaf_phyllochron_factor
+            elif self.current_v_stage > self.params.late_leaf_vstage_threshold:  # Late leaves (15-20)
+                thermal_time_for_next_leaf *= self.params.late_leaf_phyllochron_factor
             
             new_leaf_appeared = False
             
@@ -239,12 +269,14 @@ class LeafDevelopmentModel:
         """
         position_factors = []
         for v_stage in v_stage_list:
-            if v_stage <= 5:
-                factor = self.params.early_leaf_size_factor + (v_stage - 1) * (1.0 - self.params.early_leaf_size_factor) / 4.0
-            elif v_stage <= 15:
-                factor = 1.0  # Full size middle leaves  
+            if v_stage <= self.params.early_leaf_position_threshold:
+                # Early leaves get progressively larger but stay below 1.0
+                normalized_position = (v_stage - 1) / self.params.early_position_scaling_factor
+                factor = self.params.early_leaf_size_factor + normalized_position * (0.95 - self.params.early_leaf_size_factor)
+            elif v_stage <= self.params.middle_leaf_position_threshold:
+                factor = 1.0  # Full size middle leaves
             else:
-                factor = max(self.params.late_leaf_size_factor, 1.0 - (v_stage - 15) * (1.0 - self.params.late_leaf_size_factor) / 10.0)
+                factor = max(self.params.late_leaf_size_factor, 1.0 - (v_stage - self.params.middle_leaf_position_threshold) * (1.0 - self.params.late_leaf_size_factor) / self.params.late_position_scaling_factor)
             position_factors.append(factor)
         return position_factors
     
@@ -393,13 +425,15 @@ def create_lettuce_leaf_development_model(system_config: Any) -> LeafDevelopment
     config = {
         'leaf_development': getattr(system_config, 'leaf_development', {}),
         'canopy_parameters': getattr(system_config, 'canopy_parameters', {}),
-        'phenology': getattr(system_config, 'phenology', {}),
-        'nitrogen_parameters': getattr(system_config, 'nitrogen_parameters', {})
+        'phenology': getattr(system_config, 'phenology_parameters', {}),  # Updated to match CSV
+        'nitrogen_parameters': getattr(system_config, 'nitrogen_parameters', {}),
+        'genetic_parameters': getattr(system_config, 'genetic_parameters', {}),
+        'thermal_time': getattr(system_config, 'thermal_time', {})
     }
 
     if not config['leaf_development']:
         raise ValueError("leaf_development section must be provided in CSV configuration")
-    
+
     if not config['canopy_parameters']:
         raise ValueError("canopy_parameters section must be provided in CSV configuration")
 

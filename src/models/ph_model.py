@@ -38,6 +38,13 @@ class PHParameters:
     iron_solubility_data: Dict[str, float]
     calcium_phosphate_ksp: float
     magnesium_phosphate_ksp: float
+    co2_molecular_weight: float
+    n_molecular_weight: float
+    no3_molecular_weight: float
+    nh4_molecular_weight: float
+    p_molecular_weight: float
+    po4_molecular_weight: float
+    unit_conversion_factor: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'PHParameters':
@@ -50,7 +57,10 @@ class PHParameters:
             'ec_buffer_factor', 'proportional_control_factor', 'hours_per_day',
             'current_ph', 'total_alkalinity', 'carbonate_conc', 'phosphate_total',
             'ionic_strength', 'ph_min_limit', 'ph_max_limit',
-            'calcium_phosphate_ksp', 'magnesium_phosphate_ksp'
+            'calcium_phosphate_ksp', 'magnesium_phosphate_ksp',
+            'co2_molecular_weight', 'nitrogen_atomic_weight', 'no3_molecular_weight',
+            'nh4_molecular_weight', 'phosphorus_atomic_weight', 'po4_molecular_weight',
+            'unit_conversion_factor'
         ]
         for param in required_params:
             if param not in config:
@@ -113,7 +123,14 @@ class PHParameters:
             phosphate_solubility_data=config['phosphate_solubility_data'],
             iron_solubility_data=config['iron_solubility_data'],
             calcium_phosphate_ksp=float(config['calcium_phosphate_ksp']),
-            magnesium_phosphate_ksp=float(config['magnesium_phosphate_ksp'])
+            magnesium_phosphate_ksp=float(config['magnesium_phosphate_ksp']),
+            co2_molecular_weight=float(config['co2_molecular_weight']),
+            n_molecular_weight=float(config['nitrogen_atomic_weight']),  # Map from CSV name
+            no3_molecular_weight=float(config['no3_molecular_weight']),
+            nh4_molecular_weight=float(config['nh4_molecular_weight']),
+            p_molecular_weight=float(config['phosphorus_atomic_weight']),  # Map from CSV name
+            po4_molecular_weight=float(config['po4_molecular_weight']),
+            unit_conversion_factor=float(config['unit_conversion_factor'])
         )
 
 @dataclass
@@ -178,8 +195,8 @@ class HydroponicPHModel:
             raise ValueError("Temperature must be provided")
 
         pka_corrected = self.params.carbonate_buffer_pka - (temperature - 25.0) * self.params.temperature_correction_factor
-        co2_molar = (free_co2 / 44.0) / 1000.0
-        hco3_molar = (total_carbonate / 1000.0)
+        co2_molar = (free_co2 / self.params.co2_molecular_weight) / self.params.unit_conversion_factor
+        hco3_molar = (total_carbonate / self.params.unit_conversion_factor)
         ph = pka_corrected + math.log10(hco3_molar / co2_molar)
         return max(self.params.ph_min_limit, min(self.params.ph_max_limit, ph))
 
@@ -212,15 +229,15 @@ class HydroponicPHModel:
         ph_change = 0.0
         no3_uptake_mg = nutrient_uptake['NO3']
         if no3_uptake_mg > 0:
-            n_uptake_mg = no3_uptake_mg * (14.0 / 62.0)
+            n_uptake_mg = no3_uptake_mg * (self.params.n_molecular_weight / self.params.no3_molecular_weight)
             ph_change -= n_uptake_mg * self.params.nitrate_acidification_factor
         nh4_uptake_mg = nutrient_uptake['NH4']
         if nh4_uptake_mg > 0:
-            n_uptake_mg = nh4_uptake_mg * (14.0 / 18.0)
+            n_uptake_mg = nh4_uptake_mg * (self.params.n_molecular_weight / self.params.nh4_molecular_weight)
             ph_change += n_uptake_mg * self.params.ammonium_alkalinization_factor
         po4_uptake_mg = nutrient_uptake['PO4']
         if po4_uptake_mg > 0:
-            p_uptake_mg = po4_uptake_mg * (31.0 / 95.0)
+            p_uptake_mg = po4_uptake_mg * (self.params.p_molecular_weight / self.params.po4_molecular_weight)
             ph_change -= p_uptake_mg * self.params.phosphate_acidification_factor
         if self.ph_state.buffer_capacity <= 0:
             raise ValueError("Buffer capacity must be positive")
@@ -326,7 +343,7 @@ class HydroponicPHModel:
         ph_before_control = current_ph + uptake_ph_change + natural_drift
         controlled_ph, acid_dosed, base_dosed = self.simulate_ph_control_system(ph_before_control, time_hours)
         available_nutrients = self.calculate_ph_dependent_solubility(controlled_ph, nutrient_concentrations)
-        total_phosphate = available_nutrients.get('P-PO4', 0.0) * (31.0 / 95.0)
+        total_phosphate = available_nutrients.get('P-PO4', 0.0) * (self.params.p_molecular_weight / self.params.po4_molecular_weight)
         phosphate_species = self.calculate_phosphate_speciation(controlled_ph, total_phosphate)
 
         self.ph_state.current_ph = controlled_ph
@@ -353,10 +370,45 @@ class HydroponicPHModel:
 def create_lettuce_ph_model(system_config: Any) -> 'HydroponicPHModel':
     if system_config is None:
         raise ValueError("System configuration must be provided")
-    config = getattr(system_config, 'nutrient_parameters', None)
-    if config is None:
-        raise ValueError("nutrient_parameters section must be provided in configuration")
-    parameters = PHParameters.from_config(config)
+
+    # Get pH parameters
+    ph_config = getattr(system_config, 'ph_parameters', None)
+    if ph_config is None:
+        raise ValueError("ph_parameters section must be provided in configuration")
+
+    # Get additional parameters from other sections to avoid duplicates
+    photosynthesis_config = getattr(system_config, 'photosynthesis_parameters', {})
+
+    # Create merged config using existing parameters where available
+    merged_config = dict(ph_config)
+
+    # Use existing hours_per_day from photosynthesis_parameters instead of duplicate
+    if 'hours_per_day' in photosynthesis_config:
+        merged_config['hours_per_day'] = photosynthesis_config['hours_per_day']
+    elif 'hours_per_day' not in merged_config:
+        # Fallback if neither exists
+        merged_config['hours_per_day'] = 24.0
+
+    # Reconstruct nested dictionaries for solubility data
+    phosphate_solubility_data = {}
+    iron_solubility_data = {}
+
+    # Extract phosphate solubility data
+    for key, value in merged_config.items():
+        if key.startswith('phosphate_solubility_ph_'):
+            ph_value = key.replace('phosphate_solubility_ph_', '').replace('_', '.')
+            phosphate_solubility_data[ph_value] = float(value)
+
+    # Extract iron solubility data
+    for key, value in merged_config.items():
+        if key.startswith('iron_solubility_ph_'):
+            ph_value = key.replace('iron_solubility_ph_', '').replace('_', '.')
+            iron_solubility_data[ph_value] = float(value)
+
+    merged_config['phosphate_solubility_data'] = phosphate_solubility_data
+    merged_config['iron_solubility_data'] = iron_solubility_data
+
+    parameters = PHParameters.from_config(merged_config)
     return HydroponicPHModel(parameters)
 
 """

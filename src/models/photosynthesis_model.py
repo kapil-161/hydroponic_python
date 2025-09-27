@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Tuple
 from dataclasses import dataclass
 import math
 
@@ -115,11 +115,11 @@ class PhotosynthesisModel:
 
     def _calculate_instantaneous_assimilation(self, par_umol_m2_s: float, co2_ppm: float,
                                             temp_c: float, humidity: float, lai: float,
-                                            ec_factor: float, config: Dict[str, Any]) -> float:
+                                            ec_factor: float, config: Dict[str, Any]) -> Tuple[float, float]:
         if any(x is None for x in [par_umol_m2_s, co2_ppm, temp_c, humidity, lai, ec_factor, config]):
             raise ValueError("All inputs (par, co2, temp, humidity, lai, ec_factor, config) must be provided")
         if par_umol_m2_s < self.params.min_par_threshold:
-            return 0.0
+            return 0.0, 0.0
         if lai < 0 or ec_factor < 0 or humidity < 0 or humidity > 100:
             raise ValueError("Invalid input: lai, ec_factor must be non-negative, humidity must be 0-100")
         if 'optimal_temp_min' not in config or 'optimal_temp_max' not in config:

@@ -45,6 +45,24 @@ class TemperatureStressParameters:
     recovery_rate_cold: float
     stress_memory_duration: int
     memory_effect_strength: float
+    # Additional hardcoded parameters extracted from code
+    mild_stress_level: float
+    moderate_stress_level: float
+    mild_cold_stress_level: float
+    moderate_cold_stress_level: float
+    severe_cold_stress_level: float
+    frost_base_stress_level: float
+    frost_additional_stress: float
+    heat_acclimation_reduction: float
+    cold_acclimation_reduction: float
+    photosynthesis_weight: float
+    growth_weight: float
+    development_weight: float
+    respiration_weight: float
+    heat_damage_rate: float
+    cold_damage_rate: float
+    frost_recovery_multiplier: float
+    damage_factor_multiplier: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> "TemperatureStressParameters":
@@ -56,7 +74,11 @@ class TemperatureStressParameters:
             'development_heat_sensitivity', 'development_cold_sensitivity', 'acclimation_rate',
             'max_acclimation_days', 'acclimation_decay_rate', 'heat_damage_threshold', 'cold_damage_threshold',
             'frost_damage_rate', 'recovery_rate_heat', 'recovery_rate_cold', 'stress_memory_duration',
-            'memory_effect_strength'
+            'memory_effect_strength', 'mild_stress_level', 'moderate_stress_level', 'mild_cold_stress_level',
+            'moderate_cold_stress_level', 'severe_cold_stress_level', 'frost_base_stress_level',
+            'frost_additional_stress', 'heat_acclimation_reduction', 'cold_acclimation_reduction',
+            'photosynthesis_weight', 'growth_weight', 'development_weight', 'respiration_weight',
+            'heat_damage_rate', 'cold_damage_rate', 'frost_recovery_multiplier', 'damage_factor_multiplier'
         ]
         for param in required_params:
             if param not in config:
@@ -87,7 +109,24 @@ class TemperatureStressParameters:
             recovery_rate_heat=float(config['recovery_rate_heat']),
             recovery_rate_cold=float(config['recovery_rate_cold']),
             stress_memory_duration=int(config['stress_memory_duration']),
-            memory_effect_strength=float(config['memory_effect_strength'])
+            memory_effect_strength=float(config['memory_effect_strength']),
+            mild_stress_level=float(config['mild_stress_level']),
+            moderate_stress_level=float(config['moderate_stress_level']),
+            mild_cold_stress_level=float(config['mild_cold_stress_level']),
+            moderate_cold_stress_level=float(config['moderate_cold_stress_level']),
+            severe_cold_stress_level=float(config['severe_cold_stress_level']),
+            frost_base_stress_level=float(config['frost_base_stress_level']),
+            frost_additional_stress=float(config['frost_additional_stress']),
+            heat_acclimation_reduction=float(config['heat_acclimation_reduction']),
+            cold_acclimation_reduction=float(config['cold_acclimation_reduction']),
+            photosynthesis_weight=float(config['photosynthesis_weight']),
+            growth_weight=float(config['growth_weight']),
+            development_weight=float(config['development_weight']),
+            respiration_weight=float(config['respiration_weight']),
+            heat_damage_rate=float(config['heat_damage_rate']),
+            cold_damage_rate=float(config['cold_damage_rate']),
+            frost_recovery_multiplier=float(config['frost_recovery_multiplier']),
+            damage_factor_multiplier=float(config['damage_factor_multiplier'])
         )
 
 @dataclass
@@ -153,29 +192,29 @@ class TemperatureStressModel:
             if temperature <= self.params.heat_threshold_mild:
                 excess_temp = temperature - self.params.optimal_temp_max
                 mild_range = self.params.heat_threshold_mild - self.params.optimal_temp_max
-                return 0.3 * (excess_temp / mild_range) if mild_range else 0.3
+                return self.params.mild_stress_level * (excess_temp / mild_range) if mild_range else self.params.mild_stress_level
             elif temperature <= self.params.heat_threshold_severe:
                 excess_temp = temperature - self.params.heat_threshold_mild
                 moderate_range = self.params.heat_threshold_severe - self.params.heat_threshold_mild
-                return 0.3 + 0.4 * (excess_temp / moderate_range) if moderate_range else 0.7
+                return self.params.mild_stress_level + self.params.moderate_stress_level * (excess_temp / moderate_range) if moderate_range else (self.params.mild_stress_level + self.params.moderate_stress_level)
             else:
                 excess_temp = temperature - self.params.heat_threshold_severe
                 severe_range = self.params.heat_lethal_temperature - self.params.heat_threshold_severe
-                return 0.7 + 0.3 * min(1.0, excess_temp / severe_range) if severe_range else 1.0
+                return (self.params.mild_stress_level + self.params.moderate_stress_level) + self.params.severe_cold_stress_level * min(1.0, excess_temp / severe_range) if severe_range else 1.0
         else:
             if temperature >= self.params.cold_threshold_mild:
                 temp_deficit = self.params.optimal_temp_min - temperature
                 mild_range = self.params.optimal_temp_min - self.params.cold_threshold_mild
-                return 0.2 * (temp_deficit / mild_range) if mild_range else 0.2
+                return self.params.mild_cold_stress_level * (temp_deficit / mild_range) if mild_range else self.params.mild_cold_stress_level
             elif temperature >= self.params.cold_threshold_severe:
                 temp_deficit = self.params.cold_threshold_mild - temperature
                 moderate_range = self.params.cold_threshold_mild - self.params.cold_threshold_severe
-                return 0.2 + 0.3 * (temp_deficit / moderate_range) if moderate_range else 0.5
+                return self.params.mild_cold_stress_level + self.params.moderate_cold_stress_level * (temp_deficit / moderate_range) if moderate_range else (self.params.mild_cold_stress_level + self.params.moderate_cold_stress_level)
             elif temperature >= self.params.frost_threshold:
                 temp_deficit = self.params.cold_threshold_severe - temperature
                 severe_range = self.params.cold_threshold_severe - self.params.frost_threshold
-                return 0.5 + 0.3 * (temp_deficit / severe_range) if severe_range else 0.8
-            return 0.8 + 0.2 * min(1.0, abs(temperature - self.params.frost_threshold) / 5.0)
+                return (self.params.mild_cold_stress_level + self.params.moderate_cold_stress_level) + self.params.severe_cold_stress_level * (temp_deficit / severe_range) if severe_range else self.params.frost_base_stress_level
+            return self.params.frost_base_stress_level + self.params.frost_additional_stress * min(1.0, abs(temperature - self.params.frost_threshold) / 5.0)
 
     def update_acclimation(self, temperature: float, stress_type: TemperatureStressType):
         if not isinstance(temperature, (int, float)):
@@ -203,9 +242,9 @@ class TemperatureStressModel:
         if not 0 <= base_stress <= 1:
             raise ValueError("Base stress must be between 0 and 1")
         if stress_type == TemperatureStressType.HEAT:
-            return base_stress * (1.0 - self.acclimation.heat_acclimation * 0.4)
+            return base_stress * (1.0 - self.acclimation.heat_acclimation * self.params.heat_acclimation_reduction)
         elif stress_type in (TemperatureStressType.COLD, TemperatureStressType.FROST):
-            return base_stress * (1.0 - self.acclimation.cold_acclimation * 0.5)
+            return base_stress * (1.0 - self.acclimation.cold_acclimation * self.params.cold_acclimation_reduction)
         return base_stress
 
     def calculate_memory_effects(self) -> float:
@@ -237,7 +276,10 @@ class TemperatureStressModel:
             f.growth = max(0.0, 1.0 - stress_level * self.params.growth_cold_sensitivity)
             f.development = max(0.0, 1.0 - stress_level * self.params.development_cold_sensitivity)
         f.overall = (
-            f.photosynthesis * 0.35 + f.growth * 0.35 + f.development * 0.20 + f.respiration * 0.10
+            f.photosynthesis * self.params.photosynthesis_weight +
+            f.growth * self.params.growth_weight +
+            f.development * self.params.development_weight +
+            f.respiration * self.params.respiration_weight
         )
         return f
 
@@ -248,14 +290,14 @@ class TemperatureStressModel:
             raise ValueError("Duration hours must be positive")
         time_scale = duration_hours / 24.0
         if stress_type == TemperatureStressType.HEAT and stress_level > self.params.heat_damage_threshold:
-            damage_rate = (stress_level - self.params.heat_damage_threshold) * 0.01 * time_scale
+            damage_rate = (stress_level - self.params.heat_damage_threshold) * self.params.heat_damage_rate * time_scale
             self.damage.heat_damage = min(1.0, self.damage.heat_damage + damage_rate)
             self.damage.damage_recovery_rate = self.params.recovery_rate_heat
         elif stress_type in (TemperatureStressType.COLD, TemperatureStressType.FROST):
             if stress_type == TemperatureStressType.FROST:
                 self.damage.frost_damage = min(1.0, self.damage.frost_damage + self.params.frost_damage_rate * time_scale)
             if stress_level > self.params.cold_damage_threshold:
-                damage_rate = (stress_level - self.params.cold_damage_threshold) * 0.008 * time_scale
+                damage_rate = (stress_level - self.params.cold_damage_threshold) * self.params.cold_damage_rate * time_scale
                 self.damage.cold_damage = min(1.0, self.damage.cold_damage + damage_rate)
                 self.damage.damage_recovery_rate = self.params.recovery_rate_cold
         else:
@@ -266,7 +308,7 @@ class TemperatureStressModel:
                 recovery_amount = self.params.recovery_rate_cold * time_scale
                 self.damage.cold_damage = max(0.0, self.damage.cold_damage - recovery_amount)
             if self.damage.frost_damage > 0:
-                recovery_amount = self.params.recovery_rate_cold * 0.5 * time_scale
+                recovery_amount = self.params.recovery_rate_cold * self.params.frost_recovery_multiplier * time_scale
                 self.damage.frost_damage = max(0.0, self.damage.frost_damage - recovery_amount)
 
     def daily_update(self, temperature: float, duration_hours: float = 24.0) -> TemperatureStressResponse:
@@ -287,7 +329,7 @@ class TemperatureStressModel:
         process_factors = self.calculate_process_stress_factors(final_stress, stress_type)
         total_damage = max(self.damage.heat_damage, self.damage.cold_damage, self.damage.frost_damage)
         if total_damage > 0:
-            damage_factor = 1.0 - total_damage * 0.5
+            damage_factor = 1.0 - total_damage * self.params.damage_factor_multiplier
             process_factors.photosynthesis *= damage_factor
             process_factors.growth *= damage_factor
             process_factors.development *= damage_factor
@@ -376,6 +418,15 @@ class IntegratedStressParameters:
     acclimation_memory: Dict[str, float]
     stress_onset_thresholds: Dict[str, float]
     damage_thresholds: Dict[str, float]
+    # Additional calculation constants
+    chronic_stress_weight: float
+    acute_stress_weight: float
+    acclimation_benefit_factor: float
+    interaction_penalty_factor: float
+    recovery_bonus_factor: float
+    damage_penalty_factor: float
+    memory_divisor: float
+    chronic_factor_multiplier: float
 
     def __post_init__(self):
         if not all(0 <= w <= 1 for w in self.stress_weights.values()):
@@ -447,16 +498,24 @@ class IntegratedStressParameters:
             stress_interactions=stress_interactions,
             process_sensitivity=process_sensitivity,
             stress_memory_duration=memory_duration,
-            cumulative_threshold={k: 0.8 for k in stress_weights.keys()},
-            damage_accumulation_rate={k: 0.01 for k in stress_weights.keys()},
+            cumulative_threshold={k: float(config_dict.get('cumulative_threshold_default', 0.8)) for k in stress_weights.keys()},
+            damage_accumulation_rate={k: float(config_dict.get('damage_accumulation_default', 0.01)) for k in stress_weights.keys()},
             recovery_rates=recovery_rates,
-            recovery_thresholds={k: 0.8 for k in stress_weights.keys()},
-            full_recovery_time={k: 7.0 for k in stress_weights.keys()},
+            recovery_thresholds={k: float(config_dict.get('recovery_threshold_default', 0.8)) for k in stress_weights.keys()},
+            full_recovery_time={k: float(config_dict.get('full_recovery_time_default', 7.0)) for k in stress_weights.keys()},
             acclimation_rates=acclimation_rates,
-            acclimation_capacity={k: 0.3 for k in stress_weights.keys()},
-            acclimation_memory={k: 7.0 for k in stress_weights.keys()},
+            acclimation_capacity={k: float(config_dict.get('acclimation_capacity_default', 0.3)) for k in stress_weights.keys()},
+            acclimation_memory={k: float(config_dict.get('acclimation_memory_default', 7.0)) for k in stress_weights.keys()},
             stress_onset_thresholds=onset_thresholds,
-            damage_thresholds=damage_thresholds
+            damage_thresholds=damage_thresholds,
+            chronic_stress_weight=float(config_dict.get('chronic_stress_weight', 0.8)),
+            acute_stress_weight=float(config_dict.get('acute_stress_weight', 0.2)),
+            acclimation_benefit_factor=float(config_dict.get('acclimation_benefit_factor', 0.3)),
+            interaction_penalty_factor=float(config_dict.get('interaction_penalty_factor', 0.1)),
+            recovery_bonus_factor=float(config_dict.get('recovery_bonus_factor', 0.05)),
+            damage_penalty_factor=float(config_dict.get('damage_penalty_factor', 0.2)),
+            memory_divisor=float(config_dict.get('memory_divisor', 3.0)),
+            chronic_factor_multiplier=float(config_dict.get('chronic_factor_multiplier', 1.5))
         )
 
 @dataclass
@@ -524,9 +583,9 @@ class IntegratedStressModel:
         recent = stress_state.stress_history[-int(memory_d):]
         if not recent:
             return 1.0
-        weights = np.exp(-np.arange(len(recent)) / (memory_d / 3))[::-1]
+        weights = np.exp(-np.arange(len(recent)) / (memory_d / self.params.memory_divisor))[::-1]
         weighted = np.average(recent, weights=weights)
-        chronic_factor = 1.0 - (1.0 - weighted) * 1.5 if stress_state.days_under_stress > memory_d else weighted
+        chronic_factor = 1.0 - (1.0 - weighted) * self.params.chronic_factor_multiplier if stress_state.days_under_stress > memory_d else weighted
         return max(0.1, min(1.0, chronic_factor))
 
     def calculate_acclimation_effect(self, stress_state: StressState) -> float:
@@ -584,20 +643,20 @@ class IntegratedStressModel:
             sensitivity = sensitivities.get(st)
             if sensitivity is None:
                 raise ValueError(f"Sensitivity for {st} in process {process_type} must be provided")
-            combined = min(state.acute_stress, state.chronic_stress * 0.8 + state.acute_stress * 0.2)
+            combined = min(state.acute_stress, state.chronic_stress * self.params.chronic_stress_weight + state.acute_stress * self.params.acute_stress_weight)
             proc_stress = 1.0 - ((1.0 - combined) * sensitivity)
             indiv[st] = proc_stress
             if proc_stress < 0.9:
                 active[st] = proc_stress
-            accl_benefits[st] = state.acclimation_level * 0.3
+            accl_benefits[st] = state.acclimation_level * self.params.acclimation_benefit_factor
             recov[st] = state.recovery_progress
             dmg[st] = self.cumulative_damage.get(st, 0.0)
         interactions = self.calculate_stress_interactions(active)
         base = min(indiv.values()) if indiv else 1.0
-        interaction_penalty = sum(interactions.values()) * 0.1
-        accl_bonus = sum(accl_benefits.values()) * 0.1
-        recov_bonus = sum(recov.values()) * 0.05
-        dmg_penalty = sum(dmg.values()) * 0.2
+        interaction_penalty = sum(interactions.values()) * self.params.interaction_penalty_factor
+        accl_bonus = sum(accl_benefits.values()) * self.params.acclimation_benefit_factor
+        recov_bonus = sum(recov.values()) * self.params.recovery_bonus_factor
+        dmg_penalty = sum(dmg.values()) * self.params.damage_penalty_factor
         combined_factor = max(0.1, min(1.0, base - interaction_penalty + accl_bonus + recov_bonus - dmg_penalty))
         limiting = [s for s, val in indiv.items() if val < 0.8]
         limiting.sort(key=lambda x: indiv[x])

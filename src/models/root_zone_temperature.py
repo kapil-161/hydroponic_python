@@ -36,6 +36,11 @@ class RZTParameters:
     ambient_exchange_factor: float  # Factor for ambient temperature exchange
     thermal_response_time: float  # Thermal response time constant (hours)
     heat_transfer_coefficient: float  # Heat transfer coefficient for calculations
+    base_factor_constant: float  # Base constant for factor calculations
+    thermal_stress_normalizer: float  # Thermal stress normalization factor
+    diurnal_cycle_shift: int  # Hour shift for diurnal temperature cycle
+    diurnal_cycle_period: int  # Period of diurnal temperature cycle
+    daily_representative_hour: int  # Representative hour for daily calculations
 
     def __post_init__(self):
         if any(x is None for x in [
@@ -51,7 +56,8 @@ class RZTParameters:
             self.min_root_metabolism_factor, self.max_root_metabolism_factor,
             self.thermal_mass_factor, self.ambient_temp_amplitude, self.root_respiration_heat,
             self.pump_heat_generation, self.ambient_exchange_factor, self.thermal_response_time,
-            self.heat_transfer_coefficient
+            self.heat_transfer_coefficient, self.base_factor_constant, self.thermal_stress_normalizer,
+            self.diurnal_cycle_shift, self.diurnal_cycle_period, self.daily_representative_hour
         ]):
             raise ValueError("All RZTParameters fields must be provided")
         if self.min_effective_rzt >= self.max_effective_rzt:
@@ -88,7 +94,8 @@ class RZTParameters:
             'min_root_metabolism_factor', 'max_root_metabolism_factor',
             'thermal_mass_factor', 'ambient_temp_amplitude', 'root_respiration_heat',
             'pump_heat_generation', 'ambient_exchange_factor', 'thermal_response_time',
-            'heat_transfer_coefficient'
+            'heat_transfer_coefficient', 'base_factor_constant', 'thermal_stress_normalizer',
+            'diurnal_cycle_shift', 'diurnal_cycle_period', 'daily_representative_hour'
         ]
         for param in required_params:
             if param not in config:
@@ -124,7 +131,12 @@ class RZTParameters:
             pump_heat_generation=float(config['pump_heat_generation']),
             ambient_exchange_factor=float(config['ambient_exchange_factor']),
             thermal_response_time=float(config['thermal_response_time']),
-            heat_transfer_coefficient=float(config['heat_transfer_coefficient'])
+            heat_transfer_coefficient=float(config['heat_transfer_coefficient']),
+            base_factor_constant=float(config['base_factor_constant']),
+            thermal_stress_normalizer=float(config['thermal_stress_normalizer']),
+            diurnal_cycle_shift=int(config['diurnal_cycle_shift']),
+            diurnal_cycle_period=int(config['diurnal_cycle_period']),
+            daily_representative_hour=int(config['daily_representative_hour'])
         )
 
 @dataclass
@@ -225,10 +237,10 @@ class RootZoneTemperatureModel:
         optimal_rzt = self.calculate_optimal_rzt(air_temperature)
         if current_rzt <= optimal_rzt:
             temperature_diff = optimal_rzt - current_rzt
-            factor = 1.0 + (temperature_diff * self.params.nutrient_uptake_sensitivity_low)
+            factor = self.params.base_factor_constant + (temperature_diff * self.params.nutrient_uptake_sensitivity_low)
         else:
             temperature_excess = current_rzt - optimal_rzt
-            factor = 1.0 - (temperature_excess * self.params.nutrient_uptake_sensitivity_high)
+            factor = self.params.base_factor_constant - (temperature_excess * self.params.nutrient_uptake_sensitivity_high)
         return max(self.params.min_nutrient_uptake_factor, min(self.params.max_nutrient_uptake_factor, factor))
 
     def calculate_water_uptake_factor(self, current_rzt: float, air_temperature: float) -> float:
@@ -247,10 +259,10 @@ class RootZoneTemperatureModel:
         optimal_rzt = self.calculate_optimal_rzt(air_temperature)
         if current_rzt <= optimal_rzt:
             temperature_diff = optimal_rzt - current_rzt
-            factor = 1.0 + (temperature_diff * self.params.water_uptake_sensitivity_low)
+            factor = self.params.base_factor_constant + (temperature_diff * self.params.water_uptake_sensitivity_low)
         else:
             temperature_excess = current_rzt - optimal_rzt
-            factor = 1.0 - (temperature_excess * self.params.water_uptake_sensitivity_high)
+            factor = self.params.base_factor_constant - (temperature_excess * self.params.water_uptake_sensitivity_high)
         return max(self.params.min_water_uptake_factor, min(self.params.max_water_uptake_factor, factor))
 
     def calculate_photosynthesis_factor(self, current_rzt: float, air_temperature: float) -> float:
@@ -269,10 +281,10 @@ class RootZoneTemperatureModel:
         optimal_rzt = self.calculate_optimal_rzt(air_temperature)
         if current_rzt <= optimal_rzt:
             temperature_diff = optimal_rzt - current_rzt
-            factor = 1.0 + (temperature_diff * self.params.photosynthesis_sensitivity_low)
+            factor = self.params.base_factor_constant + (temperature_diff * self.params.photosynthesis_sensitivity_low)
         else:
             temperature_excess = current_rzt - optimal_rzt
-            factor = 1.0 - (temperature_excess * self.params.photosynthesis_sensitivity_high)
+            factor = self.params.base_factor_constant - (temperature_excess * self.params.photosynthesis_sensitivity_high)
         return max(self.params.min_photosynthesis_factor, min(self.params.max_photosynthesis_factor, factor))
 
     def calculate_root_metabolism_factor(self, current_rzt: float, air_temperature: float) -> float:
@@ -291,10 +303,10 @@ class RootZoneTemperatureModel:
         optimal_rzt = self.calculate_optimal_rzt(air_temperature)
         if current_rzt <= optimal_rzt:
             temperature_diff = optimal_rzt - current_rzt
-            factor = 1.0 + (temperature_diff * self.params.root_metabolism_sensitivity_low)
+            factor = self.params.base_factor_constant + (temperature_diff * self.params.root_metabolism_sensitivity_low)
         else:
             temperature_excess = current_rzt - optimal_rzt
-            factor = 1.0 - (temperature_excess * self.params.root_metabolism_sensitivity_high)
+            factor = self.params.base_factor_constant - (temperature_excess * self.params.root_metabolism_sensitivity_high)
         return max(self.params.min_root_metabolism_factor, min(self.params.max_root_metabolism_factor, factor))
 
     def calculate_thermal_dynamics(self, air_temp: float, solution_temp: float, hour: int, dt_hours: float) -> Dict[str, float]:
@@ -324,7 +336,7 @@ class RootZoneTemperatureModel:
             raise ValueError("hour must be between 0 and 23")
 
         # Diurnal temperature variation (peaks at 18:00)
-        ambient_temp_variation = self.params.ambient_temp_amplitude * math.sin(2 * math.pi * (hour - 6) / 24)
+        ambient_temp_variation = self.params.ambient_temp_amplitude * math.sin(2 * math.pi * (hour - self.params.diurnal_cycle_shift) / self.params.diurnal_cycle_period)
 
         # Heat sources/sinks
         heat_sources = {
@@ -342,7 +354,7 @@ class RootZoneTemperatureModel:
             self._previous_rzt = solution_temp
 
         # Exponential approach to target with time constant
-        response_rate = 1.0 - math.exp(-dt_hours / self.params.thermal_response_time)
+        response_rate = self.params.base_factor_constant - math.exp(-dt_hours / self.params.thermal_response_time)
         new_rzt = self._previous_rzt + (target_rzt - self._previous_rzt) * response_rate
         self._previous_rzt = new_rzt
 
@@ -396,7 +408,7 @@ class RootZoneTemperatureModel:
             water_uptake_factor=water_factor,
             photosynthesis_factor=photosynthesis_factor,
             root_metabolism_factor=metabolism_factor,
-            thermal_stress=abs(current_rzt - optimal_rzt) / 5.0,
+            thermal_stress=abs(current_rzt - optimal_rzt) / self.params.thermal_stress_normalizer,
             target_rzt=thermal_response['target_rzt'],
             thermal_lag=thermal_response['thermal_lag'],
             heat_transfer_rate=thermal_response['heat_transfer_rate'],
@@ -414,7 +426,7 @@ class RootZoneTemperatureModel:
         Returns:
             RZTModelOutput with temperature effects and factors
         """
-        return self.calculate_hourly_metrics(environmental_conditions, hour=12, dt_hours=24.0)
+        return self.calculate_hourly_metrics(environmental_conditions, hour=self.params.daily_representative_hour, dt_hours=self.params.diurnal_cycle_period)
 
 def create_lettuce_rzt_model(system_config: Any) -> RootZoneTemperatureModel:
     """

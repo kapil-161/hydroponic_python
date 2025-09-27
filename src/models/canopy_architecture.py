@@ -54,6 +54,14 @@ class CanopyArchitectureParameters:
     max_temperature_gradient: float
     temperature_gradient_factor: float
     ppfd_to_photosynthesis_factor: float
+    spherical_x_coefficient: float
+    planophile_x_coefficient: float
+    erectophile_x_coefficient: float
+    plagiophile_x_coefficient: float
+    upper_canopy_height_threshold: float
+    middle_canopy_height_threshold: float
+    lower_middle_canopy_height_threshold: float
+    zenith_angle_precision_threshold: float
     
     
     @classmethod
@@ -66,7 +74,9 @@ class CanopyArchitectureParameters:
             'sunlit_fraction_method', 'clumping_index', 'max_extinction_coefficient', 'upper_canopy_lai_factor',
             'middle_canopy_lai_factor', 'lower_middle_canopy_lai_factor', 'bottom_canopy_lai_factor',
             'shaded_light_fraction', 'max_temperature_gradient', 'temperature_gradient_factor',
-            'ppfd_to_photosynthesis_factor'
+            'ppfd_to_photosynthesis_factor', 'spherical_x_coefficient', 'planophile_x_coefficient',
+            'erectophile_x_coefficient', 'plagiophile_x_coefficient', 'upper_canopy_height_threshold',
+            'middle_canopy_height_threshold', 'lower_middle_canopy_height_threshold', 'zenith_angle_precision_threshold'
         ]
 
         missing_params = [p for p in required_params if p not in config_dict]
@@ -101,7 +111,15 @@ class CanopyArchitectureParameters:
             shaded_light_fraction=float(config_dict['shaded_light_fraction']),
             max_temperature_gradient=float(config_dict['max_temperature_gradient']),
             temperature_gradient_factor=float(config_dict['temperature_gradient_factor']),
-            ppfd_to_photosynthesis_factor=float(config_dict['ppfd_to_photosynthesis_factor'])
+            ppfd_to_photosynthesis_factor=float(config_dict['ppfd_to_photosynthesis_factor']),
+            spherical_x_coefficient=float(config_dict['spherical_x_coefficient']),
+            planophile_x_coefficient=float(config_dict['planophile_x_coefficient']),
+            erectophile_x_coefficient=float(config_dict['erectophile_x_coefficient']),
+            plagiophile_x_coefficient=float(config_dict['plagiophile_x_coefficient']),
+            upper_canopy_height_threshold=float(config_dict['upper_canopy_height_threshold']),
+            middle_canopy_height_threshold=float(config_dict['middle_canopy_height_threshold']),
+            lower_middle_canopy_height_threshold=float(config_dict['lower_middle_canopy_height_threshold']),
+            zenith_angle_precision_threshold=float(config_dict['zenith_angle_precision_threshold'])
         )
 
 
@@ -176,17 +194,17 @@ class CanopyArchitectureModel:
         zenith_rad = math.radians(solar_zenith_angle)
 
         if leaf_angle_distribution == "spherical":
-            x = 1.0
+            x = self.params.spherical_x_coefficient
         elif leaf_angle_distribution == "planophile":
-            x = 2.0 / math.pi
+            x = self.params.planophile_x_coefficient
         elif leaf_angle_distribution == "erectophile":
-            x = 2.0
+            x = self.params.erectophile_x_coefficient
         elif leaf_angle_distribution == "plagiophile":
-            x = 1.33
+            x = self.params.plagiophile_x_coefficient
         else:
             raise ValueError(f"Invalid leaf angle distribution '{leaf_angle_distribution}' - must be one of: spherical, planophile, erectophile, plagiophile")
 
-        if abs(math.cos(zenith_rad)) > 0.001:
+        if abs(math.cos(zenith_rad)) > self.params.zenith_angle_precision_threshold:
             k_beam = x / math.cos(zenith_rad)
         else:
             k_beam = self.params.max_extinction_coefficient
@@ -229,25 +247,37 @@ class CanopyArchitectureModel:
             
             # Distribute LAI - common patterns for lettuce
             relative_height = (layer.height_top + layer.height_bottom) / (2.0 * canopy_height)
-            
+
             # Beta distribution for lettuce (more leaf area in middle-upper canopy)
-            # Use CSV-configurable distribution factors
-            if relative_height > 0.8:
+            # Use CSV-configurable distribution factors and thresholds
+            if relative_height > self.params.upper_canopy_height_threshold:
                 # Upper canopy - moderate leaf density
                 layer_lai_fraction = self.params.upper_canopy_lai_factor
-            elif relative_height > 0.5:
+            elif relative_height > self.params.middle_canopy_height_threshold:
                 # Middle canopy - highest leaf density
                 layer_lai_fraction = self.params.middle_canopy_lai_factor
-            elif relative_height > 0.2:
+            elif relative_height > self.params.lower_middle_canopy_height_threshold:
                 # Lower-middle canopy - moderate density
                 layer_lai_fraction = self.params.lower_middle_canopy_lai_factor
             else:
                 # Bottom canopy - lower density
                 layer_lai_fraction = self.params.bottom_canopy_lai_factor
             
-            # Normalize to ensure total adds up correctly
-            layer_lai = (layer_lai_fraction / n_layers) * total_lai
-            layer.leaf_area_density = layer_lai / layer_thickness
+            # Store the fraction for now, will normalize at the end
+            layer.lai_fraction = layer_lai_fraction
+
+        # Calculate total of all fractions to normalize properly
+        total_fraction = sum(layer.lai_fraction for layer in self.canopy_layers)
+
+        # Distribute LAI proportionally
+        for layer in self.canopy_layers:
+            if total_fraction > 0:
+                layer_lai = (layer.lai_fraction / total_fraction) * total_lai
+            else:
+                layer_lai = total_lai / n_layers  # Equal distribution fallback
+
+            layer_thickness = layer.height_top - layer.height_bottom
+            layer.leaf_area_density = layer_lai / layer_thickness if layer_thickness > 0 else 0.0
             
             cumulative_lai += layer_lai
     
@@ -316,9 +346,15 @@ class CanopyArchitectureModel:
             
             total_absorbed_ppfd += absorbed_beam + absorbed_diffuse
         
-        # Calculate total light interception
+        # Calculate total light interception as fraction not transmitted through canopy bottom
         if light_env.ppfd_above_canopy > 0:
-            light_interception_fraction = total_absorbed_ppfd / light_env.ppfd_above_canopy
+            # Light transmitted through entire canopy using Beer's law
+            transmitted_beam = ppfd_beam * math.exp(-k_beam * total_lai)
+            transmitted_diffuse = ppfd_diffuse * math.exp(-k_diffuse * total_lai)
+            total_transmitted = transmitted_beam + transmitted_diffuse
+
+            light_interception_fraction = 1.0 - (total_transmitted / light_env.ppfd_above_canopy)
+            light_interception_fraction = max(0.0, min(1.0, light_interception_fraction))  # Clamp to [0,1]
         else:
             light_interception_fraction = 0.0
         
@@ -414,6 +450,7 @@ class CanopyArchitectureModel:
     
 def create_lettuce_canopy_model(system_config) -> CanopyArchitectureModel:
     canopy_params = getattr(system_config, 'canopy_parameters', None)
+    photosynthesis_params = getattr(system_config, 'photosynthesis_parameters', {})
 
     if canopy_params is None:
         raise ValueError("canopy_parameters missing from CSV")
@@ -421,7 +458,12 @@ def create_lettuce_canopy_model(system_config) -> CanopyArchitectureModel:
     if not canopy_params:
         raise ValueError("No canopy parameters found in CSV")
 
-    parameters = CanopyArchitectureParameters.from_config(canopy_params)
+    # Handle shaded_light_fraction from photosynthesis_parameters to avoid duplication
+    combined_params = canopy_params.copy()
+    if 'shaded_light_fraction' not in combined_params and 'shaded_light_fraction' in photosynthesis_params:
+        combined_params['shaded_light_fraction'] = photosynthesis_params['shaded_light_fraction']
+
+    parameters = CanopyArchitectureParameters.from_config(combined_params)
     return CanopyArchitectureModel(parameters)
 
 

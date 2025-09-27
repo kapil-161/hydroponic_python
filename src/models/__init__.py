@@ -1,18 +1,8 @@
 """Hydroponic Models Package"""
 
-# Backwards-compat re-exports for unified root system
-from .root_system_model import (
-    RootType,
-    HydroponicSystemType,
-    RootCohort,
-    RootZoneLayer,
-    RootArchitectureParameters,
-    RootArchitectureModel,
-    create_lettuce_root_architecture_model,
-    HydroponicRootZone,
-    HydroponicRootSystem,
-    HydroponicRootModel,
-    RootUptakeParameters,
-    EnhancedRootUptakeModel,
-    create_enhanced_root_uptake_model,
-)
+# Import only the classes that actually exist in the current models
+from .environmental_control import EnvironmentalControlSystem, EnvironmentalSetpoints, ControlEquipment
+from .nutrient_models import NutrientModel, NutrientParameters
+from .photosynthesis_model import PhotosynthesisModel, PhotosynthesisParameters
+from .respiration_model import EnhancedRespirationModel, RespirationParameters, BiomassPool, TissueType
+from .water_uptake_model import WaterUptakeModel, WaterUptakeParameters, GrowthStage

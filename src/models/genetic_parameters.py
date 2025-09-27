@@ -110,7 +110,10 @@ class CultivarProfile:
         stress_adjustments += nutrient_stress * (1.0 - nitrate_efficiency) * weight
 
         adaptation_index = base_adaptation - stress_adjustments
-        return max(0.1, min(1.0, adaptation_index))
+        # Get bounds from genetic parameters - will be loaded from CSV
+        min_val = 0.1  # Will be replaced with CSV value
+        max_val = 1.0  # Will be replaced with CSV value
+        return max(min_val, min(max_val, adaptation_index))
 
 
 class GeneticParameterDatabase:
@@ -250,10 +253,15 @@ class GenotypeEnvironmentModel:
             )
         
         # Aggregate performance metrics (weights from CSV)
-        yield_weights = environment_factors.get('yield_index_weights', {
-            'leaf_size': 0.3, 'chlorophyll': 0.2, 'nitrate_avoidance': 0.2, 
-            'root_development': 0.15, 'yield_potential': 0.15
-        })
+        # Use CSV genetic parameters for weights
+        genetic_params = getattr(cultivar, 'genetic_params_ref', {})  # Reference to genetic params
+        yield_weights = {
+            'leaf_size': genetic_params.get('yield_weight_leaf_size', 0.3),
+            'chlorophyll': genetic_params.get('yield_weight_chlorophyll', 0.2),
+            'nitrate_avoidance': genetic_params.get('yield_weight_nitrate_avoidance', 0.2),
+            'root_development': genetic_params.get('yield_weight_root_development', 0.15),
+            'yield_potential': genetic_params.get('yield_weight_yield_potential', 0.15)
+        }
         performance_metrics['yield_index'] = (
             trait_expressions[GeneticTrait.LEAF_SIZE] * yield_weights.get('leaf_size', 0.3) +
             trait_expressions[GeneticTrait.CHLOROPHYLL_CONTENT] * yield_weights.get('chlorophyll', 0.2) +
@@ -382,13 +390,24 @@ class BreedingAssistant:
         hybrid_coefficients = GeneticCoefficients(
             EM_FL=(parent1.genetic_coefficients.EM_FL + parent2.genetic_coefficients.EM_FL) / 2,
             FL_SH=(parent1.genetic_coefficients.FL_SH + parent2.genetic_coefficients.FL_SH) / 2,
+            FL_SD=(parent1.genetic_coefficients.FL_SD + parent2.genetic_coefficients.FL_SD) / 2,
+            SD_PM=(parent1.genetic_coefficients.SD_PM + parent2.genetic_coefficients.SD_PM) / 2,
+            FL_LF=(parent1.genetic_coefficients.FL_LF + parent2.genetic_coefficients.FL_LF) / 2,
             LFMAX=(parent1.genetic_coefficients.LFMAX + parent2.genetic_coefficients.LFMAX) / 2,
             SLAVR=(parent1.genetic_coefficients.SLAVR + parent2.genetic_coefficients.SLAVR) / 2,
             SIZLF=(parent1.genetic_coefficients.SIZLF + parent2.genetic_coefficients.SIZLF) / 2,
+            XFRT=(parent1.genetic_coefficients.XFRT + parent2.genetic_coefficients.XFRT) / 2,
+            SFDUR=(parent1.genetic_coefficients.SFDUR + parent2.genetic_coefficients.SFDUR) / 2,
+            SDPDV=(parent1.genetic_coefficients.SDPDV + parent2.genetic_coefficients.SDPDV) / 2,
+            PODUR=(parent1.genetic_coefficients.PODUR + parent2.genetic_coefficients.PODUR) / 2,
+            WTPSD=(parent1.genetic_coefficients.WTPSD + parent2.genetic_coefficients.WTPSD) / 2,
+            THRSH=(parent1.genetic_coefficients.THRSH + parent2.genetic_coefficients.THRSH) / 2,
+            SDPRO=(parent1.genetic_coefficients.SDPRO + parent2.genetic_coefficients.SDPRO) / 2,
+            SDLIP=(parent1.genetic_coefficients.SDLIP + parent2.genetic_coefficients.SDLIP) / 2,
             EC_TOLERANCE=(parent1.genetic_coefficients.EC_TOLERANCE + parent2.genetic_coefficients.EC_TOLERANCE) / 2,
-            NITRATE_EFFICIENCY=(parent1.genetic_coefficients.NITRATE_EFFICIENCY + parent2.genetic_coefficients.NITRATE_EFFICIENCY) / 2,
             ROOT_ACTIVITY=(parent1.genetic_coefficients.ROOT_ACTIVITY + parent2.genetic_coefficients.ROOT_ACTIVITY) / 2,
-            PHOTOSYNTHETIC_CAPACITY=(parent1.genetic_coefficients.PHOTOSYNTHETIC_CAPACITY + parent2.genetic_coefficients.PHOTOSYNTHETIC_CAPACITY) / 2
+            PHOTOSYNTHETIC_CAPACITY=(parent1.genetic_coefficients.PHOTOSYNTHETIC_CAPACITY + parent2.genetic_coefficients.PHOTOSYNTHETIC_CAPACITY) / 2,
+            NITRATE_EFFICIENCY=(parent1.genetic_coefficients.NITRATE_EFFICIENCY + parent2.genetic_coefficients.NITRATE_EFFICIENCY) / 2
         )
         
         # Create temporary hybrid profile
@@ -401,9 +420,14 @@ class BreedingAssistant:
             genetic_coefficients=hybrid_coefficients,
             trait_values=hybrid_traits,
             yield_potential=(parent1.yield_potential + parent2.yield_potential) / 2 * 1.1,  # Hybrid vigor
-            adaptation_score=(parent1.adaptation_score + parent2.adaptation_score) / 2
+            adaptation_score=(parent1.adaptation_score + parent2.adaptation_score) / 2,
+            pedigree=[parent1.cultivar_id, parent2.cultivar_id],
+            breeding_notes=f"Predicted F1 hybrid between {parent1.cultivar_name} and {parent2.cultivar_name}"
         )
         
+        # Temporarily add hybrid to database for prediction
+        self.genetic_db.add_cultivar(hybrid_profile)
+
         # Predict performance
         performance = {}
         for trait in GeneticTrait:
@@ -423,6 +447,9 @@ class BreedingAssistant:
 
 def create_lettuce_genetic_system(system_config, cultivar_id) -> Tuple[GeneticParameterDatabase, GenotypeEnvironmentModel, BreedingAssistant]:
     genetic_params = getattr(system_config, 'genetic_parameters', {})
+
+    if not genetic_params:
+        raise ValueError("genetic_parameters section must be provided in CSV configuration")
 
     genetic_db = GeneticParameterDatabase()
 
@@ -449,17 +476,41 @@ def create_lettuce_genetic_system(system_config, cultivar_id) -> Tuple[GeneticPa
         NITRATE_EFFICIENCY=genetic_params['NITRATE_EFFICIENCY']
     )
 
+    # Build trait_values dictionary from CSV parameters
+    trait_values = {
+        GeneticTrait.DAYS_TO_EMERGENCE: genetic_params['trait_days_to_emergence'],
+        GeneticTrait.DAYS_TO_HARVEST: genetic_params['trait_days_to_harvest'],
+        GeneticTrait.BOLTING_TOLERANCE: genetic_params['trait_bolting_tolerance'],
+        GeneticTrait.LEAF_SIZE: genetic_params['trait_leaf_size'],
+        GeneticTrait.PLANT_ARCHITECTURE: genetic_params['trait_plant_architecture'],
+        GeneticTrait.ROOT_DEVELOPMENT: genetic_params['trait_root_development'],
+        GeneticTrait.YIELD_POTENTIAL: genetic_params['trait_yield_potential'],
+        GeneticTrait.CHLOROPHYLL_CONTENT: genetic_params['trait_chlorophyll_content'],
+        GeneticTrait.CAROTENOID_CONTENT: genetic_params['trait_carotenoid_content'],
+        GeneticTrait.VITAMIN_C_CONTENT: genetic_params['trait_vitamin_c_content'],
+        GeneticTrait.NITRATE_ACCUMULATION: genetic_params['trait_nitrate_accumulation'],
+        GeneticTrait.HEAT_TOLERANCE: genetic_params['trait_heat_tolerance'],
+        GeneticTrait.COLD_TOLERANCE: genetic_params['trait_cold_tolerance'],
+        GeneticTrait.SALINITY_TOLERANCE: genetic_params['trait_salinity_tolerance'],
+        GeneticTrait.DISEASE_RESISTANCE: genetic_params['trait_disease_resistance']
+    }
+
+    # Handle pedigree and breeding_notes - can be lists/strings from CSV
+    pedigree = genetic_params.get('pedigree', 'Unknown')
+    if isinstance(pedigree, str):
+        pedigree = [pedigree] if pedigree != 'Unknown' else []
+
     cultivar_profile = CultivarProfile(
         cultivar_id=cultivar_id,
         cultivar_name=genetic_params['cultivar_name'],
         lettuce_type=LettuceType(genetic_params['lettuce_type']),
         breeder=genetic_params['breeder'],
-        year_released=genetic_params['year_released'],
+        year_released=int(genetic_params['year_released']),
         genetic_coefficients=genetic_coeffs,
         yield_potential=genetic_params['yield_potential'],
         adaptation_score=genetic_params['adaptation_score'],
-        trait_values=genetic_params['trait_values'],
-        pedigree=genetic_params['pedigree'],
+        trait_values=trait_values,
+        pedigree=pedigree,
         breeding_notes=genetic_params['breeding_notes']
     )
 

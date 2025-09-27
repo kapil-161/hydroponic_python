@@ -47,6 +47,15 @@ class SenescenceParameters:
     daily_biomass_loss_factor: float
     stress_recovery_threshold: float
     recovery_stress_threshold: float
+    age_factor_base: float
+    stress_intensity_denominator: float
+    reproductive_factor_adjustment: float
+    canopy_shading_threshold: float
+    shading_factor_multiplier: float
+    lower_canopy_adjustment: float
+    recovery_rate_fraction: float
+    senescence_damage_minimum: float
+    senescence_damage_maximum: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'SenescenceParameters':
@@ -58,7 +67,10 @@ class SenescenceParameters:
             'death_threshold', 'recovery_rate', 'max_recovery', 'reproductive_priority_factor',
             'lower_canopy_factor', 'active_senescence_multiplier', 'normal_senescence_multiplier',
             'stress_history_days', 'daily_area_loss_factor', 'daily_biomass_loss_factor',
-            'stress_recovery_threshold', 'recovery_stress_threshold'
+            'stress_recovery_threshold', 'recovery_stress_threshold', 'age_factor_base',
+            'stress_intensity_denominator', 'reproductive_factor_adjustment', 'canopy_shading_threshold',
+            'shading_factor_multiplier', 'lower_canopy_adjustment', 'recovery_rate_fraction',
+            'senescence_damage_minimum', 'senescence_damage_maximum'
         ]
         for param in required_params:
             if param not in config:
@@ -118,7 +130,16 @@ class SenescenceParameters:
             daily_area_loss_factor=float(config['daily_area_loss_factor']),
             daily_biomass_loss_factor=float(config['daily_biomass_loss_factor']),
             stress_recovery_threshold=float(config['stress_recovery_threshold']),
-            recovery_stress_threshold=float(config['recovery_stress_threshold'])
+            recovery_stress_threshold=float(config['recovery_stress_threshold']),
+            age_factor_base=float(config['age_factor_base']),
+            stress_intensity_denominator=float(config['stress_intensity_denominator']),
+            reproductive_factor_adjustment=float(config['reproductive_factor_adjustment']),
+            canopy_shading_threshold=float(config['canopy_shading_threshold']),
+            shading_factor_multiplier=float(config['shading_factor_multiplier']),
+            lower_canopy_adjustment=float(config['lower_canopy_adjustment']),
+            recovery_rate_fraction=float(config['recovery_rate_fraction']),
+            senescence_damage_minimum=float(config['senescence_damage_minimum']),
+            senescence_damage_maximum=float(config['senescence_damage_maximum'])
         )
 
 @dataclass
@@ -178,7 +199,7 @@ class AdvancedSenescenceModel:
         if cohort_state.age_gdd <= self.params.natural_lifespan_gdd:
             return 0.0
         excess_age = cohort_state.age_gdd - self.params.natural_lifespan_gdd
-        age_factor = 1.0 + (excess_age / self.params.natural_lifespan_gdd)
+        age_factor = self.params.age_factor_base + (excess_age / self.params.natural_lifespan_gdd)
         return self.params.age_senescence_rate * age_factor
 
     def calculate_stress_senescence(self, water_stress: float, nitrogen_stress: float,
@@ -195,7 +216,7 @@ class AdvancedSenescenceModel:
             (light_stress, self.params.light_stress_threshold, self.params.light_stress_rate)
         ]:
             if stress > threshold:
-                stress_intensity = (stress - threshold) / (1.0 - threshold)
+                stress_intensity = (stress - threshold) / (self.params.stress_intensity_denominator - threshold)
                 stress_rates['water' if rate == self.params.water_stress_rate else
                             'nitrogen' if rate == self.params.nitrogen_stress_rate else
                             'temperature' if rate == self.params.temperature_stress_rate else
@@ -214,10 +235,10 @@ class AdvancedSenescenceModel:
             raise ValueError("canopy_position must be between 0 and 1")
         dev_rate = 0.0
         if is_reproductive:
-            dev_rate += self.params.age_senescence_rate * (self.params.reproductive_priority_factor - 1.0)
-        if canopy_position < 0.5:
-            shading_factor = (0.5 - canopy_position) * 2.0
-            dev_rate += self.params.age_senescence_rate * shading_factor * (self.params.lower_canopy_factor - 1.0)
+            dev_rate += self.params.age_senescence_rate * (self.params.reproductive_priority_factor - self.params.reproductive_factor_adjustment)
+        if canopy_position < self.params.canopy_shading_threshold:
+            shading_factor = (self.params.canopy_shading_threshold - canopy_position) * self.params.shading_factor_multiplier
+            dev_rate += self.params.age_senescence_rate * shading_factor * (self.params.lower_canopy_factor - self.params.lower_canopy_adjustment)
         return dev_rate
 
     def calculate_recovery_rate(self, cohort_state: LeafCohortSenescence, current_stress_levels: Dict[str, float]) -> float:
@@ -225,7 +246,7 @@ class AdvancedSenescenceModel:
             return 0.0
         all_stress_low = all(stress < self.params.recovery_stress_threshold for stress in current_stress_levels.values())
         if all_stress_low and cohort_state.senescence_stage == SenescenceStage.EARLY_SENESCENCE:
-            max_recovery_rate = min(self.params.recovery_rate, cohort_state.senescence_damage * 0.1)
+            max_recovery_rate = min(self.params.recovery_rate, cohort_state.senescence_damage * self.params.recovery_rate_fraction)
             return max_recovery_rate
         return 0.0
 
@@ -297,7 +318,7 @@ class AdvancedSenescenceModel:
             recovery_rate = self.calculate_recovery_rate(cohort_state, environmental_stress)
             total_daily_rate = max(0.0, age_senescence + dev_senescence + stress_senescence - recovery_rate)
             cohort_state.daily_senescence_rate = total_daily_rate
-            cohort_state.senescence_damage = min(1.0, max(0.0, cohort_state.senescence_damage + total_daily_rate))
+            cohort_state.senescence_damage = min(self.params.senescence_damage_maximum, max(self.params.senescence_damage_minimum, cohort_state.senescence_damage + total_daily_rate))
             self.update_senescence_stage(cohort_state)
             cohort_state.active_senescence_types = []
             if age_senescence > 0:

@@ -125,13 +125,33 @@ class BiomassAllocationModel:
         return adjusted_fractions
 
     def _normalize_allocations(self, fractions: Dict[str, float]) -> Dict[str, float]:
-        for organ in fractions:
-            fractions[organ] = max(self.params.minimum_organ_fraction, fractions[organ])
-
+        # First normalize to sum to 1.0
         total = sum(fractions.values())
         if total > 0:
             for organ in fractions:
                 fractions[organ] /= total
+
+        # Then enforce minimum constraints and renormalize if needed
+        for organ in fractions:
+            fractions[organ] = max(self.params.minimum_organ_fraction, fractions[organ])
+
+        # Check if we need to renormalize after applying minimum constraints
+        total_after_min = sum(fractions.values())
+        if abs(total_after_min - 1.0) > 0.001:
+            # Renormalize while preserving minimums
+            excess = total_after_min - 1.0
+            adjustable_organs = [organ for organ in fractions
+                               if fractions[organ] > self.params.minimum_organ_fraction]
+
+            if adjustable_organs and excess > 0:
+                # Proportionally reduce organs above minimum
+                adjustable_total = sum(fractions[organ] - self.params.minimum_organ_fraction
+                                     for organ in adjustable_organs)
+                if adjustable_total > 0:
+                    for organ in adjustable_organs:
+                        adjustable_fraction = fractions[organ] - self.params.minimum_organ_fraction
+                        reduction = (adjustable_fraction / adjustable_total) * excess
+                        fractions[organ] -= reduction
 
         return fractions
 

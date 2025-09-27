@@ -1,6 +1,6 @@
 category,parameter_name,value,unit,description
 # Phenology Model Parameters
-phenology_parameters,base_temperature,10.0,°C,Base temperature for thermal time calculation
+phenology_parameters,base_temperature,4.5,°C,Base temperature for thermal time calculation (Wurr et al., 1996)
 phenology_parameters,optimal_temperature_min,18.0,°C,Minimum optimal temperature for development
 phenology_parameters,optimal_temperature_max,24.0,°C,Maximum optimal temperature for development
 phenology_parameters,maximum_temperature,35.0,°C,Maximum temperature beyond which development ceases
@@ -29,21 +29,21 @@ phenology_parameters,drought_threshold,0.3,fraction,Water stress threshold for d
 phenology_parameters,heat_threshold,30.0,°C,Temperature threshold for heat stress effects
 
 # Thermal Requirements for Growth Stage Transitions
-phenology_parameters,GE_to_VE,50.0,GDD,Germination to emergence
-phenology_parameters,VE_to_V1,80.0,GDD,Emergence to first leaf
-phenology_parameters,V1_to_V2,60.0,GDD,First to second leaf
-phenology_parameters,V2_to_V3,60.0,GDD,Second to third leaf
-phenology_parameters,V3_to_V4,60.0,GDD,Third to fourth leaf
-phenology_parameters,V4_to_V5,60.0,GDD,Fourth to fifth leaf
-phenology_parameters,V5_to_V6,60.0,GDD,Fifth to sixth leaf
-phenology_parameters,V6_to_V7,65.0,GDD,Sixth to seventh leaf
-phenology_parameters,V7_to_V8,65.0,GDD,Seventh to eighth leaf
-phenology_parameters,V8_to_V9,65.0,GDD,Eighth to ninth leaf
-phenology_parameters,V9_to_V10,70.0,GDD,Ninth to tenth leaf
-phenology_parameters,V10_to_V11+,70.0,GDD,Tenth leaf to mature vegetative
-phenology_parameters,V11+_to_HI,100.0,GDD,Mature vegetative to head initiation
-phenology_parameters,HI_to_HD,150.0,GDD,Head initiation to head development
-phenology_parameters,HD_to_HM,200.0,GDD,Head development to harvest maturity
+phenology_parameters,GE_to_VE,60.0,GDD,Germination to emergence (Scaife & Turner, 1983)
+phenology_parameters,VE_to_V1,80.0,GDD,Emergence to first leaf (Scaife & Turner, 1983)
+phenology_parameters,V1_to_V2,50.0,GDD,First to second leaf (Wheeler et al., 1994)
+phenology_parameters,V2_to_V3,50.0,GDD,Second to third leaf (Wheeler et al., 1994)
+phenology_parameters,V3_to_V4,50.0,GDD,Third to fourth leaf (Wheeler et al., 1994)
+phenology_parameters,V4_to_V5,50.0,GDD,Fourth to fifth leaf (Wheeler et al., 1994)
+phenology_parameters,V5_to_V6,50.0,GDD,Fifth to sixth leaf (Wheeler et al., 1994)
+phenology_parameters,V6_to_V7,50.0,GDD,Sixth to seventh leaf (Wheeler et al., 1994)
+phenology_parameters,V7_to_V8,50.0,GDD,Seventh to eighth leaf (Wheeler et al., 1994)
+phenology_parameters,V8_to_V9,50.0,GDD,Eighth to ninth leaf (Wheeler et al., 1994)
+phenology_parameters,V9_to_V10,50.0,GDD,Ninth to tenth leaf (Wheeler et al., 1994)
+phenology_parameters,V10_to_V11+,50.0,GDD,Tenth leaf to mature vegetative (Wheeler et al., 1994)
+phenology_parameters,V11+_to_HI,100.0,GDD,Mature vegetative to head initiation (Scaife & Turner, 1983)
+phenology_parameters,HI_to_HD,80.0,GDD,Head initiation to head development (Both et al., 1997)
+phenology_parameters,HD_to_HM,60.0,GDD,Head development to harvest maturity (Both et al., 1997)
 phenology_parameters,HM_to_BI,300.0,GDD,Harvest maturity to bolting initiation
 phenology_parameters,BI_to_FL,120.0,GDD,Bolting initiation to flowering
 phenology_parameters,FL_to_AN,50.0,GDD,Flowering to anthesis
@@ -67,7 +67,7 @@ photosynthesis_parameters,light_penetration_lai,2.5,m2_m2,LAI threshold for ligh
 photosynthesis_parameters,enzyme_saturation_rate,0.1,dimensionless,Rate of enzyme saturation decline per LAI unit
 photosynthesis_parameters,min_enzyme_factor,0.3,dimensionless,Minimum enzyme efficiency factor
 photosynthesis_parameters,excess_lai_efficiency,0.8,dimensionless,Efficiency factor for excess LAI
-photosynthesis_parameters,umol_to_g_carbon_ratio,1.2e-5,g_μmol,Conversion ratio from μmol CO2 to g C
+photosynthesis_parameters,umol_to_g_carbon_ratio,1.2e-4,g_μmol,Conversion ratio from μmol CO2 to g C
 photosynthesis_parameters,seconds_per_hour,3600,s,Seconds per hour for time conversions
 photosynthesis_parameters,hours_per_day,24,h,Hours per day for daily calculations
 photosynthesis_parameters,kc,270.0,μbar,Michaelis constant for CO2
@@ -88,7 +88,7 @@ photosynthesis_parameters,photosynthesis_heat_limit,40.0,°C,Heat temperature li
 photosynthesis_parameters,min_stress_factor,0.1,dimensionless,Minimum temperature stress factor for photosynthesis
 
 # Respiration Model Parameters
-respiration_parameters,maintenance_base_rate,0.015,g_C_g_biomass_day,Base maintenance respiration rate at 25°C
+respiration_parameters,maintenance_base_rate,0.005,g_C_g_biomass_day,Base maintenance respiration rate at 25°C
 respiration_parameters,reference_temperature,25.0,°C,Reference temperature for Q10 response
 respiration_parameters,q10_factor,2.0,dimensionless,Temperature response coefficient for respiration
 respiration_parameters,growth_efficiency,0.75,dimensionless,Conversion efficiency for biomass synthesis
@@ -148,7 +148,7 @@ water_parameters,psychrometric_constant,0.665,kPa_°C,Psychrometric constant for
 water_parameters,wind_speed,2.0,m_s,Wind speed for evapotranspiration calculations
 water_parameters,net_radiation_factor,0.77,dimensionless,Fraction of solar radiation converted to net radiation
 water_parameters,radiation_offset,2.45,MJ_m2_day,Radiation offset for net radiation calculation
-water_parameters,base_crop_coefficient,1.0,dimensionless,Base crop coefficient for lettuce
+water_parameters,base_crop_coefficient,2.0,dimensionless,Base crop coefficient for lettuce
 water_parameters,lai_coefficient_factor,3.0,m2_m2,LAI scaling factor for crop coefficient
 water_parameters,vegetative_stage_factor,0.8,dimensionless,Crop coefficient multiplier for vegetative stage
 water_parameters,head_formation_stage_factor,1.2,dimensionless,Crop coefficient multiplier for head formation
@@ -158,10 +158,12 @@ water_parameters,temperature_sensitivity,0.15,°C_inverse,Temperature response s
 water_parameters,optimal_vpd_min,0.8,kPa,Minimum optimal vapor pressure deficit
 water_parameters,optimal_vpd_max,1.5,kPa,Maximum optimal vapor pressure deficit
 water_parameters,vpd_sensitivity,0.3,kPa_inverse,VPD response sensitivity factor
-water_parameters,metabolic_water_per_biomass,0.002,L_g_biomass,Metabolic water demand per unit biomass
+water_parameters,metabolic_water_per_biomass,0.015,L_g_biomass,Metabolic water demand per unit biomass
 water_parameters,metabolic_water_per_lai,0.1,L_LAI,Metabolic water demand per LAI unit
 water_parameters,temp_tolerance,15.0,°C,Temperature tolerance range for water uptake
 water_parameters,min_temp_factor,0.3,dimensionless,Minimum temperature response factor
+water_parameters,water_uptake_sensitivity_low,0.06,per_°C,Water uptake sensitivity per °C below optimum for RZT
+water_parameters,water_uptake_sensitivity_high,0.10,per_°C,Water uptake sensitivity per °C above optimum for RZT
 
 # Root System Parameters
 root_system_parameters,base_root_conductance,0.5,L_day_MPa_m2,Base root hydraulic conductance
@@ -230,19 +232,19 @@ control_equipment_parameters,air_exchange_rate,2.0,ACH,Air changes per hour for 
 control_equipment_parameters,circulation_fan_power,150.0,W,Circulation fan power consumption
 
 # Nutrient Model Parameters
-nutrient_parameters,ec_factor_n_no3,0.71,dS_m_per_mg_L,EC contribution factor for nitrate nitrogen
-nutrient_parameters,ec_factor_n_nh4,0.73,dS_m_per_mg_L,EC contribution factor for ammonium nitrogen
-nutrient_parameters,ec_factor_p_po4,0.58,dS_m_per_mg_L,EC contribution factor for phosphate phosphorus
-nutrient_parameters,ec_factor_k,0.64,dS_m_per_mg_L,EC contribution factor for potassium
-nutrient_parameters,ec_factor_ca,0.50,dS_m_per_mg_L,EC contribution factor for calcium
-nutrient_parameters,ec_factor_mg,0.82,dS_m_per_mg_L,EC contribution factor for magnesium
-nutrient_parameters,ec_factor_s_so4,0.65,dS_m_per_mg_L,EC contribution factor for sulfate sulfur
-nutrient_parameters,ec_factor_fe,0.18,dS_m_per_mg_L,EC contribution factor for iron
-nutrient_parameters,ec_factor_mn,0.19,dS_m_per_mg_L,EC contribution factor for manganese
-nutrient_parameters,ec_factor_zn,0.15,dS_m_per_mg_L,EC contribution factor for zinc
-nutrient_parameters,ec_factor_cu,0.16,dS_m_per_mg_L,EC contribution factor for copper
-nutrient_parameters,ec_factor_b,0.14,dS_m_per_mg_L,EC contribution factor for boron
-nutrient_parameters,ec_factor_mo,0.10,dS_m_per_mg_L,EC contribution factor for molybdenum
+nutrient_parameters,ec_factor_n_no3,0.071,dS_m_per_mg_L,EC contribution factor for nitrate nitrogen
+nutrient_parameters,ec_factor_n_nh4,0.073,dS_m_per_mg_L,EC contribution factor for ammonium nitrogen
+nutrient_parameters,ec_factor_p_po4,0.058,dS_m_per_mg_L,EC contribution factor for phosphate phosphorus
+nutrient_parameters,ec_factor_k,0.064,dS_m_per_mg_L,EC contribution factor for potassium
+nutrient_parameters,ec_factor_ca,0.050,dS_m_per_mg_L,EC contribution factor for calcium
+nutrient_parameters,ec_factor_mg,0.082,dS_m_per_mg_L,EC contribution factor for magnesium
+nutrient_parameters,ec_factor_s_so4,0.065,dS_m_per_mg_L,EC contribution factor for sulfate sulfur
+nutrient_parameters,ec_factor_fe,0.018,dS_m_per_mg_L,EC contribution factor for iron
+nutrient_parameters,ec_factor_mn,0.019,dS_m_per_mg_L,EC contribution factor for manganese
+nutrient_parameters,ec_factor_zn,0.015,dS_m_per_mg_L,EC contribution factor for zinc
+nutrient_parameters,ec_factor_cu,0.016,dS_m_per_mg_L,EC contribution factor for copper
+nutrient_parameters,ec_factor_b,0.014,dS_m_per_mg_L,EC contribution factor for boron
+nutrient_parameters,ec_factor_mo,0.010,dS_m_per_mg_L,EC contribution factor for molybdenum
 nutrient_parameters,minimum_volume_fraction,0.1,dimensionless,Minimum solution volume fraction
 nutrient_parameters,xylem_transport_capacity,0.8,L_day_mg,Maximum xylem transport rate per unit concentration
 nutrient_parameters,phloem_transport_capacity,0.3,g_day_mg,Maximum phloem transport rate per unit concentration
@@ -277,3 +279,745 @@ nutrient_parameters,kinetics_ca_min_conc,2.0,mg_L,Minimum concentration for calc
 nutrient_parameters,kinetics_mg_vmax,4.0,mg_cm2_day,Maximum uptake rate for magnesium
 nutrient_parameters,kinetics_mg_km,12.0,mg_L,Michaelis constant for magnesium
 nutrient_parameters,kinetics_mg_min_conc,0.5,mg_L,Minimum concentration for magnesium uptake
+
+# Biomass Allocation Model Parameters
+allocation_parameters,vegetative_leaf_allocation,0.6,dimensionless,Base leaf allocation fraction during vegetative stage
+allocation_parameters,vegetative_stem_allocation,0.25,dimensionless,Base stem allocation fraction during vegetative stage
+allocation_parameters,vegetative_root_allocation,0.15,dimensionless,Base root allocation fraction during vegetative stage
+allocation_parameters,reproductive_leaf_allocation,0.45,dimensionless,Base leaf allocation fraction during reproductive stage
+allocation_parameters,reproductive_stem_allocation,0.35,dimensionless,Base stem allocation fraction during reproductive stage
+allocation_parameters,reproductive_root_allocation,0.2,dimensionless,Base root allocation fraction during reproductive stage
+allocation_parameters,light_response_factor,0.3,dimensionless,Response strength to light limitation
+allocation_parameters,nitrogen_response_factor,0.4,dimensionless,Response strength to nitrogen limitation
+allocation_parameters,water_response_factor,0.35,dimensionless,Response strength to water limitation
+allocation_parameters,minimum_organ_fraction,0.05,dimensionless,Minimum allocation fraction for any organ
+
+# Canopy Architecture Model Parameters
+canopy_parameters,number_of_layers,5,dimensionless,Number of canopy layers for light calculations
+canopy_parameters,max_lai,8.0,m2_m2,Maximum possible leaf area index for the crop
+canopy_parameters,extinction_coefficient,0.6,dimensionless,Base light extinction coefficient
+canopy_parameters,diffuse_extinction_coeff,0.8,dimensionless,Extinction coefficient multiplier for diffuse light
+canopy_parameters,beam_extinction_coeff,0.5,dimensionless,Extinction coefficient multiplier for direct beam light
+canopy_parameters,row_spacing,0.3,m,Distance between crop rows
+canopy_parameters,mean_leaf_angle,45.0,degrees,Mean leaf angle from horizontal
+canopy_parameters,canopy_width,0.25,m,Width of individual plant canopy
+canopy_parameters,leaf_angle_distribution,spherical,text,Type of leaf angle distribution
+canopy_parameters,leaf_angle_variance,20.0,degrees,Variance in leaf angle distribution
+canopy_parameters,plant_spacing,0.2,m,Distance between plants within a row
+canopy_parameters,plant_height,0.3,m,Maximum plant height at maturity
+canopy_parameters,leaf_reflectance,0.08,dimensionless,Fraction of incident light reflected by leaves
+canopy_parameters,leaf_transmittance,0.05,dimensionless,Fraction of incident light transmitted through leaves
+canopy_parameters,leaf_absorptance,0.87,dimensionless,Fraction of incident light absorbed by leaves
+canopy_parameters,self_shading_factor,0.7,dimensionless,Factor for self-shading within individual plants
+canopy_parameters,neighbor_shading_distance,0.5,m,Distance threshold for neighbor plant shading effects
+canopy_parameters,sunlit_fraction_method,campbell,text,Method for calculating sunlit leaf fraction
+canopy_parameters,clumping_index,0.85,dimensionless,Leaf clumping index (1=random distribution 0=completely clumped)
+canopy_parameters,max_extinction_coefficient,20.0,dimensionless,Maximum extinction coefficient when sun is at horizon
+canopy_parameters,upper_canopy_lai_factor,0.3,dimensionless,LAI distribution factor for upper canopy layers
+canopy_parameters,middle_canopy_lai_factor,0.4,dimensionless,LAI distribution factor for middle canopy layers
+canopy_parameters,lower_middle_canopy_lai_factor,0.25,dimensionless,LAI distribution factor for lower-middle canopy layers
+canopy_parameters,bottom_canopy_lai_factor,0.05,dimensionless,LAI distribution factor for bottom canopy layers
+canopy_parameters,max_temperature_gradient,3.0,°C,Maximum temperature gradient from top to bottom of canopy
+canopy_parameters,temperature_gradient_factor,0.5,°C_per_LAI,Temperature gradient factor per unit LAI
+canopy_parameters,ppfd_to_photosynthesis_factor,0.045,μmol_CO2_per_μmol_PPFD,Conversion factor from PPFD to photosynthesis rate
+
+# Canopy Architecture Hardcoded Constants
+canopy_parameters,spherical_x_coefficient,1.0,dimensionless,Leaf angle coefficient for spherical distribution
+canopy_parameters,planophile_x_coefficient,0.637,dimensionless,Leaf angle coefficient for planophile distribution (2/π)
+canopy_parameters,erectophile_x_coefficient,2.0,dimensionless,Leaf angle coefficient for erectophile distribution
+canopy_parameters,plagiophile_x_coefficient,1.33,dimensionless,Leaf angle coefficient for plagiophile distribution
+canopy_parameters,upper_canopy_height_threshold,0.8,dimensionless,Relative height threshold for upper canopy classification
+canopy_parameters,middle_canopy_height_threshold,0.5,dimensionless,Relative height threshold for middle canopy classification
+canopy_parameters,lower_middle_canopy_height_threshold,0.2,dimensionless,Relative height threshold for lower-middle canopy classification
+canopy_parameters,zenith_angle_precision_threshold,0.001,dimensionless,Numerical precision threshold for zenith angle calculations
+
+# Genetic Parameters Model
+genetic_parameters,EM_FL,120.0,GDD,Days from emergence to first flower in growing degree days
+genetic_parameters,FL_SH,150.0,GDD,Days from first flower to first seed in growing degree days
+genetic_parameters,FL_SD,180.0,GDD,Days from first flower to first pod in growing degree days
+genetic_parameters,SD_PM,300.0,GDD,Days from first seed to physiological maturity in growing degree days
+genetic_parameters,FL_LF,200.0,GDD,Days from first flower to end of leaf expansion in growing degree days
+genetic_parameters,LFMAX,45.0,mg_CO2_m2_s,Maximum leaf photosynthesis rate
+genetic_parameters,SLAVR,250.0,cm2_g,Specific leaf area under standard conditions
+genetic_parameters,SIZLF,120.0,cm2,Maximum size of full leaf
+genetic_parameters,XFRT,0.8,dimensionless,Maximum fraction of growth to reproductive growth
+genetic_parameters,SFDUR,450.0,GDD,Seed filling duration in growing degree days
+genetic_parameters,SDPDV,25.0,dimensionless,Average seed per pod under standard conditions
+genetic_parameters,PODUR,200.0,GDD,Time to reach final pod load in growing degree days
+genetic_parameters,WTPSD,0.05,g,Maximum weight per seed
+genetic_parameters,THRSH,0.85,dimensionless,Maximum ratio of seed/(seed+shell) at maturity
+genetic_parameters,SDPRO,0.25,dimensionless,Fraction protein in seeds
+genetic_parameters,SDLIP,0.05,dimensionless,Fraction oil in seeds
+genetic_parameters,EC_TOLERANCE,3.5,dS_m,Maximum EC tolerance
+genetic_parameters,ROOT_ACTIVITY,0.8,dimensionless,Root activity coefficient
+genetic_parameters,PHOTOSYNTHETIC_CAPACITY,0.9,dimensionless,Relative photosynthetic capacity
+genetic_parameters,NITRATE_EFFICIENCY,0.7,dimensionless,Nitrogen use efficiency factor
+genetic_parameters,cultivar_name,Boston Bibb,text,Cultivar name
+genetic_parameters,lettuce_type,butterhead,text,Type of lettuce
+genetic_parameters,breeder,Generic,text,Breeding company or program
+genetic_parameters,year_released,2020,year,Year cultivar was released
+genetic_parameters,yield_potential,0.85,dimensionless,Relative yield potential (0-1)
+genetic_parameters,adaptation_score,0.75,dimensionless,Environmental adaptation score (0-1)
+genetic_parameters,pedigree,Unknown,text,Genetic pedigree information
+genetic_parameters,breeding_notes,Standard butterhead cultivar,text,Breeding notes and characteristics
+
+# Genetic Parameter Constants and Weights
+genetic_parameters,adaptation_index_min,0.1,dimensionless,Minimum adaptation index value
+genetic_parameters,adaptation_index_max,1.0,dimensionless,Maximum adaptation index value
+genetic_parameters,expression_min,0.0,dimensionless,Minimum trait expression value
+genetic_parameters,expression_max,1.0,dimensionless,Maximum trait expression value
+genetic_parameters,default_trait_value,0.5,dimensionless,Default trait value when not specified
+genetic_parameters,default_adaptation_weight,0.6,dimensionless,Default weight for adaptation scoring
+genetic_parameters,default_yield_weight,0.25,dimensionless,Default weight for yield scoring
+genetic_parameters,default_temperature_stress_weight,0.5,dimensionless,Default weight for temperature stress
+genetic_parameters,default_nitrogen_excess_weight,0.3,dimensionless,Default weight for nitrogen excess effects
+genetic_parameters,default_stress_response_weight,0.2,dimensionless,Default weight for stress response
+genetic_parameters,default_heterosis_factor,1.05,dimensionless,Default heterosis factor for hybrids
+genetic_parameters,breeding_complementary_threshold,0.8,dimensionless,Minimum trait threshold for breeding complementarity
+genetic_parameters,hybrid_vigor_factor,1.1,dimensionless,Hybrid vigor enhancement factor for yield
+genetic_parameters,harvest_time_base,90.0,days,Base harvest time in days
+genetic_parameters,harvest_time_range,30.0,days,Range for harvest time variation
+genetic_parameters,default_performance_index,0.5,dimensionless,Default performance index value
+
+# Performance Metric Weights
+genetic_parameters,yield_weight_leaf_size,0.3,dimensionless,Weight of leaf size in yield index
+genetic_parameters,yield_weight_chlorophyll,0.2,dimensionless,Weight of chlorophyll content in yield index
+genetic_parameters,yield_weight_nitrate_avoidance,0.2,dimensionless,Weight of nitrate avoidance in yield index
+genetic_parameters,yield_weight_root_development,0.15,dimensionless,Weight of root development in yield index
+genetic_parameters,yield_weight_yield_potential,0.15,dimensionless,Weight of yield potential in yield index
+genetic_parameters,quality_weight_vitamin_c,0.3,dimensionless,Weight of vitamin C content in quality index
+genetic_parameters,quality_weight_carotenoid,0.25,dimensionless,Weight of carotenoid content in quality index
+genetic_parameters,quality_weight_nitrate_avoidance,0.25,dimensionless,Weight of nitrate avoidance in quality index
+genetic_parameters,quality_weight_chlorophyll,0.2,dimensionless,Weight of chlorophyll content in quality index
+genetic_parameters,stress_weight_heat,0.3,dimensionless,Weight of heat tolerance in stress tolerance index
+genetic_parameters,stress_weight_cold,0.25,dimensionless,Weight of cold tolerance in stress tolerance index
+genetic_parameters,stress_weight_salinity,0.25,dimensionless,Weight of salinity tolerance in stress tolerance index
+genetic_parameters,stress_weight_disease,0.2,dimensionless,Weight of disease resistance in stress tolerance index
+
+# Trait Values for Default Cultivar
+genetic_parameters,trait_days_to_emergence,0.6,dimensionless,Days to emergence trait value
+genetic_parameters,trait_days_to_harvest,0.7,dimensionless,Days to harvest trait value
+genetic_parameters,trait_bolting_tolerance,0.8,dimensionless,Bolting tolerance trait value
+genetic_parameters,trait_leaf_size,0.75,dimensionless,Leaf size trait value
+genetic_parameters,trait_plant_architecture,0.7,dimensionless,Plant architecture trait value
+genetic_parameters,trait_root_development,0.65,dimensionless,Root development trait value
+genetic_parameters,trait_yield_potential,0.85,dimensionless,Yield potential trait value
+genetic_parameters,trait_chlorophyll_content,0.8,dimensionless,Chlorophyll content trait value
+genetic_parameters,trait_carotenoid_content,0.6,dimensionless,Carotenoid content trait value
+genetic_parameters,trait_vitamin_c_content,0.7,dimensionless,Vitamin C content trait value
+genetic_parameters,trait_nitrate_accumulation,0.3,dimensionless,Nitrate accumulation trait value (lower is better)
+genetic_parameters,trait_heat_tolerance,0.6,dimensionless,Heat tolerance trait value
+genetic_parameters,trait_cold_tolerance,0.8,dimensionless,Cold tolerance trait value
+genetic_parameters,trait_salinity_tolerance,0.5,dimensionless,Salinity tolerance trait value
+genetic_parameters,trait_disease_resistance,0.7,dimensionless,Disease resistance trait value
+
+# Leaf Development Model Parameters
+leaf_development,base_phyllochron,80.0,°C_day,Thermal time interval between leaf appearances
+leaf_development,max_leaf_number,25.0,dimensionless,Maximum number of leaves for lettuce
+leaf_development,initial_leaf_number,2.0,dimensionless,Initial number of leaves (cotyledons + first true leaves)
+leaf_development,leaf_appearance_rate,1.0,leaves_per_phyllochron,Leaves per phyllochron unit
+leaf_development,max_individual_leaf_area,0.008,m2,Maximum area per individual leaf
+leaf_development,leaf_area_expansion_rate,0.15,dimensionless,Natural cellular expansion rate per day
+leaf_development,drought_threshold,0.6,dimensionless,Water stress threshold for leaf development
+leaf_development,n_stress_threshold,0.7,dimensionless,Nitrogen stress threshold for leaf expansion
+leaf_development,temperature_stress_sensitivity,0.8,dimensionless,Response sensitivity to temperature stress
+
+# Leaf Development Constants and Factors
+leaf_development,initial_leaf_area_factor,0.3,dimensionless,Factor for initial leaf area relative to maximum
+leaf_development,initial_thermal_time_factor,0.5,dimensionless,Factor for initial thermal time accumulation
+leaf_development,emerging_to_expanding_factor,0.3,dimensionless,Factor for emerging to expanding transition timing
+leaf_development,late_leaf_phyllochron_factor,1.5,dimensionless,Factor for late leaf phyllochron (slower appearance)
+leaf_development,very_late_leaf_phyllochron_factor,2.0,dimensionless,Factor for very late leaf phyllochron
+leaf_development,early_leaf_size_factor,0.4,dimensionless,Size factor for early leaves (smaller than mature)
+leaf_development,late_leaf_size_factor,0.6,dimensionless,Size factor for late leaves (smaller due to resource limits)
+leaf_development,leaf_maturation_thermal_time,150.0,°C_day,Thermal time required for leaf maturation
+leaf_development,leaf_lifespan_thermal_time,800.0,°C_day,Thermal time for complete leaf lifespan
+leaf_development,senescence_threshold_age,0.8,dimensionless,Age threshold for senescence initiation (fraction of lifespan)
+leaf_development,senescence_rate_base,0.02,per_day,Base senescence rate per day
+leaf_development,minimum_active_leaf_area,0.0001,m2,Minimum area for active leaf counting
+leaf_development,minimum_visible_leaf_area,0.00005,m2,Minimum area for visible leaf counting
+
+# Leaf Development Hardcoded Constants
+leaf_development,late_leaf_vstage_threshold,15.0,dimensionless,V-stage threshold for late leaf classification
+leaf_development,very_late_leaf_vstage_threshold,20.0,dimensionless,V-stage threshold for very late leaf classification
+leaf_development,early_leaf_position_threshold,5.0,dimensionless,V-stage threshold for early leaf position classification
+leaf_development,middle_leaf_position_threshold,15.0,dimensionless,V-stage threshold for middle leaf position classification
+leaf_development,early_position_scaling_factor,4.0,dimensionless,Scaling factor for early leaf position calculation
+leaf_development,late_position_scaling_factor,10.0,dimensionless,Scaling factor for late leaf position calculation
+
+# Nitrogen Balance Model Parameters  
+nitrogen_parameters,nitrate_reduction_rate,0.8,g_N_g_root_day,Rate of nitrate reduction to ammonium
+nitrogen_parameters,ammonium_assimilation_rate,1.2,g_N_g_root_day,Rate of ammonium assimilation into amino acids  
+nitrogen_parameters,amino_acid_uptake_rate,0.4,g_N_g_root_day,Rate of amino acid uptake by roots
+nitrogen_parameters,photosynthetic_n_use_efficiency,40.0,g_biomass_g_N,Biomass produced per unit nitrogen in photosynthesis
+nitrogen_parameters,growth_n_use_efficiency,30.0,g_biomass_g_N,Biomass produced per unit nitrogen in growth
+nitrogen_parameters,luxury_uptake_threshold,1.2,g_N_g_dry_mass,Threshold for luxury nitrogen uptake
+nitrogen_parameters,specific_root_activity,0.08,g_N_g_root_day,Maximum nitrogen uptake rate per unit root mass  
+nitrogen_parameters,root_zone_exploration,0.85,dimensionless,Root zone exploration efficiency factor
+
+# Nitrogen Uptake Kinetics (NO3 form - use existing values where available)
+nitrogen_parameters,uptake_kinetics_NO3_vmax,0.15,g_N_g_root_day,Maximum nitrate uptake rate  
+nitrogen_parameters,uptake_kinetics_NO3_km,0.5,mg_N_L,Michaelis constant for nitrate
+nitrogen_parameters,uptake_kinetics_NO3_min_conc,0.1,mg_N_L,Minimum nitrate concentration for uptake
+nitrogen_parameters,uptake_kinetics_NO3_inhibition_ki,2.0,mg_N_L,Ammonium inhibition constant for nitrate uptake
+
+# Nitrogen Uptake Kinetics (NH4 form)
+nitrogen_parameters,uptake_kinetics_NH4_vmax,0.12,g_N_g_root_day,Maximum ammonium uptake rate
+nitrogen_parameters,uptake_kinetics_NH4_km,0.3,mg_N_L,Michaelis constant for ammonium
+nitrogen_parameters,uptake_kinetics_NH4_min_conc,0.05,mg_N_L,Minimum ammonium concentration for uptake
+nitrogen_parameters,uptake_kinetics_NH4_inhibition_ki,1.5,mg_N_L,Nitrate inhibition constant for ammonium uptake
+
+# Nitrogen Uptake Kinetics (amino acids form)
+nitrogen_parameters,uptake_kinetics_amino_acids_vmax,0.08,g_N_g_root_day,Maximum amino acid uptake rate
+nitrogen_parameters,uptake_kinetics_amino_acids_km,0.8,mg_N_L,Michaelis constant for amino acids
+nitrogen_parameters,uptake_kinetics_amino_acids_min_conc,0.2,mg_N_L,Minimum amino acid concentration for uptake
+nitrogen_parameters,uptake_kinetics_amino_acids_inhibition_ki,0.0,mg_N_L,No competitive inhibition for amino acids
+
+# Nitrogen Allocation Coefficients - Vegetative Stage
+nitrogen_parameters,allocation_coefficients_vegetative_leaves,0.6,dimensionless,Nitrogen allocation priority to leaves during vegetative growth
+nitrogen_parameters,allocation_coefficients_vegetative_stems,0.2,dimensionless,Nitrogen allocation priority to stems during vegetative growth
+nitrogen_parameters,allocation_coefficients_vegetative_roots,0.2,dimensionless,Nitrogen allocation priority to roots during vegetative growth
+nitrogen_parameters,allocation_coefficients_vegetative_reproductive,0.0,dimensionless,Nitrogen allocation priority to reproductive organs during vegetative growth
+
+# Nitrogen Allocation Coefficients - Reproductive Stage  
+nitrogen_parameters,allocation_coefficients_reproductive_leaves,0.4,dimensionless,Nitrogen allocation priority to leaves during reproductive growth
+nitrogen_parameters,allocation_coefficients_reproductive_stems,0.2,dimensionless,Nitrogen allocation priority to stems during reproductive growth
+nitrogen_parameters,allocation_coefficients_reproductive_roots,0.1,dimensionless,Nitrogen allocation priority to roots during reproductive growth
+nitrogen_parameters,allocation_coefficients_reproductive_reproductive,0.3,dimensionless,Nitrogen allocation priority to reproductive organs during reproductive growth
+
+# Critical Nitrogen Concentrations - Leaves
+nitrogen_parameters,critical_n_concentrations_leaves_minimum,0.015,g_N_g_dry_mass,Minimum nitrogen concentration in leaves
+nitrogen_parameters,critical_n_concentrations_leaves_critical,0.025,g_N_g_dry_mass,Critical nitrogen concentration in leaves
+nitrogen_parameters,critical_n_concentrations_leaves_optimal,0.045,g_N_g_dry_mass,Optimal nitrogen concentration in leaves
+nitrogen_parameters,critical_n_concentrations_leaves_maximum,0.060,g_N_g_dry_mass,Maximum nitrogen concentration in leaves
+
+# Critical Nitrogen Concentrations - Stems  
+nitrogen_parameters,critical_n_concentrations_stems_minimum,0.008,g_N_g_dry_mass,Minimum nitrogen concentration in stems
+nitrogen_parameters,critical_n_concentrations_stems_critical,0.015,g_N_g_dry_mass,Critical nitrogen concentration in stems
+nitrogen_parameters,critical_n_concentrations_stems_optimal,0.025,g_N_g_dry_mass,Optimal nitrogen concentration in stems
+nitrogen_parameters,critical_n_concentrations_stems_maximum,0.035,g_N_g_dry_mass,Maximum nitrogen concentration in stems
+
+# Critical Nitrogen Concentrations - Roots
+nitrogen_parameters,critical_n_concentrations_roots_minimum,0.012,g_N_g_dry_mass,Minimum nitrogen concentration in roots
+nitrogen_parameters,critical_n_concentrations_roots_critical,0.020,g_N_g_dry_mass,Critical nitrogen concentration in roots
+nitrogen_parameters,critical_n_concentrations_roots_optimal,0.035,g_N_g_dry_mass,Optimal nitrogen concentration in roots
+nitrogen_parameters,critical_n_concentrations_roots_maximum,0.050,g_N_g_dry_mass,Maximum nitrogen concentration in roots
+
+# Critical Nitrogen Concentrations - Reproductive
+nitrogen_parameters,critical_n_concentrations_reproductive_minimum,0.020,g_N_g_dry_mass,Minimum nitrogen concentration in reproductive organs
+nitrogen_parameters,critical_n_concentrations_reproductive_critical,0.030,g_N_g_dry_mass,Critical nitrogen concentration in reproductive organs
+nitrogen_parameters,critical_n_concentrations_reproductive_optimal,0.050,g_N_g_dry_mass,Optimal nitrogen concentration in reproductive organs
+nitrogen_parameters,critical_n_concentrations_reproductive_maximum,0.070,g_N_g_dry_mass,Maximum nitrogen concentration in reproductive organs
+
+# Nitrogen Remobilization Rates by Pool Type
+nitrogen_parameters,remobilization_rates_structural,0.02,g_N_g_pool_day,Remobilization rate for structural nitrogen pool
+nitrogen_parameters,remobilization_rates_metabolic,0.15,g_N_g_pool_day,Remobilization rate for metabolic nitrogen pool
+nitrogen_parameters,remobilization_rates_storage,0.25,g_N_g_pool_day,Remobilization rate for storage nitrogen pool
+nitrogen_parameters,remobilization_rates_transport,0.30,g_N_g_pool_day,Remobilization rate for transport nitrogen pool
+
+# Nitrogen Remobilization Efficiency by Organ
+nitrogen_parameters,remobilization_efficiency_leaves,0.75,dimensionless,Nitrogen remobilization efficiency from leaves
+nitrogen_parameters,remobilization_efficiency_stems,0.60,dimensionless,Nitrogen remobilization efficiency from stems  
+nitrogen_parameters,remobilization_efficiency_roots,0.50,dimensionless,Nitrogen remobilization efficiency from roots
+nitrogen_parameters,remobilization_efficiency_reproductive,0.40,dimensionless,Nitrogen remobilization efficiency from reproductive organs
+
+# Organ Weight Factors for Stress Calculation
+nitrogen_parameters,organ_weights_leaves,0.5,dimensionless,Weight factor for leaves in nitrogen stress calculation
+nitrogen_parameters,organ_weights_stems,0.2,dimensionless,Weight factor for stems in nitrogen stress calculation
+nitrogen_parameters,organ_weights_roots,0.2,dimensionless,Weight factor for roots in nitrogen stress calculation
+nitrogen_parameters,organ_weights_reproductive,0.1,dimensionless,Weight factor for reproductive organs in nitrogen stress calculation
+
+# Nitrogen Pool Fractions - Leaves
+nitrogen_parameters,pool_fractions_leaves_structural,0.4,dimensionless,Fraction of leaf nitrogen in structural pool
+nitrogen_parameters,pool_fractions_leaves_metabolic,0.35,dimensionless,Fraction of leaf nitrogen in metabolic pool
+nitrogen_parameters,pool_fractions_leaves_storage,0.2,dimensionless,Fraction of leaf nitrogen in storage pool
+nitrogen_parameters,pool_fractions_leaves_transport,0.05,dimensionless,Fraction of leaf nitrogen in transport pool
+
+# Nitrogen Pool Fractions - Stems
+nitrogen_parameters,pool_fractions_stems_structural,0.6,dimensionless,Fraction of stem nitrogen in structural pool
+nitrogen_parameters,pool_fractions_stems_metabolic,0.2,dimensionless,Fraction of stem nitrogen in metabolic pool
+nitrogen_parameters,pool_fractions_stems_storage,0.15,dimensionless,Fraction of stem nitrogen in storage pool
+nitrogen_parameters,pool_fractions_stems_transport,0.05,dimensionless,Fraction of stem nitrogen in transport pool
+
+# Nitrogen Pool Fractions - Roots
+nitrogen_parameters,pool_fractions_roots_structural,0.5,dimensionless,Fraction of root nitrogen in structural pool
+nitrogen_parameters,pool_fractions_roots_metabolic,0.3,dimensionless,Fraction of root nitrogen in metabolic pool
+nitrogen_parameters,pool_fractions_roots_storage,0.15,dimensionless,Fraction of root nitrogen in storage pool
+nitrogen_parameters,pool_fractions_roots_transport,0.05,dimensionless,Fraction of root nitrogen in transport pool
+
+# Nitrogen Pool Fractions - Reproductive
+nitrogen_parameters,pool_fractions_reproductive_structural,0.3,dimensionless,Fraction of reproductive nitrogen in structural pool
+nitrogen_parameters,pool_fractions_reproductive_metabolic,0.4,dimensionless,Fraction of reproductive nitrogen in metabolic pool
+nitrogen_parameters,pool_fractions_reproductive_storage,0.25,dimensionless,Fraction of reproductive nitrogen in storage pool
+nitrogen_parameters,pool_fractions_reproductive_transport,0.05,dimensionless,Fraction of reproductive nitrogen in transport pool
+
+# pH Model Parameters
+ph_parameters,ph_target_min,5.5,pH,Minimum target pH for control system
+ph_parameters,ph_target_max,6.5,pH,Maximum target pH for control system
+ph_parameters,ph_buffer_capacity,5.0,mEq_L,Base buffer capacity of nutrient solution
+ph_parameters,ph_drift_rate,0.05,pH_per_day,Natural pH drift rate without intervention
+ph_parameters,nitrate_acidification_factor,0.02,pH_per_mg_N,pH decrease per mg N from nitrate uptake
+ph_parameters,ammonium_alkalinization_factor,0.02,pH_per_mg_N,pH increase per mg N from ammonium uptake
+ph_parameters,phosphate_acidification_factor,0.01,pH_per_mg_P,pH decrease per mg P from phosphate uptake
+ph_parameters,carbonate_buffer_pka,6.1,pH,pKa for carbonate buffer system (HCO3-/CO2)
+ph_parameters,phosphate_buffer_pka1,2.12,pH,First pKa for phosphate system (H3PO4/H2PO4-)
+ph_parameters,phosphate_buffer_pka2,7.21,pH,Second pKa for phosphate system (H2PO4-/HPO4--)
+ph_parameters,phosphate_buffer_pka3,12.67,pH,Third pKa for phosphate system (HPO4--/PO4---)
+ph_parameters,ph_adjustment_rate,0.5,pH_per_hour,Maximum pH adjustment rate by control system
+ph_parameters,ph_deadband,0.1,pH,pH control deadband to prevent oscillation
+ph_parameters,temperature_correction_factor,0.01,pH_per_°C,pH correction factor per degree C from 25°C
+ph_parameters,ec_buffer_factor,0.2,dimensionless,Buffer capacity multiplier per EC unit (dS/m)
+ph_parameters,proportional_control_factor,0.8,dimensionless,Proportional control multiplier for dosing calculations
+ph_parameters,current_ph,6.0,pH,Initial pH of the nutrient solution
+ph_parameters,total_alkalinity,3.0,mEq_L,Total alkalinity of the solution
+ph_parameters,carbonate_conc,50.0,mg_L,Carbonate concentration as HCO3-
+ph_parameters,phosphate_total,15.0,mg_L_P,Total phosphate concentration as P
+ph_parameters,ionic_strength,0.02,M,Ionic strength of the solution
+ph_parameters,ph_min_limit,4.0,pH,Absolute minimum allowable pH
+ph_parameters,ph_max_limit,8.5,pH,Absolute maximum allowable pH
+ph_parameters,calcium_phosphate_ksp,2.07e-33,M5,Solubility product constant for Ca3(PO4)2
+ph_parameters,magnesium_phosphate_ksp,1.04e-24,M5,Solubility product constant for Mg3(PO4)2
+
+# pH-dependent Phosphate Solubility Data (mg P/L)
+ph_parameters,phosphate_solubility_ph_4_0,250.0,mg_L_P,Phosphate solubility at pH 4.0
+ph_parameters,phosphate_solubility_ph_5_0,180.0,mg_L_P,Phosphate solubility at pH 5.0
+ph_parameters,phosphate_solubility_ph_6_0,120.0,mg_L_P,Phosphate solubility at pH 6.0
+ph_parameters,phosphate_solubility_ph_7_0,80.0,mg_L_P,Phosphate solubility at pH 7.0
+ph_parameters,phosphate_solubility_ph_8_0,45.0,mg_L_P,Phosphate solubility at pH 8.0
+
+# pH-dependent Iron Solubility Data (mg Fe/L)
+ph_parameters,iron_solubility_ph_4_0,50.0,mg_L_Fe,Iron solubility at pH 4.0
+ph_parameters,iron_solubility_ph_5_0,25.0,mg_L_Fe,Iron solubility at pH 5.0
+ph_parameters,iron_solubility_ph_6_0,8.0,mg_L_Fe,Iron solubility at pH 6.0
+ph_parameters,iron_solubility_ph_7_0,2.0,mg_L_Fe,Iron solubility at pH 7.0
+ph_parameters,iron_solubility_ph_8_0,0.5,mg_L_Fe,Iron solubility at pH 8.0
+
+# Molecular Weight Constants for pH Calculations
+ph_parameters,co2_molecular_weight,44.0,g_mol,Molecular weight of CO2
+ph_parameters,no3_molecular_weight,62.0,g_mol,Molecular weight of NO3-
+ph_parameters,nh4_molecular_weight,18.0,g_mol,Molecular weight of NH4+
+ph_parameters,po4_molecular_weight,95.0,g_mol,Molecular weight of PO4---
+ph_parameters,nitrogen_atomic_weight,14.0,g_mol,Atomic weight of nitrogen
+ph_parameters,phosphorus_atomic_weight,31.0,g_mol,Atomic weight of phosphorus
+ph_parameters,unit_conversion_factor,1000.0,mg_g,Conversion factor from grams to milligrams
+
+# Root System Model Additional Parameters
+
+# Root Zone Layer Configuration Parameters
+root_system_parameters,temperature_range_factor,10.0,°C,Temperature range factor for root zone layers
+root_system_parameters,min_temperature_factor,0.1,dimensionless,Minimum temperature factor for root uptake
+root_system_parameters,max_temperature_factor,4.0,dimensionless,Maximum temperature factor for root uptake
+root_system_parameters,low_flow_factor,0.4,dimensionless,Flow factor when below minimum flow rate
+root_system_parameters,high_flow_factor,0.6,dimensionless,Flow factor when above maximum flow rate
+root_system_parameters,ph_zone_min,5.5,pH,Minimum optimal pH for root zones
+root_system_parameters,ph_zone_max,6.5,pH,Maximum optimal pH for root zones
+root_system_parameters,min_ph_factor,0.2,dimensionless,Minimum pH factor for root uptake
+root_system_parameters,ph_penalty_factor,0.5,dimensionless,pH penalty factor outside optimal range
+
+# Root System Volume Distribution Factors
+root_system_parameters,nft_zone_1_fraction,0.4,dimensionless,Volume fraction for NFT zone 1 (0-2cm)
+root_system_parameters,nft_zone_2_fraction,0.4,dimensionless,Volume fraction for NFT zone 2 (2-4cm)
+root_system_parameters,nft_zone_3_fraction,0.2,dimensionless,Volume fraction for NFT zone 3 (4-6cm)
+root_system_parameters,dwc_zone_1_fraction,0.2,dimensionless,Volume fraction for DWC zone 1 (0-5cm)
+root_system_parameters,dwc_zone_2_fraction,0.5,dimensionless,Volume fraction for DWC zone 2 (5-15cm)
+root_system_parameters,dwc_zone_3_fraction,0.3,dimensionless,Volume fraction for DWC zone 3 (15-25cm)
+root_system_parameters,general_zone_1_fraction,0.25,dimensionless,Volume fraction for other systems zone 1 (0-3cm)
+root_system_parameters,general_zone_2_fraction,0.35,dimensionless,Volume fraction for other systems zone 2 (3-8cm)
+root_system_parameters,general_zone_3_fraction,0.25,dimensionless,Volume fraction for other systems zone 3 (8-15cm)
+root_system_parameters,general_zone_4_fraction,0.15,dimensionless,Volume fraction for other systems zone 4 (15-20cm)
+
+# Root Growth Calculation Parameters
+root_system_parameters,root_biomass_density,0.3,g_cm3,Density factor for root biomass calculation
+root_system_parameters,coarse_root_min_threshold,0.05,cm,Minimum length threshold for coarse root cohorts
+root_system_parameters,fine_root_min_threshold,0.1,cm,Minimum length threshold for fine root cohorts
+root_system_parameters,diameter_minimum_limit,0.05,mm,Absolute minimum root diameter
+
+# Zone Growth Potential Weights
+root_system_parameters,auxin_gradient_weight,0.15,dimensionless,Weight of auxin gradient in growth potential
+root_system_parameters,nutrient_signal_weight,0.1,dimensionless,Weight of nutrient signal in growth potential
+root_system_parameters,oxygen_effect_weight,0.1,dimensionless,Weight of oxygen effect in growth potential
+root_system_parameters,competition_effect_weight,0.05,dimensionless,Weight of competition effect in growth potential
+root_system_parameters,temperature_effect_weight,0.03,dimensionless,Weight of temperature effect in growth potential
+root_system_parameters,min_growth_potential,0.02,dimensionless,Minimum zone growth potential
+root_system_parameters,max_growth_potential,0.2,dimensionless,Maximum zone growth potential
+
+# Temperature Factor Missing Parameters
+root_system_parameters,max_temp_threshold,35.0,°C,Maximum temperature threshold for root activity
+root_system_parameters,temp_decay_factor,0.1,dimensionless,Temperature decay factor above optimal
+
+# Flow Rate Calculation Parameters
+root_system_parameters,flow_rate_offset,0.5,dimensionless,Offset for flow rate calculation
+root_system_parameters,flow_rate_multiplier,0.5,dimensionless,Multiplier for flow rate calculation
+
+# Transport and Age Effect Parameters
+root_system_parameters,transport_temp_exponent,1.25,dimensionless,Exponent for temperature effect on nutrient transport
+root_system_parameters,minimum_surface_area,1.0,cm2,Minimum surface area for calculations
+root_system_parameters,minimum_biomass,0.001,g,Minimum biomass for specific root length calculations
+root_system_parameters,minimum_volume,1.0,cm3,Minimum volume for density calculations
+root_system_parameters,effective_area_minimum,1e-6,cm2,Minimum effective surface area threshold
+
+# Core Root System Parameters
+root_system_parameters,container_volume,5000.0,cm3,Container/reservoir volume
+root_system_parameters,channel_length,100.0,cm,Channel length for NFT systems
+root_system_parameters,system_type,deep_water_culture,string,Hydroponic system type
+root_system_parameters,channel_width,10.0,cm,Channel width for NFT systems
+root_system_parameters,channel_depth,5.0,cm,Channel depth for NFT systems
+root_system_parameters,n_channels,4,count,Number of parallel channels
+root_system_parameters,root_zone_independent,false,boolean,Whether root zone size is independent of tank volume
+root_system_parameters,primary_root_growth_rate,2.5,cm_day,Primary root growth rate
+root_system_parameters,lateral_root_density,8.0,count_per_cm,Lateral roots per cm of primary root
+root_system_parameters,branching_angle_mean,45.0,degrees,Mean branching angle
+root_system_parameters,branching_angle_std,15.0,degrees,Standard deviation of branching angle
+root_system_parameters,fine_root_fraction,0.6,dimensionless,Fraction of fine roots
+root_system_parameters,medium_root_fraction,0.3,dimensionless,Fraction of medium roots
+root_system_parameters,coarse_root_fraction,0.1,dimensionless,Fraction of coarse roots
+root_system_parameters,fine_diameter_mean,0.2,mm,Mean diameter of fine roots
+root_system_parameters,fine_diameter_std,0.05,mm,Standard deviation of fine root diameter
+root_system_parameters,medium_diameter_mean,0.8,mm,Mean diameter of medium roots
+root_system_parameters,medium_diameter_std,0.2,mm,Standard deviation of medium root diameter
+root_system_parameters,coarse_diameter_mean,2.0,mm,Mean diameter of coarse roots
+root_system_parameters,coarse_diameter_std,0.5,mm,Standard deviation of coarse root diameter
+root_system_parameters,fine_turnover_rate,0.05,fraction_per_day,Fine root turnover rate
+root_system_parameters,medium_turnover_rate,0.02,fraction_per_day,Medium root turnover rate
+root_system_parameters,coarse_turnover_rate,0.01,fraction_per_day,Coarse root turnover rate
+root_system_parameters,fine_root_half_life_days,20.0,days,Fine root activity half-life
+root_system_parameters,medium_root_half_life_days,40.0,days,Medium root activity half-life
+root_system_parameters,coarse_root_half_life_days,80.0,days,Coarse root activity half-life
+root_system_parameters,fine_min_activity,0.2,dimensionless,Minimum activity factor for fine roots
+root_system_parameters,medium_min_activity,0.15,dimensionless,Minimum activity factor for medium roots
+root_system_parameters,coarse_min_activity,0.1,dimensionless,Minimum activity factor for coarse roots
+root_system_parameters,establishment_plateau_days,7.0,days,Days of establishment plateau for root activity
+root_system_parameters,initial_root_activity,1.0,dimensionless,Initial activity factor for new roots
+root_system_parameters,fine_root_effectiveness,1.0,dimensionless,Fine root effectiveness factor
+root_system_parameters,medium_root_effectiveness,0.7,dimensionless,Medium root effectiveness factor
+root_system_parameters,coarse_root_effectiveness,0.3,dimensionless,Coarse root effectiveness factor
+root_system_parameters,optimal_temperature,22.0,°C,Optimal temperature for root uptake
+root_system_parameters,q10_factor,2.0,dimensionless,Q10 factor for temperature response
+root_system_parameters,optimal_flow_rate,1.5,L_min,Optimal flow rate
+root_system_parameters,flow_stress_threshold,4.0,L_min,Flow rate stress threshold
+root_system_parameters,root_growth_auxin_decay_rate,0.1,per_zone,Auxin decay rate for growth potential
+root_system_parameters,root_optimal_density,50.0,cm_per_cm3,Optimal root length density
+root_system_parameters,root_density_stress_factor,0.3,dimensionless,Root density stress factor
+root_system_parameters,root_temp_optimum,20.0,°C,Optimal root temperature
+root_system_parameters,root_temp_max,35.0,°C,Maximum root temperature
+root_system_parameters,root_temp_min_factor,0.1,dimensionless,Minimum temperature factor for roots
+root_system_parameters,root_oxygen_optimum,8.0,mg_L,Optimal dissolved oxygen level
+root_system_parameters,root_oxygen_min_factor,0.2,dimensionless,Minimum oxygen factor
+root_system_parameters,ph_stress_range_acidic,1.0,pH_units,pH stress range on acidic side
+root_system_parameters,ph_stress_range_basic,1.5,pH_units,pH stress range on basic side
+root_system_parameters,ph_stress_factor,0.5,dimensionless,pH stress factor
+root_system_parameters,young_root_activity,0.9,dimensionless,Activity factor for young roots
+root_system_parameters,old_root_activity,0.4,dimensionless,Activity factor for old roots
+
+# Nutrient Uptake Kinetics Parameters
+root_system_parameters,no3_uptake_vmax,0.15,mg_cm2_day,Maximum nitrate uptake rate
+root_system_parameters,no3_uptake_km,50.0,mg_L,Michaelis constant for nitrate uptake
+root_system_parameters,nh4_uptake_vmax,0.12,mg_cm2_day,Maximum ammonium uptake rate
+root_system_parameters,nh4_uptake_km,20.0,mg_L,Michaelis constant for ammonium uptake
+root_system_parameters,po4_uptake_vmax,0.08,mg_cm2_day,Maximum phosphate uptake rate
+root_system_parameters,po4_uptake_km,15.0,mg_L,Michaelis constant for phosphate uptake
+root_system_parameters,k_uptake_vmax,0.10,mg_cm2_day,Maximum potassium uptake rate
+root_system_parameters,k_uptake_km,30.0,mg_L,Michaelis constant for potassium uptake
+root_system_parameters,ca_uptake_vmax,0.06,mg_cm2_day,Maximum calcium uptake rate
+root_system_parameters,ca_uptake_km,40.0,mg_L,Michaelis constant for calcium uptake
+root_system_parameters,mg_uptake_vmax,0.05,mg_cm2_day,Maximum magnesium uptake rate
+root_system_parameters,mg_uptake_km,25.0,mg_L,Michaelis constant for magnesium uptake
+root_system_parameters,so4_uptake_vmax,0.04,mg_cm2_day,Maximum sulfate uptake rate
+root_system_parameters,so4_uptake_km,35.0,mg_L,Michaelis constant for sulfate uptake
+
+# System-Specific Multipliers (NFT)
+root_system_parameters,system_multipliers_nutrient_film_technique_root_length_multiplier,1.2,dimensionless,NFT root length multiplier
+root_system_parameters,system_multipliers_nutrient_film_technique_surface_area_multiplier,1.3,dimensionless,NFT surface area multiplier
+root_system_parameters,system_multipliers_nutrient_film_technique_branching_multiplier,1.1,dimensionless,NFT branching multiplier
+
+# System-Specific Multipliers (DWC)
+root_system_parameters,system_multipliers_deep_water_culture_root_length_multiplier,1.0,dimensionless,DWC root length multiplier
+root_system_parameters,system_multipliers_deep_water_culture_surface_area_multiplier,1.0,dimensionless,DWC surface area multiplier
+root_system_parameters,system_multipliers_deep_water_culture_branching_multiplier,1.0,dimensionless,DWC branching multiplier
+
+# System-Specific Multipliers (Aeroponics)
+root_system_parameters,system_multipliers_aeroponics_root_length_multiplier,1.5,dimensionless,Aeroponics root length multiplier
+root_system_parameters,system_multipliers_aeroponics_surface_area_multiplier,1.4,dimensionless,Aeroponics surface area multiplier
+root_system_parameters,system_multipliers_aeroponics_branching_multiplier,1.3,dimensionless,Aeroponics branching multiplier
+
+# Nutrient Demand Weights
+root_system_parameters,nutrient_demand_weight_no3,0.4,dimensionless,Nitrogen demand weight
+root_system_parameters,nutrient_demand_weight_po4,0.2,dimensionless,Phosphate demand weight
+root_system_parameters,nutrient_demand_weight_k,0.2,dimensionless,Potassium demand weight
+root_system_parameters,nutrient_demand_weight_ca,0.1,dimensionless,Calcium demand weight
+root_system_parameters,nutrient_demand_weight_mg,0.1,dimensionless,Magnesium demand weight
+
+# Nutrient Reference Concentrations
+root_system_parameters,nutrient_ref_concentration_no3,200.0,mg_L,Nitrogen reference concentration
+root_system_parameters,nutrient_ref_concentration_po4,50.0,mg_L,Phosphate reference concentration
+root_system_parameters,nutrient_ref_concentration_k,300.0,mg_L,Potassium reference concentration
+root_system_parameters,nutrient_ref_concentration_ca,200.0,mg_L,Calcium reference concentration
+root_system_parameters,nutrient_ref_concentration_mg,50.0,mg_L,Magnesium reference concentration
+
+# Nutrient Competition Groups
+root_system_parameters,nutrient_competition_no3,NH4,string,NO3 competition group
+root_system_parameters,nutrient_competition_nh4,NO3,string,NH4 competition group
+root_system_parameters,nutrient_competition_po4,,string,PO4 competition group
+root_system_parameters,nutrient_competition_k,Ca-Mg,string,K competition group
+root_system_parameters,nutrient_competition_ca,K-Mg,string,Ca competition group
+root_system_parameters,nutrient_competition_mg,K-Ca,string,Mg competition group
+
+# Nutrient pH Optima
+root_system_parameters,ph_optimum_no3_min,5.5,pH,NO3 optimal pH minimum
+root_system_parameters,ph_optimum_no3_max,6.5,pH,NO3 optimal pH maximum
+root_system_parameters,ph_optimum_nh4_min,6.0,pH,NH4 optimal pH minimum
+root_system_parameters,ph_optimum_nh4_max,7.0,pH,NH4 optimal pH maximum
+root_system_parameters,ph_optimum_po4_min,6.0,pH,PO4 optimal pH minimum
+root_system_parameters,ph_optimum_po4_max,7.0,pH,PO4 optimal pH maximum
+root_system_parameters,ph_optimum_k_min,5.5,pH,K optimal pH minimum
+root_system_parameters,ph_optimum_k_max,7.5,pH,K optimal pH maximum
+root_system_parameters,ph_optimum_ca_min,6.0,pH,Ca optimal pH minimum
+root_system_parameters,ph_optimum_ca_max,8.0,pH,Ca optimal pH maximum
+root_system_parameters,ph_optimum_mg_min,6.0,pH,Mg optimal pH minimum
+root_system_parameters,ph_optimum_mg_max,8.0,pH,Mg optimal pH maximum
+
+# Missing Core Root System Parameters
+root_system_parameters,root_zone_efficiency_factor,0.8,dimensionless,Root zone efficiency factor
+
+# Temperature Stress Model Parameters
+stress_parameters,optimal_temp_min,18.0,°C,Minimum optimal temperature for temperature stress
+stress_parameters,optimal_temp_max,26.0,°C,Maximum optimal temperature for temperature stress
+stress_parameters,heat_threshold_mild,28.0,°C,Mild heat stress threshold
+stress_parameters,heat_threshold_severe,32.0,°C,Severe heat stress threshold
+stress_parameters,heat_lethal_temperature,40.0,°C,Lethal temperature for heat stress
+stress_parameters,cold_threshold_mild,15.0,°C,Mild cold stress threshold
+stress_parameters,cold_threshold_severe,10.0,°C,Severe cold stress threshold
+stress_parameters,frost_threshold,2.0,°C,Frost damage threshold
+stress_parameters,photosynthesis_heat_sensitivity,0.8,dimensionless,Photosynthesis sensitivity to heat stress
+stress_parameters,photosynthesis_cold_sensitivity,0.9,dimensionless,Photosynthesis sensitivity to cold stress
+stress_parameters,respiration_heat_sensitivity,0.6,dimensionless,Respiration sensitivity to heat stress
+stress_parameters,respiration_cold_sensitivity,0.7,dimensionless,Respiration sensitivity to cold stress
+stress_parameters,growth_heat_sensitivity,0.9,dimensionless,Growth sensitivity to heat stress
+stress_parameters,growth_cold_sensitivity,1.0,dimensionless,Growth sensitivity to cold stress
+stress_parameters,development_heat_sensitivity,0.7,dimensionless,Development sensitivity to heat stress
+stress_parameters,development_cold_sensitivity,0.8,dimensionless,Development sensitivity to cold stress
+stress_parameters,acclimation_rate,0.1,per_day,Rate of temperature acclimation
+stress_parameters,max_acclimation_days,14,days,Maximum days for temperature acclimation history
+stress_parameters,acclimation_decay_rate,0.05,per_day,Rate of acclimation decay
+stress_parameters,heat_damage_threshold,0.7,dimensionless,Threshold for heat damage accumulation
+stress_parameters,cold_damage_threshold,0.6,dimensionless,Threshold for cold damage accumulation
+stress_parameters,frost_damage_rate,0.1,per_day,Rate of frost damage accumulation
+stress_parameters,recovery_rate_heat,0.02,per_day,Recovery rate from heat damage
+stress_parameters,recovery_rate_cold,0.015,per_day,Recovery rate from cold damage
+stress_parameters,stress_memory_duration,7,days,Duration of stress memory effect
+stress_parameters,memory_effect_strength,0.2,dimensionless,Strength of stress memory effect
+
+# Integrated Stress Model Hardcoded Constants
+stress_parameters,stress_weight_water,0.25,dimensionless,Weight of water stress in overall stress calculation
+stress_parameters,stress_weight_temperature,0.3,dimensionless,Weight of temperature stress in overall stress calculation
+stress_parameters,stress_weight_nutrient,0.2,dimensionless,Weight of nutrient stress in overall stress calculation
+stress_parameters,stress_weight_light,0.1,dimensionless,Weight of light stress in overall stress calculation
+stress_parameters,stress_weight_salinity,0.1,dimensionless,Weight of salinity stress in overall stress calculation
+stress_parameters,stress_weight_oxygen,0.03,dimensionless,Weight of oxygen stress in overall stress calculation
+stress_parameters,stress_weight_ph,0.02,dimensionless,Weight of pH stress in overall stress calculation
+
+# Stress Interaction Factors (hardcoded in code)
+stress_parameters,water_temp_interaction_factor,1.3,dimensionless,Water-temperature stress interaction factor
+stress_parameters,water_salinity_interaction_factor,1.4,dimensionless,Water-salinity stress interaction factor
+stress_parameters,water_nutrient_interaction_factor,1.2,dimensionless,Water-nutrient stress interaction factor
+stress_parameters,temp_light_interaction_factor,1.1,dimensionless,Temperature-light stress interaction factor
+stress_parameters,nutrient_ph_interaction_factor,1.5,dimensionless,Nutrient-pH stress interaction factor
+stress_parameters,nutrient_salinity_interaction_factor,1.1,dimensionless,Nutrient-salinity stress interaction factor
+
+# Stress Onset and Damage Thresholds
+stress_parameters,stress_onset_threshold_water,0.2,dimensionless,Onset threshold for water stress
+stress_parameters,stress_onset_threshold_temperature,0.15,dimensionless,Onset threshold for temperature stress
+stress_parameters,stress_onset_threshold_nutrient,0.25,dimensionless,Onset threshold for nutrient stress
+stress_parameters,stress_onset_threshold_light,0.3,dimensionless,Onset threshold for light stress
+stress_parameters,stress_onset_threshold_salinity,0.2,dimensionless,Onset threshold for salinity stress
+stress_parameters,stress_onset_threshold_oxygen,0.1,dimensionless,Onset threshold for oxygen stress
+stress_parameters,stress_onset_threshold_ph,0.15,dimensionless,Onset threshold for pH stress
+stress_parameters,damage_threshold_water,0.6,dimensionless,Damage threshold for water stress
+stress_parameters,damage_threshold_temperature,0.5,dimensionless,Damage threshold for temperature stress
+stress_parameters,damage_threshold_nutrient,0.7,dimensionless,Damage threshold for nutrient stress
+stress_parameters,damage_threshold_light,0.8,dimensionless,Damage threshold for light stress
+stress_parameters,damage_threshold_salinity,0.6,dimensionless,Damage threshold for salinity stress
+stress_parameters,damage_threshold_oxygen,0.4,dimensionless,Damage threshold for oxygen stress
+stress_parameters,damage_threshold_ph,0.5,dimensionless,Damage threshold for pH stress
+
+# UnifiedStressCalculator Hardcoded Constants
+stress_parameters,root_temp_tolerance,5.0,°C,Root temperature tolerance range
+stress_parameters,root_temp_stress_factor,0.1,per_°C,Root temperature stress factor
+stress_parameters,vpd_stress_low_factor,0.15,per_kPa,VPD stress factor for low VPD
+stress_parameters,vpd_stress_high_factor,0.25,per_kPa,VPD stress factor for high VPD
+stress_parameters,optimal_vpd_min,0.5,kPa,Minimum optimal VPD
+stress_parameters,optimal_vpd_max,1.2,kPa,Maximum optimal VPD
+stress_parameters,optimal_ec_min,1.2,dS_m,Minimum optimal EC
+stress_parameters,optimal_ec_max,2.0,dS_m,Maximum optimal EC
+stress_parameters,ec_stress_high_factor,0.1,per_dS_m,EC stress factor for high EC
+stress_parameters,ec_stress_low_factor,0.15,per_dS_m,EC stress factor for low EC
+stress_parameters,nitrogen_stress_factor,0.3,dimensionless,Nitrogen stress factor
+stress_parameters,optimal_n_min,150.0,mg_L,Minimum optimal nitrogen concentration
+stress_parameters,optimal_n_max,250.0,mg_L,Maximum optimal nitrogen concentration
+stress_parameters,severe_deficiency_threshold,50.0,mg_L,Severe nitrogen deficiency threshold
+
+# Process Sensitivity Factors (hardcoded defaults)
+stress_parameters,process_sensitivity_photosynthesis,0.8,dimensionless,Default photosynthesis sensitivity to stress
+stress_parameters,process_sensitivity_respiration,0.8,dimensionless,Default respiration sensitivity to stress
+stress_parameters,process_sensitivity_transpiration,0.8,dimensionless,Default transpiration sensitivity to stress
+stress_parameters,process_sensitivity_growth,0.7,dimensionless,Default growth sensitivity to stress
+
+# Temperature Stress Level Constants (replace hardcoded values)
+stress_parameters,mild_stress_level,0.3,dimensionless,Stress level for mild temperature deviation
+stress_parameters,moderate_stress_level,0.4,dimensionless,Additional stress level for moderate temperature deviation
+stress_parameters,mild_cold_stress_level,0.2,dimensionless,Stress level for mild cold deviation
+stress_parameters,moderate_cold_stress_level,0.3,dimensionless,Additional stress level for moderate cold deviation
+stress_parameters,severe_cold_stress_level,0.3,dimensionless,Additional stress level for severe cold deviation
+stress_parameters,frost_base_stress_level,0.8,dimensionless,Base stress level for frost conditions
+stress_parameters,frost_additional_stress,0.2,dimensionless,Additional stress for extreme frost
+
+# Acclimation Effect Constants
+stress_parameters,heat_acclimation_reduction,0.4,dimensionless,Heat acclimation stress reduction factor
+stress_parameters,cold_acclimation_reduction,0.5,dimensionless,Cold acclimation stress reduction factor
+
+# Process Factor Weights
+stress_parameters,photosynthesis_weight,0.35,dimensionless,Weight of photosynthesis in overall stress
+stress_parameters,growth_weight,0.35,dimensionless,Weight of growth in overall stress
+stress_parameters,development_weight,0.20,dimensionless,Weight of development in overall stress
+stress_parameters,respiration_weight,0.10,dimensionless,Weight of respiration in overall stress
+
+# Damage and Recovery Constants
+stress_parameters,heat_damage_rate,0.01,per_day,Heat damage accumulation rate per day
+stress_parameters,cold_damage_rate,0.008,per_day,Cold damage accumulation rate per day
+stress_parameters,frost_recovery_multiplier,0.5,dimensionless,Frost damage recovery rate multiplier
+stress_parameters,damage_factor_multiplier,0.5,dimensionless,Damage effect multiplier on process factors
+
+# IntegratedStressModel Default Constants
+stress_parameters,cumulative_threshold_default,0.8,dimensionless,Default cumulative stress threshold
+stress_parameters,damage_accumulation_default,0.01,per_day,Default damage accumulation rate
+stress_parameters,recovery_threshold_default,0.8,dimensionless,Default recovery threshold
+stress_parameters,full_recovery_time_default,7.0,days,Default full recovery time
+stress_parameters,acclimation_capacity_default,0.3,dimensionless,Default acclimation capacity
+stress_parameters,acclimation_memory_default,7.0,days,Default acclimation memory duration
+
+# UnifiedStressCalculator Calculation Constants
+stress_parameters,chronic_stress_weight,0.8,dimensionless,Weight of chronic stress in combined calculation
+stress_parameters,acute_stress_weight,0.2,dimensionless,Weight of acute stress in combined calculation
+stress_parameters,acclimation_benefit_factor,0.3,dimensionless,Acclimation benefit factor
+stress_parameters,interaction_penalty_factor,0.1,dimensionless,Stress interaction penalty factor
+stress_parameters,recovery_bonus_factor,0.05,dimensionless,Recovery bonus factor
+stress_parameters,damage_penalty_factor,0.2,dimensionless,Damage penalty factor
+stress_parameters,memory_divisor,3.0,dimensionless,Memory effect time divisor for exponential weighting
+stress_parameters,chronic_factor_multiplier,1.5,dimensionless,Chronic stress factor multiplier
+senescence_parameters,natural_lifespan_gdd,800.0,gdd,Leaf lifespan in GDD before natural senescence
+senescence_parameters,age_senescence_rate,0.02,per_day,Daily senescence rate for old leaves
+senescence_parameters,water_stress_threshold,0.7,dimensionless,Water stress threshold for senescence
+senescence_parameters,nitrogen_stress_threshold,0.6,dimensionless,Nitrogen stress threshold for senescence
+senescence_parameters,temperature_stress_threshold,0.65,dimensionless,Temperature stress threshold for senescence
+senescence_parameters,light_stress_threshold,0.5,dimensionless,Light stress threshold for senescence
+senescence_parameters,water_stress_rate,0.05,per_day,Daily senescence rate under water stress
+senescence_parameters,nitrogen_stress_rate,0.04,per_day,Daily senescence rate under nitrogen stress
+senescence_parameters,temperature_stress_rate,0.06,per_day,Daily senescence rate under temperature stress
+senescence_parameters,light_stress_rate,0.03,per_day,Daily senescence rate under light stress
+senescence_parameters,early_senescence_threshold,0.15,dimensionless,Damage threshold for early senescence
+senescence_parameters,active_senescence_threshold,0.35,dimensionless,Damage threshold for active senescence
+senescence_parameters,late_senescence_threshold,0.65,dimensionless,Damage threshold for late senescence
+senescence_parameters,death_threshold,0.9,dimensionless,Damage threshold for death
+senescence_parameters,recovery_rate,0.01,per_day,Daily recovery rate under good conditions
+senescence_parameters,max_recovery,0.3,dimensionless,Maximum recoverable damage fraction
+senescence_parameters,reproductive_priority_factor,1.8,dimensionless,Senescence acceleration during reproduction
+senescence_parameters,lower_canopy_factor,1.4,dimensionless,Senescence acceleration for shaded leaves
+senescence_parameters,active_senescence_multiplier,2.5,dimensionless,Remobilization multiplier for active senescence
+senescence_parameters,normal_senescence_multiplier,1.0,dimensionless,Remobilization multiplier for normal senescence
+senescence_parameters,stress_history_days,7,days,Days of stress history tracked
+senescence_parameters,daily_area_loss_factor,0.8,dimensionless,Daily area loss factor during senescence
+senescence_parameters,daily_biomass_loss_factor,0.6,dimensionless,Daily biomass loss factor during senescence
+senescence_parameters,stress_recovery_threshold,0.25,dimensionless,Stress threshold for recovery
+senescence_parameters,recovery_stress_threshold,0.25,dimensionless,Stress threshold for recovery initiation
+senescence_parameters,nitrogen_recovery,0.8,dimensionless,Nitrogen remobilization efficiency
+senescence_parameters,phosphorus_recovery,0.7,dimensionless,Phosphorus remobilization efficiency
+senescence_parameters,potassium_recovery,0.9,dimensionless,Potassium remobilization efficiency
+senescence_parameters,magnesium_recovery,0.6,dimensionless,Magnesium remobilization efficiency
+senescence_parameters,sulfur_recovery,0.7,dimensionless,Sulfur remobilization efficiency
+senescence_parameters,calcium_recovery,0.2,dimensionless,Calcium remobilization efficiency
+senescence_parameters,iron_recovery,0.5,dimensionless,Iron remobilization efficiency
+senescence_parameters,manganese_recovery,0.4,dimensionless,Manganese remobilization efficiency
+senescence_parameters,zinc_recovery,0.6,dimensionless,Zinc remobilization efficiency
+senescence_parameters,copper_recovery,0.5,dimensionless,Copper remobilization efficiency
+senescence_parameters,boron_recovery,0.3,dimensionless,Boron remobilization efficiency
+senescence_parameters,molybdenum_recovery,0.4,dimensionless,Molybdenum remobilization efficiency
+senescence_parameters,age_factor_base,1.0,dimensionless,Base factor for age senescence calculation
+senescence_parameters,stress_intensity_denominator,1.0,dimensionless,Denominator for stress intensity calculation
+senescence_parameters,reproductive_factor_adjustment,1.0,dimensionless,Adjustment factor for reproductive senescence
+senescence_parameters,canopy_shading_threshold,0.5,dimensionless,Canopy position threshold for shading effects
+senescence_parameters,shading_factor_multiplier,2.0,dimensionless,Multiplier for shading factor calculation
+senescence_parameters,lower_canopy_adjustment,1.0,dimensionless,Adjustment factor for lower canopy senescence
+senescence_parameters,recovery_rate_fraction,0.1,dimensionless,Fraction of damage used in recovery rate calculation
+senescence_parameters,senescence_damage_minimum,0.0,dimensionless,Minimum senescence damage value
+senescence_parameters,senescence_damage_maximum,1.0,dimensionless,Maximum senescence damage value
+root_zone_temperature_parameters,optimal_rzt_offset,3.0,°C,Root zone temperature offset above air temperature
+root_zone_temperature_parameters,min_effective_rzt,15.0,°C,Minimum effective root zone temperature
+root_zone_temperature_parameters,max_effective_rzt,28.0,°C,Maximum effective root zone temperature
+root_zone_temperature_parameters,linear_growth_slope,0.15,per_°C,Growth factor increase per °C below optimum
+root_zone_temperature_parameters,rapid_decline_slope,0.25,per_°C,Growth factor decrease per °C above optimum
+root_zone_temperature_parameters,base_growth_factor,1.0,dimensionless,Growth factor at optimal RZT
+root_zone_temperature_parameters,nutrient_uptake_sensitivity_low,0.08,per_°C,Nutrient uptake sensitivity per °C below optimum
+root_zone_temperature_parameters,nutrient_uptake_sensitivity_high,0.12,per_°C,Nutrient uptake sensitivity per °C above optimum
+root_zone_temperature_parameters,photosynthesis_sensitivity_low,0.05,per_°C,Photosynthesis sensitivity per °C below optimum
+root_zone_temperature_parameters,photosynthesis_sensitivity_high,0.10,per_°C,Photosynthesis sensitivity per °C above optimum
+root_zone_temperature_parameters,root_metabolism_sensitivity_low,0.10,per_°C,Root metabolism sensitivity per °C below optimum
+root_zone_temperature_parameters,root_metabolism_sensitivity_high,0.15,per_°C,Root metabolism sensitivity per °C above optimum
+root_zone_temperature_parameters,max_nutrient_uptake_factor,1.5,dimensionless,Maximum nutrient uptake factor
+root_zone_temperature_parameters,max_water_uptake_factor,1.4,dimensionless,Maximum water uptake factor
+root_zone_temperature_parameters,max_photosynthesis_factor,1.3,dimensionless,Maximum photosynthesis factor
+root_zone_temperature_parameters,max_root_metabolism_factor,1.6,dimensionless,Maximum root metabolism factor
+root_zone_temperature_parameters,rzt_min_growth_factor,0.1,dimensionless,Minimum growth factor below effective temperature (reuses existing)
+root_zone_temperature_parameters,max_growth_factor,1.8,dimensionless,Maximum growth factor
+root_zone_temperature_parameters,min_nutrient_uptake_factor,0.2,dimensionless,Minimum nutrient uptake factor
+root_zone_temperature_parameters,min_water_uptake_factor,0.15,dimensionless,Minimum water uptake factor
+root_zone_temperature_parameters,min_photosynthesis_factor,0.3,dimensionless,Minimum photosynthesis factor
+root_zone_temperature_parameters,min_root_metabolism_factor,0.1,dimensionless,Minimum root metabolism factor
+root_zone_temperature_parameters,rzt_thermal_mass_factor,0.05,h_inverse,How quickly RZT responds to changes (reuses existing)
+root_zone_temperature_parameters,rzt_ambient_temp_amplitude,2.5,°C,Amplitude of diurnal temperature variation
+root_zone_temperature_parameters,rzt_root_respiration_heat,0.5,°C,Heat generation from root respiration
+root_zone_temperature_parameters,rzt_pump_heat_generation,0.3,°C,Heat generation from circulation pumps
+root_zone_temperature_parameters,rzt_ambient_exchange_factor,0.1,dimensionless,Factor for ambient temperature exchange
+root_zone_temperature_parameters,rzt_thermal_response_time,4.0,h,Thermal response time constant
+root_zone_temperature_parameters,rzt_heat_transfer_coefficient,2.5,W_m2_°C,Heat transfer coefficient for calculations
+root_zone_temperature_parameters,base_factor_constant,1.0,dimensionless,Base constant for factor calculations
+root_zone_temperature_parameters,thermal_stress_normalizer,5.0,°C,Thermal stress normalization factor
+root_zone_temperature_parameters,diurnal_cycle_shift,6,h,Hour shift for diurnal temperature cycle
+root_zone_temperature_parameters,diurnal_cycle_period,24,h,Period of diurnal temperature cycle
+root_zone_temperature_parameters,daily_representative_hour,12,h,Representative hour for daily calculations
+stress_parameters,stress_memory_duration_water,24.0,hours,Memory duration for water stress effects
+stress_parameters,stress_memory_duration_temperature,24.0,hours,Memory duration for temperature stress effects
+stress_parameters,stress_memory_duration_nutrient,48.0,hours,Memory duration for nutrient stress effects
+stress_parameters,stress_memory_duration_light,12.0,hours,Memory duration for light stress effects
+stress_parameters,cumulative_threshold_water,0.7,dimensionless,Cumulative water stress threshold
+stress_parameters,cumulative_threshold_temperature,0.8,dimensionless,Cumulative temperature stress threshold
+stress_parameters,cumulative_threshold_nutrient,0.6,dimensionless,Cumulative nutrient stress threshold
+stress_parameters,cumulative_threshold_light,0.5,dimensionless,Cumulative light stress threshold
+stress_parameters,damage_accumulation_rate_water,0.1,per_day,Water stress damage accumulation rate
+stress_parameters,damage_accumulation_rate_temperature,0.15,per_day,Temperature stress damage accumulation rate
+stress_parameters,recovery_rate_water,0.2,per_day,Water stress recovery rate
+stress_parameters,recovery_rate_temperature,0.1,per_day,Temperature stress recovery rate
+stress_parameters,recovery_threshold_water,0.3,dimensionless,Water stress recovery threshold
+stress_parameters,recovery_threshold_temperature,0.4,dimensionless,Temperature stress recovery threshold
+stress_parameters,full_recovery_time_water,72.0,hours,Full recovery time from water stress
+stress_parameters,full_recovery_time_temperature,96.0,hours,Full recovery time from temperature stress
+stress_parameters,acclimation_rate_water,0.05,per_day,Water stress acclimation rate
+stress_parameters,acclimation_rate_temperature,0.03,per_day,Temperature stress acclimation rate
+stress_parameters,acclimation_capacity_water,0.8,dimensionless,Water stress acclimation capacity
+stress_parameters,acclimation_capacity_temperature,0.7,dimensionless,Temperature stress acclimation capacity
+stress_parameters,acclimation_memory_water,168.0,hours,Water stress acclimation memory duration
+stress_parameters,acclimation_memory_temperature,240.0,hours,Temperature stress acclimation memory duration
+stress_parameters,stress_onset_threshold_water,0.2,dimensionless,Water stress onset threshold
+stress_parameters,stress_onset_threshold_temperature,0.25,dimensionless,Temperature stress onset threshold
+stress_parameters,damage_threshold_water,0.8,dimensionless,Water stress damage threshold
+stress_parameters,damage_threshold_temperature,0.85,dimensionless,Temperature stress damage threshold
+stress_parameters,process_sensitivity_photosynthesis_water,0.9,dimensionless,Photosynthesis sensitivity to water stress
+stress_parameters,process_sensitivity_photosynthesis_temperature,0.8,dimensionless,Photosynthesis sensitivity to temperature stress
+stress_parameters,process_sensitivity_growth_water,0.95,dimensionless,Growth sensitivity to water stress
+stress_parameters,process_sensitivity_growth_temperature,0.85,dimensionless,Growth sensitivity to temperature stress
+stress_parameters,process_sensitivity_development_water,0.7,dimensionless,Development sensitivity to water stress
+stress_parameters,process_sensitivity_development_temperature,0.75,dimensionless,Development sensitivity to temperature stress
+leaf_development,min_temp,4.5,°C,Minimum temperature for leaf development
+leaf_development,opt_temp_min,18.0,°C,Lower optimal temperature for leaf development
+leaf_development,opt_temp_max,24.0,°C,Upper optimal temperature for leaf development
+leaf_development,max_temp,35.0,°C,Maximum temperature for leaf development
+leaf_development,specific_leaf_area,250.0,cm2_g,Specific leaf area (cm²/g dry weight)

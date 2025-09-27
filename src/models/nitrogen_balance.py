@@ -499,10 +499,82 @@ class NitrogenBalanceModel:
 def create_lettuce_nitrogen_balance_model(system_config: Any) -> 'NitrogenBalanceModel':
     if system_config is None:
         raise ValueError("System configuration must be provided")
-    config = getattr(system_config, 'nitrogen_parameters', None)
-    if config is None:
+
+    # Get nitrogen parameters
+    nitrogen_config = getattr(system_config, 'nitrogen_parameters', None)
+    if nitrogen_config is None:
         raise ValueError("nitrogen_parameters section must be provided in configuration")
-    parameters = NitrogenBalanceParameters.from_config(config)
+
+    # Get additional parameters from other sections to avoid duplicates
+    leaf_dev_config = getattr(system_config, 'leaf_development', {})
+
+    # Create merged config using existing parameters where available
+    merged_config = dict(nitrogen_config)
+
+    # Use existing n_stress_threshold from leaf_development instead of duplicate
+    if 'n_stress_threshold' in leaf_dev_config:
+        merged_config['n_stress_threshold'] = leaf_dev_config['n_stress_threshold']
+    elif 'n_stress_threshold' not in merged_config:
+        # Fallback if neither exists
+        merged_config['n_stress_threshold'] = 0.7
+
+    # Reconstruct nested dictionaries from flat CSV parameters
+
+    # 1. Uptake kinetics
+    uptake_kinetics = {}
+    for n_form in ['NO3', 'NH4', 'amino_acids']:
+        uptake_kinetics[n_form] = {}
+        for param in ['vmax', 'km', 'min_conc', 'inhibition_ki']:
+            key = f'uptake_kinetics_{n_form}_{param}'
+            if key in merged_config:
+                uptake_kinetics[n_form][param] = merged_config[key]
+    merged_config['uptake_kinetics'] = uptake_kinetics
+
+    # 2. Allocation coefficients
+    allocation_coefficients = {}
+    for stage in ['vegetative', 'reproductive']:
+        allocation_coefficients[stage] = {}
+        for organ in ['leaves', 'stems', 'roots', 'reproductive']:
+            key = f'allocation_coefficients_{stage}_{organ}'
+            if key in merged_config:
+                allocation_coefficients[stage][organ] = merged_config[key]
+    merged_config['allocation_coefficients'] = allocation_coefficients
+
+    # 3. Critical N concentrations
+    critical_n_concentrations = {}
+    for organ in ['leaves', 'stems', 'roots', 'reproductive']:
+        critical_n_concentrations[organ] = {}
+        for level in ['minimum', 'critical', 'optimal', 'maximum']:
+            key = f'critical_n_concentrations_{organ}_{level}'
+            if key in merged_config:
+                critical_n_concentrations[organ][level] = merged_config[key]
+    merged_config['critical_n_concentrations'] = critical_n_concentrations
+
+    # 4. Remobilization rates
+    remobilization_rates = {}
+    for pool in ['structural', 'metabolic', 'storage', 'transport']:
+        key = f'remobilization_rates_{pool}'
+        if key in merged_config:
+            remobilization_rates[pool] = merged_config[key]
+    merged_config['remobilization_rates'] = remobilization_rates
+
+    # 5. Remobilization efficiency
+    remobilization_efficiency = {}
+    for organ in ['leaves', 'stems', 'roots', 'reproductive']:
+        key = f'remobilization_efficiency_{organ}'
+        if key in merged_config:
+            remobilization_efficiency[organ] = merged_config[key]
+    merged_config['remobilization_efficiency'] = remobilization_efficiency
+
+    # 6. Organ weights
+    organ_weights = {}
+    for organ in ['leaves', 'stems', 'roots', 'reproductive']:
+        key = f'organ_weights_{organ}'
+        if key in merged_config:
+            organ_weights[organ] = merged_config[key]
+    merged_config['organ_weights'] = organ_weights
+
+    parameters = NitrogenBalanceParameters.from_config(merged_config)
     return NitrogenBalanceModel(parameters)
 
 """
