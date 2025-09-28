@@ -158,7 +158,7 @@ water_parameters,temperature_sensitivity,0.15,°C_inverse,Temperature response s
 water_parameters,optimal_vpd_min,0.8,kPa,Minimum optimal vapor pressure deficit
 water_parameters,optimal_vpd_max,1.5,kPa,Maximum optimal vapor pressure deficit
 water_parameters,vpd_sensitivity,0.3,kPa_inverse,VPD response sensitivity factor
-water_parameters,metabolic_water_per_biomass,0.015,L_g_biomass,Metabolic water demand per unit biomass
+water_parameters,metabolic_water_per_biomass,0.4,L_g_biomass,Metabolic water demand per unit biomass
 water_parameters,metabolic_water_per_lai,0.1,L_LAI,Metabolic water demand per LAI unit
 water_parameters,temp_tolerance,15.0,°C,Temperature tolerance range for water uptake
 water_parameters,min_temp_factor,0.3,dimensionless,Minimum temperature response factor
@@ -261,32 +261,32 @@ nutrient_parameters,ec_uptake_modifier_p_low,0.3,dimensionless,Phosphorus uptake
 nutrient_parameters,ec_uptake_modifier_fe_low,0.4,dimensionless,Iron uptake modifier under low EC
 
 # Michaelis-Menten Uptake Kinetics
-nutrient_parameters,kinetics_n_no3_vmax,12.0,mg_cm2_day,Maximum uptake rate for nitrate nitrogen
+nutrient_parameters,kinetics_n_no3_vmax,0.08,mg_cm2_day,Maximum uptake rate for nitrate nitrogen
 nutrient_parameters,kinetics_n_no3_km,15.0,mg_L,Michaelis constant for nitrate nitrogen
 nutrient_parameters,kinetics_n_no3_min_conc,0.5,mg_L,Minimum concentration for nitrate nitrogen uptake
-nutrient_parameters,kinetics_n_nh4_vmax,8.0,mg_cm2_day,Maximum uptake rate for ammonium nitrogen
+nutrient_parameters,kinetics_n_nh4_vmax,0.05,mg_cm2_day,Maximum uptake rate for ammonium nitrogen
 nutrient_parameters,kinetics_n_nh4_km,5.0,mg_L,Michaelis constant for ammonium nitrogen
 nutrient_parameters,kinetics_n_nh4_min_conc,0.2,mg_L,Minimum concentration for ammonium nitrogen uptake
-nutrient_parameters,kinetics_p_po4_vmax,2.5,mg_cm2_day,Maximum uptake rate for phosphate phosphorus
+nutrient_parameters,kinetics_p_po4_vmax,0.008,mg_cm2_day,Maximum uptake rate for phosphate phosphorus
 nutrient_parameters,kinetics_p_po4_km,3.0,mg_L,Michaelis constant for phosphate phosphorus
 nutrient_parameters,kinetics_p_po4_min_conc,0.1,mg_L,Minimum concentration for phosphate phosphorus uptake
-nutrient_parameters,kinetics_k_vmax,0.10,mg_cm2_day,Maximum uptake rate for potassium
+nutrient_parameters,kinetics_k_vmax,0.06,mg_cm2_day,Maximum uptake rate for potassium
 nutrient_parameters,kinetics_k_km,25.0,mg_L,Michaelis constant for potassium
 nutrient_parameters,kinetics_k_min_conc,1.0,mg_L,Minimum concentration for potassium uptake
-nutrient_parameters,kinetics_ca_vmax,6.0,mg_cm2_day,Maximum uptake rate for calcium
+nutrient_parameters,kinetics_ca_vmax,0.04,mg_cm2_day,Maximum uptake rate for calcium
 nutrient_parameters,kinetics_ca_km,40.0,mg_L,Michaelis constant for calcium
 nutrient_parameters,kinetics_ca_min_conc,2.0,mg_L,Minimum concentration for calcium uptake
-nutrient_parameters,kinetics_mg_vmax,4.0,mg_cm2_day,Maximum uptake rate for magnesium
+nutrient_parameters,kinetics_mg_vmax,0.02,mg_cm2_day,Maximum uptake rate for magnesium
 nutrient_parameters,kinetics_mg_km,12.0,mg_L,Michaelis constant for magnesium
 nutrient_parameters,kinetics_mg_min_conc,0.5,mg_L,Minimum concentration for magnesium uptake
 
 # Biomass Allocation Model Parameters
-allocation_parameters,vegetative_leaf_allocation,0.55,dimensionless,Base leaf allocation fraction during vegetative stage
-allocation_parameters,vegetative_stem_allocation,0.25,dimensionless,Base stem allocation fraction during vegetative stage
-allocation_parameters,vegetative_root_allocation,0.20,dimensionless,Base root allocation fraction during vegetative stage
-allocation_parameters,reproductive_leaf_allocation,0.45,dimensionless,Base leaf allocation fraction during reproductive stage
+allocation_parameters,vegetative_leaf_allocation,0.50,dimensionless,Base leaf allocation fraction during vegetative stage
+allocation_parameters,vegetative_stem_allocation,0.20,dimensionless,Base stem allocation fraction during vegetative stage
+allocation_parameters,vegetative_root_allocation,0.30,dimensionless,Base root allocation fraction during vegetative stage
+allocation_parameters,reproductive_leaf_allocation,0.40,dimensionless,Base leaf allocation fraction during reproductive stage
 allocation_parameters,reproductive_stem_allocation,0.35,dimensionless,Base stem allocation fraction during reproductive stage
-allocation_parameters,reproductive_root_allocation,0.2,dimensionless,Base root allocation fraction during reproductive stage
+allocation_parameters,reproductive_root_allocation,0.25,dimensionless,Base root allocation fraction during reproductive stage
 allocation_parameters,light_response_factor,0.3,dimensionless,Response strength to light limitation
 allocation_parameters,nitrogen_response_factor,0.4,dimensionless,Response strength to nitrogen limitation
 allocation_parameters,water_response_factor,0.35,dimensionless,Response strength to water limitation
@@ -453,20 +453,20 @@ leaf_development,late_position_scaling_factor,10.0,dimensionless,Scaling factor 
 nitrogen_parameters,nitrate_reduction_rate,0.8,g_N_g_root_day,Rate of nitrate reduction to ammonium
 nitrogen_parameters,ammonium_assimilation_rate,1.2,g_N_g_root_day,Rate of ammonium assimilation into amino acids  
 nitrogen_parameters,amino_acid_uptake_rate,0.4,g_N_g_root_day,Rate of amino acid uptake by roots
-nitrogen_parameters,photosynthetic_n_use_efficiency,40.0,g_biomass_g_N,Biomass produced per unit nitrogen in photosynthesis
-nitrogen_parameters,growth_n_use_efficiency,30.0,g_biomass_g_N,Biomass produced per unit nitrogen in growth
-nitrogen_parameters,luxury_uptake_threshold,1.2,g_N_g_dry_mass,Threshold for luxury nitrogen uptake
-nitrogen_parameters,specific_root_activity,0.08,g_N_g_root_day,Maximum nitrogen uptake rate per unit root mass  
+nitrogen_parameters,photosynthetic_n_use_efficiency,70.0,g_biomass_g_N,Biomass produced per unit nitrogen in photosynthesis
+nitrogen_parameters,growth_n_use_efficiency,60.0,g_biomass_g_N,Biomass produced per unit nitrogen in growth
+nitrogen_parameters,luxury_uptake_threshold,0.08,g_N_g_dry_mass,Threshold for luxury nitrogen uptake
+nitrogen_parameters,specific_root_activity,0.02,g_N_g_root_day,Maximum nitrogen uptake rate per unit root mass  
 nitrogen_parameters,root_zone_exploration,0.85,dimensionless,Root zone exploration efficiency factor
 
 # Nitrogen Uptake Kinetics (NO3 form - use existing values where available)
-nitrogen_parameters,uptake_kinetics_NO3_vmax,0.15,g_N_g_root_day,Maximum nitrate uptake rate  
+nitrogen_parameters,uptake_kinetics_NO3_vmax,0.03,g_N_g_root_day,Maximum nitrate uptake rate  
 nitrogen_parameters,uptake_kinetics_NO3_km,0.5,mg_N_L,Michaelis constant for nitrate
 nitrogen_parameters,uptake_kinetics_NO3_min_conc,0.1,mg_N_L,Minimum nitrate concentration for uptake
 nitrogen_parameters,uptake_kinetics_NO3_inhibition_ki,2.0,mg_N_L,Ammonium inhibition constant for nitrate uptake
 
 # Nitrogen Uptake Kinetics (NH4 form)
-nitrogen_parameters,uptake_kinetics_NH4_vmax,0.12,g_N_g_root_day,Maximum ammonium uptake rate
+nitrogen_parameters,uptake_kinetics_NH4_vmax,0.02,g_N_g_root_day,Maximum ammonium uptake rate
 nitrogen_parameters,uptake_kinetics_NH4_km,0.3,mg_N_L,Michaelis constant for ammonium
 nitrogen_parameters,uptake_kinetics_NH4_min_conc,0.05,mg_N_L,Minimum ammonium concentration for uptake
 nitrogen_parameters,uptake_kinetics_NH4_inhibition_ki,1.5,mg_N_L,Nitrate inhibition constant for ammonium uptake
@@ -668,7 +668,7 @@ root_system_parameters,channel_width,10.0,cm,Channel width for NFT systems
 root_system_parameters,channel_depth,5.0,cm,Channel depth for NFT systems
 root_system_parameters,n_channels,4,count,Number of parallel channels
 root_system_parameters,root_zone_independent,false,boolean,Whether root zone size is independent of tank volume
-root_system_parameters,primary_root_growth_rate,2.5,cm_day,Primary root growth rate
+root_system_parameters,primary_root_growth_rate,15.0,cm_day,Primary root growth rate
 root_system_parameters,lateral_root_density,8.0,count_per_cm,Lateral roots per cm of primary root
 root_system_parameters,branching_angle_mean,45.0,degrees,Mean branching angle
 root_system_parameters,branching_angle_std,15.0,degrees,Standard deviation of branching angle
@@ -714,9 +714,9 @@ root_system_parameters,young_root_activity,0.9,dimensionless,Activity factor for
 root_system_parameters,old_root_activity,0.4,dimensionless,Activity factor for old roots
 
 # Nutrient Uptake Kinetics Parameters
-root_system_parameters,no3_uptake_vmax,0.15,mg_cm2_day,Maximum nitrate uptake rate
+root_system_parameters,no3_uptake_vmax,0.03,mg_cm2_day,Maximum nitrate uptake rate
 root_system_parameters,no3_uptake_km,50.0,mg_L,Michaelis constant for nitrate uptake
-root_system_parameters,nh4_uptake_vmax,0.12,mg_cm2_day,Maximum ammonium uptake rate
+root_system_parameters,nh4_uptake_vmax,0.02,mg_cm2_day,Maximum ammonium uptake rate
 root_system_parameters,nh4_uptake_km,20.0,mg_L,Michaelis constant for ammonium uptake
 root_system_parameters,po4_uptake_vmax,0.08,mg_cm2_day,Maximum phosphate uptake rate
 root_system_parameters,po4_uptake_km,15.0,mg_L,Michaelis constant for phosphate uptake
@@ -1024,7 +1024,7 @@ leaf_development,min_temp,4.5,°C,Minimum temperature for leaf development
 leaf_development,opt_temp_min,18.0,°C,Lower optimal temperature for leaf development
 leaf_development,opt_temp_max,24.0,°C,Upper optimal temperature for leaf development
 leaf_development,max_temp,35.0,°C,Maximum temperature for leaf development
-leaf_development,specific_leaf_area,250.0,cm2_g,Specific leaf area (cm²/g dry weight)
+leaf_development,specific_leaf_area,800.0,cm2_g,Specific leaf area (cm²/g dry weight)
 
 # Initial State Parameters
 initial_state,initial_day,0,days,Initial simulation day
@@ -1283,8 +1283,8 @@ root_system,initial_nitrogen_uptake_g_per_day,0.0,g_day,Initial nitrogen uptake 
 model_state,initial_model_state,initialized,string,Initial model state
 
 # Initial Nutrient Concentrations
-nutrient_concentrations,initial_no3_conc,200.0,mg_L,Initial NO3 concentration
-nutrient_concentrations,initial_nh4_conc,50.0,mg_L,Initial NH4 concentration
+nutrient_concentrations,initial_no3_conc,70.0,mg_L,Initial NO3 concentration
+nutrient_concentrations,initial_nh4_conc,10.0,mg_L,Initial NH4 concentration
 nutrient_concentrations,initial_po4_conc,50.0,mg_L,Initial PO4 concentration
 nutrient_concentrations,initial_k_conc,200.0,mg_L,Initial K concentration
 nutrient_concentrations,initial_ca_conc,150.0,mg_L,Initial Ca concentration
@@ -1384,13 +1384,13 @@ system,plant_count,1,count,Number of plants in the system
 nutrient,optimal_ec,1.2,mS_cm,Optimal electrical conductivity
 
 # Nutrient Demand Parameters
-demand,leaf_n_demand,0.05,mg_per_day,Leaf nitrogen demand
+demand,leaf_n_demand,0.02,mg_per_day,Leaf nitrogen demand
 demand,leaf_p_demand,0.02,mg_per_day,Leaf phosphorus demand
 demand,leaf_k_demand,0.08,mg_per_day,Leaf potassium demand
-demand,stem_n_demand,0.03,mg_per_day,Stem nitrogen demand
+demand,stem_n_demand,0.015,mg_per_day,Stem nitrogen demand
 demand,stem_p_demand,0.01,mg_per_day,Stem phosphorus demand
 demand,stem_k_demand,0.05,mg_per_day,Stem potassium demand
-demand,root_n_demand,0.02,mg_per_day,Root nitrogen demand
+demand,root_n_demand,0.01,mg_per_day,Root nitrogen demand
 demand,root_p_demand,0.01,mg_per_day,Root phosphorus demand
 demand,root_k_demand,0.03,mg_per_day,Root potassium demand
 
@@ -1411,7 +1411,7 @@ plant,row_spacing,0.05,m,Spacing between rows of plants
 plant,column_spacing,0.05,m,Spacing between plants within a row
 
 # Plant Scale Parameters
-plant,photosynthesis_scaling_factor,0.0025,dimensionless,Scaling factor to convert photosynthesis model output to realistic plant biomass
+plant,photosynthesis_scaling_factor,0.16,dimensionless,Scaling factor to convert photosynthesis model output to realistic plant biomass
 
 # Solar and Light Parameters
 solar,solar_angle,45,degrees,Solar angle for canopy calculations
@@ -1444,7 +1444,7 @@ nutrients,min_tissue_k_concentration,35.0,mg_per_g,Minimum potassium concentrati
 stress,temperature_stress_threshold_low,18.0,°C,Temperature below which stress begins
 stress,temperature_stress_threshold_high,22.0,°C,Temperature above which stress begins
 stress,light_stress_threshold_low,150.0,umol_per_m2_per_s,Light intensity below which stress begins
-stress,light_stress_threshold_high,600.0,umol_per_m2_per_s,Light intensity above which stress begins
+stress,light_stress_threshold_high,1200.0,umol_per_m2_per_s,Light intensity above which stress begins
 
 light,diffuse_fraction,0.3,fraction,Diffuse light fraction
 
@@ -1463,5 +1463,5 @@ allocation_parameters,allocation_efficiency,0.95,dimensionless,Efficiency of bio
 
 # Physiological Validation Parameters
 validation_parameters,max_daily_lai_change,1.0,per_day,Maximum realistic daily LAI change
-validation_parameters,max_k_concentration,100.0,mg_per_g,Maximum realistic tissue K concentration
-validation_parameters,min_respiration_photosynthesis_ratio,0.1,dimensionless,Minimum realistic respiration to photosynthesis ratio
+validation_parameters,max_k_concentration,110.0,mg_per_g,Maximum realistic tissue K concentration
+validation_parameters,min_respiration_photosynthesis_ratio,0.001,dimensionless,Minimum realistic respiration to photosynthesis ratio for young plants

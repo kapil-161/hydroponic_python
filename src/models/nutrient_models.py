@@ -280,9 +280,9 @@ class NutrientModel:
 
     def _get_uptake_kinetics(self) -> Dict[str, Dict[str, float]]:
         return {
-            'N-NO3': {'vmax': self.params.kinetics_n_no3_vmax, 'km': self.params.kinetics_n_no3_km, 'min_conc': self.params.kinetics_n_no3_min_conc},
-            'N-NH4': {'vmax': self.params.kinetics_n_nh4_vmax, 'km': self.params.kinetics_n_nh4_km, 'min_conc': self.params.kinetics_n_nh4_min_conc},
-            'P-PO4': {'vmax': self.params.kinetics_p_po4_vmax, 'km': self.params.kinetics_p_po4_km, 'min_conc': self.params.kinetics_p_po4_min_conc},
+            'NO3': {'vmax': self.params.kinetics_n_no3_vmax, 'km': self.params.kinetics_n_no3_km, 'min_conc': self.params.kinetics_n_no3_min_conc},
+            'NH4': {'vmax': self.params.kinetics_n_nh4_vmax, 'km': self.params.kinetics_n_nh4_km, 'min_conc': self.params.kinetics_n_nh4_min_conc},
+            'PO4': {'vmax': self.params.kinetics_p_po4_vmax, 'km': self.params.kinetics_p_po4_km, 'min_conc': self.params.kinetics_p_po4_min_conc},
             'K': {'vmax': self.params.kinetics_k_vmax, 'km': self.params.kinetics_k_km, 'min_conc': self.params.kinetics_k_min_conc},
             'Ca': {'vmax': self.params.kinetics_ca_vmax, 'km': self.params.kinetics_ca_km, 'min_conc': self.params.kinetics_ca_min_conc},
             'Mg': {'vmax': self.params.kinetics_mg_vmax, 'km': self.params.kinetics_mg_km, 'min_conc': self.params.kinetics_mg_min_conc}

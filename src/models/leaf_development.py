@@ -389,7 +389,11 @@ class LeafDevelopmentModel:
                 if cohort_id in self.leaf_cohorts:
                     del self.leaf_cohorts[cohort_id]
             
-            lai = total_area
+            # Calculate proper LAI = leaf area / ground area
+            # LAI should simply equal total_area when ground area = 1 m²
+            lai = total_area  # m² / (1 m²) = dimensionless LAI
+
+            # Remove debug output
             
             total_areas.append(total_area)
             lai_values.append(lai)

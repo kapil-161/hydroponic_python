@@ -332,11 +332,11 @@ class EnhancedRespirationModel:
         adjusted_growth = hourly_growth * hourly_adjustment
         adjusted_total = adjusted_maintenance + adjusted_growth
 
-        # Ensure minimum biological respiration rate (following "no defaults" rule - calculated from model parameters)
-        # Scale minimum respiration based on total biomass to ensure realistic rates for living plants
+        # Ensure minimum biological respiration rate proportional to actual biomass (following "model output" rule)
+        # Use realistic minimum respiration proportional to biomass, not fixed minimum
         total_biomass = sum(pool.dry_mass for pool in biomass_pools) if biomass_pools else 0.02
-        # Calculate minimum respiration to maintain ~15% of expected photosynthesis rate
-        biomass_based_min = self.params.maintenance_base_rate * max(225.0, total_biomass * 1120.0)
+        # Minimum respiration = 0.1% of biomass per day (realistic for plant maintenance)
+        biomass_based_min = total_biomass * 0.001  # 0.1% of biomass per day
         adjusted_total = max(biomass_based_min, adjusted_total)
         co2_release_rate = adjusted_total * self.params.carbon_to_co2_ratio
         respiratory_quotient = self._calculate_respiratory_quotient(hour)
