@@ -26,8 +26,10 @@ ensures that changes to the parameters don't break the simulation and that the m
 -should raise error if anything doesnot work
 - should work according to plan
  -If parameter is missing from CSV, dont create minimal default based on parameter type
+ - All equation must be scientifically correct
 ## Code Structure
 - no duplicate code and parameters
+- in real plant growth, dynamic variable and interrelation is observed do my codes mimicry that?
 - no two functions or codes for same calculation (like simple and complex)
 - clean dead codes
 - please search existing function before creating because we have all codes in our codebase

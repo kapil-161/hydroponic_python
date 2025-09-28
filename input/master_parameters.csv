@@ -142,6 +142,7 @@ respiration_parameters,carbohydrate_fraction,0.50,dimensionless,Fraction of grow
 respiration_parameters,lipid_fraction,0.08,dimensionless,Fraction of growth allocated to lipids
 respiration_parameters,organic_acid_fraction,0.12,dimensionless,Fraction of growth allocated to organic acids
 respiration_parameters,lignin_fraction,0.15,dimensionless,Fraction of growth allocated to lignin
+respiration_parameters,mineral_fraction,0.10,dimensionless,Fraction of growth allocated to minerals
 
 # Water Uptake Model Parameters
 water_parameters,psychrometric_constant,0.665,kPa_°C,Psychrometric constant for Penman-Monteith
@@ -335,11 +336,12 @@ canopy_parameters,lower_middle_canopy_height_threshold,0.2,dimensionless,Relativ
 canopy_parameters,zenith_angle_precision_threshold,0.001,dimensionless,Numerical precision threshold for zenith angle calculations
 
 # Genetic Parameters Model
-genetic_parameters,EM_FL,120.0,GDD,Days from emergence to first flower in growing degree days
-genetic_parameters,FL_SH,150.0,GDD,Days from first flower to first seed in growing degree days
-genetic_parameters,FL_SD,180.0,GDD,Days from first flower to first pod in growing degree days
-genetic_parameters,SD_PM,300.0,GDD,Days from first seed to physiological maturity in growing degree days
-genetic_parameters,FL_LF,200.0,GDD,Days from first flower to end of leaf expansion in growing degree days
+# Thermal requirements calculated from phenology_parameters transitions for genetic model compatibility
+genetic_parameters,EM_FL,1340.0,GDD,Days from emergence to first flower - calculated from phenology transitions sum
+genetic_parameters,FL_SH,150.0,GDD,Days from first flower to first seed - mapped from AN_to_SD + SD_to_PM
+genetic_parameters,FL_SD,200.0,GDD,Days from first flower to first pod - mapped from FL_to_AN + AN_to_SD
+genetic_parameters,SD_PM,150.0,GDD,Days from first seed to physiological maturity - mapped from SD_to_PM
+genetic_parameters,FL_LF,200.0,GDD,Days from first flower to end of leaf expansion - genetic trait
 genetic_parameters,LFMAX,45.0,mg_CO2_m2_s,Maximum leaf photosynthesis rate
 genetic_parameters,SLAVR,250.0,cm2_g,Specific leaf area under standard conditions
 genetic_parameters,SIZLF,120.0,cm2,Maximum size of full leaf
@@ -667,7 +669,7 @@ root_system_parameters,system_type,deep_water_culture,string,Hydroponic system t
 root_system_parameters,channel_width,10.0,cm,Channel width for NFT systems
 root_system_parameters,channel_depth,5.0,cm,Channel depth for NFT systems
 root_system_parameters,n_channels,4,count,Number of parallel channels
-root_system_parameters,root_zone_independent,false,boolean,Whether root zone size is independent of tank volume
+root_system_parameters,root_zone_independent,true,boolean,Whether root zone size is independent of tank volume
 root_system_parameters,primary_root_growth_rate,15.0,cm_day,Primary root growth rate
 root_system_parameters,lateral_root_density,8.0,count_per_cm,Lateral roots per cm of primary root
 root_system_parameters,branching_angle_mean,45.0,degrees,Mean branching angle
@@ -1032,25 +1034,30 @@ initial_state,initial_hour,6,hours,Initial simulation hour
 initial_state,initial_leaf_biomass,0.01,g,Initial leaf biomass
 initial_state,initial_stem_biomass,0.005,g,Initial stem biomass
 initial_state,initial_root_biomass,0.005,g,Initial root biomass
-initial_state,initial_total_biomass,0.02,g,Initial total biomass
+# Removed static initial_total_biomass - should be calculated as sum of organ biomass values
+# total_biomass = initial_leaf_biomass + initial_stem_biomass + initial_root_biomass
 initial_state,initial_lai,0.001,dimensionless,Initial leaf area index
 initial_state,initial_leaf_area,2.5,cm2,Initial leaf area
 initial_state,initial_canopy_height,1.0,cm,Initial canopy height
-initial_state,initial_photosynthesis_rate,0.0,umol_CO2_m2_s,Initial photosynthesis rate
-initial_state,initial_respiration_rate,0.0,umol_CO2_m2_s,Initial respiration rate
-initial_state,initial_net_assimilation,0.0,umol_CO2_m2_s,Initial net assimilation
+# Removed static initial rate parameters - should be calculated dynamically by respective models:
+# - photosynthesis_rate: calculated by PhotosynthesisModel from light, CO2, temperature, LAI
+# - respiration_rate: calculated by RespirationModel from biomass and temperature
+# - net_assimilation: calculated as photosynthesis_rate - respiration_rate
 initial_state,initial_thermal_time,0.0,GDD,Initial thermal time
 initial_state,initial_growth_stage,emergence,string,Initial growth stage
 initial_state,initial_development_index,0.0,dimensionless,Initial development index
-initial_state,initial_temperature_stress,0.0,dimensionless,Initial temperature stress
-initial_state,initial_water_stress,0.0,dimensionless,Initial water stress
-initial_state,initial_nutrient_stress,0.0,dimensionless,Initial nutrient stress
-initial_state,initial_light_stress,0.0,dimensionless,Initial light stress
+# Removed static initial stress parameters - should be calculated dynamically by UnifiedStressCalculator
+# Initial stress factors should be calculated from initial environmental conditions:
+# - temperature_stress: from initial_air_temperature vs optimal temperature range
+# - water_stress: from initial_humidity and VPD calculations
+# - nutrient_stress: from initial nutrient concentrations vs optimal levels
+# - light_stress: from initial_light_intensity vs optimal light requirements
 initial_state,initial_n_content,0.03,g_N_g_dry_mass,Initial nitrogen content
 initial_state,initial_p_content,0.005,g_P_g_dry_mass,Initial phosphorus content
 initial_state,initial_k_content,0.02,g_K_g_dry_mass,Initial potassium content
-initial_state,initial_water_uptake,0.0,ml_day,Initial water uptake
-initial_state,initial_transpiration,0.0,ml_day,Initial transpiration
+# Removed static initial water rate parameters - should be calculated dynamically by WaterUptakeModel:
+# - water_uptake: calculated by WaterUptakeModel from root biomass, solution concentration, and environmental stress
+# - transpiration: calculated by WaterUptakeModel from leaf area, VPD, stomatal conductance, and environmental factors
 initial_state,initial_root_depth,1.0,cm,Initial root depth
 initial_state,initial_root_distribution,"{'zone1': 0.4, 'zone2': 0.4, 'zone3': 0.2}",dict,Initial root distribution by zone
 initial_state,initial_air_temperature,20.0,°C,Initial air temperature
@@ -1259,11 +1266,12 @@ senescence,initial_senescence_stage,healthy,string,Initial senescence stage
 # Root System Initial Parameters
 root_system,initial_total_root_length,10.0,cm,Initial total root length
 root_system,initial_total_root_surface_area,5.0,cm2,Initial total root surface area
-root_system,initial_total_root_biomass,0.005,g,Initial total root biomass
+# Removed duplicate initial_total_root_biomass - should use initial_root_biomass from initial_state category
 root_system,initial_total_root_volume,2.0,cm3,Initial total root volume
 root_system,initial_root_length_density,5.0,cm_cm3,Initial root length density
 root_system,initial_root_surface_area_density,2.5,cm2_cm3,Initial root surface area density
-root_system,initial_specific_root_length,2000.0,cm_g,Initial specific root length
+# Removed static initial_specific_root_length - should be calculated dynamically by RootSystemModel
+# Specific root length = total_root_length / total_root_biomass (emergent property from root architecture)
 root_system,initial_average_root_activity,1.0,dimensionless,Initial average root activity
 root_system,initial_fine_root_length,6.0,cm,Initial fine root length
 root_system,initial_medium_root_length,3.0,cm,Initial medium root length
@@ -1283,8 +1291,8 @@ root_system,initial_nitrogen_uptake_g_per_day,0.0,g_day,Initial nitrogen uptake 
 model_state,initial_model_state,initialized,string,Initial model state
 
 # Initial Nutrient Concentrations
-nutrient_concentrations,initial_no3_conc,70.0,mg_L,Initial NO3 concentration
-nutrient_concentrations,initial_nh4_conc,10.0,mg_L,Initial NH4 concentration
+nutrient_concentrations,initial_no3_conc,50.0,mg_L,Initial NO3 concentration
+nutrient_concentrations,initial_nh4_conc,5.0,mg_L,Initial NH4 concentration
 nutrient_concentrations,initial_po4_conc,50.0,mg_L,Initial PO4 concentration
 nutrient_concentrations,initial_k_conc,200.0,mg_L,Initial K concentration
 nutrient_concentrations,initial_ca_conc,150.0,mg_L,Initial Ca concentration
@@ -1305,27 +1313,8 @@ simulation,dt_hours,1.0,hours,Time step in hours
 simulation,ambient_co2,400.0,ppm,Ambient CO2 concentration
 simulation,photoperiod_hours,16,hours,Photoperiod hours per day
 
-# Thermal Requirements for Phenology Transitions
-thermal_requirements,GE_to_VE,25.0,degC-day,Thermal time from germination to emergence
-thermal_requirements,VE_to_V1,15.0,degC-day,Thermal time from emergence to first leaf
-thermal_requirements,V1_to_V2,12.0,degC-day,Thermal time from first to second leaf
-thermal_requirements,V2_to_V3,12.0,degC-day,Thermal time from second to third leaf
-thermal_requirements,V3_to_V4,12.0,degC-day,Thermal time from third to fourth leaf
-thermal_requirements,V4_to_V5,12.0,degC-day,Thermal time from fourth to fifth leaf
-thermal_requirements,V5_to_V6,12.0,degC-day,Thermal time from fifth to sixth leaf
-thermal_requirements,V6_to_V7,12.0,degC-day,Thermal time from sixth to seventh leaf
-thermal_requirements,V7_to_V8,12.0,degC-day,Thermal time from seventh to eighth leaf
-thermal_requirements,V8_to_V9,12.0,degC-day,Thermal time from eighth to ninth leaf
-thermal_requirements,V9_to_V10,12.0,degC-day,Thermal time from ninth to tenth leaf
-thermal_requirements,V10_to_V11+,12.0,degC-day,Thermal time from tenth leaf to mature vegetative
-thermal_requirements,V11+_to_HI,50.0,degC-day,Thermal time from mature vegetative to head initiation
-thermal_requirements,HI_to_HD,30.0,degC-day,Thermal time from head initiation to head development
-thermal_requirements,HD_to_HM,25.0,degC-day,Thermal time from head development to harvest maturity
-thermal_requirements,HM_to_BI,40.0,degC-day,Thermal time from harvest maturity to bolting initiation
-thermal_requirements,BI_to_FL,20.0,degC-day,Thermal time from bolting initiation to flowering
-thermal_requirements,FL_to_AN,15.0,degC-day,Thermal time from flowering to anthesis
-thermal_requirements,AN_to_SD,25.0,degC-day,Thermal time from anthesis to seed development
-thermal_requirements,SD_to_PM,30.0,degC-day,Thermal time from seed development to physiological maturity
+# Removed duplicate thermal_requirements section - consolidated into phenology_parameters
+# phenology_parameters section contains authoritative thermal requirements with scientific references
 
 # Initial Nutrient Uptake Parameters
 nutrient_uptake,initial_no3_uptake,0.5,mg_per_day,Initial NO3 uptake rate
@@ -1346,7 +1335,8 @@ nutrient_uptake,initial_mo_uptake,0.002,mg_per_day,Initial Mo uptake rate
 nutrient_concentrations,initial_p_po4_conc,30.0,mg_L,Initial P-PO4 concentration
 
 # Initial System Parameters
-system,initial_ec,1.2,mS_cm,Initial electrical conductivity
+# Removed static initial_ec - should be calculated dynamically by NutrientModel
+# from initial nutrient concentrations using _calculate_ec_from_concentrations()
 
 # Light and PAR Parameters
 light,solar_to_par_conversion,0.47,fraction,Solar radiation to PAR conversion factor
@@ -1355,27 +1345,24 @@ light,solar_to_par_conversion,0.47,fraction,Solar radiation to PAR conversion fa
 nutrient,ec_factor,1.0,factor,EC factor for nutrient calculations
 
 # Canopy and Light Parameters
-canopy,sunlit_fraction,0.8,fraction,Sunlit fraction of canopy
+# Removed static sunlit_fraction - should be calculated dynamically by CanopyArchitectureModel
+# based on LAI, canopy height, solar angle, and extinction coefficients
 
-# Tissue Nitrogen Content Parameters
-tissue,leaf_nitrogen_content,4.5,percent,Nitrogen content in leaves
-tissue,stem_nitrogen_content,2.5,percent,Nitrogen content in stems
-tissue,root_nitrogen_content,3.0,percent,Nitrogen content in roots
+# Removed static tissue nitrogen content parameters - should be calculated dynamically by NitrogenBalanceModel
+# based on nitrogen uptake, allocation, growth rates, and remobilization processes
 
 # Growth Parameters
 growth,new_growth_fraction,0.8,fraction,Fraction of new growth
 
-# Protein and Carbohydrate Fractions
-biomass,growth_proteins_fraction,0.25,fraction,Protein fraction in new growth
-biomass,growth_carbohydrates_fraction,0.60,fraction,Carbohydrate fraction in new growth
-biomass,growth_lipids_fraction,0.05,fraction,Lipid fraction in new growth
-biomass,growth_minerals_fraction,0.10,fraction,Mineral fraction in new growth
+# Removed duplicate biochemical composition parameters - use respiration_parameters section instead
+# Note: growth_minerals_fraction (0.10) moved to respiration_parameters as mineral_fraction
 
 # Root Parameters
-root,root_specific_area,200.0,cm2_g,Specific root surface area
+# Removed static root_specific_area - should be calculated dynamically by RootSystemModel
+# Specific root area = total_root_surface_area / total_root_biomass (calculated from root architecture)
 
 # System Volume Parameters
-system,tank_volume_L,100.0,L,Nutrient solution tank volume
+system,tank_volume_L,10.0,L,Nutrient solution tank volume
 
 # Plant Count Parameters
 system,plant_count,1,count,Number of plants in the system
@@ -1384,15 +1371,8 @@ system,plant_count,1,count,Number of plants in the system
 nutrient,optimal_ec,1.2,mS_cm,Optimal electrical conductivity
 
 # Nutrient Demand Parameters
-demand,leaf_n_demand,0.02,mg_per_day,Leaf nitrogen demand
-demand,leaf_p_demand,0.02,mg_per_day,Leaf phosphorus demand
-demand,leaf_k_demand,0.08,mg_per_day,Leaf potassium demand
-demand,stem_n_demand,0.015,mg_per_day,Stem nitrogen demand
-demand,stem_p_demand,0.01,mg_per_day,Stem phosphorus demand
-demand,stem_k_demand,0.05,mg_per_day,Stem potassium demand
-demand,root_n_demand,0.01,mg_per_day,Root nitrogen demand
-demand,root_p_demand,0.01,mg_per_day,Root phosphorus demand
-demand,root_k_demand,0.03,mg_per_day,Root potassium demand
+# Removed static nutrient demand parameters - demands should be calculated dynamically from growth models
+# based on organ growth rates and target tissue concentrations, not provided as fixed CSV values
 
 # Transport Efficiency Parameters
 transport,n_transport_efficiency,0.8,fraction,Nitrogen transport efficiency
@@ -1412,13 +1392,14 @@ plant,column_spacing,0.05,m,Spacing between plants within a row
 
 # Plant Scale Parameters
 plant,photosynthesis_scaling_factor,0.16,dimensionless,Scaling factor to convert photosynthesis model output to realistic plant biomass
+plant,min_biomass_for_full_photosynthesis,0.1,g,Minimum biomass required for full photosynthetic capacity
 
 # Solar and Light Parameters
 solar,solar_angle,45,degrees,Solar angle for canopy calculations
 
 # Thermal Equilibrium Parameters
-thermal,thermal_equilibrium_factor,0.8,dimensionless,Factor for thermal equilibrium between solution and air
-thermal,solution_temp_equilibrium_rate,0.1,per_day,Rate of solution temperature equilibration
+# Removed static thermal equilibrium parameters - should be calculated dynamically by RootZoneTemperatureModel
+# based on thermal dynamics including air temperature, solution temperature, pump heat, root respiration, and ambient exchange
 
 # Nutrient Concentration Parameters
 nutrients,n_concentration_per_biomass,30.0,mg_per_g,Nitrogen content per gram new biomass (3%)
@@ -1456,7 +1437,8 @@ photosynthesis_parameters,photosynthesis_temp_factor,0.8,dimensionless,Temperatu
 water_parameters,hydraulic_conductance,0.5,L_per_day_per_MPa,Plant hydraulic conductance
 stress_parameters,minimum_temperature_stress,0.0,dimensionless,Minimum baseline temperature stress
 stress_parameters,minimum_light_stress,0.0,dimensionless,Minimum baseline light stress
-stress_parameters,hydroponic_water_stress,0.0,dimensionless,Water stress in hydroponic systems
+# Removed static hydroponic_water_stress - should be calculated dynamically by UnifiedStressCalculator
+# based on VPD, EC, temperature, humidity, and system conditions
 stress_parameters,minimum_nutrient_stress,0.0,dimensionless,Minimum baseline nutrient stress
 growth_parameters,minimum_growth_rate,0.0,g_per_day,Minimum daily growth rate when conditions are limiting
 allocation_parameters,allocation_efficiency,0.95,dimensionless,Efficiency of biomass allocation between organs

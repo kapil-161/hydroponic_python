@@ -377,17 +377,29 @@ class NutrientModel:
     def _update_concentrations(self, concentrations: Dict[str, float], uptake_rates: Dict[str, float],
                              plant_status: Dict[str, Any]) -> Dict[str, float]:
         updated = {}
-        tank_volume = plant_status['tank_volume_L']
         plant_count = plant_status['plant_count']
-        if tank_volume <= 0:
-            raise ValueError("Tank volume must be positive")
+
+        # Calculate root zone volume based on root surface area instead of tank volume
+        root_surface_area = plant_status['root_surface_area']  # cm²
+        # Assume 1mm (0.1 cm) rhizosphere layer around roots for nutrient depletion
+        rhizosphere_thickness = 0.1  # cm
+        root_zone_volume_cm3 = root_surface_area * rhizosphere_thickness  # cm³
+        root_zone_volume_L = root_zone_volume_cm3 / 1000.0  # Convert to L
+
+        # Minimum root zone volume to prevent unrealistic depletion
+        min_root_zone_volume = 0.01  # 10 mL minimum
+        root_zone_volume_L = max(min_root_zone_volume, root_zone_volume_L)
 
         for nutrient, initial_conc in concentrations.items():
             if nutrient in uptake_rates:
-                initial_mass = initial_conc * tank_volume
+                # Calculate depletion based on root zone volume, not tank volume
+                initial_mass = initial_conc * root_zone_volume_L
                 total_uptake = uptake_rates[nutrient] * plant_count
                 final_mass = max(0.0, initial_mass - total_uptake)
-                updated[nutrient] = final_mass / tank_volume
+
+                # Concentration change is limited by what's available in root zone
+                concentration_change = total_uptake / root_zone_volume_L
+                updated[nutrient] = max(0.0, initial_conc - concentration_change)
             else:
                 updated[nutrient] = initial_conc
         return updated

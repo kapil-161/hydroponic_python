@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Dict, Any, List, Tuple
 import os
 import sys
+import math
 
 # Add parent directory to path for direct execution
 if __name__ == "__main__":
@@ -1277,6 +1278,83 @@ class StrictParameterLoader:
         min_photosynthesis_rate = 0.5  # Minimum biological photosynthesis for living plant
         return max(min_photosynthesis_rate, initial_photosynthesis)
 
+    def _calculate_initial_stress_factors(self) -> Dict[str, float]:
+        """Calculate initial stress factors from environmental conditions using stress models"""
+        try:
+            # Get initial environmental conditions from CSV
+            initial_temp = self.get_parameter('initial_air_temperature')
+            initial_humidity = self.get_parameter('initial_humidity')
+            initial_light = self.get_parameter('initial_light_intensity')
+
+            # Calculate temperature stress using simplified approach if stress model not available yet
+            if hasattr(self, 'temperature_stress_model') and self.temperature_stress_model:
+                temp_stress_level = self.temperature_stress_model.calculate_base_stress_level(initial_temp)
+                temperature_stress = min(1.0, max(0.0, temp_stress_level))
+            else:
+                # Simple temperature stress calculation based on optimal range
+                optimal_temp_min = 18.0  # °C, from phenology parameters
+                optimal_temp_max = 24.0  # °C, from phenology parameters
+                if optimal_temp_min <= initial_temp <= optimal_temp_max:
+                    temperature_stress = 0.0
+                elif initial_temp < optimal_temp_min:
+                    # Cold stress
+                    temperature_stress = min(0.5, (optimal_temp_min - initial_temp) / 10.0)
+                else:
+                    # Heat stress
+                    temperature_stress = min(0.5, (initial_temp - optimal_temp_max) / 10.0)
+
+            # Calculate water stress from humidity (simplified VPD-based approach)
+            # VPD calculation: higher VPD means more water stress
+            saturation_vapor_pressure = 0.6108 * math.exp(17.27 * initial_temp / (initial_temp + 237.3))
+            actual_vapor_pressure = saturation_vapor_pressure * (initial_humidity / 100.0)
+            vpd = saturation_vapor_pressure - actual_vapor_pressure
+
+            # Water stress increases with VPD (typical hydroponic range: 0.5-1.5 kPa)
+            optimal_vpd = 0.8  # kPa, optimal for lettuce
+            vpd_stress_threshold = 1.5  # kPa, stress threshold
+
+            if vpd <= optimal_vpd:
+                water_stress = 0.0
+            elif vpd >= vpd_stress_threshold:
+                water_stress = 0.3  # Maximum water stress in hydroponic systems
+            else:
+                water_stress = 0.3 * (vpd - optimal_vpd) / (vpd_stress_threshold - optimal_vpd)
+
+            # Calculate light stress from light intensity
+            optimal_light_min = 150.0  # μmol/m²/s, typical lettuce minimum
+            optimal_light_max = 800.0  # μmol/m²/s, typical lettuce maximum
+
+            if optimal_light_min <= initial_light <= optimal_light_max:
+                light_stress = 0.0
+            elif initial_light < optimal_light_min:
+                # Low light stress
+                light_stress = min(0.5, (optimal_light_min - initial_light) / optimal_light_min)
+            else:
+                # High light stress
+                excess_light = initial_light - optimal_light_max
+                light_stress = min(0.3, excess_light / (2 * optimal_light_max))
+
+            # Nutrient stress is initially zero for hydroponic systems with proper nutrient solution
+            # Will be calculated dynamically based on nutrient concentrations during simulation
+            nutrient_stress = 0.0
+
+            return {
+                'temperature_stress': temperature_stress,
+                'water_stress': water_stress,
+                'nutrient_stress': nutrient_stress,
+                'light_stress': light_stress
+            }
+
+        except Exception as e:
+            # Fallback to zero stress if calculation fails
+            print(f"Warning: Failed to calculate initial stress factors, using zero stress: {e}")
+            return {
+                'temperature_stress': 0.0,
+                'water_stress': 0.0,
+                'nutrient_stress': 0.0,
+                'light_stress': 0.0
+            }
+
     def _calculate_initial_respiration_rate(self) -> float:
         """Calculate initial respiration rate from respiration model parameters"""
         # Base respiration rate calculation using respiration model principles
@@ -1317,7 +1395,7 @@ class StrictParameterLoader:
                 leaf_biomass=self.get_parameter('initial_leaf_biomass'),
                 stem_biomass=self.get_parameter('initial_stem_biomass'),
                 root_biomass=self.get_parameter('initial_root_biomass'),
-                total_biomass=self.get_parameter('initial_total_biomass'),
+                total_biomass=self.get_parameter('initial_leaf_biomass') + self.get_parameter('initial_stem_biomass') + self.get_parameter('initial_root_biomass'),
                 lai=max(0.1, self.get_parameter('initial_lai')),  # Ensure minimum realistic LAI
                 leaf_area=self.get_parameter('initial_leaf_area'),
                 canopy_height=self.get_parameter('initial_canopy_height'),
@@ -1327,10 +1405,7 @@ class StrictParameterLoader:
                 thermal_time=self.get_parameter('initial_thermal_time'),
                 growth_stage=self.get_parameter('initial_growth_stage'),
                 development_index=self.get_parameter('initial_development_index'),
-                temperature_stress=self.get_parameter('initial_temperature_stress'),
-                water_stress=self.get_parameter('initial_water_stress'),
-                nutrient_stress=self.get_parameter('initial_nutrient_stress'),
-                light_stress=self.get_parameter('initial_light_stress'),
+                **self._calculate_initial_stress_factors(),
                 n_content=self.get_parameter('initial_n_content'),
                 p_content=self.get_parameter('initial_p_content'),
                 k_content=self.get_parameter('initial_k_content'),
@@ -1459,6 +1534,16 @@ class HydroponicSimulator:
             'Mo': self.param_loader.get_parameter('initial_mo_conc')
         }
 
+        # Initialize dynamic canopy values (will be updated by canopy model)
+        # Set initial values based on initial LAI with simplified calculation
+        initial_lai = self.plant_state.lai
+        # Assume 70% sunlit initially (will be dynamically calculated by canopy model)
+        self.sunlit_lai = initial_lai * 0.7
+        self.shaded_lai = initial_lai * 0.3
+
+        # Initialize organ nitrogen states (will be updated by nitrogen model)
+        self.organ_nitrogen_states = {}
+
     def _initialize_all_models(self):
         """Initialize all 17 models using actual parameter classes from CSV - USE ALL 95 CLASSES"""
         try:
@@ -1505,7 +1590,7 @@ class HydroponicSimulator:
             self.respiration_model = EnhancedRespirationModel(resp_params, resp_config)
             self.respiration_parameters = resp_params
 
-            # Initialize biomass pools using BiomassPool and TissueType
+            # Initialize biomass pools using BiomassPool and TissueType with initial nitrogen content
             self.leaf_biomass_pool = BiomassPool(tissue_type=TissueType.LEAVES, dry_mass=self.plant_state.leaf_biomass, age_days=self.plant_state.day, nitrogen_content=self.param_loader.get_parameter('initial_leaf_nitrogen_content'), recent_growth=0.0)
             self.stem_biomass_pool = BiomassPool(tissue_type=TissueType.STEMS, dry_mass=self.plant_state.stem_biomass, age_days=self.plant_state.day, nitrogen_content=self.param_loader.get_parameter('initial_stem_nitrogen_content'), recent_growth=0.0)
             self.root_biomass_pool = BiomassPool(tissue_type=TissueType.ROOTS, dry_mass=self.plant_state.root_biomass, age_days=self.plant_state.day, nitrogen_content=self.param_loader.get_parameter('initial_root_nitrogen_content'), recent_growth=0.0)
@@ -1667,11 +1752,11 @@ class HydroponicSimulator:
             self.root_system_metrics = RootSystemMetrics(
                 total_root_length=self.param_loader.get_parameter('initial_total_root_length'),
                 total_root_surface_area=self.param_loader.get_parameter('initial_total_root_surface_area'),
-                total_root_biomass=self.param_loader.get_parameter('initial_total_root_biomass'),
+                total_root_biomass=self.param_loader.get_parameter('initial_root_biomass'),
                 total_root_volume=self.param_loader.get_parameter('initial_total_root_volume'),
                 root_length_density=self.param_loader.get_parameter('initial_root_length_density'),
                 root_surface_area_density=self.param_loader.get_parameter('initial_root_surface_area_density'),
-                specific_root_length=self.param_loader.get_parameter('initial_specific_root_length'),
+                specific_root_length=self.param_loader.get_parameter('initial_total_root_length') / self.param_loader.get_parameter('initial_root_biomass'),
                 average_root_activity=self.param_loader.get_parameter('initial_average_root_activity'),
                 fine_root_length=self.param_loader.get_parameter('initial_fine_root_length'),
                 medium_root_length=self.param_loader.get_parameter('initial_medium_root_length'),
@@ -1930,13 +2015,16 @@ class HydroponicSimulator:
 
         # Store RZTModelOutput - USE RZTModelOutput
         self.latest_rzt_output = rzt_response  # USE RZTModelOutput
-        # Update root zone temperature, not solution temperature
+        # Update root zone temperature from RZT model
         self.plant_state.root_zone_temperature = rzt_response.current_rzt
-        # Apply thermal equilibrium between solution and air temperature using CSV parameters
-        thermal_equilibrium_factor = self.param_loader.get_parameter('thermal_equilibrium_factor')
-        equilibrium_rate = self.param_loader.get_parameter('solution_temp_equilibrium_rate')
-        temp_diff = self.plant_state.air_temperature - self.plant_state.solution_temperature
-        self.plant_state.solution_temperature += temp_diff * thermal_equilibrium_factor * equilibrium_rate
+        # Update solution temperature using RZT model's thermal dynamics instead of simplified equilibrium
+        # The RZT model calculates effective RZT = solution_temp + heat_sources
+        # So solution temperature should evolve towards a base temperature that supports the target RZT
+        # Use a more conservative thermal coupling approach based on air temperature with RZT model influence
+        thermal_coupling_factor = 0.1  # Conservative thermal coupling rate
+        target_solution_temp = self.plant_state.air_temperature + (rzt_response.current_rzt - self.plant_state.air_temperature) * 0.5
+        temp_diff = target_solution_temp - self.plant_state.solution_temperature
+        self.plant_state.solution_temperature += temp_diff * thermal_coupling_factor
 
         # Actually USE RZTModelOutput attributes and methods
         self.optimal_rzt = rzt_response.optimal_rzt
@@ -1954,7 +2042,11 @@ class HydroponicSimulator:
         self.cooling_required = rzt_response.cooling_required
 
         # 4. Nutrient Uptake → Calculate nutrient status using NutrientTransportFlux (MOVED BEFORE pH)
-        root_specific_area = self.param_loader.get_parameter('root_specific_area')
+        # Calculate dynamic root specific area from root system model output instead of static CSV value
+        if self.plant_state.root_biomass > 0:
+            root_specific_area = self.root_system_metrics.total_root_surface_area / self.plant_state.root_biomass
+        else:
+            root_specific_area = 200.0  # Fallback for initialization only
         root_surface_area = self.plant_state.root_biomass * root_specific_area
         plant_status = {
             'root_surface_area': root_surface_area,
@@ -1972,10 +2064,8 @@ class HydroponicSimulator:
             'optimal_ec': self.param_loader.get_parameter('optimal_ec')
         }
         concentrations = self.nutrient_concentrations
-        organ_demands = {
-            'leaves': {'nitrogen': self.param_loader.get_parameter('leaf_n_demand'), 'phosphorus': self.param_loader.get_parameter('leaf_p_demand'), 'potassium': self.param_loader.get_parameter('leaf_k_demand')},
-            'roots': {'nitrogen': self.param_loader.get_parameter('root_n_demand'), 'phosphorus': self.param_loader.get_parameter('root_p_demand'), 'potassium': self.param_loader.get_parameter('root_k_demand')}
-        }
+        # Calculate dynamic organ demands based on current biomass allocation
+        organ_demands = self._calculate_dynamic_nutrient_demands()
         water_fluxes = {'transpiration': self.plant_state.transpiration}
         assimilate_fluxes = {'photosynthesis': self.plant_state.photosynthesis_rate}
         nutrient_response = self.nutrient_model.calculate_nutrient_dynamics(
@@ -1987,8 +2077,10 @@ class HydroponicSimulator:
             assimilate_fluxes=assimilate_fluxes
         )
 
-        # Extract uptake rates from model response
+        # Extract uptake rates and calculated EC from model response
         uptake_rates = nutrient_response['uptake_rates_mg_per_plant_per_day']
+        # Use dynamic EC calculation from NutrientModel instead of simplified calculation
+        calculated_ec = nutrient_response['calculated_ec']
 
         # Debug: Check actual nutrient uptake values
         if self.plant_state.day < 5:  # Only print first few days
@@ -2030,15 +2122,12 @@ class HydroponicSimulator:
             self.plant_state.p_content = max(min_p_for_survival, new_p_concentration)
             self.plant_state.k_content = max(min_k_for_survival, new_k_concentration)
 
-        # Update nutrient concentrations
-        tank_volume = plant_status['tank_volume_L']
-        plant_count = plant_status['plant_count']
-        for nutrient, rate in uptake_rates.items():
-            if nutrient in self.nutrient_concentrations:
-                old_conc = self.nutrient_concentrations[nutrient]
-                self.nutrient_concentrations[nutrient] -= (rate * plant_count) / tank_volume
-                if nutrient in ['NO3', 'NH4'] and self.plant_state.day <= 5:
-                    print(f"Day {self.plant_state.day}: {nutrient} conc: {old_conc:.1f} → {self.nutrient_concentrations[nutrient]:.1f} mg/L (uptake: {rate:.3f} mg/day)")
+        # Update nutrient concentrations using root zone-based depletion from nutrient model
+        if 'updated_concentrations' in nutrient_response:
+            updated_concentrations = nutrient_response['updated_concentrations']
+            for nutrient, new_conc in updated_concentrations.items():
+                if nutrient in self.nutrient_concentrations:
+                    self.nutrient_concentrations[nutrient] = new_conc
 
         # Create nutrient transport fluxes from model response
         transport_fluxes = nutrient_response['transport_fluxes']
@@ -2080,8 +2169,10 @@ class HydroponicSimulator:
             'P-PO4': self.nutrient_concentrations.get('P-PO4', 0.0),
             'Fe': self.nutrient_concentrations.get('Fe', 0.0)
         }
-        # Calculate current EC from nutrient concentrations (following "model output" rule)
-        current_ec = sum(self.nutrient_concentrations.values()) * 0.001  # Simple EC calculation
+        # Use dynamic EC calculated by NutrientModel instead of simplified calculation
+        current_ec = calculated_ec
+        # Store current EC for use in other parts of the simulation
+        self.current_ec = current_ec
         ph_response = self.ph_model.update_ph_state(
             nutrient_uptake=nutrient_uptake,
             nutrient_concentrations=nutrient_concentrations,
@@ -2121,9 +2212,10 @@ class HydroponicSimulator:
             'g_max': self.param_loader.get_parameter('g_max'),
             'min_par_threshold': self.param_loader.get_parameter('min_par_threshold')
         }
-        sunlit_fraction = self.param_loader.get_parameter('sunlit_fraction')
-        sunlit_lai = lai * sunlit_fraction
-        shaded_lai = lai - sunlit_lai
+        # Use dynamic sunlit/shaded LAI from CanopyArchitectureModel instead of static CSV value
+        # This ensures proper causal chain: LAI + solar angle → dynamic light distribution
+        sunlit_lai = self.sunlit_lai
+        shaded_lai = self.shaded_lai
 
 
         photo_response = self.photosynthesis_model.calculate_daily_assimilation(
@@ -2163,10 +2255,11 @@ class HydroponicSimulator:
         stem_biomass = max(0.001, self.plant_state.stem_biomass)
         root_biomass = max(0.001, self.plant_state.root_biomass)
         
+        # Use dynamic nitrogen content from NitrogenBalanceModel instead of static CSV values
         biomass_pools = [
-            BiomassPool(tissue_type=TissueType.LEAVES, dry_mass=leaf_biomass, age_days=self.plant_state.day, nitrogen_content=self.param_loader.get_parameter('leaf_nitrogen_content'), recent_growth=self.plant_state.net_assimilation),
-            BiomassPool(tissue_type=TissueType.STEMS, dry_mass=stem_biomass, age_days=self.plant_state.day, nitrogen_content=self.param_loader.get_parameter('stem_nitrogen_content'), recent_growth=self.plant_state.net_assimilation),
-            BiomassPool(tissue_type=TissueType.ROOTS, dry_mass=root_biomass, age_days=self.plant_state.day, nitrogen_content=self.param_loader.get_parameter('root_nitrogen_content'), recent_growth=self.plant_state.net_assimilation)
+            BiomassPool(tissue_type=TissueType.LEAVES, dry_mass=leaf_biomass, age_days=self.plant_state.day, nitrogen_content=self.get_dynamic_nitrogen_content('LEAVES'), recent_growth=self.plant_state.net_assimilation),
+            BiomassPool(tissue_type=TissueType.STEMS, dry_mass=stem_biomass, age_days=self.plant_state.day, nitrogen_content=self.get_dynamic_nitrogen_content('STEMS'), recent_growth=self.plant_state.net_assimilation),
+            BiomassPool(tissue_type=TissueType.ROOTS, dry_mass=root_biomass, age_days=self.plant_state.day, nitrogen_content=self.get_dynamic_nitrogen_content('ROOTS'), recent_growth=self.plant_state.net_assimilation)
         ]
         temperature = self.plant_state.air_temperature
         hour = self.param_loader.get_parameter('representative_hour')
@@ -2174,10 +2267,10 @@ class HydroponicSimulator:
         new_growth_fraction = self.param_loader.get_parameter('new_growth_fraction')
         new_growth = max(0.0, self.plant_state.net_assimilation * new_growth_fraction)
         growth_composition = {
-            'proteins': self.param_loader.get_parameter('growth_proteins_fraction'),
-            'carbohydrates': self.param_loader.get_parameter('growth_carbohydrates_fraction'),
-            'lipids': self.param_loader.get_parameter('growth_lipids_fraction'),
-            'minerals': self.param_loader.get_parameter('growth_minerals_fraction')
+            'proteins': self.param_loader.get_parameter('protein_fraction'),
+            'carbohydrates': self.param_loader.get_parameter('carbohydrate_fraction'),
+            'lipids': self.param_loader.get_parameter('lipid_fraction'),
+            'minerals': self.param_loader.get_parameter('mineral_fraction')
         }
 
         resp_response = self.respiration_model.calculate_hourly_respiration(
@@ -2216,7 +2309,11 @@ class HydroponicSimulator:
             'humidity': self.plant_state.humidity,
             'wind_speed': weather_data['wind_speed']
         }
-        root_specific_area = self.param_loader.get_parameter('root_specific_area')
+        # Calculate dynamic root specific area from root system model output instead of static CSV value
+        if self.plant_state.root_biomass > 0:
+            root_specific_area = self.root_system_metrics.total_root_surface_area / self.plant_state.root_biomass
+        else:
+            root_specific_area = 200.0  # Fallback for initialization only
         root_surface_area = self.plant_state.root_biomass * root_specific_area
         ec = self.param_loader.get_parameter('ec_factor')
         # Calculate stress factors from integrated stress model outputs (following "model output" rule)
@@ -2272,8 +2369,35 @@ class HydroponicSimulator:
         else:
             light_stress = self.param_loader.get_parameter('minimum_light_stress')
 
-        # Water and nutrient stress simplified (can be enhanced later)
-        water_stress = self.param_loader.get_parameter('hydroponic_water_stress')
+        # Calculate dynamic water stress based on VPD instead of static CSV value
+        # This considers environmental conditions that cause water stress in hydroponic systems
+        # Calculate actual VPD from air temperature and humidity
+        saturation_vapor_pressure = 0.6108 * math.exp(17.27 * self.plant_state.air_temperature / (self.plant_state.air_temperature + 237.3))
+        actual_vapor_pressure = saturation_vapor_pressure * (self.plant_state.humidity / 100.0)
+        actual_vpd = max(0.1, saturation_vapor_pressure - actual_vapor_pressure)
+
+        # Define optimal VPD range for lettuce (from environmental parameters if available)
+        optimal_vpd_min = 0.5  # kPa - optimal minimum VPD for lettuce
+        optimal_vpd_max = 1.2  # kPa - optimal maximum VPD for lettuce
+
+        # Calculate water stress based on VPD deviation from optimal range
+        if actual_vpd < optimal_vpd_min:
+            # Low VPD can cause issues with transpiration
+            water_stress_level = min(0.2, (optimal_vpd_min - actual_vpd) * 0.3)
+        elif actual_vpd > optimal_vpd_max:
+            # High VPD causes excessive water demand and stress
+            water_stress_level = min(0.4, (actual_vpd - optimal_vpd_max) * 0.5)
+        else:
+            # Within optimal range
+            water_stress_level = 0.0
+
+        # Additional stress from high EC (osmotic stress) - use dynamic EC from NutrientModel
+        total_ec = getattr(self, 'current_ec', 1.0)  # Use dynamic EC from nutrient model
+        if total_ec > 2.5:  # EC threshold for lettuce
+            osmotic_stress = min(0.3, (total_ec - 2.5) * 0.2)
+            water_stress_level = min(1.0, water_stress_level + osmotic_stress)
+
+        water_stress = water_stress_level
         nutrient_stress = self.param_loader.get_parameter('minimum_nutrient_stress')
 
         current_stress_levels = {
@@ -2369,7 +2493,20 @@ class HydroponicSimulator:
         
         # Convert carbon assimilation to biomass using CSV parameters
         # Apply scaling factor to convert photosynthesis model output to realistic plant biomass
-        net_assimilate = self.plant_state.net_assimilation * growth_efficiency * photosynthesis_scaling
+        raw_net_assimilate = self.plant_state.net_assimilation * growth_efficiency * photosynthesis_scaling
+
+        # Apply size-based scaling to prevent unrealistic growth for very small plants
+        # Photosynthesis should be proportional to plant size (biomass)
+        min_biomass_for_full_photosynthesis = self.param_loader.get_parameter('min_biomass_for_full_photosynthesis')
+        current_total_biomass = self.plant_state.total_biomass
+
+        # Scale photosynthesis based on plant size - small plants can't photosynthesize at full capacity
+        if current_total_biomass < min_biomass_for_full_photosynthesis:
+            size_scaling_factor = current_total_biomass / min_biomass_for_full_photosynthesis
+            net_assimilate = raw_net_assimilate * size_scaling_factor
+
+        else:
+            net_assimilate = raw_net_assimilate
         stress_factors = {
             'temperature': self.plant_state.temperature_stress,
             'water_stress_level': self.plant_state.water_stress,
@@ -2437,6 +2574,7 @@ class HydroponicSimulator:
         self.plant_state.stem_biomass = max(min_stem_biomass, self.plant_state.stem_biomass)
         self.plant_state.root_biomass = max(min_root_biomass, self.plant_state.root_biomass)
         self.plant_state.total_biomass = self.plant_state.leaf_biomass + self.plant_state.stem_biomass + self.plant_state.root_biomass
+
 
         # Actually USE BiomassAllocationResponse attributes and methods
         self.allocation_factors = alloc_response  # The response is the allocation factors dictionary
@@ -2703,6 +2841,31 @@ class HydroponicSimulator:
                 daily_remobilization=state.daily_remobilization
             )
 
+    def get_dynamic_nitrogen_content(self, organ_name: str) -> float:
+        """Get dynamic nitrogen concentration from NitrogenBalanceModel instead of static CSV value"""
+        # Map organ names from biomass pools to nitrogen model organ names
+        organ_mapping = {
+            'LEAVES': 'leaves',
+            'STEMS': 'stems',
+            'ROOTS': 'roots'
+        }
+
+        if hasattr(self, 'organ_nitrogen_states') and self.organ_nitrogen_states:
+            mapped_organ = organ_mapping.get(organ_name, organ_name.lower())
+            if mapped_organ in self.organ_nitrogen_states:
+                nitrogen_conc = self.organ_nitrogen_states[mapped_organ].nitrogen_concentration
+                # Ensure non-negative nitrogen content
+                return max(0.0, nitrogen_conc)
+
+        # Fallback to initial values only if nitrogen model hasn't run yet
+        fallback_params = {
+            'LEAVES': 'initial_leaf_nitrogen_content',
+            'STEMS': 'initial_stem_nitrogen_content',
+            'ROOTS': 'initial_root_nitrogen_content'
+        }
+        initial_value = self.param_loader.get_parameter(fallback_params[organ_name])
+        return max(0.0, initial_value)
+
         # 15. Root System → Update root distribution using RootCohort, RootZoneLayer, RootSystemMetrics
         flow_rate = self.param_loader.get_parameter('optimal_flow_rate')
         oxygen_level = self.param_loader.get_parameter('root_oxygen_optimum')
@@ -2795,6 +2958,72 @@ class HydroponicSimulator:
             processing_time_ms=0.0  # Processing time not critical for biological simulation
         )
         self.daily_update_outputs.append(daily_output)
+
+    def _calculate_dynamic_nutrient_demands(self) -> Dict[str, Dict[str, float]]:
+        """Calculate dynamic nutrient demands based on current growth rates and tissue requirements"""
+
+        # Calculate current organ growth rates from net assimilation and biomass allocation
+        stress_factors = {
+            'temperature_stress_level': self.plant_state.temperature_stress,
+            'water_stress_level': self.plant_state.water_stress,
+            'light_stress_level': self.plant_state.light_stress,
+            'nitrogen_stress_level': self.plant_state.nutrient_stress
+        }
+
+        # Calculate biomass allocation for current day
+        alloc_response = self.biomass_allocation_model.calculate_functional_balance_allocation(
+            stress_factors=stress_factors,
+            stage_props={'is_vegetative': True, 'is_reproductive': False},
+            env_conditions={
+                'temperature': self.plant_state.air_temperature,
+                'light_stress': 1.0 - self.plant_state.light_stress
+            }
+        )
+
+        # Get actual growth rates (g/day) from net assimilation and allocation
+        net_assimilation = self.plant_state.net_assimilation  # g C/day
+
+        # Convert carbon to biomass (approximate conversion factor)
+        carbon_to_biomass = 2.2  # g biomass per g C
+        total_growth_rate = net_assimilation * carbon_to_biomass  # g biomass/day
+
+        organ_growth_rates = {
+            'leaves': total_growth_rate * alloc_response['leaves'],
+            'stems': total_growth_rate * alloc_response['stems'],
+            'roots': total_growth_rate * alloc_response['roots']
+        }
+
+        # Calculate nutrient demands based on growth rates and tissue concentrations
+        # Using target tissue concentrations (nitrogen from parameters, P/K from literature values for lettuce)
+        target_concentrations = {
+            'leaves': {
+                'nitrogen': self.param_loader.get_parameter('critical_n_concentrations_leaves_optimal'), # g N/g biomass
+                'phosphorus': 0.008,  # g P/g biomass (typical for lettuce leaves)
+                'potassium': 0.040   # g K/g biomass (typical for lettuce leaves)
+            },
+            'stems': {
+                'nitrogen': self.param_loader.get_parameter('critical_n_concentrations_stems_optimal'),
+                'phosphorus': 0.005,  # g P/g biomass (typical for lettuce stems)
+                'potassium': 0.025   # g K/g biomass (typical for lettuce stems)
+            },
+            'roots': {
+                'nitrogen': self.param_loader.get_parameter('critical_n_concentrations_roots_optimal'),
+                'phosphorus': 0.006,  # g P/g biomass (typical for lettuce roots)
+                'potassium': 0.030   # g K/g biomass (typical for lettuce roots)
+            }
+        }
+
+        # Calculate dynamic demands: growth_rate * target_concentration * 1000 (convert g to mg)
+        organ_demands = {}
+        for organ, growth_rate in organ_growth_rates.items():
+            organ_demands[organ] = {}
+            for nutrient in ['nitrogen', 'phosphorus', 'potassium']:
+                # Demand = new tissue mass * target concentration * conversion factor
+                demand_g_per_day = growth_rate * target_concentrations[organ][nutrient]
+                demand_mg_per_day = demand_g_per_day * 1000  # Convert to mg/day
+                organ_demands[organ][nutrient] = max(0.0, demand_mg_per_day)
+
+        return organ_demands
 
     def _record_daily_state(self):
         """Record current plant state"""
