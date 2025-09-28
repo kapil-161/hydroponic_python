@@ -152,17 +152,28 @@ class PhotosynthesisModel:
         ci = co2_ppm * 0.7
         net_photosynthesis_rate = 0.0
 
-        for _ in range(3):
+        # Iterate until CO2 concentration converges (proper numerical solution)
+        max_iterations = 20
+        tolerance = 0.01  # CO2 concentration convergence tolerance (ppm)
+
+        for iteration in range(max_iterations):
+            ci_prev = ci
+
             ac = vcmax * (ci - self.params.gamma_star) / (ci + self.params.kc * (1 + self.params.o2_mmol_mol / self.params.ko))
             i2 = self.params.alpha * par_umol_m2_s * self.params.phi_psii
             j = (i2 + jmax - math.sqrt((i2 + jmax)**2 - 4 * self.params.theta * i2 * jmax)) / (2 * self.params.theta)
             aj = j * (ci - self.params.gamma_star) / (4 * (ci + 2 * self.params.gamma_star))
             net_photosynthesis_rate = max(0.0, min(ac, aj) - rd)
+
             if gs > 1e-9:
                 ci = co2_ppm - (net_photosynthesis_rate * 1.6 / gs)
                 ci = max(self.params.gamma_star, ci)
             else:
                 ci = co2_ppm
+
+            # Check for convergence
+            if abs(ci - ci_prev) < tolerance:
+                break
 
         hourly_g_c_per_m2 = net_photosynthesis_rate * self.params.seconds_per_hour * self.params.umol_to_g_carbon_ratio
         return max(0.0, hourly_g_c_per_m2 * lai * ec_factor), gs
@@ -188,7 +199,8 @@ class PhotosynthesisModel:
 
     def calculate_hourly_assimilation(self, par_umol_m2_s: float, co2_ppm: float, temp_c: float, humidity: float,
                                      lai: float, ec_factor: float, config: Dict[str, Any],
-                                     sunlit_lai: float, shaded_lai: float) -> float:
+                                     sunlit_lai: float, shaded_lai: float,
+                                     dynamic_shaded_par: Optional[float] = None) -> Tuple[float, float]:
         if any(x is None for x in [par_umol_m2_s, co2_ppm, temp_c, humidity, lai, ec_factor, config, sunlit_lai, shaded_lai]):
             raise ValueError("All inputs must be provided")
         if abs((sunlit_lai + shaded_lai) - lai) > 0.001:
@@ -200,7 +212,11 @@ class PhotosynthesisModel:
         shaded_photosynthesis = 0.0
         shaded_gs = 0.0
         if shaded_lai > 0:
-            shaded_par = par_umol_m2_s * self.params.shaded_light_fraction
+            # Use dynamic shaded PAR if provided, otherwise fallback to static fraction
+            if dynamic_shaded_par is not None:
+                shaded_par = dynamic_shaded_par  # Use dynamic PAR from CanopyArchitectureModel
+            else:
+                shaded_par = par_umol_m2_s * self.params.shaded_light_fraction  # Fallback to static fraction
             shaded_photosynthesis, shaded_gs = self._calculate_instantaneous_assimilation(
                 shaded_par, co2_ppm, temp_c, humidity, shaded_lai, ec_factor, config
             )
@@ -209,7 +225,8 @@ class PhotosynthesisModel:
 
     def calculate_daily_assimilation(self, par_umol_m2_s: float, co2_ppm: float, temp_c: float, humidity: float,
                                     lai: float, photoperiod_hours: float, ec_factor: float,
-                                    config: Dict[str, Any], sunlit_lai: float, shaded_lai: float) -> PhotosynthesisResponse:
+                                    config: Dict[str, Any], sunlit_lai: float, shaded_lai: float,
+                                    dynamic_dark_respiration_rate: Optional[float] = None) -> PhotosynthesisResponse:
         if any(x is None for x in [par_umol_m2_s, co2_ppm, temp_c, humidity, lai, photoperiod_hours, ec_factor, config, sunlit_lai, shaded_lai]):
             raise ValueError("All inputs must be provided")
         if photoperiod_hours < 0 or photoperiod_hours > self.params.hours_per_day:
@@ -221,11 +238,19 @@ class PhotosynthesisModel:
             par_umol_m2_s, co2_ppm, temp_c, humidity, lai, ec_factor, config, sunlit_lai, shaded_lai
         )
         daily_assimilation = hourly_assimilation * photoperiod_hours
-        rd = self._arrhenius_temp_response(self.params.rd_25, self.params.ear, temp_c)
-        dark_respiration_umol_per_sec = rd * lai
-        dark_respiration_g_c_per_hour = dark_respiration_umol_per_sec * self.params.seconds_per_hour * self.params.umol_to_g_carbon_ratio
-        dark_period_hours = self.params.hours_per_day - photoperiod_hours
-        total_dark_respiration_loss = dark_respiration_g_c_per_hour * dark_period_hours
+
+        # Use dynamic respiration rate if provided, otherwise fallback to simplified calculation
+        if dynamic_dark_respiration_rate is not None:
+            # Use dynamic respiration rate from EnhancedRespirationModel (following "model output" rule)
+            dark_period_hours = self.params.hours_per_day - photoperiod_hours
+            total_dark_respiration_loss = dynamic_dark_respiration_rate * dark_period_hours
+        else:
+            # Fallback to simplified static calculation
+            rd = self._arrhenius_temp_response(self.params.rd_25, self.params.ear, temp_c)
+            dark_respiration_umol_per_sec = rd * lai
+            dark_respiration_g_c_per_hour = dark_respiration_umol_per_sec * self.params.seconds_per_hour * self.params.umol_to_g_carbon_ratio
+            dark_period_hours = self.params.hours_per_day - photoperiod_hours
+            total_dark_respiration_loss = dark_respiration_g_c_per_hour * dark_period_hours
         net_daily_assimilation = max(0.0, daily_assimilation - total_dark_respiration_loss)
 
         return PhotosynthesisResponse(

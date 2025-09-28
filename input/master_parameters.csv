@@ -1044,7 +1044,7 @@ initial_state,initial_canopy_height,1.0,cm,Initial canopy height
 # - respiration_rate: calculated by RespirationModel from biomass and temperature
 # - net_assimilation: calculated as photosynthesis_rate - respiration_rate
 initial_state,initial_thermal_time,0.0,GDD,Initial thermal time
-initial_state,initial_growth_stage,emergence,string,Initial growth stage
+initial_state,initial_growth_stage,EMERGENCE,string,Initial growth stage
 initial_state,initial_development_index,0.0,dimensionless,Initial development index
 # Removed static initial stress parameters - should be calculated dynamically by UnifiedStressCalculator
 # Initial stress factors should be calculated from initial environmental conditions:
@@ -1058,6 +1058,8 @@ initial_state,initial_k_content,0.02,g_K_g_dry_mass,Initial potassium content
 # Removed static initial water rate parameters - should be calculated dynamically by WaterUptakeModel:
 # - water_uptake: calculated by WaterUptakeModel from root biomass, solution concentration, and environmental stress
 # - transpiration: calculated by WaterUptakeModel from leaf area, VPD, stomatal conductance, and environmental factors
+initial_state,initial_water_uptake,0.008,L_day,Initial water uptake rate
+initial_state,initial_transpiration,0.006,L_day,Initial transpiration rate
 initial_state,initial_root_depth,1.0,cm,Initial root depth
 initial_state,initial_root_distribution,"{'zone1': 0.4, 'zone2': 0.4, 'zone3': 0.2}",dict,Initial root distribution by zone
 initial_state,initial_air_temperature,20.0,°C,Initial air temperature

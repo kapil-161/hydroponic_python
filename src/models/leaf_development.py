@@ -163,6 +163,14 @@ class LeafCohort:
     stage: LeafStage              # Current development stage
     thermal_time_since_appearance: float
     senescence_rate: float
+    current_biomass: float = None # Current leaf biomass (g DM) - calculated from area if not provided
+    
+    def __post_init__(self):
+        # Calculate current_biomass from current_area if not provided
+        if self.current_biomass is None:
+            # Use a default specific leaf area of 200 cm²/g (typical for lettuce)
+            default_sla = 200.0  # cm²/g
+            self.current_biomass = self.current_area * 10000 / default_sla  # Convert m² to cm²
 
 
 class LeafDevelopmentModel:
@@ -358,6 +366,7 @@ class LeafDevelopmentModel:
                     
                     proposed_area = cohort.current_area + max(0.0, daily_increase)
                     cohort.current_area = min(proposed_area, cohort.max_potential_area)
+                    cohort.current_biomass = cohort.current_area / self.params.specific_leaf_area
                     
                     if cohort.thermal_time_since_appearance > self.params.leaf_maturation_thermal_time:
                         cohort.stage = LeafStage.MATURE
@@ -373,6 +382,7 @@ class LeafDevelopmentModel:
                 elif cohort.stage == LeafStage.SENESCING:
                     area_loss = cohort.current_area * cohort.senescence_rate
                     cohort.current_area = max(0.0, cohort.current_area - area_loss)
+                    cohort.current_biomass = cohort.current_area / self.params.specific_leaf_area
                     senesced_area += area_loss
                     
                     if cohort.current_area < self.params.minimum_visible_leaf_area:
@@ -414,10 +424,12 @@ class LeafDevelopmentModel:
     def _create_initial_leaf_cohort(self, cohort_id: int):
         """Create initial leaf cohorts (cotyledons + first leaves)."""
         initial_area = self.params.max_individual_leaf_area * self.params.initial_leaf_area_factor
+        initial_biomass = initial_area / self.params.specific_leaf_area
         cohort = LeafCohort(
             cohort_id=cohort_id,
             appearance_day=0.0,
             current_area=initial_area,
+            current_biomass=initial_biomass,
             max_potential_area=self.params.max_individual_leaf_area,
             stage=LeafStage.EXPANDING,
             thermal_time_since_appearance=self.params.leaf_maturation_thermal_time * self.params.initial_thermal_time_factor,
@@ -429,11 +441,13 @@ class LeafDevelopmentModel:
         """Create a new leaf cohort."""
         position_factors = self.calculate_leaf_position_factors([self.current_v_stage])
         max_area = self.params.max_individual_leaf_area * position_factors[0]
-        
+        current_biomass = self.params.minimum_visible_leaf_area / self.params.specific_leaf_area
+
         cohort = LeafCohort(
             cohort_id=self.next_cohort_id,
             appearance_day=self.current_v_stage,
             current_area=self.params.minimum_visible_leaf_area,
+            current_biomass=current_biomass,
             max_potential_area=max_area,
             stage=LeafStage.EMERGING,
             thermal_time_since_appearance=0.0,

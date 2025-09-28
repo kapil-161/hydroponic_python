@@ -184,6 +184,7 @@ class WaterUptakeResponse:
     temperature_factor: float              # Temperature response factor (0 to 1)
     vpd_factor: float                     # VPD response factor (0 to 1)
     hydraulic_uptake: float                # Hydraulic water uptake rate (L/m²/day)
+    total_hydraulic_conductance: float     # Total plant hydraulic conductance (L/day/MPa)
 
 class WaterUptakeModel:
     """
@@ -284,7 +285,7 @@ class WaterUptakeModel:
         default_stress_factors = {'water_stress_level': 0.0, 'salinity_stress': 0.0}
         actual_stress_factors = stress_factors if stress_factors is not None else default_stress_factors
 
-        hydraulic_uptake = self.calculate_hydraulic_water_uptake(
+        hydraulic_uptake, total_conductance = self.calculate_hydraulic_water_uptake(
             light_interception=min(1.0, lai / 2.0),
             temperature=temperature,
             humidity=humidity,
@@ -309,7 +310,8 @@ class WaterUptakeModel:
             environmental_factor=environmental_factor,
             temperature_factor=temp_factor,
             vpd_factor=vpd_factor,
-            hydraulic_uptake=hydraulic_uptake
+            hydraulic_uptake=hydraulic_uptake,
+            total_hydraulic_conductance=total_conductance
         )
 
     def calculate_hydraulic_water_uptake(self,
@@ -382,7 +384,7 @@ class WaterUptakeModel:
             cavitation_factor = max(0.1, 1.0 + (adjusted_leaf_potential - self.params.cavitation_threshold) / 1.0)
             hydraulic_water_uptake *= cavitation_factor
 
-        return max(0.1, hydraulic_water_uptake + metabolic_water)
+        return max(0.1, hydraulic_water_uptake + metabolic_water), total_conductance
 
     def _calculate_temperature_factor(self, temperature: float) -> float:
         """Use consolidated temperature factor calculation from core_utils."""

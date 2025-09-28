@@ -1401,7 +1401,7 @@ class StrictParameterLoader:
                 canopy_height=self.get_parameter('initial_canopy_height'),
                 photosynthesis_rate=self._calculate_initial_photosynthesis_rate(),
                 respiration_rate=self._calculate_initial_respiration_rate(),
-                net_assimilation=self.get_parameter('initial_net_assimilation'),
+                net_assimilation=self._calculate_initial_photosynthesis_rate() - self._calculate_initial_respiration_rate(),
                 thermal_time=self.get_parameter('initial_thermal_time'),
                 growth_stage=self.get_parameter('initial_growth_stage'),
                 development_index=self.get_parameter('initial_development_index'),

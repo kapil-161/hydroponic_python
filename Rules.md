@@ -5,6 +5,7 @@ ensures that changes to the parameters don't break the simulation and that the m
 ## Parameter Management
 - dont put values on csv which should come out from each model file, one model output can be another model input. 
 - no fallback code
+- i dont want temporary solutions
 - dont make premature success claims 
 - no default value in code
 - no hardcoded values in code, only in csv

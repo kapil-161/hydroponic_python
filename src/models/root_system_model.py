@@ -463,6 +463,7 @@ class RootSystemMetrics:
     total_uptake_g_per_day: float
     nitrogen_uptake_g_per_day: float
     nutrient_uptake_rates: Dict[str, float]
+    root_distribution: Dict[int, float] = field(default_factory=lambda: {1: 0.4, 2: 0.4, 3: 0.2})
 
 class EnhancedRootSystemModel:
     def __init__(self, parameters: RootSystemParameters):
@@ -619,6 +620,18 @@ class EnhancedRootSystemModel:
         root_surface_area_density = total_surface_area / max(self.params.minimum_volume, total_zone_volume)
         avg_activity = weighted_activity / max(1, total_cohorts)
         specific_root_length = total_length / max(self.params.minimum_biomass, total_biomass)
+        # Calculate root distribution by zone
+        zone_surface_areas = {}
+        for i, zone in enumerate(self.root_zones):
+            zone_surface_area = sum(cohort.surface_area for cohort in zone.root_cohorts)
+            zone_surface_areas[i] = zone_surface_area
+
+        # Calculate distribution fractions
+        root_distribution = {}
+        if total_surface_area > 0:
+            for zone_id, surface_area in zone_surface_areas.items():
+                root_distribution[zone_id] = surface_area / total_surface_area
+
         return {
             'total_root_length': total_length,
             'total_root_surface_area': total_surface_area,
@@ -633,7 +646,8 @@ class EnhancedRootSystemModel:
             'coarse_root_length': coarse_length,
             'fine_root_fraction': fine_length / max(self.params.minimum_volume, total_length),
             'root_age_days': self.total_age_days,
-            'cumulative_growth': self.cumulative_root_growth
+            'cumulative_growth': self.cumulative_root_growth,
+            'root_distribution': root_distribution
         }
 
     def calculate_effective_surface_area(self, architecture_metrics: Dict[str, float]) -> float:
@@ -855,6 +869,7 @@ class EnhancedRootSystemModel:
             cumulative_growth=architecture_metrics['cumulative_growth'],
             total_nutrient_uptake=uptake_results['total_nutrient_uptake'],
             uptake_per_surface_area=uptake_results['uptake_per_surface_area'],
+            root_distribution=architecture_metrics['root_distribution'],
             uptake_temperature_factor=uptake_results['uptake_temperature_factor'],
             uptake_flow_factor=uptake_results['uptake_flow_factor'],
             effective_root_surface_area=uptake_results['effective_root_surface_area'],
