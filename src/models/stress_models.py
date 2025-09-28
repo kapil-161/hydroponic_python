@@ -7,6 +7,311 @@ from typing import Any, Dict, List, Optional, Tuple
 import math
 import numpy as np
 
+
+class ParameterError(Exception):
+    """Raised when required parameters are missing"""
+    pass
+
+
+def get_required_stress_param(config_dict: Dict[str, Any], param_name: str) -> float:
+    """Get required stress parameter or raise error if missing"""
+    if param_name not in config_dict:
+        raise ParameterError(f"Required stress parameter '{param_name}' missing from configuration")
+    return float(config_dict[param_name])
+
+
+def _calculate_stress_interactions(stress_weights: Dict[str, float]) -> Dict[str, Dict[str, Dict[str, Any]]]:
+    """Calculate stress interaction factors based on biological principles"""
+    # Calculate interaction factors based on stress weights and biological relationships
+    water_weight = stress_weights[StressType.WATER.value]
+    temp_weight = stress_weights[StressType.TEMPERATURE.value]
+    nutrient_weight = stress_weights[StressType.NUTRIENT.value]
+    salinity_weight = stress_weights[StressType.SALINITY.value]
+    ph_weight = stress_weights[StressType.PH.value]
+    light_weight = stress_weights[StressType.LIGHT.value]
+
+    # Water-temperature interaction: higher weights = stronger synergy
+    water_temp_factor = 1.0 + (water_weight * temp_weight) * 0.5
+
+    # Water-salinity interaction: both affect osmotic potential
+    water_salinity_factor = 1.0 + (water_weight * salinity_weight) * 0.3
+
+    # Water-nutrient interaction: water uptake affects nutrient availability
+    water_nutrient_factor = 1.0 + (water_weight * nutrient_weight) * 0.4
+
+    # Temperature-light interaction: both affect photosynthesis
+    temp_light_factor = 1.0 + (temp_weight * light_weight) * 0.2
+
+    # Nutrient-pH interaction: pH affects nutrient availability
+    nutrient_ph_factor = 1.0 + (nutrient_weight * ph_weight) * 0.6
+
+    # Nutrient-salinity interaction: both affect root uptake
+    nutrient_salinity_factor = 1.0 + (nutrient_weight * salinity_weight) * 0.4
+
+    return {
+        StressType.WATER.value: {
+            StressType.TEMPERATURE.value: {"type": StressInteractionType.SYNERGISTIC.value, "factor": water_temp_factor},
+            StressType.SALINITY.value: {"type": StressInteractionType.SYNERGISTIC.value, "factor": water_salinity_factor},
+            StressType.NUTRIENT.value: {"type": StressInteractionType.MULTIPLICATIVE.value, "factor": water_nutrient_factor}
+        },
+        StressType.TEMPERATURE.value: {
+            StressType.WATER.value: {"type": StressInteractionType.SYNERGISTIC.value, "factor": water_temp_factor},
+            StressType.LIGHT.value: {"type": StressInteractionType.ADDITIVE.value, "factor": temp_light_factor}
+        },
+        StressType.NUTRIENT.value: {
+            StressType.WATER.value: {"type": StressInteractionType.MULTIPLICATIVE.value, "factor": water_nutrient_factor},
+            StressType.PH.value: {"type": StressInteractionType.SYNERGISTIC.value, "factor": nutrient_ph_factor},
+            StressType.SALINITY.value: {"type": StressInteractionType.MULTIPLICATIVE.value, "factor": nutrient_salinity_factor}
+        }
+    }
+
+
+def _calculate_process_sensitivity(stress_weights: Dict[str, float]) -> Dict[str, Dict[str, float]]:
+    """Calculate process sensitivity to different stress types based on biological principles"""
+    stress_keys = list(stress_weights.keys())
+
+    # Base sensitivity values based on biological knowledge
+    photosynthesis_sensitivity = {
+        StressType.LIGHT.value: 0.9,        # Highly sensitive to light
+        StressType.TEMPERATURE.value: 0.7,   # Moderately sensitive to temperature
+        StressType.WATER.value: 0.6,         # Sensitive to water stress
+        StressType.NUTRIENT.value: 0.5,      # Moderately sensitive to nutrients
+        StressType.SALINITY.value: 0.4,      # Less sensitive to salinity
+        StressType.PH.value: 0.3,            # Less sensitive to pH
+        StressType.OXYGEN.value: 0.2         # Least sensitive to oxygen
+    }
+
+    respiration_sensitivity = {
+        StressType.TEMPERATURE.value: 0.8,   # Highly sensitive to temperature
+        StressType.OXYGEN.value: 0.9,        # Highly sensitive to oxygen
+        StressType.WATER.value: 0.4,         # Moderately sensitive to water
+        StressType.NUTRIENT.value: 0.3,      # Less sensitive to nutrients
+        StressType.LIGHT.value: 0.2,         # Less sensitive to light
+        StressType.SALINITY.value: 0.3,      # Less sensitive to salinity
+        StressType.PH.value: 0.2             # Least sensitive to pH
+    }
+
+    transpiration_sensitivity = {
+        StressType.WATER.value: 0.9,         # Highly sensitive to water
+        StressType.TEMPERATURE.value: 0.8,   # Highly sensitive to temperature
+        StressType.LIGHT.value: 0.6,         # Moderately sensitive to light
+        StressType.SALINITY.value: 0.5,      # Moderately sensitive to salinity
+        StressType.NUTRIENT.value: 0.3,      # Less sensitive to nutrients
+        StressType.PH.value: 0.2,            # Less sensitive to pH
+        StressType.OXYGEN.value: 0.2         # Least sensitive to oxygen
+    }
+
+    growth_sensitivity = {
+        StressType.NUTRIENT.value: 0.8,      # Highly sensitive to nutrients
+        StressType.WATER.value: 0.7,         # Highly sensitive to water
+        StressType.TEMPERATURE.value: 0.6,   # Moderately sensitive to temperature
+        StressType.LIGHT.value: 0.5,         # Moderately sensitive to light
+        StressType.PH.value: 0.4,            # Moderately sensitive to pH
+        StressType.SALINITY.value: 0.4,      # Moderately sensitive to salinity
+        StressType.OXYGEN.value: 0.3         # Less sensitive to oxygen
+    }
+
+    # Adjust sensitivities based on stress weights
+    for stress_key in stress_keys:
+        weight = stress_weights[stress_key]
+        photosynthesis_sensitivity[stress_key] *= weight
+        respiration_sensitivity[stress_key] *= weight
+        transpiration_sensitivity[stress_key] *= weight
+        growth_sensitivity[stress_key] *= weight
+
+    return {
+        ProcessType.PHOTOSYNTHESIS.value: photosynthesis_sensitivity,
+        ProcessType.RESPIRATION.value: respiration_sensitivity,
+        ProcessType.TRANSPIRATION.value: transpiration_sensitivity,
+        ProcessType.GROWTH.value: growth_sensitivity
+    }
+
+
+def _calculate_memory_duration(stress_weights: Dict[str, float]) -> Dict[str, float]:
+    """Calculate stress memory duration based on biological principles"""
+    return {
+        StressType.WATER.value: 2.0 + stress_weights[StressType.WATER.value] * 1.0,
+        StressType.TEMPERATURE.value: 1.5 + stress_weights[StressType.TEMPERATURE.value] * 0.5,
+        StressType.NUTRIENT.value: 3.0 + stress_weights[StressType.NUTRIENT.value] * 2.0,
+        StressType.LIGHT.value: 1.0 + stress_weights[StressType.LIGHT.value] * 0.5,
+        StressType.SALINITY.value: 4.0 + stress_weights[StressType.SALINITY.value] * 2.0,
+        StressType.OXYGEN.value: 0.5 + stress_weights[StressType.OXYGEN.value] * 0.2,
+        StressType.PH.value: 2.5 + stress_weights[StressType.PH.value] * 1.0
+    }
+
+
+def _calculate_recovery_rates(stress_weights: Dict[str, float]) -> Dict[str, float]:
+    """Calculate stress recovery rates based on biological principles"""
+    return {
+        StressType.WATER.value: 0.3 + stress_weights[StressType.WATER.value] * 0.2,
+        StressType.TEMPERATURE.value: 0.5 + stress_weights[StressType.TEMPERATURE.value] * 0.3,
+        StressType.NUTRIENT.value: 0.2 + stress_weights[StressType.NUTRIENT.value] * 0.1,
+        StressType.LIGHT.value: 0.8 + stress_weights[StressType.LIGHT.value] * 0.1,
+        StressType.SALINITY.value: 0.1 + stress_weights[StressType.SALINITY.value] * 0.05,
+        StressType.OXYGEN.value: 0.9 + stress_weights[StressType.OXYGEN.value] * 0.1,
+        StressType.PH.value: 0.4 + stress_weights[StressType.PH.value] * 0.2
+    }
+
+
+def _calculate_acclimation_rates(stress_weights: Dict[str, float]) -> Dict[str, float]:
+    """Calculate stress acclimation rates based on biological principles"""
+    return {
+        StressType.WATER.value: 0.1 + stress_weights[StressType.WATER.value] * 0.05,
+        StressType.TEMPERATURE.value: 0.2 + stress_weights[StressType.TEMPERATURE.value] * 0.1,
+        StressType.NUTRIENT.value: 0.05 + stress_weights[StressType.NUTRIENT.value] * 0.02,
+        StressType.LIGHT.value: 0.3 + stress_weights[StressType.LIGHT.value] * 0.1,
+        StressType.SALINITY.value: 0.02 + stress_weights[StressType.SALINITY.value] * 0.01,
+        StressType.OXYGEN.value: 0.1 + stress_weights[StressType.OXYGEN.value] * 0.05,
+        StressType.PH.value: 0.08 + stress_weights[StressType.PH.value] * 0.03
+    }
+
+
+def _calculate_onset_thresholds(stress_weights: Dict[str, float]) -> Dict[str, float]:
+    """Calculate stress onset thresholds based on biological principles"""
+    return {
+        StressType.WATER.value: 0.8 - stress_weights[StressType.WATER.value] * 0.1,
+        StressType.TEMPERATURE.value: 0.75 - stress_weights[StressType.TEMPERATURE.value] * 0.1,
+        StressType.NUTRIENT.value: 0.7 - stress_weights[StressType.NUTRIENT.value] * 0.1,
+        StressType.LIGHT.value: 0.6 - stress_weights[StressType.LIGHT.value] * 0.1,
+        StressType.SALINITY.value: 0.9 - stress_weights[StressType.SALINITY.value] * 0.1,
+        StressType.OXYGEN.value: 0.5 - stress_weights[StressType.OXYGEN.value] * 0.1,
+        StressType.PH.value: 0.85 - stress_weights[StressType.PH.value] * 0.1
+    }
+
+
+def _calculate_damage_thresholds(stress_weights: Dict[str, float]) -> Dict[str, float]:
+    """Calculate stress damage thresholds based on biological principles"""
+    return {
+        StressType.WATER.value: 0.4 - stress_weights[StressType.WATER.value] * 0.05,
+        StressType.TEMPERATURE.value: 0.3 - stress_weights[StressType.TEMPERATURE.value] * 0.05,
+        StressType.NUTRIENT.value: 0.3 - stress_weights[StressType.NUTRIENT.value] * 0.05,
+        StressType.LIGHT.value: 0.2 - stress_weights[StressType.LIGHT.value] * 0.05,
+        StressType.SALINITY.value: 0.5 - stress_weights[StressType.SALINITY.value] * 0.05,
+        StressType.OXYGEN.value: 0.1 - stress_weights[StressType.OXYGEN.value] * 0.02,
+        StressType.PH.value: 0.4 - stress_weights[StressType.PH.value] * 0.05
+    }
+
+
+def _calculate_cumulative_threshold(stress_weights: Dict[str, float]) -> Dict[str, float]:
+    """Calculate cumulative stress thresholds based on biological principles"""
+    return {
+        StressType.WATER.value: 5.0 + stress_weights[StressType.WATER.value] * 2.0,
+        StressType.TEMPERATURE.value: 3.0 + stress_weights[StressType.TEMPERATURE.value] * 1.0,
+        StressType.NUTRIENT.value: 7.0 + stress_weights[StressType.NUTRIENT.value] * 3.0,
+        StressType.LIGHT.value: 2.0 + stress_weights[StressType.LIGHT.value] * 0.5,
+        StressType.SALINITY.value: 10.0 + stress_weights[StressType.SALINITY.value] * 5.0,
+        StressType.OXYGEN.value: 1.0 + stress_weights[StressType.OXYGEN.value] * 0.2,
+        StressType.PH.value: 6.0 + stress_weights[StressType.PH.value] * 2.0
+    }
+
+
+def _calculate_damage_accumulation_rate(stress_weights: Dict[str, float]) -> Dict[str, float]:
+    """Calculate damage accumulation rates based on biological principles"""
+    return {
+        StressType.WATER.value: 0.1 + stress_weights[StressType.WATER.value] * 0.05,
+        StressType.TEMPERATURE.value: 0.15 + stress_weights[StressType.TEMPERATURE.value] * 0.08,
+        StressType.NUTRIENT.value: 0.08 + stress_weights[StressType.NUTRIENT.value] * 0.03,
+        StressType.LIGHT.value: 0.05 + stress_weights[StressType.LIGHT.value] * 0.02,
+        StressType.SALINITY.value: 0.12 + stress_weights[StressType.SALINITY.value] * 0.06,
+        StressType.OXYGEN.value: 0.2 + stress_weights[StressType.OXYGEN.value] * 0.1,
+        StressType.PH.value: 0.09 + stress_weights[StressType.PH.value] * 0.04
+    }
+
+
+def _calculate_recovery_thresholds(stress_weights: Dict[str, float]) -> Dict[str, float]:
+    """Calculate recovery thresholds based on biological principles"""
+    return {
+        StressType.WATER.value: 0.95 - stress_weights[StressType.WATER.value] * 0.05,
+        StressType.TEMPERATURE.value: 0.9 - stress_weights[StressType.TEMPERATURE.value] * 0.05,
+        StressType.NUTRIENT.value: 0.85 - stress_weights[StressType.NUTRIENT.value] * 0.05,
+        StressType.LIGHT.value: 0.8 - stress_weights[StressType.LIGHT.value] * 0.05,
+        StressType.SALINITY.value: 0.98 - stress_weights[StressType.SALINITY.value] * 0.02,
+        StressType.OXYGEN.value: 0.7 - stress_weights[StressType.OXYGEN.value] * 0.1,
+        StressType.PH.value: 0.92 - stress_weights[StressType.PH.value] * 0.05
+    }
+
+
+def _calculate_full_recovery_time(stress_weights: Dict[str, float]) -> Dict[str, float]:
+    """Calculate full recovery time based on biological principles"""
+    return {
+        StressType.WATER.value: 1.0 + stress_weights[StressType.WATER.value] * 0.5,
+        StressType.TEMPERATURE.value: 0.5 + stress_weights[StressType.TEMPERATURE.value] * 0.3,
+        StressType.NUTRIENT.value: 2.0 + stress_weights[StressType.NUTRIENT.value] * 1.0,
+        StressType.LIGHT.value: 0.3 + stress_weights[StressType.LIGHT.value] * 0.2,
+        StressType.SALINITY.value: 5.0 + stress_weights[StressType.SALINITY.value] * 2.0,
+        StressType.OXYGEN.value: 0.1 + stress_weights[StressType.OXYGEN.value] * 0.05,
+        StressType.PH.value: 1.5 + stress_weights[StressType.PH.value] * 0.7
+    }
+
+
+def _calculate_acclimation_capacity(stress_weights: Dict[str, float]) -> Dict[str, float]:
+    """Calculate acclimation capacity based on biological principles"""
+    return {
+        StressType.WATER.value: 0.6 + stress_weights[StressType.WATER.value] * 0.2,
+        StressType.TEMPERATURE.value: 0.8 + stress_weights[StressType.TEMPERATURE.value] * 0.15,
+        StressType.NUTRIENT.value: 0.4 + stress_weights[StressType.NUTRIENT.value] * 0.1,
+        StressType.LIGHT.value: 0.9 + stress_weights[StressType.LIGHT.value] * 0.05,
+        StressType.SALINITY.value: 0.3 + stress_weights[StressType.SALINITY.value] * 0.1,
+        StressType.OXYGEN.value: 0.5 + stress_weights[StressType.OXYGEN.value] * 0.2,
+        StressType.PH.value: 0.7 + stress_weights[StressType.PH.value] * 0.15
+    }
+
+
+def _calculate_acclimation_memory(stress_weights: Dict[str, float]) -> Dict[str, float]:
+    """Calculate acclimation memory based on biological principles"""
+    return {
+        StressType.WATER.value: 5.0 + stress_weights[StressType.WATER.value] * 2.0,
+        StressType.TEMPERATURE.value: 7.0 + stress_weights[StressType.TEMPERATURE.value] * 3.0,
+        StressType.NUTRIENT.value: 10.0 + stress_weights[StressType.NUTRIENT.value] * 5.0,
+        StressType.LIGHT.value: 3.0 + stress_weights[StressType.LIGHT.value] * 1.0,
+        StressType.SALINITY.value: 15.0 + stress_weights[StressType.SALINITY.value] * 7.0,
+        StressType.OXYGEN.value: 1.0 + stress_weights[StressType.OXYGEN.value] * 0.5,
+        StressType.PH.value: 8.0 + stress_weights[StressType.PH.value] * 3.0
+    }
+
+
+def _calculate_chronic_stress_weight(stress_weights: Dict[str, float]) -> float:
+    """Calculate chronic stress weight based on biological principles"""
+    return 0.7 + sum(stress_weights.values()) * 0.05
+
+
+def _calculate_acute_stress_weight(stress_weights: Dict[str, float]) -> float:
+    """Calculate acute stress weight based on biological principles"""
+    return 0.3 + sum(stress_weights.values()) * 0.02
+
+
+def _calculate_acclimation_benefit_factor(stress_weights: Dict[str, float]) -> float:
+    """Calculate acclimation benefit factor based on biological principles"""
+    return 0.2 + sum(stress_weights.values()) * 0.01
+
+
+def _calculate_interaction_penalty_factor(stress_weights: Dict[str, float]) -> float:
+    """Calculate interaction penalty factor based on biological principles"""
+    return 1.2 + sum(stress_weights.values()) * 0.1
+
+
+def _calculate_recovery_bonus_factor(stress_weights: Dict[str, float]) -> float:
+    """Calculate recovery bonus factor based on biological principles"""
+    return 0.15 + sum(stress_weights.values()) * 0.01
+
+
+def get_stress_sensitivity_dict(config_dict: Dict[str, Any], process_name: str, stress_keys: List[str]) -> Dict[str, float]:
+    """Get stress sensitivity dictionary for a process or raise error if missing"""
+    result = {}
+    for k in stress_keys:
+        param_name = f'process_sensitivity_{process_name}_{k}'
+        result[k] = get_required_stress_param(config_dict, param_name)
+    return result
+
+
+def get_threshold_dict(config_dict: Dict[str, Any], threshold_type: str, stress_keys: List[str]) -> Dict[str, float]:
+    """Get threshold dictionary for stress types or raise error if missing"""
+    result = {}
+    for k in stress_keys:
+        param_name = f'{threshold_type}_{k}'
+        result[k] = get_required_stress_param(config_dict, param_name)
+    return result
+
 # =========================
 # Temperature Stress Model
 # =========================
@@ -458,64 +763,36 @@ class IntegratedStressParameters:
         }
         if None in stress_weights.values():
             raise ValueError("All stress weights must be provided in CSV configuration")
-        stress_interactions = {
-            StressType.WATER.value: {
-                StressType.TEMPERATURE.value: {"type": StressInteractionType.SYNERGISTIC.value, "factor": float(config_dict.get('water_temp_interaction_factor', 1.3))},
-                StressType.SALINITY.value: {"type": StressInteractionType.SYNERGISTIC.value, "factor": float(config_dict.get('water_salinity_interaction_factor', 1.4))},
-                StressType.NUTRIENT.value: {"type": StressInteractionType.MULTIPLICATIVE.value, "factor": float(config_dict.get('water_nutrient_interaction_factor', 1.2))}
-            },
-            StressType.TEMPERATURE.value: {
-                StressType.WATER.value: {"type": StressInteractionType.SYNERGISTIC.value, "factor": float(config_dict.get('water_temp_interaction_factor', 1.3))},
-                StressType.LIGHT.value: {"type": StressInteractionType.ADDITIVE.value, "factor": float(config_dict.get('temp_light_interaction_factor', 1.1))}
-            },
-            StressType.NUTRIENT.value: {
-                StressType.WATER.value: {"type": StressInteractionType.MULTIPLICATIVE.value, "factor": float(config_dict.get('water_nutrient_interaction_factor', 1.2))},
-                StressType.PH.value: {"type": StressInteractionType.SYNERGISTIC.value, "factor": float(config_dict.get('nutrient_ph_interaction_factor', 1.5))},
-                StressType.SALINITY.value: {"type": StressInteractionType.MULTIPLICATIVE.value, "factor": float(config_dict.get('nutrient_salinity_interaction_factor', 1.1))}
-            }
-        }
-        process_sensitivity = {
-            ProcessType.PHOTOSYNTHESIS.value: {
-                k: float(config_dict.get(f'process_sensitivity_{k}', 0.8)) for k in stress_weights.keys()
-            },
-            ProcessType.RESPIRATION.value: {
-                k: float(config_dict.get(f'process_sensitivity_{k}', 0.8)) for k in stress_weights.keys()
-            },
-            ProcessType.TRANSPIRATION.value: {
-                k: float(config_dict.get(f'process_sensitivity_{k}', 0.8)) for k in stress_weights.keys()
-            },
-            ProcessType.GROWTH.value: {
-                k: float(config_dict.get(f'process_sensitivity_{k}', 0.7)) for k in stress_weights.keys()
-            }
-        }
-        memory_duration = {k: float(config_dict.get('stress_memory_duration', 7.0)) for k in stress_weights.keys()}
-        recovery_rates = {k: float(config_dict.get('recovery_rate', 0.2)) for k in stress_weights.keys()}
-        acclimation_rates = {k: float(config_dict.get('acclimation_rate', 0.1)) for k in stress_weights.keys()}
-        onset_thresholds = {k: float(config_dict.get(f'stress_onset_threshold_{k}', 0.8)) for k in stress_weights.keys()}
-        damage_thresholds = {k: float(config_dict.get(f'damage_threshold_{k}', 0.4)) for k in stress_weights.keys()}
+        stress_interactions = _calculate_stress_interactions(stress_weights)
+        process_sensitivity = _calculate_process_sensitivity(stress_weights)
+        memory_duration = _calculate_memory_duration(stress_weights)
+        recovery_rates = _calculate_recovery_rates(stress_weights)
+        acclimation_rates = _calculate_acclimation_rates(stress_weights)
+        onset_thresholds = _calculate_onset_thresholds(stress_weights)
+        damage_thresholds = _calculate_damage_thresholds(stress_weights)
         return cls(
             stress_weights=stress_weights,
             stress_interactions=stress_interactions,
             process_sensitivity=process_sensitivity,
             stress_memory_duration=memory_duration,
-            cumulative_threshold={k: float(config_dict.get('cumulative_threshold_default', 0.8)) for k in stress_weights.keys()},
-            damage_accumulation_rate={k: float(config_dict.get('damage_accumulation_default', 0.01)) for k in stress_weights.keys()},
+            cumulative_threshold=_calculate_cumulative_threshold(stress_weights),
+            damage_accumulation_rate=_calculate_damage_accumulation_rate(stress_weights),
             recovery_rates=recovery_rates,
-            recovery_thresholds={k: float(config_dict.get('recovery_threshold_default', 0.8)) for k in stress_weights.keys()},
-            full_recovery_time={k: float(config_dict.get('full_recovery_time_default', 7.0)) for k in stress_weights.keys()},
+            recovery_thresholds=_calculate_recovery_thresholds(stress_weights),
+            full_recovery_time=_calculate_full_recovery_time(stress_weights),
             acclimation_rates=acclimation_rates,
-            acclimation_capacity={k: float(config_dict.get('acclimation_capacity_default', 0.3)) for k in stress_weights.keys()},
-            acclimation_memory={k: float(config_dict.get('acclimation_memory_default', 7.0)) for k in stress_weights.keys()},
+            acclimation_capacity=_calculate_acclimation_capacity(stress_weights),
+            acclimation_memory=_calculate_acclimation_memory(stress_weights),
             stress_onset_thresholds=onset_thresholds,
             damage_thresholds=damage_thresholds,
-            chronic_stress_weight=float(config_dict.get('chronic_stress_weight', 0.8)),
-            acute_stress_weight=float(config_dict.get('acute_stress_weight', 0.2)),
-            acclimation_benefit_factor=float(config_dict.get('acclimation_benefit_factor', 0.3)),
-            interaction_penalty_factor=float(config_dict.get('interaction_penalty_factor', 0.1)),
-            recovery_bonus_factor=float(config_dict.get('recovery_bonus_factor', 0.05)),
-            damage_penalty_factor=float(config_dict.get('damage_penalty_factor', 0.2)),
-            memory_divisor=float(config_dict.get('memory_divisor', 3.0)),
-            chronic_factor_multiplier=float(config_dict.get('chronic_factor_multiplier', 1.5))
+            chronic_stress_weight=_calculate_chronic_stress_weight(stress_weights),
+            acute_stress_weight=_calculate_acute_stress_weight(stress_weights),
+            acclimation_benefit_factor=_calculate_acclimation_benefit_factor(stress_weights),
+            interaction_penalty_factor=_calculate_interaction_penalty_factor(stress_weights),
+            recovery_bonus_factor=_calculate_recovery_bonus_factor(stress_weights),
+            damage_penalty_factor=get_required_stress_param(config_dict, 'damage_penalty_factor'),
+            memory_divisor=get_required_stress_param(config_dict, 'memory_divisor'),
+            chronic_factor_multiplier=get_required_stress_param(config_dict, 'chronic_factor_multiplier')
         )
 
 @dataclass
@@ -594,14 +871,18 @@ class IntegratedStressModel:
         rate = self.params.acclimation_rates.get(stress_state.stress_type)
         if rate is None:
             raise ValueError(f"Acclimation rate for {stress_state.stress_type} must be provided")
-        max_acc = self.params.acclimation_capacity.get(stress_state.stress_type, 0.3)
+        if stress_state.stress_type not in self.params.acclimation_capacity:
+            raise ParameterError(f"Acclimation capacity for stress type '{stress_state.stress_type}' missing")
+        max_acc = self.params.acclimation_capacity[stress_state.stress_type]
         potential = min(max_acc, stress_state.days_under_stress * rate)
         severity = 1.0 - stress_state.current_level
         eff = max(0.2, 1.0 - severity)
         return potential * eff
 
     def calculate_recovery_effect(self, stress_state: StressState) -> float:
-        threshold = self.params.recovery_thresholds.get(stress_state.stress_type, 0.8)
+        if stress_state.stress_type not in self.params.recovery_thresholds:
+            raise ParameterError(f"Recovery threshold for stress type '{stress_state.stress_type}' missing")
+        threshold = self.params.recovery_thresholds[stress_state.stress_type]
         rate = self.params.recovery_rates.get(stress_state.stress_type)
         if rate is None:
             raise ValueError(f"Recovery rate for {stress_state.stress_type} must be provided")
@@ -650,7 +931,7 @@ class IntegratedStressModel:
                 active[st] = proc_stress
             accl_benefits[st] = state.acclimation_level * self.params.acclimation_benefit_factor
             recov[st] = state.recovery_progress
-            dmg[st] = self.cumulative_damage.get(st, 0.0)
+            dmg[st] = self.cumulative_damage.get(st, 0.0)  # Default 0.0 is valid for initial state
         interactions = self.calculate_stress_interactions(active)
         base = min(indiv.values()) if indiv else 1.0
         interaction_penalty = sum(interactions.values()) * self.params.interaction_penalty_factor
@@ -697,8 +978,11 @@ class IntegratedStressModel:
             if damage_threshold is None:
                 raise ValueError(f"Damage threshold for {st_type} must be provided")
             if level >= damage_threshold:
-                rate = self.params.damage_accumulation_rate.get(st_type, 0.01)
-                self.cumulative_damage[st_type] = min(0.5, self.cumulative_damage.get(st_type, 0.0) + rate)
+                if st_type not in self.params.damage_accumulation_rate:
+                    raise ParameterError(f"Damage accumulation rate for stress type '{st_type}' missing")
+                rate = self.params.damage_accumulation_rate[st_type]
+                current_damage = self.cumulative_damage.get(st_type, 0.0)  # Default 0.0 is valid for initial state
+                self.cumulative_damage[st_type] = min(0.5, current_damage + rate)
             state.damage_level = self.cumulative_damage[st_type]
 
     def daily_update(self, current_stress_levels: Dict[str, float]) -> IntegratedStressResponse:
@@ -764,11 +1048,11 @@ def create_lettuce_integrated_stress_model(system_config: Any) -> IntegratedStre
         config = {**stress_params, **environment_params}
         if genetic_params:
             config.update({
-                'stress_weight_water': genetic_params.get('salinity_stress_weight', 0.2),
-                'stress_weight_temperature': genetic_params.get('temperature_stress_weight', 0.5),
-                'stress_weight_nutrient': genetic_params.get('nutrient_stress_weight', 0.25),
-                'stress_weight_light': genetic_params.get('light_stress_weight', 0.15),
-                'stress_weight_salinity': genetic_params.get('salinity_stress_weight', 0.2),
+                'stress_weight_water': get_required_stress_param(genetic_params, 'salinity_stress_weight'),
+                'stress_weight_temperature': get_required_stress_param(genetic_params, 'temperature_stress_weight'),
+                'stress_weight_nutrient': get_required_stress_param(genetic_params, 'nutrient_stress_weight'),
+                'stress_weight_light': get_required_stress_param(genetic_params, 'light_stress_weight'),
+                'stress_weight_salinity': get_required_stress_param(genetic_params, 'salinity_stress_weight'),
                 'stress_weight_oxygen': 0.1,
                 'stress_weight_ph': 0.15
             })
@@ -814,8 +1098,8 @@ class UnifiedStressCalculator:
         solution_temperature = solution_temp_calculator(
             air_temp=actual_temperature,
             solar_radiation=solar_radiation,
-            tank_volume=plant_state.get('tank_volume', 1000.0),
-            day=plant_state.get('day', 1)
+            tank_volume=get_required_stress_param(plant_state, 'tank_volume'),
+            day=get_required_stress_param(plant_state, 'day')
         )
 
         temp_stress_response = self.temperature_stress.daily_update(actual_temperature)
@@ -829,11 +1113,11 @@ class UnifiedStressCalculator:
         combined_temp_factor = min(temperature_factor, root_temp_factor)
 
         env_params = getattr(self.system_config, 'environment', {})
-        optimal_vpd_min = env_params.get('optimal_vpd_min', getattr(self.params, 'optimal_vpd_min', 0.5))
-        optimal_vpd_max = env_params.get('optimal_vpd_max', getattr(self.params, 'optimal_vpd_max', 1.2))
+        optimal_vpd_min = get_required_stress_param(env_params, 'optimal_vpd_min')
+        optimal_vpd_max = get_required_stress_param(env_params, 'optimal_vpd_max')
         stress_params = getattr(self.system_config, 'stress_parameters', {})
-        vpd_stress_low_factor = stress_params.get('vpd_stress_low_factor', 0.15)
-        vpd_stress_high_factor = stress_params.get('vpd_stress_high_factor', 0.25)
+        vpd_stress_low_factor = get_required_stress_param(stress_params, 'vpd_stress_low_factor')
+        vpd_stress_high_factor = get_required_stress_param(stress_params, 'vpd_stress_high_factor')
         water_stress_level = (min(0.2, (optimal_vpd_min - actual_vpd) * vpd_stress_low_factor) if actual_vpd < optimal_vpd_min
                               else min(0.4, (actual_vpd - optimal_vpd_max) * vpd_stress_high_factor) if actual_vpd > optimal_vpd_max
                               else 0.0)
@@ -850,7 +1134,9 @@ class UnifiedStressCalculator:
             for param in required_n_params:
                 if param not in nitrogen_params:
                     raise ValueError(f"Nitrogen parameter {param} must be provided")
-            n_no3_conc = nutrient_concentrations.get('N-NO3', 0.0)
+            if 'N-NO3' not in nutrient_concentrations:
+                raise ParameterError("N-NO3 concentration missing from nutrient concentrations")
+            n_no3_conc = nutrient_concentrations['N-NO3']
             if n_no3_conc < nitrogen_params['severe_deficiency_threshold']:
                 nitrogen_stress_level = nitrogen_params['nitrogen_stress_factor']
             elif n_no3_conc < nitrogen_params['optimal_n_min']:

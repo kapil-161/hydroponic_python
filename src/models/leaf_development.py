@@ -8,9 +8,28 @@ Key equations:
 - senescence_rate = f(age_factor, stress_senescence)
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 from dataclasses import dataclass
 from enum import Enum
+
+
+class ParameterError(Exception):
+    """Raised when required parameters are missing"""
+    pass
+
+
+def get_required_config(config: Dict[str, Any], param_name: str) -> Dict[str, Any]:
+    """Get required configuration section or raise error if missing"""
+    if param_name not in config:
+        raise ParameterError(f"Required configuration section '{param_name}' missing from leaf development config")
+    return config[param_name]
+
+
+def get_required_stress_factor(stress_factors: Dict[str, Any], factor_name: str, fallback_list: List[float]) -> List[float]:
+    """Get required stress factor or raise error if missing"""
+    if factor_name not in stress_factors:
+        raise ParameterError(f"Required stress factor '{factor_name}' missing from stress factors")
+    return stress_factors[factor_name]
 
 
 class LeafStage(Enum):
@@ -75,18 +94,18 @@ class LeafParameters:
     def from_config(cls, config: Dict[str, Any]) -> 'LeafParameters':
         leaf_params = config['leaf_development']
         canopy_params = config['canopy_parameters']
-        phenology_params = config.get('phenology', {})
-        nitrogen_params = config.get('nitrogen_parameters', {})
+        phenology_params = get_required_config(config, 'phenology')
+        nitrogen_params = get_required_config(config, 'nitrogen_parameters')
         
         # Merge parameters from different sections, handling duplicates
         merged_params = leaf_params.copy()
 
         # Use existing SLAVR from genetic_parameters (avoid duplicate parameters)
-        genetic_params = config.get('genetic_parameters', {})
+        genetic_params = get_required_config(config, 'genetic_parameters')
         merged_params['specific_leaf_area'] = genetic_params['SLAVR']
 
         # Use existing thermal time parameters (avoid duplicate parameters)
-        thermal_params = config.get('thermal_time', {})
+        thermal_params = get_required_config(config, 'thermal_time')
         merged_params['min_temp'] = thermal_params['base_temp']
         merged_params['opt_temp_min'] = thermal_params['optimal_temp_min']
         merged_params['opt_temp_max'] = thermal_params['optimal_temp_max']
@@ -322,9 +341,9 @@ class LeafDevelopmentModel:
                 elif cohort.stage == LeafStage.EXPANDING:
                     base_expansion_rate = self.params.leaf_area_expansion_rate
                     
-                    temperature_factor = stress_factors.get('temperature_factor', [1.0] * len(daily_thermal_time_list))[day_idx]
-                    nitrogen_factor = stress_factors.get('nitrogen_factor', [1.0] * len(daily_thermal_time_list))[day_idx]
-                    water_factor = stress_factors.get('water_factor', [1.0] * len(daily_thermal_time_list))[day_idx]
+                    temperature_factor = get_required_stress_factor(stress_factors, 'temperature_factor', [1.0] * len(daily_thermal_time_list))[day_idx]
+                    nitrogen_factor = get_required_stress_factor(stress_factors, 'nitrogen_factor', [1.0] * len(daily_thermal_time_list))[day_idx]
+                    water_factor = get_required_stress_factor(stress_factors, 'water_factor', [1.0] * len(daily_thermal_time_list))[day_idx]
                     
                     cell_division_factor = temperature_factor
                     cell_expansion_factor = water_factor * nitrogen_factor

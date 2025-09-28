@@ -3,6 +3,18 @@ from typing import Any, Dict, List
 from hydro_system_data import DailyResults
 from core_utilities import format_scientific, create_summary_table, ParameterAccessError, get_strict_param
 
+
+class ParameterError(Exception):
+    """Raised when required parameters are missing"""
+    pass
+
+
+def get_required_threshold_param(thresholds: Dict[str, Any], param_name: str) -> float:
+    """Get required threshold parameter or raise error if missing"""
+    if param_name not in thresholds:
+        raise ParameterError(f"Required threshold parameter '{param_name}' missing from nutrient thresholds")
+    return thresholds[param_name]
+
 class ResultsDisplayUtility:
     """
     Utility for formatting and displaying hydroponic simulation results.
@@ -139,8 +151,10 @@ class ResultsDisplayUtility:
         nutrient_thresholds = get_strict_param(self.config, 'display_parameters', 'nutrient_thresholds')
         for name, key, conc, uptake in nutrients:
             if conc is not None:
-                optimal = nutrient_thresholds.get(key, {}).get('optimal', 50.0)
-                low = nutrient_thresholds.get(key, {}).get('low', 20.0)
+                if key not in nutrient_thresholds:
+                    raise ParameterError(f"Nutrient thresholds for '{key}' missing from configuration")
+                optimal = get_required_threshold_param(nutrient_thresholds[key], 'optimal')
+                low = get_required_threshold_param(nutrient_thresholds[key], 'low')
                 status = "🟢 Optimal" if conc > optimal else "🟡 Low" if conc > low else "🔴 Critical"
                 uptake_str = f"{uptake:.2f}" if uptake is not None else "N/A"
                 output.append(f"  {name:<10} {conc:<15.1f} mg/L {uptake_str:<20} {status:<15}")
@@ -184,7 +198,10 @@ class ResultsDisplayUtility:
         
         for name, value, thresholds, target, status_func in env_data:
             if value is not None:
-                status = status_func({'value': value, 'min': thresholds['min'], 'max': thresholds.get('max', float('inf'))})
+                max_val = thresholds.get('max')
+                if max_val is None:
+                    max_val = float('inf')
+                status = status_func({'value': value, 'min': thresholds['min'], 'max': max_val})
                 output.append(f"  {name:<20} {value:<15.1f} {target:<15} {status:<15}")
             else:
                 output.append(f"  {name:<20} {'N/A':<15} {target:<15} {'Data Missing':<15}")

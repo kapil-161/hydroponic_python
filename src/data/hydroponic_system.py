@@ -5,6 +5,18 @@ from typing import Dict, List, Optional
 import pandas as pd
 import math
 
+
+class ParameterError(Exception):
+    """Raised when required parameters are missing"""
+    pass
+
+
+def get_required_nutrient(nutrient_dict: Dict[str, float], nutrient_name: str) -> float:
+    """Get required nutrient concentration or raise error if missing"""
+    if nutrient_name not in nutrient_dict:
+        raise ParameterError(f"Required nutrient '{nutrient_name}' missing from nutrient concentrations")
+    return nutrient_dict[nutrient_name]
+
 # =========================
 # Hydroponic System Data Classes and Configuration
 # =========================
@@ -442,11 +454,11 @@ class SimulationResults:
                 'Base_Dosed_mL_L': result.base_dosed_ml_per_L,
                 'Buffer_Capacity': result.buffer_capacity,
                 # Nutrient concentrations
-                'N-NO3_mg_L': result.nutrient_concentrations.get('N-NO3', 0.0),
-                'P-PO4_mg_L': result.nutrient_concentrations.get('P-PO4', 0.0),
-                'K_mg_L': result.nutrient_concentrations.get('K', 0.0),
-                'Ca_mg_L': result.nutrient_concentrations.get('Ca', 0.0),
-                'Mg_mg_L': result.nutrient_concentrations.get('Mg', 0.0),
+                'N-NO3_mg_L': get_required_nutrient(result.nutrient_concentrations, 'N-NO3'),
+                'P-PO4_mg_L': get_required_nutrient(result.nutrient_concentrations, 'P-PO4'),
+                'K_mg_L': get_required_nutrient(result.nutrient_concentrations, 'K'),
+                'Ca_mg_L': get_required_nutrient(result.nutrient_concentrations, 'Ca'),
+                'Mg_mg_L': get_required_nutrient(result.nutrient_concentrations, 'Mg'),
                 # Root zone conditions
                 'RZT_C': result.rzt,
                 'RZT_Growth_Factor': result.rzt_growth_factor,

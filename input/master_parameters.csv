@@ -270,7 +270,7 @@ nutrient_parameters,kinetics_n_nh4_min_conc,0.2,mg_L,Minimum concentration for a
 nutrient_parameters,kinetics_p_po4_vmax,2.5,mg_cm2_day,Maximum uptake rate for phosphate phosphorus
 nutrient_parameters,kinetics_p_po4_km,3.0,mg_L,Michaelis constant for phosphate phosphorus
 nutrient_parameters,kinetics_p_po4_min_conc,0.1,mg_L,Minimum concentration for phosphate phosphorus uptake
-nutrient_parameters,kinetics_k_vmax,15.0,mg_cm2_day,Maximum uptake rate for potassium
+nutrient_parameters,kinetics_k_vmax,0.10,mg_cm2_day,Maximum uptake rate for potassium
 nutrient_parameters,kinetics_k_km,25.0,mg_L,Michaelis constant for potassium
 nutrient_parameters,kinetics_k_min_conc,1.0,mg_L,Minimum concentration for potassium uptake
 nutrient_parameters,kinetics_ca_vmax,6.0,mg_cm2_day,Maximum uptake rate for calcium
@@ -1450,3 +1450,18 @@ light,diffuse_fraction,0.3,fraction,Diffuse light fraction
 
 # Minimum Root Allocation for Biological Realism
 allocation_parameters,min_root_allocation_fraction,0.15,dimensionless,Minimum root allocation fraction to maintain biological realism
+
+# Missing Parameters for Hardcoded Value Replacement
+photosynthesis_parameters,photosynthesis_temp_factor,0.8,dimensionless,Temperature factor for photosynthesis efficiency
+water_parameters,hydraulic_conductance,0.5,L_per_day_per_MPa,Plant hydraulic conductance
+stress_parameters,minimum_temperature_stress,0.0,dimensionless,Minimum baseline temperature stress
+stress_parameters,minimum_light_stress,0.0,dimensionless,Minimum baseline light stress
+stress_parameters,hydroponic_water_stress,0.0,dimensionless,Water stress in hydroponic systems
+stress_parameters,minimum_nutrient_stress,0.0,dimensionless,Minimum baseline nutrient stress
+growth_parameters,minimum_growth_rate,0.0,g_per_day,Minimum daily growth rate when conditions are limiting
+allocation_parameters,allocation_efficiency,0.95,dimensionless,Efficiency of biomass allocation between organs
+
+# Physiological Validation Parameters
+validation_parameters,max_daily_lai_change,1.0,per_day,Maximum realistic daily LAI change
+validation_parameters,max_k_concentration,100.0,mg_per_g,Maximum realistic tissue K concentration
+validation_parameters,min_respiration_photosynthesis_ratio,0.1,dimensionless,Minimum realistic respiration to photosynthesis ratio

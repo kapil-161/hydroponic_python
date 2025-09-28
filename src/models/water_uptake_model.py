@@ -3,6 +3,25 @@ from dataclasses import dataclass
 from typing import Dict, Any, Optional
 from enum import Enum
 
+
+class ParameterError(Exception):
+    """Raised when required parameters are missing"""
+    pass
+
+
+def get_required_water_config(config: Dict[str, Any], param_name: str) -> Dict[str, Any]:
+    """Get required water configuration section or raise error if missing"""
+    if param_name not in config:
+        raise ParameterError(f"Required configuration section '{param_name}' missing from water uptake config")
+    return config[param_name]
+
+
+def get_required_water_param(params: Dict[str, Any], param_name: str) -> float:
+    """Get required water parameter or raise error if missing"""
+    if param_name not in params:
+        raise ParameterError(f"Required water parameter '{param_name}' missing from water parameters")
+    return params[param_name]
+
 # =========================
 # Water Uptake Model
 # =========================
@@ -101,9 +120,9 @@ class WaterUptakeParameters:
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'WaterUptakeParameters':
         """Create parameters from configuration dictionary."""
-        water_params = config.get('water_parameters', {})
-        stress_params = config.get('stress_parameters', {})
-        root_params = config.get('root_system_parameters', {})
+        water_params = get_required_water_config(config, 'water_parameters')
+        stress_params = get_required_water_config(config, 'stress_parameters')
+        root_params = get_required_water_config(config, 'root_system_parameters')
         required_params = [
             'psychrometric_constant', 'wind_speed', 'net_radiation_factor', 'radiation_offset',
             'base_crop_coefficient', 'lai_coefficient_factor', 'vegetative_stage_factor',
@@ -129,8 +148,8 @@ class WaterUptakeParameters:
             vegetative_stage_factor=float(water_params['vegetative_stage_factor']),
             head_formation_stage_factor=float(water_params['head_formation_stage_factor']),
             mature_stage_factor=float(water_params['mature_stage_factor']),
-            optimal_temperature=float(water_params.get('optimal_temperature', 21.0)),
-            temperature_sensitivity=float(water_params.get('temperature_sensitivity', 0.1)),
+            optimal_temperature=float(get_required_water_param(water_params, 'optimal_temperature')),
+            temperature_sensitivity=float(get_required_water_param(water_params, 'temperature_sensitivity')),
             optimal_vpd_min=float(water_params['optimal_vpd_min']),
             optimal_vpd_max=float(water_params['optimal_vpd_max']),
             vpd_sensitivity=float(water_params['vpd_sensitivity']),
@@ -183,7 +202,8 @@ class WaterUptakeModel:
                                         solar_radiation: float,
                                         lai: float,
                                         total_biomass: float,
-                                        growth_stage: str = GrowthStage.VEGETATIVE.value) -> WaterUptakeResponse:
+                                        growth_stage: str = GrowthStage.VEGETATIVE.value,
+                                        stress_factors: Dict[str, float] = None) -> WaterUptakeResponse:
         """
         Calculate water uptake using Penman-Monteith evapotranspiration.
 
@@ -232,7 +252,9 @@ class WaterUptakeModel:
             GrowthStage.HEAD_FORMATION.value: self.params.head_formation_stage_factor,
             GrowthStage.MATURE.value: self.params.mature_stage_factor
         }
-        stage_factor = stage_factors.get(growth_stage, 1.0)
+        if growth_stage not in stage_factors:
+            raise ParameterError(f"Required growth stage '{growth_stage}' missing from stage factors")
+        stage_factor = stage_factors[growth_stage]
         kc = self.params.base_crop_coefficient * lai_factor * stage_factor
 
         # Environmental factors
@@ -258,6 +280,10 @@ class WaterUptakeModel:
         wue_L_per_kg = total_water_uptake_L / (total_biomass / 1000.0) if total_biomass > 0 else 0.0
 
         # Hydraulic uptake (simplified call for consistency)
+        # Use stress factors from integrated stress model outputs (following "model output" rule)
+        default_stress_factors = {'water_stress_level': 0.0, 'salinity_stress': 0.0}
+        actual_stress_factors = stress_factors if stress_factors is not None else default_stress_factors
+
         hydraulic_uptake = self.calculate_hydraulic_water_uptake(
             light_interception=min(1.0, lai / 2.0),
             temperature=temperature,
@@ -267,7 +293,7 @@ class WaterUptakeModel:
             lai=lai,
             stem_biomass=total_biomass * 0.3,  # Assume 30% of biomass is stem
             solution_ec=1.5,  # Placeholder, should come from UnifiedStressCalculator
-            stress_factors={}
+            stress_factors=actual_stress_factors
         )
 
         return WaterUptakeResponse(
@@ -405,8 +431,8 @@ class WaterUptakeModel:
 
     def _calculate_osmotic_adjustment(self, stress_factors: Dict[str, Any]) -> float:
         """Calculate osmotic adjustment under stress (MPa)."""
-        water_stress = stress_factors.get('water_stress_level', 0.0)
-        salt_stress = stress_factors.get('salinity_stress', 0.0)
+        water_stress = get_required_water_param(stress_factors, 'water_stress_level')
+        salt_stress = get_required_water_param(stress_factors, 'salinity_stress')
         if not all(0 <= x <= 1 for x in [water_stress, salt_stress]):
             raise ValueError("Stress levels must be between 0 and 1")
         adjustment = self.params.max_osmotic_adjustment * (water_stress + salt_stress * self.params.salt_stress_osmotic_factor)

@@ -1,7 +1,9 @@
 # Code Quality Rules
-
+Enforce a consistent code style using a tool like black or ruff.
+ensure that the different models work together correctly.
+ensures that changes to the parameters don't break the simulation and that the model continues to produce correct results.
 ## Parameter Management
-- dont put values on csv which should come out from each model file. 
+- dont put values on csv which should come out from each model file, one model output can be another model input. 
 - no fallback code
 - dont make premature success claims 
 - no default value in code

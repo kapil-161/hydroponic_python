@@ -13,6 +13,25 @@ from typing import Dict, Tuple, Optional, List, Any
 from dataclasses import dataclass
 from enum import Enum
 import math
+
+
+class ParameterError(Exception):
+    """Raised when required parameters are missing"""
+    pass
+
+
+def get_required_condition(conditions: Dict[str, Any], param_name: str) -> float:
+    """Get required environmental condition or raise error if missing"""
+    if param_name not in conditions or conditions[param_name] is None:
+        raise ParameterError(f"Required environmental condition '{param_name}' missing from current conditions")
+    return conditions[param_name]
+
+
+def get_required_action_param(action: Dict[str, Any], param_name: str) -> float:
+    """Get required action parameter or raise error if missing"""
+    if param_name not in action or action[param_name] is None:
+        raise ParameterError(f"Required action parameter '{param_name}' missing from control action")
+    return action[param_name]
 from src.utils.core_utils import calculate_vpd
 
 
@@ -562,9 +581,9 @@ class EnvironmentalControlSystem:
         photoperiod_time = self.calculate_photoperiod_time(float(hour), light_start_hour)
         
         # Current conditions
-        temp = current_conditions.get('temperature', 22.0)
-        humidity = current_conditions.get('humidity', 65.0)
-        co2 = current_conditions.get('co2', 400.0)
+        temp = get_required_condition(current_conditions, 'temperature')
+        humidity = get_required_condition(current_conditions, 'humidity')
+        co2 = get_required_condition(current_conditions, 'co2')
         
         # Target conditions (day/night dependent)
         if light_on:
@@ -593,8 +612,8 @@ class EnvironmentalControlSystem:
         co2_adjustment = self._apply_co2_control(co2, co2_action, dt_hours)
         
         # Calculate total energy consumption
-        total_energy = (humidity_action.get('energy_consumption_kWh', 0.0) + 
-                       co2_action.get('energy_consumption_kWh', 0.0)) * dt_hours
+        total_energy = (get_required_action_param(humidity_action, 'energy_consumption_kWh') +
+                       get_required_action_param(co2_action, 'energy_consumption_kWh')) * dt_hours
         
         return {
             'temperature': temp + temp_adjustment,
@@ -644,8 +663,8 @@ class EnvironmentalControlSystem:
     
     def _apply_co2_control(self, current_co2: float, action: Dict[str, float], dt_hours: float) -> float:
         """Apply CO2 control actions to calculate actual CO2 change."""
-        injection_rate = action.get('co2_injection_rate', 0.0)  # μmol/mol/min
-        ventilation_increase = action.get('ventilation_increase', 0.0)
+        injection_rate = get_required_action_param(action, 'co2_injection_rate')  # μmol/mol/min
+        ventilation_increase = get_required_action_param(action, 'ventilation_increase')
         
         # CO2 injection effect
         co2_increase = injection_rate * 60.0 * dt_hours  # Convert min to hours
@@ -707,8 +726,8 @@ class EnvironmentalControlSystem:
         temp = current_conditions['temperature']
         rh = current_conditions['humidity']
         co2 = current_conditions['co2']
-        light_intensity = current_conditions.get('light_intensity', 200.0)
-        light_on = light_schedule.get('light_on', True)
+        light_intensity = get_required_condition(current_conditions, 'light_intensity')
+        light_on = get_required_action_param(light_schedule, 'light_on')
         
         # Calculate current VPD
         current_vpd = calculate_vpd(temp, rh)

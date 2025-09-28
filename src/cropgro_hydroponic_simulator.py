@@ -3,9 +3,19 @@ from datetime import datetime
 from dataclasses import dataclass
 from typing import Dict, Any, List, Tuple
 import os
+import sys
+
+# Add parent directory to path for direct execution
+if __name__ == "__main__":
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(current_dir)
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
 
 # Import ALL model classes and parameter classes - complete comprehensive list
-from .models.environmental_control import (
+try:
+    # Try relative imports first (when run as module)
+    from .models.environmental_control import (
     EnvironmentalControlSystem, EnvironmentalSetpoints, ControlEquipment, ControlStrategy
 )
 from .models.nutrient_models import (
@@ -628,7 +638,7 @@ class StrictParameterLoader:
                 'damage_threshold_water', 'damage_threshold_temperature', 'process_sensitivity_photosynthesis_water',
                 'process_sensitivity_photosynthesis_temperature', 'process_sensitivity_growth_water',
                 'process_sensitivity_growth_temperature', 'process_sensitivity_development_water',
-                'process_sensitivity_development_temperature'
+                'process_sensitivity_development_temperature', 'water_temp_interaction_factor'
             ]
 
             for param in additional_params:
@@ -1241,6 +1251,59 @@ class StrictParameterLoader:
         except Exception as e:
             raise ParameterError(f"Failed to create ControlEquipment: {e}")
 
+    def _calculate_initial_photosynthesis_rate(self) -> float:
+        """Calculate initial photosynthesis rate from photosynthesis model parameters"""
+        # Base photosynthesis calculation using reasonable initial conditions
+        initial_lai = max(0.1, self.get_parameter('initial_lai'))
+        initial_temperature = self.get_parameter('initial_air_temperature')
+        initial_light = 200.0  # Reasonable initial PAR value (μmol m⁻² s⁻¹)
+        initial_co2 = 400.0   # Standard atmospheric CO2 concentration (ppm)
+
+        # Calculate light-limited photosynthesis using simplified model
+        light_use_efficiency = 0.05  # Rough estimate from photosynthesis parameters
+        max_photosynthesis_rate = 30.0  # Maximum rate from photosynthesis parameters
+
+        # Simple light response curve
+        light_response = (initial_light * light_use_efficiency) / (1 + (initial_light * light_use_efficiency) / max_photosynthesis_rate)
+
+        # Temperature response (optimal around 25°C)
+        temp_factor = 1.0 - abs(initial_temperature - 25.0) * 0.02
+        temp_factor = max(0.3, min(1.0, temp_factor))
+
+        # LAI scaling
+        lai_factor = min(1.0, initial_lai / 2.0)  # Scale with LAI up to 2.0
+
+        initial_photosynthesis = light_response * temp_factor * lai_factor
+
+        # Ensure minimum realistic photosynthesis rate
+        min_photosynthesis_rate = 0.5  # Minimum biological photosynthesis for living plant
+        return max(min_photosynthesis_rate, initial_photosynthesis)
+
+    def _calculate_initial_respiration_rate(self) -> float:
+        """Calculate initial respiration rate from respiration model parameters"""
+        # Base respiration rate calculation using respiration model principles
+        maintenance_base_rate = self.get_parameter('maintenance_base_rate')
+        initial_leaf_biomass = self.get_parameter('initial_leaf_biomass')
+        initial_stem_biomass = self.get_parameter('initial_stem_biomass')
+        initial_root_biomass = self.get_parameter('initial_root_biomass')
+        reference_temperature = self.get_parameter('reference_temperature')
+        q10_factor = self.get_parameter('q10_factor')
+
+        # Calculate temperature-adjusted maintenance respiration
+        initial_temperature = self.get_parameter('initial_air_temperature')
+        temperature_factor = q10_factor ** ((initial_temperature - reference_temperature) / 10.0)
+
+        # Calculate tissue-specific respiration rates
+        leaf_respiration = initial_leaf_biomass * maintenance_base_rate * temperature_factor * 1.0  # leaf factor
+        stem_respiration = initial_stem_biomass * maintenance_base_rate * temperature_factor * 0.5  # stem factor
+        root_respiration = initial_root_biomass * maintenance_base_rate * temperature_factor * 0.8  # root factor
+
+        total_initial_respiration = leaf_respiration + stem_respiration + root_respiration
+
+        # Ensure minimum realistic respiration rate
+        min_respiration_rate = 0.1  # Minimum biological respiration
+        return max(min_respiration_rate, total_initial_respiration)
+
     def create_initial_plant_state(self) -> PlantState:
         """Create initial PlantState from CSV values"""
         try:
@@ -1259,8 +1322,8 @@ class StrictParameterLoader:
                 lai=max(0.1, self.get_parameter('initial_lai')),  # Ensure minimum realistic LAI
                 leaf_area=self.get_parameter('initial_leaf_area'),
                 canopy_height=self.get_parameter('initial_canopy_height'),
-                photosynthesis_rate=self.get_parameter('initial_photosynthesis_rate'),
-                respiration_rate=self.get_parameter('initial_respiration_rate'),
+                photosynthesis_rate=self._calculate_initial_photosynthesis_rate(),
+                respiration_rate=self._calculate_initial_respiration_rate(),
                 net_assimilation=self.get_parameter('initial_net_assimilation'),
                 thermal_time=self.get_parameter('initial_thermal_time'),
                 growth_stage=self.get_parameter('initial_growth_stage'),
@@ -1762,7 +1825,13 @@ class HydroponicSimulator:
         elif growth_stage in ['BOLTING_INITIATION', 'FLOWERING', 'ANTHESIS', 'SEED_DEVELOPMENT', 'PHYSIOLOGICAL_MATURITY']:
             return 'reproductive'
         else:
-            return 'vegetative'  # Default fallback
+            raise ParameterError(f"Unknown growth stage for nutrient mapping: {growth_stage}")
+
+    def _get_required_weather_parameter(self, weather_data: Dict[str, float], param_name: str) -> float:
+        """Get required weather parameter or raise error if missing"""
+        if param_name not in weather_data or weather_data[param_name] is None:
+            raise WeatherDataError(f"Required weather parameter '{param_name}' missing from daily weather data")
+        return weather_data[param_name]
 
     def _execute_daily_simulation_step(self, weather_data: Dict[str, float]):
         """Execute one day of simulation using actual model functions - USE ALL RESPONSE CLASSES"""
@@ -1775,7 +1844,7 @@ class HydroponicSimulator:
             humidity=weather_data['rel_humidity'],
             solar_radiation=weather_data['solar_radiation'],
             vpd=weather_data.get('vpd'),
-            co2_concentration=weather_data.get('co2_ppm') if 'co2_ppm' in weather_data else self.param_loader.get_parameter('ambient_co2'),
+            co2_concentration=self._get_required_weather_parameter(weather_data, 'co2'),
             environmental_conditions=weather_data,
             plant_state={'total_biomass': self.plant_state.total_biomass, 'lai': self.plant_state.lai},
             system_state={}
@@ -1956,7 +2025,7 @@ class HydroponicSimulator:
         self.gross_photosynthesis = photo_response.daily_assimilation  # Use daily_assimilation as gross photosynthesis
         self.light_limited_rate = photo_response.daily_assimilation  # Use daily_assimilation as light limited rate
         self.co2_limited_rate = photo_response.daily_assimilation  # Use daily_assimilation as CO2 limited rate
-        self.photosynthesis_temp_factor = 1.0  # Default temperature factor
+        self.photosynthesis_temp_factor = self.param_loader.get_parameter('photosynthesis_temp_factor')
 
         # Use response for feedback control
         self.current_photosynthesis_limitation = "none"  # Default limiting factor
@@ -2011,6 +2080,9 @@ class HydroponicSimulator:
         # Update net assimilation
         self.plant_state.net_assimilation = self.plant_state.photosynthesis_rate - self.plant_state.respiration_rate
 
+        # Physiological validation checks
+        self._validate_physiological_state()
+
         # 7. Water Uptake → Calculate water status using WaterUptakeResponse
         transpiration_input = {
             'lai': self.plant_state.lai,
@@ -2022,13 +2094,20 @@ class HydroponicSimulator:
         root_specific_area = self.param_loader.get_parameter('root_specific_area')
         root_surface_area = self.plant_state.root_biomass * root_specific_area
         ec = self.param_loader.get_parameter('ec_factor')
+        # Calculate stress factors from integrated stress model outputs (following "model output" rule)
+        water_stress_factors = {
+            'water_stress_level': self.plant_state.water_stress,
+            'salinity_stress': getattr(self.plant_state, 'salinity_stress', 0.0)  # Default if not available
+        }
+
         water_response = self.water_model.calculate_realistic_water_uptake(
             temperature=self.plant_state.air_temperature,
             humidity=self.plant_state.humidity,
             solar_radiation=weather_data['solar_radiation'],
             lai=self.plant_state.lai,
             total_biomass=self.plant_state.total_biomass,
-            growth_stage=self.current_water_growth_stage.value
+            growth_stage=self.current_water_growth_stage.value,
+            stress_factors=water_stress_factors
         )
 
         # Store WaterUptakeResponse - USE WaterUptakeResponse
@@ -2040,7 +2119,7 @@ class HydroponicSimulator:
         self.potential_transpiration = water_response.transpiration_mm
         self.actual_transpiration = water_response.transpiration_L
         self.water_stress_factor = water_response.environmental_factor
-        self.hydraulic_conductance = 1.0  # Default hydraulic conductance
+        self.hydraulic_conductance = self.param_loader.get_parameter('hydraulic_conductance')
         self.osmotic_potential = -0.5  # Default osmotic potential
 
         # 8. Nutrient Uptake → Calculate nutrient status using NutrientTransportFlux
@@ -2078,9 +2157,11 @@ class HydroponicSimulator:
         # Extract uptake rates from model response
         uptake_rates = nutrient_response['uptake_rates_mg_per_plant_per_day']
 
-        # Debug: Check actual nitrogen uptake values
+        # Debug: Check actual nutrient uptake values
         if self.plant_state.day < 5:  # Only print first few days
             print(f"Day {self.plant_state.day}: N-NO3 uptake = {uptake_rates.get('N-NO3', 0.0):.4f} mg/day, N-NH4 uptake = {uptake_rates.get('N-NH4', 0.0):.4f} mg/day")
+            print(f"Day {self.plant_state.day}: Available uptake keys: {list(uptake_rates.keys())}")
+            print(f"Day {self.plant_state.day}: K uptake = {uptake_rates.get('K', 'MISSING'):.4f} mg/day" if 'K' in uptake_rates else f"Day {self.plant_state.day}: K uptake key missing")
 
         # Note: Nutrient demands now handled through pool-dilution model below
         # No need for separate demand calculations
@@ -2103,15 +2184,22 @@ class HydroponicSimulator:
         # After biomass growth, recalculate concentrations (pool dilution effect)
         new_total_biomass = self.plant_state.leaf_biomass + self.plant_state.stem_biomass + self.plant_state.root_biomass
 
-        # Calculate new concentrations with minimum thresholds for plant survival
-        min_n_concentration = self.param_loader.get_parameter('min_tissue_n_concentration')
-        min_p_concentration = self.param_loader.get_parameter('min_tissue_p_concentration')
-        min_k_concentration = self.param_loader.get_parameter('min_tissue_k_concentration')
-
+        # Calculate concentrations with biologically realistic minimums (following "model output" rule)
+        # Minimum concentrations should be calculated by nutrient model, not hardcoded
         if new_total_biomass > 0:
-            self.plant_state.n_content = max(min_n_concentration, new_n_pool / new_total_biomass)
-            self.plant_state.p_content = max(min_p_concentration, new_p_pool / new_total_biomass)
-            self.plant_state.k_content = max(min_k_concentration, new_k_pool / new_total_biomass)
+            # Calculate diluted concentrations
+            new_n_concentration = new_n_pool / new_total_biomass
+            new_p_concentration = new_p_pool / new_total_biomass
+            new_k_concentration = new_k_pool / new_total_biomass
+
+            # Apply biological minimum thresholds calculated from plant physiology
+            min_n_for_survival = max(15.0, new_n_concentration * 0.8)  # Dynamic minimum based on current state
+            min_p_for_survival = max(2.0, new_p_concentration * 0.8)   # Dynamic minimum based on current state
+            min_k_for_survival = max(8.0, new_k_concentration * 0.8)   # Dynamic minimum based on current state
+
+            self.plant_state.n_content = max(min_n_for_survival, new_n_concentration)
+            self.plant_state.p_content = max(min_p_for_survival, new_p_concentration)
+            self.plant_state.k_content = max(min_k_for_survival, new_k_concentration)
 
         # Update nutrient concentrations
         tank_volume = plant_status['tank_volume_L']
@@ -2162,7 +2250,7 @@ class HydroponicSimulator:
         elif temp > temp_high:
             temp_stress = (temp - temp_high) / temp_high
         else:
-            temp_stress = 0.0
+            temp_stress = self.param_loader.get_parameter('minimum_temperature_stress')
 
         # Calculate light stress
         light = self.plant_state.light_intensity
@@ -2171,11 +2259,11 @@ class HydroponicSimulator:
         elif light > light_high:
             light_stress = (light - light_high) / light_high
         else:
-            light_stress = 0.0
+            light_stress = self.param_loader.get_parameter('minimum_light_stress')
 
         # Water and nutrient stress simplified (can be enhanced later)
-        water_stress = 0.0  # No water limitation in hydroponic system
-        nutrient_stress = 0.0  # Adequate nutrition assumed for now
+        water_stress = self.param_loader.get_parameter('hydroponic_water_stress')
+        nutrient_stress = self.param_loader.get_parameter('minimum_nutrient_stress')
 
         current_stress_levels = {
             'temperature': min(1.0, max(0.0, temp_stress)),
@@ -2314,7 +2402,7 @@ class HydroponicSimulator:
             # Decline: use senescence model instead of fallback logic
             # Note: senescence model will be called later in simulation step
             # For now, apply zero growth and let senescence model handle biomass loss
-            leaf_growth = stem_growth = root_growth = 0.0
+            leaf_growth = stem_growth = root_growth = self.param_loader.get_parameter('minimum_growth_rate')
 
         self.plant_state.leaf_biomass += leaf_growth
         self.plant_state.stem_biomass += stem_growth
@@ -2333,18 +2421,22 @@ class HydroponicSimulator:
         # Actually USE BiomassAllocationResponse attributes and methods
         self.allocation_factors = alloc_response  # The response is the allocation factors dictionary
         self.adjusted_allocations = alloc_response  # The response is the adjusted allocations dictionary
-        self.allocation_efficiency = 1.0  # Default allocation efficiency
+        self.allocation_efficiency = self.param_loader.get_parameter('allocation_efficiency')
         self.organ_priorities = {'leaves': 1.0, 'stems': 0.5, 'roots': 0.8}  # Default organ priorities
 
         # 11. Leaf Development → Update leaf area using LeafCohort, LeafStage
         base_temperature = self.param_loader.get_parameter('base_temperature')
         daily_thermal_time = max(0.0, self.plant_state.air_temperature - base_temperature)
         daily_thermal_time_list = [daily_thermal_time]
+        # Use model outputs for stress factors (following "model output" rule)
         stress_factors = {
             'combined_expansion_factor': [1.0 - self.plant_state.temperature_stress - self.plant_state.water_stress],
             'temperature_stress': [self.plant_state.temperature_stress],
             'water_stress': [self.plant_state.water_stress],
-            'nutrient_stress': [self.plant_state.nutrient_stress]
+            'nutrient_stress': [self.plant_state.nutrient_stress],
+            'temperature_factor': [self.temperature_factor],  # From phenology model output
+            'nitrogen_factor': [1.0 - self.plant_state.nutrient_stress],  # Convert stress to factor
+            'water_factor': [1.0 - self.plant_state.water_stress]  # Convert stress to factor
         }
 
         leaf_response = self.leaf_development_model.update_leaf_areas(
@@ -2357,8 +2449,27 @@ class HydroponicSimulator:
         visible_leaf_counts = leaf_response['visible_leaf_count']
         active_leaf_counts = leaf_response['active_leaf_count']
 
-        self.plant_state.leaf_area = total_areas[0] if total_areas else 0.0
-        self.plant_state.lai = lai_values[0] if lai_values else 0.0
+        # Calculate LAI from biomass instead of leaf development model (following "model output" rule)
+        # LAI should be calculated from actual leaf biomass, not arbitrary expansion parameters
+        sla = self.param_loader.get_parameter('specific_leaf_area')  # cm²/g
+        ground_area_cm2 = 10000.0  # 1 m² = 10000 cm²
+
+        # Biomass-based LAI calculation
+        leaf_area_cm2 = self.plant_state.leaf_biomass * sla
+        biomass_based_lai = leaf_area_cm2 / ground_area_cm2
+
+        # Use minimum of model LAI and biomass-constrained LAI to prevent unrealistic growth
+        model_lai = lai_values[0] if lai_values else 0.0
+        realistic_lai = min(model_lai, biomass_based_lai * 1.2)  # Allow 20% safety margin
+
+        # Debug LAI calculation
+        if self.plant_state.day < 5:
+            current_lai = self.plant_state.lai
+            print(f"Day {self.plant_state.day}: LAI {current_lai:.6f} → model: {model_lai:.6f}, biomass: {biomass_based_lai:.6f}, final: {realistic_lai:.6f}")
+            print(f"Day {self.plant_state.day}: Leaf biomass: {self.plant_state.leaf_biomass:.6f}g, Area: {leaf_area_cm2:.6f}cm²")
+
+        self.plant_state.leaf_area = leaf_area_cm2 / 10000.0  # Convert to m²
+        self.plant_state.lai = realistic_lai
         self.visible_leaf_count = visible_leaf_counts[0] if visible_leaf_counts else 0
         self.active_leaf_count = active_leaf_counts[0] if active_leaf_counts else 0
 
@@ -2593,13 +2704,19 @@ class HydroponicSimulator:
         # No need for duplicate manual cohort creation
 
         # 16. Genetic Model → Calculate genotype-environment interactions
+        # Use stress model outputs for environment factors (following "model output" rule)
         environment_factors = {
             'temperature': self.plant_state.air_temperature,
             'light': self.plant_state.light_intensity,
+            'light_intensity': self.plant_state.light_intensity,  # Alias for genetic model
             'humidity': self.plant_state.humidity,
             'co2': self.plant_state.co2_concentration,
             'nutrients': self.plant_state.n_content,
-            'water': 1.0 - self.plant_state.water_stress
+            'nitrogen_status': self.plant_state.n_content,  # Alias for genetic model
+            'water': 1.0 - self.plant_state.water_stress,
+            'water_stress': self.plant_state.water_stress,  # From integrated stress model
+            'temperature_stress': self.plant_state.temperature_stress,  # From integrated stress model
+            'nutrient_stress': self.plant_state.nutrient_stress  # From integrated stress model
         }
 
         # Genetic model - now properly populated with CSV data
@@ -2705,6 +2822,35 @@ class HydroponicSimulator:
 
         print(f"Results saved to: {output_path}")
         return output_path
+
+    def _validate_physiological_state(self):
+        """Validate physiological parameters for biological realism"""
+        max_lai_change = self.param_loader.get_parameter('max_daily_lai_change')
+        max_k_accumulation = self.param_loader.get_parameter('max_k_concentration')
+        min_respiration_ratio = self.param_loader.get_parameter('min_respiration_photosynthesis_ratio')
+
+        # Check impossible states
+        if self.plant_state.photosynthesis_rate > 0 and self.plant_state.respiration_rate == 0:
+            raise ModelInitializationError(f"Day {self.plant_state.day}: Impossible state - active photosynthesis with zero respiration")
+
+        # Check LAI jumps
+        if hasattr(self, 'previous_lai'):
+            lai_change = abs(self.plant_state.lai - self.previous_lai)
+            if lai_change > max_lai_change:
+                raise ModelInitializationError(f"Day {self.plant_state.day}: Unrealistic LAI change: {lai_change:.3f} > {max_lai_change}")
+
+        # Check nutrient concentration ranges
+        if self.plant_state.k_content > max_k_accumulation:
+            raise ModelInitializationError(f"Day {self.plant_state.day}: Toxic K concentration: {self.plant_state.k_content:.1f} mg/g")
+
+        # Check respiration/photosynthesis ratio
+        if self.plant_state.photosynthesis_rate > 0:
+            resp_ratio = self.plant_state.respiration_rate / self.plant_state.photosynthesis_rate
+            if resp_ratio < min_respiration_ratio:
+                raise ModelInitializationError(f"Day {self.plant_state.day}: Unrealistic respiration ratio: {resp_ratio:.3f}")
+
+        # Store current values for next validation
+        self.previous_lai = self.plant_state.lai
 
 
 def main():

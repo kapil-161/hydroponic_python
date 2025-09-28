@@ -343,7 +343,9 @@ class HydroponicPHModel:
         ph_before_control = current_ph + uptake_ph_change + natural_drift
         controlled_ph, acid_dosed, base_dosed = self.simulate_ph_control_system(ph_before_control, time_hours)
         available_nutrients = self.calculate_ph_dependent_solubility(controlled_ph, nutrient_concentrations)
-        total_phosphate = available_nutrients.get('P-PO4', 0.0) * (self.params.p_molecular_weight / self.params.po4_molecular_weight)
+        if 'P-PO4' not in available_nutrients:
+            raise ValueError("P-PO4 nutrient concentration missing from available nutrients")
+        total_phosphate = available_nutrients['P-PO4'] * (self.params.p_molecular_weight / self.params.po4_molecular_weight)
         phosphate_species = self.calculate_phosphate_speciation(controlled_ph, total_phosphate)
 
         self.ph_state.current_ph = controlled_ph
