@@ -19,13 +19,14 @@ class NitrogenBalanceParameters:
     remobilization_efficiency: Dict[str, float]
     organ_weights: Dict[str, float]
     pool_fractions: Dict[str, Dict[str, float]]
+    cache_timeout: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'NitrogenBalanceParameters':
         required_params = [
             'nitrate_reduction_rate', 'ammonium_assimilation_rate', 'amino_acid_uptake_rate',
             'photosynthetic_n_use_efficiency', 'growth_n_use_efficiency', 'n_stress_threshold',
-            'luxury_uptake_threshold', 'specific_root_activity', 'root_zone_exploration'
+            'luxury_uptake_threshold', 'specific_root_activity', 'root_zone_exploration', 'cache_timeout'
         ]
         for param in required_params:
             if param not in config:
@@ -93,7 +94,8 @@ class NitrogenBalanceParameters:
             remobilization_rates=config['remobilization_rates'],
             remobilization_efficiency=config['remobilization_efficiency'],
             organ_weights=config['organ_weights'],
-            pool_fractions=pool_fractions
+            pool_fractions=pool_fractions,
+            cache_timeout=float(config['cache_timeout'])
         )
 
 @dataclass
@@ -150,6 +152,10 @@ class NitrogenBalanceModel:
         self.nitrogen_history: List[Dict[str, Any]] = []
         self.total_cumulative_uptake: float = 0.0
         self.total_cumulative_remobilization: float = 0.0
+    
+    def initialize(self):
+        """Initialize the nitrogen balance model"""
+        pass
 
     def initialize_organ_nitrogen(self, organ_name: str, initial_dry_mass: float, initial_n_concentration: float):
         if organ_name not in self.params.critical_n_concentrations:

@@ -52,6 +52,8 @@ class CanopyArchitectureParameters:
     bottom_canopy_lai_factor: float
     shaded_light_fraction: float
     max_temperature_gradient: float
+    direct_beam_fraction: float
+    diffuse_fraction: float
     temperature_gradient_factor: float
     ppfd_to_photosynthesis_factor: float
     spherical_x_coefficient: float
@@ -119,7 +121,9 @@ class CanopyArchitectureParameters:
             upper_canopy_height_threshold=float(config_dict['upper_canopy_height_threshold']),
             middle_canopy_height_threshold=float(config_dict['middle_canopy_height_threshold']),
             lower_middle_canopy_height_threshold=float(config_dict['lower_middle_canopy_height_threshold']),
-            zenith_angle_precision_threshold=float(config_dict['zenith_angle_precision_threshold'])
+            zenith_angle_precision_threshold=float(config_dict['zenith_angle_precision_threshold']),
+            direct_beam_fraction=float(config_dict['direct_beam_fraction']),
+            diffuse_fraction=float(config_dict['diffuse_fraction'])
         )
 
 
@@ -164,6 +168,9 @@ class CanopyArchitectureResponse:
 class CanopyArchitectureModel:
     def __init__(self, parameters: CanopyArchitectureParameters):
         self.params = parameters
+    
+    def initialize(self):
+        """Initialize the canopy architecture model"""
         self.canopy_layers: List[CanopyLayer] = []
         self._initialize_canopy_layers()
         

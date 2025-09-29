@@ -1,0 +1,148 @@
+"""
+Weather Data Loader Utility
+
+Loads daily weather data strictly - no defaults.
+Follows Rules.md - no default values allowed.
+"""
+
+import pandas as pd
+from typing import Dict, Any, Optional
+import os
+
+
+class WeatherDataError(Exception):
+    """Exception raised when weather data loading fails"""
+    pass
+
+
+class WeatherDataLoader:
+    """Loads daily weather data strictly - no defaults"""
+
+    def __init__(self, weather_csv_path: str):
+        self.weather_csv_path = weather_csv_path
+        self.weather_data = None
+        self._load_weather_data()
+
+    def _load_weather_data(self):
+        """Load weather data from CSV file"""
+        if not os.path.exists(self.weather_csv_path):
+            raise WeatherDataError(f"Weather data file not found: {self.weather_csv_path}")
+        
+        try:
+            self.weather_data = pd.read_csv(self.weather_csv_path)
+            
+            # Map actual column names to expected names
+            column_mapping = {
+                'temp_avg': 'temperature',
+                'rel_humidity': 'humidity', 
+                'par': 'light_intensity',
+                'co2_ppm': 'co2_concentration'
+            }
+            
+            # Rename columns to standard names
+            self.weather_data = self.weather_data.rename(columns=column_mapping)
+            
+            # Validate required columns
+            required_columns = ['date', 'temperature', 'humidity', 'light_intensity', 'co2_concentration']
+            missing_columns = [col for col in required_columns if col not in self.weather_data.columns]
+            
+            if missing_columns:
+                raise WeatherDataError(f"Missing required weather columns: {missing_columns}")
+            
+            # Convert date column to datetime
+            self.weather_data['date'] = pd.to_datetime(self.weather_data['date'])
+            
+            # Validate data quality
+            if self.weather_data.empty:
+                raise WeatherDataError("Weather data is empty - no defaults allowed")
+            
+            # Check for missing values
+            missing_data = self.weather_data[required_columns].isnull().any()
+            if missing_data.any():
+                missing_cols = missing_data[missing_data].index.tolist()
+                raise WeatherDataError(f"Missing weather data in columns: {missing_cols} - no defaults allowed")
+            
+        except Exception as e:
+            raise WeatherDataError(f"Failed to load weather data from {self.weather_csv_path}: {e}")
+
+    def get_weather_for_day(self, day: int) -> Dict[str, Any]:
+        """Get weather data for specific day"""
+        if self.weather_data is None:
+            raise WeatherDataError("Weather data not loaded")
+        
+        if day < 1 or day > len(self.weather_data):
+            raise WeatherDataError(f"Day {day} out of range (1-{len(self.weather_data)})")
+        
+        row = self.weather_data.iloc[day - 1]  # Convert to 0-based index
+        
+        return {
+            'date': row['date'],
+            'temperature': float(row['temperature']),
+            'humidity': float(row['humidity']),
+            'light_intensity': float(row['light_intensity']),
+            'co2_concentration': float(row['co2_concentration']),
+            'wind_speed': float(row.get('wind_speed', 0.0)),
+            'precipitation': float(row.get('precipitation', 0.0))
+        }
+
+    def get_weather_for_hour(self, day: int, hour: int) -> Dict[str, Any]:
+        """Get weather data for specific hour (interpolated from daily data)"""
+        daily_weather = self.get_weather_for_day(day)
+        
+        # Simple interpolation for hourly data
+        # In a real system, you might have hourly weather data
+        return {
+            'date': daily_weather['date'],
+            'hour': hour,
+            'temperature': daily_weather['temperature'],
+            'humidity': daily_weather['humidity'],
+            'light_intensity': daily_weather['light_intensity'] * self._get_hourly_light_factor(hour),
+            'co2_concentration': daily_weather['co2_concentration'],
+            'wind_speed': daily_weather['wind_speed'],
+            'precipitation': daily_weather['precipitation']
+        }
+
+    def _get_hourly_light_factor(self, hour: int) -> float:
+        """Get light intensity factor for specific hour (0-23)"""
+        # Simple diurnal light pattern
+        if 6 <= hour <= 18:  # Daylight hours
+            # Peak at noon (hour 12)
+            if hour <= 12:
+                return (hour - 6) / 6.0  # 0 to 1 from 6am to noon
+            else:
+                return (18 - hour) / 6.0  # 1 to 0 from noon to 6pm
+        else:
+            return 0.0  # No light at night
+
+    def get_total_days(self) -> int:
+        """Get total number of days in weather data"""
+        if self.weather_data is None:
+            return 0
+        return len(self.weather_data)
+
+    def get_date_range(self) -> tuple:
+        """Get date range of weather data"""
+        if self.weather_data is None or self.weather_data.empty:
+            return None, None
+        
+        return self.weather_data['date'].min(), self.weather_data['date'].max()
+
+    def validate_weather_data(self) -> bool:
+        """Validate weather data quality"""
+        if self.weather_data is None or self.weather_data.empty:
+            return False
+        
+        # Check for reasonable value ranges
+        temp_range = (0, 50)  # Celsius
+        humidity_range = (0, 100)  # Percentage
+        light_range = (0, 2000)  # μmol/m²/s
+        co2_range = (300, 1000)  # ppm
+        
+        checks = [
+            self.weather_data['temperature'].between(*temp_range).all(),
+            self.weather_data['humidity'].between(*humidity_range).all(),
+            self.weather_data['light_intensity'].between(*light_range).all(),
+            self.weather_data['co2_concentration'].between(*co2_range).all()
+        ]
+        
+        return all(checks)

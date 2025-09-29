@@ -89,6 +89,7 @@ class LeafParameters:
     middle_leaf_position_threshold: float   # V-stage threshold for middle leaf position classification
     early_position_scaling_factor: float    # Scaling factor for early leaf position calculation
     late_position_scaling_factor: float     # Scaling factor for late leaf position calculation
+    cache_timeout: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'LeafParameters':
@@ -149,7 +150,8 @@ class LeafParameters:
             early_leaf_position_threshold=merged_params['early_leaf_position_threshold'],
             middle_leaf_position_threshold=merged_params['middle_leaf_position_threshold'],
             early_position_scaling_factor=merged_params['early_position_scaling_factor'],
-            late_position_scaling_factor=merged_params['late_position_scaling_factor']
+            late_position_scaling_factor=merged_params['late_position_scaling_factor'],
+            cache_timeout=merged_params['cache_timeout']
         )
 
 
@@ -168,9 +170,8 @@ class LeafCohort:
     def __post_init__(self):
         # Calculate current_biomass from current_area if not provided
         if self.current_biomass is None:
-            # Use a default specific leaf area of 200 cm²/g (typical for lettuce)
-            default_sla = 200.0  # cm²/g
-            self.current_biomass = self.current_area * 10000 / default_sla  # Convert m² to cm²
+            # This should be calculated using parameters from CSV, not hardcoded
+            raise ValueError("current_biomass must be provided or calculated using CSV parameters")
 
 
 class LeafDevelopmentModel:
@@ -189,6 +190,10 @@ class LeafDevelopmentModel:
 
         # Set next cohort ID to be after all initial cohorts
         self.next_cohort_id = int(self.params.initial_leaf_number) + 1
+    
+    def initialize(self):
+        """Initialize the leaf development model"""
+        pass
     
     def calculate_thermal_time(self, temperature_list: list) -> list:
         """Use consolidated thermal time calculation from core_utils."""

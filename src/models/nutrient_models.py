@@ -58,6 +58,7 @@ class NutrientParameters:
     redistribution_thresholds: Dict[str, float]
     stress_redistribution_rates: Dict[str, float]
     sink_strength_coefficients: Dict[str, Dict[str, float]]
+    cache_timeout: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'NutrientParameters':
@@ -80,8 +81,8 @@ class NutrientParameters:
             if param not in config:
                 raise KeyError(f"Required parameter '{param}' not found in configuration")
 
-        nutrients = ["nitrogen", "phosphorus", "potassium", "calcium", "magnesium", "sulfur",
-                     "iron", "manganese", "zinc", "copper", "boron", "molybdenum"]
+        nutrients = ["N-NO3", "N-NH4", "P-PO4", "K", "Ca", "Mg", "S-SO4",
+                     "Fe", "Mn", "Zn", "Cu", "B", "Mo"]
         mobility_class = {}
         xylem_rates = {}
         phloem_rates = {}
@@ -115,7 +116,7 @@ class NutrientParameters:
 
         organs = ["leaves", "stems", "roots"]
         for organ in organs:
-            for nutrient in ["nitrogen", "phosphorus", "potassium"]:
+            for nutrient in ["N-NO3", "N-NH4", "P-PO4", "K"]:
                 buffer_key = f"buffering_capacities_{organ}_{nutrient}"
                 storage_key = f"storage_pool_sizes_{organ}_{nutrient}"
                 if buffer_key not in config or storage_key not in config:
@@ -123,7 +124,7 @@ class NutrientParameters:
                 buffering_cap[organ][nutrient] = float(config[buffer_key])
                 storage_sizes[organ][nutrient] = float(config[storage_key])
 
-        for nutrient in ["nitrogen", "phosphorus", "potassium", "calcium", "magnesium", "sulfur"]:
+        for nutrient in ["N-NO3", "N-NH4", "P-PO4", "K", "Ca", "Mg", "S-SO4"]:
             key = f"redistribution_thresholds_{nutrient}"
             if key not in config:
                 raise KeyError(f"Missing redistribution threshold for {nutrient}")
@@ -199,7 +200,8 @@ class NutrientParameters:
             storage_pool_sizes=storage_sizes,
             redistribution_thresholds=redist_thresh,
             stress_redistribution_rates=stress_redist,
-            sink_strength_coefficients=sink_coeffs
+            sink_strength_coefficients=sink_coeffs,
+            cache_timeout=float(config['cache_timeout'])
         )
 
 class NutrientMobility(Enum):
@@ -260,6 +262,10 @@ class NutrientModel:
         self.organ_pools: Dict[str, Dict[str, OrganNutrientPools]] = {}
         self.transport_history: List[Dict[str, Any]] = []
         self.cumulative_redistribution: Dict[str, float] = {}
+    
+    def initialize(self):
+        """Initialize the nutrient model"""
+        pass
 
     def _get_ec_factors(self) -> Dict[str, float]:
         return {
@@ -280,9 +286,9 @@ class NutrientModel:
 
     def _get_uptake_kinetics(self) -> Dict[str, Dict[str, float]]:
         return {
-            'NO3': {'vmax': self.params.kinetics_n_no3_vmax, 'km': self.params.kinetics_n_no3_km, 'min_conc': self.params.kinetics_n_no3_min_conc},
-            'NH4': {'vmax': self.params.kinetics_n_nh4_vmax, 'km': self.params.kinetics_n_nh4_km, 'min_conc': self.params.kinetics_n_nh4_min_conc},
-            'PO4': {'vmax': self.params.kinetics_p_po4_vmax, 'km': self.params.kinetics_p_po4_km, 'min_conc': self.params.kinetics_p_po4_min_conc},
+            'N-NO3': {'vmax': self.params.kinetics_n_no3_vmax, 'km': self.params.kinetics_n_no3_km, 'min_conc': self.params.kinetics_n_no3_min_conc},
+            'N-NH4': {'vmax': self.params.kinetics_n_nh4_vmax, 'km': self.params.kinetics_n_nh4_km, 'min_conc': self.params.kinetics_n_nh4_min_conc},
+            'P-PO4': {'vmax': self.params.kinetics_p_po4_vmax, 'km': self.params.kinetics_p_po4_km, 'min_conc': self.params.kinetics_p_po4_min_conc},
             'K': {'vmax': self.params.kinetics_k_vmax, 'km': self.params.kinetics_k_km, 'min_conc': self.params.kinetics_k_min_conc},
             'Ca': {'vmax': self.params.kinetics_ca_vmax, 'km': self.params.kinetics_ca_km, 'min_conc': self.params.kinetics_ca_min_conc},
             'Mg': {'vmax': self.params.kinetics_mg_vmax, 'km': self.params.kinetics_mg_km, 'min_conc': self.params.kinetics_mg_min_conc}

@@ -26,24 +26,38 @@ class BiomassAllocationParameters:
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'BiomassAllocationParameters':
-        allocation_params = config['allocation_parameters']
+        # Per Rules.md: all parameters come directly from CSV via parameter loader
+        required_params = [
+            'vegetative_leaf_allocation', 'vegetative_stem_allocation', 'vegetative_root_allocation',
+            'reproductive_leaf_allocation', 'reproductive_stem_allocation', 'reproductive_root_allocation',
+            'light_response_factor', 'nitrogen_response_factor', 'water_response_factor',
+            'minimum_organ_fraction'
+        ]
+        for param in required_params:
+            if param not in config:
+                raise KeyError(f"Missing required parameter: {param}")
+
         return cls(
-            vegetative_leaf_allocation=allocation_params['vegetative_leaf_allocation'],
-            vegetative_stem_allocation=allocation_params['vegetative_stem_allocation'],
-            vegetative_root_allocation=allocation_params['vegetative_root_allocation'],
-            reproductive_leaf_allocation=allocation_params['reproductive_leaf_allocation'],
-            reproductive_stem_allocation=allocation_params['reproductive_stem_allocation'],
-            reproductive_root_allocation=allocation_params['reproductive_root_allocation'],
-            light_response_factor=allocation_params['light_response_factor'],
-            nitrogen_response_factor=allocation_params['nitrogen_response_factor'],
-            water_response_factor=allocation_params['water_response_factor'],
-            minimum_organ_fraction=allocation_params['minimum_organ_fraction']
+            vegetative_leaf_allocation=float(config['vegetative_leaf_allocation']),
+            vegetative_stem_allocation=float(config['vegetative_stem_allocation']),
+            vegetative_root_allocation=float(config['vegetative_root_allocation']),
+            reproductive_leaf_allocation=float(config['reproductive_leaf_allocation']),
+            reproductive_stem_allocation=float(config['reproductive_stem_allocation']),
+            reproductive_root_allocation=float(config['reproductive_root_allocation']),
+            light_response_factor=float(config['light_response_factor']),
+            nitrogen_response_factor=float(config['nitrogen_response_factor']),
+            water_response_factor=float(config['water_response_factor']),
+            minimum_organ_fraction=float(config['minimum_organ_fraction'])
         )
 
 
 class BiomassAllocationModel:
     def __init__(self, parameters: BiomassAllocationParameters):
         self.params = parameters
+    
+    def initialize(self):
+        """Initialize the biomass allocation model"""
+        pass
 
     def calculate_functional_balance_allocation(self,
                                               stress_factors: Dict[str, Any],

@@ -174,6 +174,10 @@ class AdvancedSenescenceModel:
             'water': [], 'nitrogen': [], 'temperature': [], 'light': []
         }
         self.remobilization_pool: Dict[str, float] = {}
+    
+    def initialize(self):
+        """Initialize the senescence model"""
+        pass
 
     def initialize_cohort(self, cohort_id: int, initial_nutrient_content: Dict[str, float]):
         if cohort_id in self.cohort_states:

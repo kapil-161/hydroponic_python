@@ -53,8 +53,11 @@ class PhenologyParameters:
     vernalization_temperature: float
     vernalization_days: float
     stress_acceleration_factor: float
+    optimal_water_stress: float
     drought_threshold: float
     heat_threshold: float
+
+    # Remove non-existent parameters per Rules.md
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'PhenologyParameters':
@@ -127,6 +130,7 @@ class PhenologyParameters:
             vernalization_temperature=float(config['vernalization_temperature']),
             vernalization_days=float(config['vernalization_days']),
             stress_acceleration_factor=float(config['stress_acceleration_factor']),
+            optimal_water_stress=float(config['optimal_water_stress']),
             drought_threshold=float(config['drought_threshold']),
             heat_threshold=float(config['heat_threshold'])
         )
@@ -172,6 +176,9 @@ class ComprehensivePhenologyModel:
             days_in_stage=0
         )
         self.photoperiod_history: List[float] = []
+    
+    def initialize(self):
+        """Initialize the phenology model"""
         self.temperature_history: List[float] = []
 
     def calculate_thermal_time(self, temperature: float) -> float:

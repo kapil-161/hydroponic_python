@@ -39,7 +39,9 @@ class RespirationParameters:
     circadian_amplitude_2: float
     circadian_peak_2: int
     diurnal_base_factor: float
-    optimal_temperature: float
+    # optimal_temperature: float  # Consolidated to phenology_parameters
+    phenology_optimal_temperature_min: float  # Minimum optimal temperature from phenology
+    phenology_optimal_temperature_max: float  # Maximum optimal temperature from phenology
     moderate_stress_threshold: float
     severe_stress_threshold: float
     moderate_stress_factor: float
@@ -52,9 +54,21 @@ class RespirationParameters:
     max_acclimation_temperature: float
     min_diurnal_factor: float
     max_diurnal_factor: float
+    
+    # Remove non-existent early parameters per Rules.md
+
+    # Growth composition parameters
+    protein_fraction: float
+    carbohydrate_fraction: float
+    lipid_fraction: float
+    organic_acid_fraction: float
+    lignin_fraction: float
+    mineral_fraction: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'RespirationParameters':
+        # Load phenology parameters for temperature consolidation
+        phenology_params = config.get('phenology_parameters', {})
         required_params = [
             'maintenance_base_rate', 'reference_temperature', 'q10_factor', 'growth_efficiency',
             'biosynthetic_cost', 'age_effect_coefficient', 'max_age_effect', 'acclimation_rate',
@@ -63,17 +77,22 @@ class RespirationParameters:
             'glucose_to_carbon_ratio', 'min_history_threshold', 'day_start_hour', 'day_end_hour',
             'day_respiration_factor', 'night_respiration_factor', 'carbon_to_co2_ratio',
             'circadian_amplitude_1', 'circadian_peak_1', 'circadian_amplitude_2', 'circadian_peak_2',
-            'diurnal_base_factor', 'optimal_temperature', 'moderate_stress_threshold',
+            'diurnal_base_factor', 'moderate_stress_threshold',
             'severe_stress_threshold', 'moderate_stress_factor', 'severe_stress_base',
             'severe_stress_factor', 'daytime_respiratory_quotient', 'nighttime_respiratory_quotient',
             'min_acclimation_temperature', 'max_acclimation_temperature', 'min_diurnal_factor',
             'max_diurnal_factor', 'tissue_factor_leaves', 'tissue_factor_stems',
             'tissue_factor_roots', 'tissue_factor_reproductive', 'protein_respiration_cost',
             'carbohydrate_respiration_cost', 'lipid_respiration_cost', 'organic_acid_respiration_cost',
-            'lignin_respiration_cost', 'mineral_respiration_cost'
+            'lignin_respiration_cost', 'mineral_respiration_cost',
+            'optimal_temperature_min', 'optimal_temperature_max',
+            # 'early_leaf_biomass', 'early_stem_biomass', 'early_root_biomass', 'early_total_biomass',
+            # 'early_growth_stage', 'early_development_index', 'optimal_temperature_stress', 'cache_timeout',  # Not in CSV
+            'protein_fraction', 'carbohydrate_fraction', 'lipid_fraction', 'organic_acid_fraction',
+            'lignin_fraction', 'mineral_fraction'
         ]
         for param in required_params:
-            if param not in config:
+            if param not in config and param not in phenology_params:
                 raise KeyError(f"Missing required parameter: {param}")
 
         tissue_factors = {
@@ -100,8 +119,10 @@ class RespirationParameters:
             raise ValueError("min_history_threshold must be positive")
         if config['day_start_hour'] >= config['day_end_hour']:
             raise ValueError("day_start_hour must be less than day_end_hour")
-        if config['optimal_temperature'] < config['min_acclimation_temperature'] or config['optimal_temperature'] > config['max_acclimation_temperature']:
-            raise ValueError("optimal_temperature must be within acclimation bounds")
+        # Get optimal temperature from phenology parameters (consolidation per Rules.md)
+        phenology_optimal_temp = (phenology_params.get('optimal_temperature_min', 18.0) + phenology_params.get('optimal_temperature_max', 24.0)) / 2.0
+        if phenology_optimal_temp < config['min_acclimation_temperature'] or phenology_optimal_temp > config['max_acclimation_temperature']:
+            raise ValueError("consolidated optimal_temperature must be within acclimation bounds")
         if config['moderate_stress_threshold'] >= config['severe_stress_threshold']:
             raise ValueError("moderate_stress_threshold must be less than severe_stress_threshold")
 
@@ -134,7 +155,8 @@ class RespirationParameters:
             circadian_amplitude_2=float(config['circadian_amplitude_2']),
             circadian_peak_2=int(config['circadian_peak_2']),
             diurnal_base_factor=float(config['diurnal_base_factor']),
-            optimal_temperature=float(config['optimal_temperature']),
+            phenology_optimal_temperature_min=float(phenology_params.get('optimal_temperature_min', config.get('optimal_temperature_min', 18.0))),
+            phenology_optimal_temperature_max=float(phenology_params.get('optimal_temperature_max', config.get('optimal_temperature_max', 24.0))),
             moderate_stress_threshold=float(config['moderate_stress_threshold']),
             severe_stress_threshold=float(config['severe_stress_threshold']),
             moderate_stress_factor=float(config['moderate_stress_factor']),
@@ -146,7 +168,14 @@ class RespirationParameters:
             min_acclimation_temperature=float(config['min_acclimation_temperature']),
             max_acclimation_temperature=float(config['max_acclimation_temperature']),
             min_diurnal_factor=float(config['min_diurnal_factor']),
-            max_diurnal_factor=float(config['max_diurnal_factor'])
+            max_diurnal_factor=float(config['max_diurnal_factor']),
+            # Remove non-existent parameters per Rules.md
+            protein_fraction=float(config['protein_fraction']),
+            carbohydrate_fraction=float(config['carbohydrate_fraction']),
+            lipid_fraction=float(config['lipid_fraction']),
+            organic_acid_fraction=float(config['organic_acid_fraction']),
+            lignin_fraction=float(config['lignin_fraction']),
+            mineral_fraction=float(config['mineral_fraction'])
         )
 
     def get_required_growth_composition(self, config: Dict[str, Any]) -> Dict[str, float]:
@@ -189,6 +218,10 @@ class EnhancedRespirationModel:
         self.config = config
         self.temperature_history: List[float] = []
         self.acclimated_reference_temp: float = self.params.reference_temperature
+    
+    def initialize(self):
+        """Initialize the respiration model"""
+        pass
 
     def calculate_temperature_factor(self, temperature: float, acclimated_temp: float = None) -> float:
         if temperature is None:
@@ -374,7 +407,7 @@ class EnhancedRespirationModel:
         # ALL parameters come from CSV configuration
         temp_config = type('Config', (), {
             'temperature_stress': {
-                'optimal_temperature': self.params.optimal_temperature,
+                'optimal_temperature': (self.params.phenology_optimal_temperature_min + self.params.phenology_optimal_temperature_max) / 2.0,
                 'moderate_stress_threshold': self.params.moderate_stress_threshold,
                 'severe_stress_threshold': self.params.severe_stress_threshold,
                 'moderate_stress_factor': self.params.moderate_stress_factor,

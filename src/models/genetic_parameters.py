@@ -66,6 +66,7 @@ class GeneticTrait(Enum):
     COLD_TOLERANCE = "cold_tolerance"
     SALINITY_TOLERANCE = "salinity_tolerance"
     DISEASE_RESISTANCE = "disease_resistance"
+    GROWTH_RATE = "growth_rate"
 
 
 @dataclass
@@ -105,6 +106,9 @@ class CultivarProfile:
     trait_values: Dict[GeneticTrait, float]
     pedigree: List[str]
     breeding_notes: str
+    breeding_generation: int = 1  # Default to F1 generation
+    origin: str = "Unknown"  # Geographic or breeding origin
+    maturity_days: int = 60  # Days to harvest maturity
     
     def calculate_adaptation_index(self, environment_factors: Dict[str, float]) -> float:
         base_adaptation = self.adaptation_score
@@ -145,8 +149,18 @@ class CultivarProfile:
 class GeneticParameterDatabase:
     """Database of lettuce cultivar genetic parameters"""
     
-    def __init__(self):
+    def __init__(self, config: Dict[str, Any] = None):
         self.cultivars: Dict[str, CultivarProfile] = {}
+        
+        # Load default parameters from CSV
+        if config:
+            self.default_air_temperature = float(config.get('default_air_temperature', 20.0))
+            self.default_humidity = float(config.get('default_humidity', 60.0))
+            self.default_light_intensity = float(config.get('default_light_intensity', 200.0))
+            self.cache_timeout = float(config.get('cache_timeout', 1.0))
+        else:
+            raise ValueError("GeneticParameterDatabase requires configuration with default parameters")
+        
         self.initialize_cultivar_database()
     
     def initialize_cultivar_database(self):
@@ -196,6 +210,10 @@ class GenotypeEnvironmentModel:
     
     def __init__(self, genetic_db: GeneticParameterDatabase):
         self.genetic_db = genetic_db
+    
+    def initialize(self):
+        """Initialize the genetic parameters model"""
+        pass
         
     def calculate_phenotype_expression(self, 
                                      cultivar_id: str,

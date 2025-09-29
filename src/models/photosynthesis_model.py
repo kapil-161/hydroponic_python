@@ -32,6 +32,11 @@ class PhotosynthesisParameters:
     photosynthesis_cold_limit: float
     photosynthesis_heat_limit: float
     min_stress_factor: float
+    optimal_temperature_min: float
+    optimal_temperature_max: float
+    light_saturation_threshold: float
+    optimal_vpd_min: float
+    optimal_vpd_max: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'PhotosynthesisParameters':
@@ -42,7 +47,8 @@ class PhotosynthesisParameters:
             'hours_per_day', 'kc', 'ko', 'gamma_star', 'jmax_25', 'vcmax_25',
             'theta', 'alpha', 'rd_25', 'eaj', 'eav', 'ear', 'o2_mmol_mol',
             'shaded_light_fraction', 'photosynthesis_cold_limit', 'photosynthesis_heat_limit',
-            'min_stress_factor'
+            'min_stress_factor', 'optimal_temperature_min', 'optimal_temperature_max',
+            'light_saturation_threshold', 'optimal_vpd_min', 'optimal_vpd_max'
         ]
         for param in required_params:
             if param not in config:
@@ -89,7 +95,12 @@ class PhotosynthesisParameters:
             shaded_light_fraction=float(config['shaded_light_fraction']),
             photosynthesis_cold_limit=float(config['photosynthesis_cold_limit']),
             photosynthesis_heat_limit=float(config['photosynthesis_heat_limit']),
-            min_stress_factor=float(config['min_stress_factor'])
+            min_stress_factor=float(config['min_stress_factor']),
+            optimal_temperature_min=float(config['optimal_temperature_min']),
+            optimal_temperature_max=float(config['optimal_temperature_max']),
+            light_saturation_threshold=float(config['light_saturation_threshold']),
+            optimal_vpd_min=float(config['optimal_vpd_min']),
+            optimal_vpd_max=float(config['optimal_vpd_max'])
         )
 
 @dataclass
@@ -104,6 +115,10 @@ class PhotosynthesisModel:
         if not parameters:
             raise ValueError("PhotosynthesisParameters must be provided")
         self.params = parameters
+    
+    def initialize(self):
+        """Initialize the photosynthesis model"""
+        pass
 
     def _arrhenius_temp_response(self, rate_25: float, ea: float, temp_c: float) -> float:
         if temp_c is None:
@@ -140,13 +155,25 @@ class PhotosynthesisModel:
         ea = es * (humidity / 100.0)
         vpd = max(0.1, es - ea)
 
-        f_light = min(1.0, par_umol_m2_s / config.get('light_saturation', 2000.0))
+        # All parameters must come from CSV per Rules.md
+        if 'light_saturation_threshold' not in config:
+            raise KeyError("light_saturation_threshold must be provided in config from CSV")
+        if 'optimal_vpd_min' not in config or 'optimal_vpd_max' not in config:
+            raise KeyError("optimal_vpd_min and optimal_vpd_max must be provided in config from CSV")
+
+        f_light = min(1.0, par_umol_m2_s / config['light_saturation_threshold'])
         f_temp = self._calculate_temperature_stress_factor(temp_c, config['optimal_temp_min'], config['optimal_temp_max'])
-        optimal_vpd = config.get('optimal_vpd', 1.0)
+
+        # Use VPD range from CSV parameters
+        optimal_vpd_min = config['optimal_vpd_min']
+        optimal_vpd_max = config['optimal_vpd_max']
+        optimal_vpd = (optimal_vpd_min + optimal_vpd_max) / 2.0
+
         if vpd <= optimal_vpd:
             f_vpd = max(0.1, vpd / optimal_vpd)
         else:
-            f_vpd = max(0.1, 1.0 - (vpd - optimal_vpd) / config.get('vpd_decline_rate', 2.0))
+            vpd_decline_range = optimal_vpd_max - optimal_vpd_min
+            f_vpd = max(0.1, 1.0 - (vpd - optimal_vpd) / vpd_decline_range)
 
         gs = self.params.g_max * f_light * f_temp * f_vpd
         ci = co2_ppm * 0.7

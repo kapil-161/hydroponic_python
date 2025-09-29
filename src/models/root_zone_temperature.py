@@ -178,6 +178,10 @@ class RootZoneTemperatureModel:
             raise ValueError("RZTParameters must be provided")
         self.params = parameters
         self._previous_rzt: float = None  # Initialize as None, set in first update
+    
+    def initialize(self):
+        """Initialize the root zone temperature model"""
+        pass
 
     def calculate_optimal_rzt(self, air_temperature: float) -> float:
         """

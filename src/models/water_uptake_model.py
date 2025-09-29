@@ -79,6 +79,14 @@ class WaterUptakeParameters:
     # Temperature factor parameters
     temp_tolerance: float                 # Temperature tolerance range
     min_temp_factor: float               # Minimum temperature factor
+    
+    # Biomass allocation parameters
+    stem_biomass_fraction: float         # Fraction of total biomass allocated to stem
+    
+    # Phenology temperature parameters (consolidated)
+    phenology_optimal_temperature_min: float  # Minimum optimal temperature from phenology
+    phenology_optimal_temperature_max: float  # Maximum optimal temperature from phenology
+    leaf_area_to_biomass_ratio: float  # Ratio for converting leaf area to biomass
 
     def __post_init__(self):
         """Validate parameter ranges to ensure physical realism."""
@@ -123,6 +131,7 @@ class WaterUptakeParameters:
         water_params = get_required_water_config(config, 'water_parameters')
         stress_params = get_required_water_config(config, 'stress_parameters')
         root_params = get_required_water_config(config, 'root_system_parameters')
+        phenology_params = get_required_water_config(config, 'phenology_parameters')
         required_params = [
             'psychrometric_constant', 'wind_speed', 'net_radiation_factor', 'radiation_offset',
             'base_crop_coefficient', 'lai_coefficient_factor', 'vegetative_stage_factor',
@@ -131,12 +140,14 @@ class WaterUptakeParameters:
             'metabolic_water_per_lai', 'base_root_conductance', 'root_conductance_scaling_factor',
             'base_xylem_conductance', 'xylem_conductance_scaling_factor', 'base_leaf_potential',
             'transpiration_potential_factor', 'solution_potential_factor', 'cavitation_threshold',
-            'max_osmotic_adjustment', 'salt_stress_osmotic_factor', 'temp_tolerance', 'min_temp_factor'
+            'max_osmotic_adjustment', 'salt_stress_osmotic_factor', 'temp_tolerance', 'min_temp_factor', 'stem_biomass_fraction',
+            'optimal_temperature_min', 'optimal_temperature_max', 'leaf_area_to_biomass_ratio'
         ]
         for param in required_params:
             if (param not in water_params and
                 param not in stress_params and
-                param not in root_params):
+                param not in root_params and
+                param not in phenology_params):
                 raise ValueError(f"Missing required parameter: {param}")
         return cls(
             psychrometric_constant=float(water_params['psychrometric_constant']),
@@ -166,7 +177,11 @@ class WaterUptakeParameters:
             max_osmotic_adjustment=float(stress_params['max_osmotic_adjustment']),
             salt_stress_osmotic_factor=float(stress_params['salt_stress_osmotic_factor']),
             temp_tolerance=float(water_params['temp_tolerance']),
-            min_temp_factor=float(water_params['min_temp_factor'])
+            min_temp_factor=float(water_params['min_temp_factor']),
+            stem_biomass_fraction=float(water_params['stem_biomass_fraction']),
+            phenology_optimal_temperature_min=float(phenology_params['optimal_temperature_min']),
+            phenology_optimal_temperature_max=float(phenology_params['optimal_temperature_max']),
+            leaf_area_to_biomass_ratio=float(water_params['leaf_area_to_biomass_ratio'])
         )
 
 @dataclass
@@ -196,6 +211,10 @@ class WaterUptakeModel:
         if not parameters:
             raise ValueError("WaterUptakeParameters must be provided")
         self.params = parameters
+    
+    def initialize(self):
+        """Initialize the water uptake model"""
+        pass
 
     def calculate_realistic_water_uptake(self,
                                         temperature: float,
@@ -204,7 +223,8 @@ class WaterUptakeModel:
                                         lai: float,
                                         total_biomass: float,
                                         growth_stage: str = GrowthStage.VEGETATIVE.value,
-                                        stress_factors: Dict[str, float] = None) -> WaterUptakeResponse:
+                                        stress_factors: Dict[str, float] = None,
+                                        solution_ec: float = 1.5) -> WaterUptakeResponse:
         """
         Calculate water uptake using Penman-Monteith evapotranspiration.
 
@@ -280,10 +300,10 @@ class WaterUptakeModel:
         # Water use efficiency
         wue_L_per_kg = total_water_uptake_L / (total_biomass / 1000.0) if total_biomass > 0 else 0.0
 
-        # Hydraulic uptake (simplified call for consistency)
-        # Use stress factors from integrated stress model outputs (following "model output" rule)
-        default_stress_factors = {'water_stress_level': 0.0, 'salinity_stress': 0.0}
-        actual_stress_factors = stress_factors if stress_factors is not None else default_stress_factors
+        # Hydraulic uptake calculation
+        # Stress factors must be provided - no defaults allowed per Rules.md
+        if stress_factors is None:
+            raise ValueError("Stress factors must be provided - no defaults allowed per Rules.md")
 
         hydraulic_uptake, total_conductance = self.calculate_hydraulic_water_uptake(
             light_interception=min(1.0, lai / 2.0),
@@ -292,9 +312,9 @@ class WaterUptakeModel:
             solar_radiation=solar_radiation,
             vpd=vpd,
             lai=lai,
-            stem_biomass=total_biomass * 0.3,  # Assume 30% of biomass is stem
-            solution_ec=1.5,  # Placeholder, should come from UnifiedStressCalculator
-            stress_factors=actual_stress_factors
+            stem_biomass=total_biomass * self.params.stem_biomass_fraction,
+            solution_ec=solution_ec,  # Must be provided as parameter
+            stress_factors=stress_factors
         )
 
         return WaterUptakeResponse(
@@ -394,13 +414,14 @@ class WaterUptakeModel:
             raise ValueError("Temperature must be numeric")
 
         # Create config structure for consolidated function
-        # Replace hardcoded 15 and 0.3 with CSV parameters
+        # Calculate optimal_temp from min/max range
+        optimal_temp = (self.params.phenology_optimal_temperature_min + self.params.phenology_optimal_temperature_max) / 2.0
         temp_config = type('Config', (), {
             'temperature_factor': {
-                'optimal_temp': self.params.optimal_temperature,
+                'optimal_temp': optimal_temp,
                 'temperature_sensitivity': self.params.temperature_sensitivity,
-                'temp_tolerance': self.params.temp_tolerance,  # Must be in CSV instead of hardcoded 15
-                'min_factor': self.params.min_temp_factor      # Must be in CSV instead of hardcoded 0.3
+                'temp_tolerance': self.params.temp_tolerance,
+                'min_factor': self.params.min_temp_factor
             }
         })
 

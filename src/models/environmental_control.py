@@ -15,6 +15,29 @@ from enum import Enum
 import math
 
 
+def calculate_vpd(temperature: float, relative_humidity: float) -> float:
+    """
+    Calculate Vapor Pressure Deficit (VPD) from temperature and relative humidity.
+
+    Args:
+        temperature: Air temperature (°C)
+        relative_humidity: Relative humidity (%)
+
+    Returns:
+        VPD in kPa
+    """
+    # Saturated vapor pressure using Magnus equation
+    es = 0.6108 * math.exp(17.27 * temperature / (temperature + 237.3))
+
+    # Actual vapor pressure
+    ea = (relative_humidity / 100.0) * es
+
+    # VPD = saturated - actual
+    vpd = es - ea
+
+    return vpd
+
+
 class ParameterError(Exception):
     """Raised when required parameters are missing"""
     pass
@@ -32,7 +55,6 @@ def get_required_action_param(action: Dict[str, Any], param_name: str) -> float:
     if param_name not in action or action[param_name] is None:
         raise ParameterError(f"Required action parameter '{param_name}' missing from control action")
     return action[param_name]
-from src.utils.core_utils import calculate_vpd
 
 
 class ControlStrategy(Enum):
@@ -69,6 +91,12 @@ class EnvironmentalSetpoints:
     co2_response_km: float
     max_co2_enhancement_factor: float
     pid_parameters: dict
+    
+    # Simulator default parameters
+    default_air_temperature: float
+    default_humidity: float
+    default_light_intensity: float
+    cache_timeout: float
     
     @classmethod
     def from_config(cls, config_dict: dict) -> 'EnvironmentalSetpoints':
@@ -115,7 +143,11 @@ class EnvironmentalSetpoints:
             co2_response_vmax=float(config_dict['co2_response_vmax']),
             co2_response_km=float(config_dict['co2_response_km']),
             max_co2_enhancement_factor=float(config_dict['max_co2_enhancement_factor']),
-            pid_parameters=pid_parameters
+            pid_parameters=pid_parameters,
+            default_air_temperature=float(config_dict['default_air_temperature']),
+            default_humidity=float(config_dict['default_humidity']),
+            default_light_intensity=float(config_dict['default_light_intensity']),
+            cache_timeout=float(config_dict['cache_timeout'])
         )
 
 
@@ -157,8 +189,12 @@ class EnvironmentalControlSystem:
             'co2': {'kp': None, 'ki': None, 'kd': None},
             'temperature': {'kp': None, 'ki': None, 'kd': None}
         }
+    
+    def initialize(self):
+        """Initialize the environmental control system"""
+        pass
 
-        self._load_pid_parameters(setpoints.pid_parameters)
+        self._load_pid_parameters(self.setpoints.pid_parameters)
 
         self.integral_errors = {'humidity': 0.0, 'co2': 0.0, 'temperature': 0.0}
         self.previous_errors = {'humidity': 0.0, 'co2': 0.0, 'temperature': 0.0}
@@ -357,13 +393,8 @@ class EnvironmentalControlSystem:
                     'action': 'maintain'
                 }
         
-        # Default return case for unhandled strategies
-        return {
-            'humidifier_power': 0.0,
-            'dehumidifier_power': 0.0,
-            'energy_consumption_kWh': 0.0,
-            'action': 'no_control'
-        }
+        # All strategies must be properly configured - no default fallback
+        raise ValueError(f"Unhandled humidity control strategy: {strategy}")
     
     def _calculate_time_based_co2_target(self, base_target: float, photoperiod_time: float, 
                                        light_on: bool, config_dict: Optional[Dict[str, Any]] = None) -> float:
@@ -372,8 +403,7 @@ class EnvironmentalControlSystem:
             return self.setpoints.ambient_co2
         
         if not config_dict:
-            # Fallback to original behavior if no config
-            return base_target
+            raise ValueError("CO2 configuration must be provided - no fallback allowed")
         
         # Load time-based parameters from CSV - ERROR if missing
         required_params = [
@@ -485,69 +515,53 @@ class EnvironmentalControlSystem:
                 'co2_cost': 0.0,
                 'action': 'ambient'
             }
-        
-        else:  # Default to PID for any other strategy
-            # Time-based CO2 enrichment strategy using CSV parameters
-            target_co2 = self._calculate_time_based_co2_target(
-                target_co2, photoperiod_time, light_on, config_dict
-            )
-            error = target_co2 - current_co2
-            
-            # PID control with intelligent modifications
+
+        elif strategy == ControlStrategy.PID:
+            # PID control implementation for CO2
             params = self.pid_params['co2']
-            
+
+            # Update integral and derivative terms
             self.integral_errors['co2'] += error
             derivative = error - self.previous_errors['co2']
             self.previous_errors['co2'] = error
-            
-            pid_output = (params['kp'] * error + 
+
+            # PID output
+            pid_output = (params['kp'] * error +
                          params['ki'] * self.integral_errors['co2'] +
                          params['kd'] * derivative)
-            
-            # Convert to injection rate (μmol/mol/min)
-            if error > self.setpoints.co2_tolerance and light_on:
-                injection_rate = min(self.equipment.co2_injection_rate, 
-                                   max(0.0, pid_output * 0.5))
-                
-                # Calculate costs
-                co2_volume_L_per_min = injection_rate * 0.001  # Rough conversion
-                co2_cost_per_hour = co2_volume_L_per_min * 60 * 0.002  # $0.002/L
-                
+
+            # Convert to equipment control signals
+            if pid_output > 10.0:
+                # CO2 injection needed
+                injection_rate = min(self.equipment.co2_injection_rate, pid_output * 0.1)
                 return {
                     'co2_injection_rate': injection_rate,
                     'ventilation_increase': 0.0,
-                    'energy_consumption_kWh': 0.05,  # Injection system power
-                    'co2_cost': co2_cost_per_hour,
-                    'action': f'inject_{injection_rate:.1f}μmol/mol/min'
+                    'energy_consumption_kWh': injection_rate * 0.002,
+                    'co2_cost': injection_rate * 0.001,
+                    'action': f'inject_{injection_rate:.1f}'
                 }
-            
-            elif error < -self.setpoints.co2_tolerance:
-                # Too much CO2 - increase ventilation
-                ventilation_increase = min(2.0, abs(error) / 100.0)
+            elif pid_output < -10.0:
+                # Ventilation increase needed
+                vent_increase = min(5.0, abs(pid_output) * 0.01)
                 return {
                     'co2_injection_rate': 0.0,
-                    'ventilation_increase': ventilation_increase,
-                    'energy_consumption_kWh': ventilation_increase * 0.1,
+                    'ventilation_increase': vent_increase,
+                    'energy_consumption_kWh': vent_increase * 0.1,
                     'co2_cost': 0.0,
-                    'action': f'ventilate_{ventilation_increase:.1f}x'
+                    'action': f'ventilate_{vent_increase:.1f}'
                 }
             else:
                 return {
                     'co2_injection_rate': 0.0,
                     'ventilation_increase': 0.0,
-                    'energy_consumption_kWh': 0.02,
+                    'energy_consumption_kWh': 0.05,  # Baseline monitoring
                     'co2_cost': 0.0,
                     'action': 'maintain'
                 }
-        
-        # Default return case for unhandled strategies
-        return {
-            'co2_injection_rate': 0.0,
-            'ventilation_increase': 0.0,
-            'energy_consumption_kWh': 0.0,
-            'co2_cost': 0.0,
-            'action': 'no_control'
-        }
+
+        else:  # All strategies must be explicitly configured
+            raise ValueError(f"Unhandled CO2 control strategy: {strategy}")
     
     def hourly_update(self, current_conditions: Dict[str, float], hour: int, 
                      dt_hours: float = 1.0, strategy: ControlStrategy = ControlStrategy.PID) -> Dict[str, Any]:

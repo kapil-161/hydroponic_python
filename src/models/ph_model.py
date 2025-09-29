@@ -45,6 +45,15 @@ class PHParameters:
     p_molecular_weight: float
     po4_molecular_weight: float
     unit_conversion_factor: float
+    
+    # Simulator default parameters
+    default_nitrate_uptake: float
+    default_ammonium_uptake: float
+    default_phosphate_uptake: float
+    default_phosphate_concentration: float
+    default_iron_concentration: float
+    default_time_step: float
+    cache_timeout: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'PHParameters':
@@ -130,7 +139,14 @@ class PHParameters:
             nh4_molecular_weight=float(config['nh4_molecular_weight']),
             p_molecular_weight=float(config['phosphorus_atomic_weight']),  # Map from CSV name
             po4_molecular_weight=float(config['po4_molecular_weight']),
-            unit_conversion_factor=float(config['unit_conversion_factor'])
+            unit_conversion_factor=float(config['unit_conversion_factor']),
+            default_nitrate_uptake=float(config['default_nitrate_uptake']),
+            default_ammonium_uptake=float(config['default_ammonium_uptake']),
+            default_phosphate_uptake=float(config['default_phosphate_uptake']),
+            default_phosphate_concentration=float(config['default_phosphate_concentration']),
+            default_iron_concentration=float(config['default_iron_concentration']),
+            default_time_step=float(config['default_time_step']),
+            cache_timeout=float(config['cache_timeout'])
         )
 
 @dataclass
@@ -185,6 +201,10 @@ class HydroponicPHModel:
             calcium_phosphate_ksp=parameters.calcium_phosphate_ksp,
             magnesium_phosphate_ksp=parameters.magnesium_phosphate_ksp
         )
+    
+    def initialize(self):
+        """Initialize the pH model"""
+        pass
 
     def calculate_henderson_hasselbalch_ph(self, total_carbonate: float, free_co2: float, temperature: float) -> float:
         if total_carbonate <= 0:

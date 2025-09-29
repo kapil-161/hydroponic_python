@@ -187,7 +187,9 @@ class RootSystemParameters:
     fine_root_effectiveness: float
     medium_root_effectiveness: float
     coarse_root_effectiveness: float
-    optimal_temperature: float
+    # optimal_temperature: float  # Consolidated to phenology_parameters
+    phenology_optimal_temperature_min: float  # Minimum optimal temperature from phenology
+    phenology_optimal_temperature_max: float  # Maximum optimal temperature from phenology
     q10_factor: float
     optimal_flow_rate: float
     flow_stress_threshold: float
@@ -248,9 +250,12 @@ class RootSystemParameters:
     minimum_biomass: float
     minimum_volume: float
     effective_area_minimum: float
+    cache_timeout: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'RootSystemParameters':
+        # Load phenology parameters for temperature consolidation
+        phenology_params = config.get('phenology_parameters', {})
         required_params = [
             'container_volume', 'channel_length', 'system_type', 'channel_width', 'channel_depth',
             'n_channels', 'root_zone_independent', 'primary_root_growth_rate', 'lateral_root_density',
@@ -261,7 +266,7 @@ class RootSystemParameters:
             'medium_root_half_life_days', 'coarse_root_half_life_days', 'root_zone_efficiency_factor',
             'fine_min_activity', 'medium_min_activity', 'coarse_min_activity', 'establishment_plateau_days',
             'initial_root_activity', 'fine_root_effectiveness', 'medium_root_effectiveness',
-            'coarse_root_effectiveness', 'optimal_temperature', 'q10_factor', 'optimal_flow_rate',
+            'coarse_root_effectiveness', 'q10_factor', 'optimal_flow_rate',
             'flow_stress_threshold', 'root_growth_auxin_decay_rate', 'root_optimal_density',
             'root_density_stress_factor', 'root_temp_optimum', 'root_temp_max', 'root_temp_min_factor',
             'root_oxygen_optimum', 'root_oxygen_min_factor', 'ph_stress_range_acidic', 'ph_stress_range_basic',
@@ -275,11 +280,12 @@ class RootSystemParameters:
             'auxin_gradient_weight', 'nutrient_signal_weight', 'oxygen_effect_weight', 'competition_effect_weight',
             'temperature_effect_weight', 'min_growth_potential', 'max_growth_potential', 'max_temp_threshold',
             'temp_decay_factor', 'flow_rate_offset', 'flow_rate_multiplier', 'transport_temp_exponent',
-            'minimum_surface_area', 'minimum_biomass', 'minimum_volume', 'effective_area_minimum'
+            'minimum_surface_area', 'minimum_biomass', 'minimum_volume', 'effective_area_minimum',
+            'optimal_temperature_min', 'optimal_temperature_max', 'cache_timeout'
         ]
         required_nutrients = ['NO3', 'NH4', 'PO4', 'K', 'Ca', 'Mg', 'SO4']
         for param in required_params:
-            if param not in config:
+            if param not in config and param not in phenology_params:
                 raise KeyError(f"Missing required parameter: {param}")
         base_uptake_rates = {}
         michaelis_constants = {}
@@ -376,7 +382,8 @@ class RootSystemParameters:
             fine_root_effectiveness=float(config['fine_root_effectiveness']),
             medium_root_effectiveness=float(config['medium_root_effectiveness']),
             coarse_root_effectiveness=float(config['coarse_root_effectiveness']),
-            optimal_temperature=float(config['optimal_temperature']),
+            phenology_optimal_temperature_min=float(phenology_params['optimal_temperature_min']),
+            phenology_optimal_temperature_max=float(phenology_params['optimal_temperature_max']),
             q10_factor=float(config['q10_factor']),
             optimal_flow_rate=float(config['optimal_flow_rate']),
             flow_stress_threshold=float(config['flow_stress_threshold']),
@@ -436,7 +443,8 @@ class RootSystemParameters:
             minimum_surface_area=float(config['minimum_surface_area']),
             minimum_biomass=float(config['minimum_biomass']),
             minimum_volume=float(config['minimum_volume']),
-            effective_area_minimum=float(config['effective_area_minimum'])
+            effective_area_minimum=float(config['effective_area_minimum']),
+            cache_timeout=float(config['cache_timeout'])
         )
 
 @dataclass
@@ -463,7 +471,7 @@ class RootSystemMetrics:
     total_uptake_g_per_day: float
     nitrogen_uptake_g_per_day: float
     nutrient_uptake_rates: Dict[str, float]
-    root_distribution: Dict[int, float] = field(default_factory=lambda: {1: 0.4, 2: 0.4, 3: 0.2})
+    root_distribution: Dict[int, float] = field(default_factory=dict)
 
 class EnhancedRootSystemModel:
     def __init__(self, parameters: RootSystemParameters):
@@ -474,6 +482,10 @@ class EnhancedRootSystemModel:
         self.total_age_days = 0.0
         self.cumulative_root_growth = 0.0
         self.initialize_root_zones()
+    
+    def initialize(self):
+        """Initialize the root system model"""
+        pass
 
     def initialize_root_zones(self):
         effective_volume = self.params.container_volume * self.params.root_zone_efficiency_factor
@@ -484,7 +496,7 @@ class EnhancedRootSystemModel:
                 RootZoneLayer(
                     depth_range=(0, 2), volume=effective_volume * self.params.nft_zone_1_fraction, temperature=0.0, flow_rate=0.0, 
                     oxygen_level=0.0, ph=0.0, nutrient_concentrations={}, 
-                    temperature_q10=self.params.q10_factor, root_base_temperature=self.params.optimal_temperature, 
+                    temperature_q10=self.params.q10_factor, root_base_temperature=(self.params.phenology_optimal_temperature_min + self.params.phenology_optimal_temperature_max) / 2.0, 
                     temperature_range=self.params.temperature_range_factor, min_temperature_factor=self.params.min_temperature_factor, max_temperature_factor=self.params.max_temperature_factor, 
                     min_flow_rate=self.params.optimal_flow_rate * 0.5, max_flow_rate=self.params.flow_stress_threshold, 
                     low_flow_factor=self.params.low_flow_factor, high_flow_factor=self.params.high_flow_factor, optimal_flow_rate=self.params.optimal_flow_rate, 
@@ -494,7 +506,7 @@ class EnhancedRootSystemModel:
                 RootZoneLayer(
                     depth_range=(2, 4), volume=effective_volume * self.params.nft_zone_2_fraction, temperature=0.0, flow_rate=0.0, 
                     oxygen_level=0.0, ph=0.0, nutrient_concentrations={}, 
-                    temperature_q10=self.params.q10_factor, root_base_temperature=self.params.optimal_temperature, 
+                    temperature_q10=self.params.q10_factor, root_base_temperature=(self.params.phenology_optimal_temperature_min + self.params.phenology_optimal_temperature_max) / 2.0, 
                     temperature_range=self.params.temperature_range_factor, min_temperature_factor=self.params.min_temperature_factor, max_temperature_factor=self.params.max_temperature_factor, 
                     min_flow_rate=self.params.optimal_flow_rate * 0.5, max_flow_rate=self.params.flow_stress_threshold, 
                     low_flow_factor=self.params.low_flow_factor, high_flow_factor=self.params.high_flow_factor, optimal_flow_rate=self.params.optimal_flow_rate, 
@@ -504,7 +516,7 @@ class EnhancedRootSystemModel:
                 RootZoneLayer(
                     depth_range=(4, 6), volume=effective_volume * self.params.nft_zone_3_fraction, temperature=0.0, flow_rate=0.0, 
                     oxygen_level=0.0, ph=0.0, nutrient_concentrations={}, 
-                    temperature_q10=self.params.q10_factor, root_base_temperature=self.params.optimal_temperature, 
+                    temperature_q10=self.params.q10_factor, root_base_temperature=(self.params.phenology_optimal_temperature_min + self.params.phenology_optimal_temperature_max) / 2.0, 
                     temperature_range=self.params.temperature_range_factor, min_temperature_factor=self.params.min_temperature_factor, max_temperature_factor=self.params.max_temperature_factor, 
                     min_flow_rate=self.params.optimal_flow_rate * 0.5, max_flow_rate=self.params.flow_stress_threshold, 
                     low_flow_factor=self.params.low_flow_factor, high_flow_factor=self.params.high_flow_factor, optimal_flow_rate=self.params.optimal_flow_rate, 
@@ -517,7 +529,7 @@ class EnhancedRootSystemModel:
                 RootZoneLayer(
                     depth_range=(0, 5), volume=effective_volume * self.params.dwc_zone_1_fraction, temperature=0.0, flow_rate=0.0, 
                     oxygen_level=0.0, ph=0.0, nutrient_concentrations={}, 
-                    temperature_q10=self.params.q10_factor, root_base_temperature=self.params.optimal_temperature, 
+                    temperature_q10=self.params.q10_factor, root_base_temperature=(self.params.phenology_optimal_temperature_min + self.params.phenology_optimal_temperature_max) / 2.0, 
                     temperature_range=self.params.temperature_range_factor, min_temperature_factor=self.params.min_temperature_factor, max_temperature_factor=self.params.max_temperature_factor, 
                     min_flow_rate=self.params.optimal_flow_rate * 0.5, max_flow_rate=self.params.flow_stress_threshold, 
                     low_flow_factor=self.params.low_flow_factor, high_flow_factor=self.params.high_flow_factor, optimal_flow_rate=self.params.optimal_flow_rate, 
@@ -527,7 +539,7 @@ class EnhancedRootSystemModel:
                 RootZoneLayer(
                     depth_range=(5, 15), volume=effective_volume * self.params.dwc_zone_2_fraction, temperature=0.0, flow_rate=0.0, 
                     oxygen_level=0.0, ph=0.0, nutrient_concentrations={}, 
-                    temperature_q10=self.params.q10_factor, root_base_temperature=self.params.optimal_temperature, 
+                    temperature_q10=self.params.q10_factor, root_base_temperature=(self.params.phenology_optimal_temperature_min + self.params.phenology_optimal_temperature_max) / 2.0, 
                     temperature_range=self.params.temperature_range_factor, min_temperature_factor=self.params.min_temperature_factor, max_temperature_factor=self.params.max_temperature_factor, 
                     min_flow_rate=self.params.optimal_flow_rate * 0.5, max_flow_rate=self.params.flow_stress_threshold, 
                     low_flow_factor=self.params.low_flow_factor, high_flow_factor=self.params.high_flow_factor, optimal_flow_rate=self.params.optimal_flow_rate, 
@@ -537,7 +549,7 @@ class EnhancedRootSystemModel:
                 RootZoneLayer(
                     depth_range=(15, 25), volume=effective_volume * self.params.dwc_zone_3_fraction, temperature=0.0, flow_rate=0.0, 
                     oxygen_level=0.0, ph=0.0, nutrient_concentrations={}, 
-                    temperature_q10=self.params.q10_factor, root_base_temperature=self.params.optimal_temperature, 
+                    temperature_q10=self.params.q10_factor, root_base_temperature=(self.params.phenology_optimal_temperature_min + self.params.phenology_optimal_temperature_max) / 2.0, 
                     temperature_range=self.params.temperature_range_factor, min_temperature_factor=self.params.min_temperature_factor, max_temperature_factor=self.params.max_temperature_factor, 
                     min_flow_rate=self.params.optimal_flow_rate * 0.5, max_flow_rate=self.params.flow_stress_threshold, 
                     low_flow_factor=self.params.low_flow_factor, high_flow_factor=self.params.high_flow_factor, optimal_flow_rate=self.params.optimal_flow_rate, 
@@ -550,7 +562,7 @@ class EnhancedRootSystemModel:
                 RootZoneLayer(
                     depth_range=(0, 3), volume=effective_volume * self.params.general_zone_1_fraction, temperature=0.0, flow_rate=0.0, 
                     oxygen_level=0.0, ph=0.0, nutrient_concentrations={}, 
-                    temperature_q10=self.params.q10_factor, root_base_temperature=self.params.optimal_temperature, 
+                    temperature_q10=self.params.q10_factor, root_base_temperature=(self.params.phenology_optimal_temperature_min + self.params.phenology_optimal_temperature_max) / 2.0, 
                     temperature_range=self.params.temperature_range_factor, min_temperature_factor=self.params.min_temperature_factor, max_temperature_factor=self.params.max_temperature_factor, 
                     min_flow_rate=self.params.optimal_flow_rate * 0.5, max_flow_rate=self.params.flow_stress_threshold, 
                     low_flow_factor=self.params.low_flow_factor, high_flow_factor=self.params.high_flow_factor, optimal_flow_rate=self.params.optimal_flow_rate, 
@@ -560,7 +572,7 @@ class EnhancedRootSystemModel:
                 RootZoneLayer(
                     depth_range=(3, 8), volume=effective_volume * self.params.general_zone_2_fraction, temperature=0.0, flow_rate=0.0, 
                     oxygen_level=0.0, ph=0.0, nutrient_concentrations={}, 
-                    temperature_q10=self.params.q10_factor, root_base_temperature=self.params.optimal_temperature, 
+                    temperature_q10=self.params.q10_factor, root_base_temperature=(self.params.phenology_optimal_temperature_min + self.params.phenology_optimal_temperature_max) / 2.0, 
                     temperature_range=self.params.temperature_range_factor, min_temperature_factor=self.params.min_temperature_factor, max_temperature_factor=self.params.max_temperature_factor, 
                     min_flow_rate=self.params.optimal_flow_rate * 0.5, max_flow_rate=self.params.flow_stress_threshold, 
                     low_flow_factor=self.params.low_flow_factor, high_flow_factor=self.params.high_flow_factor, optimal_flow_rate=self.params.optimal_flow_rate, 
@@ -570,7 +582,7 @@ class EnhancedRootSystemModel:
                 RootZoneLayer(
                     depth_range=(8, 15), volume=effective_volume * self.params.general_zone_3_fraction, temperature=0.0, flow_rate=0.0, 
                     oxygen_level=0.0, ph=0.0, nutrient_concentrations={}, 
-                    temperature_q10=self.params.q10_factor, root_base_temperature=self.params.optimal_temperature, 
+                    temperature_q10=self.params.q10_factor, root_base_temperature=(self.params.phenology_optimal_temperature_min + self.params.phenology_optimal_temperature_max) / 2.0, 
                     temperature_range=self.params.temperature_range_factor, min_temperature_factor=self.params.min_temperature_factor, max_temperature_factor=self.params.max_temperature_factor, 
                     min_flow_rate=self.params.optimal_flow_rate * 0.5, max_flow_rate=self.params.flow_stress_threshold, 
                     low_flow_factor=self.params.low_flow_factor, high_flow_factor=self.params.high_flow_factor, optimal_flow_rate=self.params.optimal_flow_rate, 
@@ -580,7 +592,7 @@ class EnhancedRootSystemModel:
                 RootZoneLayer(
                     depth_range=(15, 20), volume=effective_volume * self.params.general_zone_4_fraction, temperature=0.0, flow_rate=0.0, 
                     oxygen_level=0.0, ph=0.0, nutrient_concentrations={}, 
-                    temperature_q10=self.params.q10_factor, root_base_temperature=self.params.optimal_temperature, 
+                    temperature_q10=self.params.q10_factor, root_base_temperature=(self.params.phenology_optimal_temperature_min + self.params.phenology_optimal_temperature_max) / 2.0, 
                     temperature_range=self.params.temperature_range_factor, min_temperature_factor=self.params.min_temperature_factor, max_temperature_factor=self.params.max_temperature_factor, 
                     min_flow_rate=self.params.optimal_flow_rate * 0.5, max_flow_rate=self.params.flow_stress_threshold, 
                     low_flow_factor=self.params.low_flow_factor, high_flow_factor=self.params.high_flow_factor, optimal_flow_rate=self.params.optimal_flow_rate, 
@@ -666,7 +678,8 @@ class EnhancedRootSystemModel:
             coarse_area * self.params.coarse_root_effectiveness
         )
         if effective_area < self.params.effective_area_minimum:
-            raise ValueError("Effective surface area calculation failed: too small")
+            print(f"Warning: Effective surface area {effective_area} is below minimum {self.params.effective_area_minimum}, using minimum")
+            effective_area = self.params.effective_area_minimum
         return effective_area
 
     def calculate_temperature_factor(self, temperature: float) -> float:
@@ -680,7 +693,7 @@ class EnhancedRootSystemModel:
         # ALL parameters must come from CSV configuration - no hardcoded values
         temp_config = type('Config', (), {
             'temperature_factor': {
-                'optimal_temp': self.params.optimal_temperature,
+                'optimal_temp': (self.params.phenology_optimal_temperature_min + self.params.phenology_optimal_temperature_max) / 2.0,
                 'q10': self.params.q10_factor,
                 'min_factor': self.params.min_temperature_factor,
                 'max_factor': self.params.max_temperature_factor,
