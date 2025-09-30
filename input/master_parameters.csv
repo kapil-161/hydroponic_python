@@ -51,9 +51,7 @@ phenology_parameters,FL_to_AN,50.0,GDD,Flowering to anthesis
 phenology_parameters,AN_to_SD,200.0,GDD,Anthesis to seed development
 phenology_parameters,SD_to_PM,150.0,GDD,Seed development to physiological maturity
 
-# Consolidated Thermal Time Parameters (using phenology_parameters values)
-thermal_time,base_temp,10.0,°C,Base temperature for thermal time calculation
-thermal_time,thermal_time_scale,1.0,dimensionless,Scale factor for thermal time calculation
+# Note: Thermal time parameters consolidated into phenology_parameters section above
 
 # Photosynthesis Model Parameters
 photosynthesis_parameters,phi_psii,0.85,dimensionless,Maximum quantum efficiency of PSII
@@ -152,15 +150,15 @@ water_parameters,lai_coefficient_factor,3.0,m2_m2,LAI scaling factor for crop co
 water_parameters,vegetative_stage_factor,0.8,dimensionless,Crop coefficient multiplier for vegetative stage
 water_parameters,head_formation_stage_factor,1.2,dimensionless,Crop coefficient multiplier for head formation
 water_parameters,mature_stage_factor,0.9,dimensionless,Crop coefficient multiplier for mature stage
-water_parameters,optimal_temperature,22.0,°C,Optimal temperature for water uptake (consolidated to phenology_parameters)
+# Note: optimal_temperature consolidated into phenology_parameters section
 water_parameters,temperature_sensitivity,0.15,°C_inverse,Temperature response sensitivity factor
 water_parameters,optimal_vpd_min,0.8,kPa,Minimum optimal vapor pressure deficit
 water_parameters,optimal_vpd_max,1.5,kPa,Maximum optimal vapor pressure deficit
 water_parameters,vpd_sensitivity,0.3,kPa_inverse,VPD response sensitivity factor
 water_parameters,metabolic_water_per_biomass,0.4,L_g_biomass,Metabolic water demand per unit biomass
 water_parameters,metabolic_water_per_lai,0.1,L_LAI,Metabolic water demand per LAI unit
-water_parameters,temp_tolerance,15.0,°C,Temperature tolerance range for water uptake
-water_parameters,min_temp_factor,0.3,dimensionless,Minimum temperature response factor
+water_parameters,temperature_tolerance,15.0,°C,Temperature tolerance range for water uptake
+water_parameters,minimum_temperature_factor,0.3,dimensionless,Minimum temperature response factor
 water_parameters,stem_biomass_fraction,0.3,dimensionless,Fraction of total biomass allocated to stem
 water_parameters,leaf_area_to_biomass_ratio,0.1,g_per_m2,Ratio for converting leaf area to biomass
 water_parameters,water_uptake_sensitivity_low,0.06,per_°C,Water uptake sensitivity per °C below optimum for RZT
@@ -187,7 +185,7 @@ environment,min_humidity,45.0,%,Minimum allowed relative humidity
 environment,max_humidity,75.0,%,Maximum allowed relative humidity
 environment,day_temp,22.0,°C,Optimal daytime temperature
 environment,night_temp,18.0,°C,Optimal nighttime temperature
-environment,temp_tolerance,2.0,°C,Acceptable temperature deviation
+environment,temperature_tolerance,2.0,°C,Acceptable temperature deviation
 environment,target_co2,800.0,ppm,Target CO2 concentration during photoperiod
 environment,ambient_co2,400.0,ppm,Ambient atmospheric CO2 concentration
 environment,co2_tolerance,50.0,ppm,Acceptable CO2 deviation from target
@@ -613,7 +611,7 @@ ph_parameters,unit_conversion_factor,1000.0,mg_g,Conversion factor from grams to
 
 # Root Zone Layer Configuration Parameters
 root_system_parameters,temperature_range_factor,10.0,°C,Temperature range factor for root zone layers
-root_system_parameters,min_temperature_factor,0.1,dimensionless,Minimum temperature factor for root uptake
+root_system_parameters,minimum_temperature_factor,0.1,dimensionless,Minimum temperature factor for root uptake
 root_system_parameters,max_temperature_factor,4.0,dimensionless,Maximum temperature factor for root uptake
 root_system_parameters,low_flow_factor,0.4,dimensionless,Flow factor when below minimum flow rate
 root_system_parameters,high_flow_factor,0.6,dimensionless,Flow factor when above maximum flow rate
@@ -650,15 +648,15 @@ root_system_parameters,min_growth_potential,0.02,dimensionless,Minimum zone grow
 root_system_parameters,max_growth_potential,0.2,dimensionless,Maximum zone growth potential
 
 # Temperature Factor Missing Parameters
-root_system_parameters,max_temp_threshold,35.0,°C,Maximum temperature threshold for root activity
-root_system_parameters,temp_decay_factor,0.1,dimensionless,Temperature decay factor above optimal
+root_system_parameters,maximum_temperature_threshold,35.0,°C,Maximum temperature threshold for root activity
+root_system_parameters,temperature_decay_factor,0.1,dimensionless,Temperature decay factor above optimal
 
 # Flow Rate Calculation Parameters
 root_system_parameters,flow_rate_offset,0.5,dimensionless,Offset for flow rate calculation
 root_system_parameters,flow_rate_multiplier,0.5,dimensionless,Multiplier for flow rate calculation
 
 # Transport and Age Effect Parameters
-root_system_parameters,transport_temp_exponent,1.25,dimensionless,Exponent for temperature effect on nutrient transport
+root_system_parameters,transport_temperature_exponent,1.25,dimensionless,Exponent for temperature effect on nutrient transport
 root_system_parameters,minimum_surface_area,1.0,cm2,Minimum surface area for calculations
 root_system_parameters,minimum_biomass,0.001,g,Minimum biomass for specific root length calculations
 root_system_parameters,minimum_volume,1.0,cm3,Minimum volume for density calculations
@@ -706,11 +704,11 @@ root_system_parameters,flow_stress_threshold,4.0,L_min,Flow rate stress threshol
 root_system_parameters,root_growth_auxin_decay_rate,0.1,per_zone,Auxin decay rate for growth potential
 root_system_parameters,root_optimal_density,50.0,cm_per_cm3,Optimal root length density
 root_system_parameters,root_density_stress_factor,0.3,dimensionless,Root density stress factor
-root_system_parameters,root_temp_optimum,20.0,°C,Optimal root temperature
-root_system_parameters,root_temp_max,35.0,°C,Maximum root temperature
-root_system_parameters,root_temp_min_factor,0.1,dimensionless,Minimum temperature factor for roots
+root_system_parameters,root_temperature_optimum,20.0,°C,Optimal root temperature
+root_system_parameters,root_temperature_maximum,35.0,°C,Maximum root temperature
+root_system_parameters,root_temperature_minimum_factor,0.1,dimensionless,Minimum temperature factor for roots
 root_system_parameters,root_oxygen_optimum,8.0,mg_L,Optimal dissolved oxygen level
-root_system_parameters,root_oxygen_min_factor,0.2,dimensionless,Minimum oxygen factor
+root_system_parameters,root_oxygen_minimum_factor,0.2,dimensionless,Minimum oxygen factor
 root_system_parameters,ph_stress_range_acidic,1.0,pH_units,pH stress range on acidic side
 root_system_parameters,ph_stress_range_basic,1.5,pH_units,pH stress range on basic side
 root_system_parameters,ph_stress_factor,0.5,dimensionless,pH stress factor
@@ -825,10 +823,10 @@ stress_parameters,stress_weight_oxygen,0.03,dimensionless,Weight of oxygen stres
 stress_parameters,stress_weight_ph,0.02,dimensionless,Weight of pH stress in overall stress calculation
 
 # Stress Interaction Factors (hardcoded in code)
-stress_parameters,water_temp_interaction_factor,1.3,dimensionless,Water-temperature stress interaction factor
+stress_parameters,water_temperature_interaction_factor,1.3,dimensionless,Water-temperature stress interaction factor
 stress_parameters,water_salinity_interaction_factor,1.4,dimensionless,Water-salinity stress interaction factor
 stress_parameters,water_nutrient_interaction_factor,1.2,dimensionless,Water-nutrient stress interaction factor
-stress_parameters,temp_light_interaction_factor,1.1,dimensionless,Temperature-light stress interaction factor
+stress_parameters,temperature_light_interaction_factor,1.1,dimensionless,Temperature-light stress interaction factor
 stress_parameters,nutrient_ph_interaction_factor,1.5,dimensionless,Nutrient-pH stress interaction factor
 stress_parameters,nutrient_salinity_interaction_factor,1.1,dimensionless,Nutrient-salinity stress interaction factor
 
@@ -849,8 +847,8 @@ stress_parameters,damage_threshold_oxygen,0.4,dimensionless,Damage threshold for
 stress_parameters,damage_threshold_ph,0.5,dimensionless,Damage threshold for pH stress
 
 # UnifiedStressCalculator Hardcoded Constants
-stress_parameters,root_temp_tolerance,5.0,°C,Root temperature tolerance range
-stress_parameters,root_temp_stress_factor,0.1,per_°C,Root temperature stress factor
+stress_parameters,root_temperature_tolerance,5.0,°C,Root temperature tolerance range
+stress_parameters,root_temperature_stress_factor,0.1,per_°C,Root temperature stress factor
 stress_parameters,vpd_stress_low_factor,0.15,per_kPa,VPD stress factor for low VPD
 stress_parameters,vpd_stress_high_factor,0.25,per_kPa,VPD stress factor for high VPD
 stress_parameters,optimal_vpd_min,0.5,kPa,Minimum optimal VPD
@@ -981,7 +979,7 @@ root_zone_temperature_parameters,min_water_uptake_factor,0.15,dimensionless,Mini
 root_zone_temperature_parameters,min_photosynthesis_factor,0.3,dimensionless,Minimum photosynthesis factor
 root_zone_temperature_parameters,min_root_metabolism_factor,0.1,dimensionless,Minimum root metabolism factor
 root_zone_temperature_parameters,rzt_thermal_mass_factor,0.05,h_inverse,How quickly RZT responds to changes (reuses existing)
-root_zone_temperature_parameters,rzt_ambient_temp_amplitude,2.5,°C,Amplitude of diurnal temperature variation
+root_zone_temperature_parameters,rzt_ambient_temperature_amplitude,2.5,°C,Amplitude of diurnal temperature variation
 root_zone_temperature_parameters,rzt_root_respiration_heat,0.5,°C,Heat generation from root respiration
 root_zone_temperature_parameters,rzt_pump_heat_generation,0.3,°C,Heat generation from circulation pumps
 root_zone_temperature_parameters,rzt_ambient_exchange_factor,0.1,dimensionless,Factor for ambient temperature exchange
@@ -1016,18 +1014,18 @@ stress_parameters,acclimation_memory_water,168.0,hours,Water stress acclimation 
 stress_parameters,acclimation_memory_temperature,240.0,hours,Temperature stress acclimation memory duration
 stress_parameters,stress_onset_threshold_water,0.2,dimensionless,Water stress onset threshold
 stress_parameters,stress_onset_threshold_temperature,0.25,dimensionless,Temperature stress onset threshold
-stress_parameters,damage_threshold_water,0.8,dimensionless,Water stress damage threshold
-stress_parameters,damage_threshold_temperature,0.85,dimensionless,Temperature stress damage threshold
+# Note: damage_threshold_water consolidated above (removed duplicate)
+# Note: damage_threshold_temperature consolidated above (removed duplicate)
 stress_parameters,process_sensitivity_photosynthesis_water,0.9,dimensionless,Photosynthesis sensitivity to water stress
 stress_parameters,process_sensitivity_photosynthesis_temperature,0.8,dimensionless,Photosynthesis sensitivity to temperature stress
 stress_parameters,process_sensitivity_growth_water,0.95,dimensionless,Growth sensitivity to water stress
 stress_parameters,process_sensitivity_growth_temperature,0.85,dimensionless,Growth sensitivity to temperature stress
 stress_parameters,process_sensitivity_development_water,0.7,dimensionless,Development sensitivity to water stress
 stress_parameters,process_sensitivity_development_temperature,0.75,dimensionless,Development sensitivity to temperature stress
-leaf_development,min_temp,4.5,°C,Minimum temperature for leaf development
+leaf_development,minimum_temperature,4.5,°C,Minimum temperature for leaf development
 # leaf_development,opt_temp_min,18.0,°C,Lower optimal temperature for leaf development (consolidated to phenology_parameters)
 # leaf_development,opt_temp_max,24.0,°C,Upper optimal temperature for leaf development (consolidated to phenology_parameters)
-leaf_development,max_temp,35.0,°C,Maximum temperature for leaf development
+leaf_development,maximum_temperature,35.0,°C,Maximum temperature for leaf development
 leaf_development,specific_leaf_area,800.0,cm2_g,Specific leaf area (cm²/g dry weight)
 
 # Initial State Parameters
@@ -1522,7 +1520,7 @@ light,diffuse_fraction,0.3,fraction,Diffuse light fraction
 allocation_parameters,min_root_allocation_fraction,0.15,dimensionless,Minimum root allocation fraction to maintain biological realism
 
 # Missing Parameters for Hardcoded Value Replacement
-photosynthesis_parameters,photosynthesis_temp_factor,0.8,dimensionless,Temperature factor for photosynthesis efficiency
+photosynthesis_parameters,photosynthesis_temperature_factor,0.8,dimensionless,Temperature factor for photosynthesis efficiency
 water_parameters,hydraulic_conductance,0.5,L_per_day_per_MPa,Plant hydraulic conductance
 stress_parameters,minimum_temperature_stress,0.0,dimensionless,Minimum baseline temperature stress
 stress_parameters,minimum_light_stress,0.0,dimensionless,Minimum baseline light stress
@@ -1753,7 +1751,7 @@ root_system,transpiration_potential_factor,0.05,MPa_mm_day,Leaf potential change
 root_system,solution_potential_factor,-0.036,MPa_dS_m,Solution potential change per EC unit
 root_system,cavitation_threshold,-2.0,MPa,Water potential threshold for cavitation
 root_system,temperature_range_factor,10.0,°C,Temperature range factor for root zone layers
-root_system,min_temperature_factor,0.1,dimensionless,Minimum temperature factor for root uptake
+root_system,minimum_temperature_factor,0.1,dimensionless,Minimum temperature factor for root uptake
 root_system,max_temperature_factor,4.0,dimensionless,Maximum temperature factor for root uptake
 root_system,low_flow_factor,0.4,dimensionless,Flow factor when below minimum flow rate
 root_system,high_flow_factor,0.6,dimensionless,Flow factor when above maximum flow rate
@@ -1782,11 +1780,11 @@ root_system,competition_effect_weight,0.05,dimensionless,Weight of competition e
 root_system,temperature_effect_weight,0.03,dimensionless,Weight of temperature effect in growth potential
 root_system,min_growth_potential,0.02,dimensionless,Minimum zone growth potential
 root_system,max_growth_potential,0.2,dimensionless,Maximum zone growth potential
-root_system,max_temp_threshold,35.0,°C,Maximum temperature threshold for root activity
-root_system,temp_decay_factor,0.1,dimensionless,Temperature decay factor above optimal
+# Note: max_temp_threshold consolidated into root_system_parameters section
+root_system,temperature_decay_factor,0.1,dimensionless,Temperature decay factor above optimal
 root_system,flow_rate_offset,0.5,dimensionless,Offset for flow rate calculation
 root_system,flow_rate_multiplier,0.5,dimensionless,Multiplier for flow rate calculation
-root_system,transport_temp_exponent,1.25,dimensionless,Exponent for temperature effect on nutrient transport
+root_system,transport_temperature_exponent,1.25,dimensionless,Exponent for temperature effect on nutrient transport
 root_system,minimum_surface_area,1.0,cm2,Minimum surface area for calculations
 root_system,minimum_biomass,0.001,g,Minimum biomass for specific root length calculations
 root_system,minimum_volume,1.0,cm3,Minimum volume for density calculations
@@ -1831,11 +1829,11 @@ root_system,flow_stress_threshold,4.0,L_min,Flow rate stress threshold
 root_system,root_growth_auxin_decay_rate,0.1,per_zone,Auxin decay rate for growth potential
 root_system,root_optimal_density,50.0,cm_per_cm3,Optimal root length density
 root_system,root_density_stress_factor,0.3,dimensionless,Root density stress factor
-root_system,root_temp_optimum,20.0,°C,Optimal root temperature
-root_system,root_temp_max,35.0,°C,Maximum root temperature
-root_system,root_temp_min_factor,0.1,dimensionless,Minimum temperature factor for roots
+# Note: root_temp_optimum consolidated into root_system_parameters section
+root_system,root_temperature_maximum,35.0,°C,Maximum root temperature
+root_system,root_temperature_minimum_factor,0.1,dimensionless,Minimum temperature factor for roots
 root_system,root_oxygen_optimum,8.0,mg_L,Optimal dissolved oxygen level
-root_system,root_oxygen_min_factor,0.2,dimensionless,Minimum oxygen factor
+root_system,root_oxygen_minimum_factor,0.2,dimensionless,Minimum oxygen factor
 root_system,ph_stress_range_acidic,1.0,pH_units,pH stress range on acidic side
 root_system,ph_stress_range_basic,1.5,pH_units,pH stress range on basic side
 root_system,ph_stress_factor,0.5,dimensionless,pH stress factor
@@ -1906,7 +1904,7 @@ root_system,flow_rate_multiplier,1.0,dimensionless,Flow rate multiplier
 root_system,flow_rate_offset,0.1,L_per_min,Flow rate offset
 root_system,initial_activity,0.8,dimensionless,Initial activity
 root_system,max_growth_potential,1.0,dimensionless,Max growth potential
-root_system,max_temp_threshold,35.0,°C,Max temperature threshold
+# Note: max_temp_threshold consolidated into root_system_parameters section
 root_system,min_growth_potential,0.1,dimensionless,Min growth potential
 root_system,minimum_biomass,0.01,g,Minimum biomass
 root_system,minimum_surface_area,0.001,m2,Minimum surface area
@@ -1915,15 +1913,15 @@ root_system,nutrient_signal_weight,0.4,dimensionless,Nutrient signal weight
 root_system,old_root_activity,0.3,dimensionless,Old root activity
 root_system,optimal_density,0.5,g_per_cm3,Optimal density
 root_system,oxygen_effect_weight,0.5,dimensionless,Oxygen effect weight
-root_system,oxygen_min_factor,0.2,dimensionless,Oxygen min factor
+root_system,oxygen_minimum_factor,0.2,dimensionless,Oxygen minimum factor
 root_system,oxygen_optimum,8.0,mg_L,Oxygen optimum
 root_system,q10_factor,2.0,dimensionless,Q10 factor
-root_system,temp_decay_factor,0.1,per_°C,Temperature decay factor
-root_system,temp_max,35.0,°C,Max temperature
-root_system,temp_min_factor,0.1,dimensionless,Min temperature factor
-root_system,temp_optimum,22.0,°C,Optimal temperature
+root_system,temperature_decay_factor,0.1,per_°C,Temperature decay factor
+root_system,temperature_maximum,35.0,°C,Temperature maximum
+root_system,temperature_minimum_factor,0.1,dimensionless,Temperature minimum factor
+# Note: temp_optimum consolidated into phenology_parameters section
 root_system,temperature_effect_weight,0.4,dimensionless,Temperature effect weight
-root_system,transport_temp_exponent,2.0,dimensionless,Transport temperature exponent
+root_system,transport_temperature_exponent,2.0,dimensionless,Transport temperature exponent
 root_system,young_root_activity,1.0,dimensionless,Young root activity
 
 # Root System Multipliers (system-specific adjustments)

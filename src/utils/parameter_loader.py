@@ -477,15 +477,16 @@ class StrictParameterLoader:
         config['water_parameters']['vegetative_stage_factor'] = self.get_parameter('water_parameters_vegetative_stage_factor')
         config['water_parameters']['head_formation_stage_factor'] = self.get_parameter('water_parameters_head_formation_stage_factor')
         config['water_parameters']['mature_stage_factor'] = self.get_parameter('water_parameters_mature_stage_factor')
-        config['water_parameters']['optimal_temperature'] = self.get_parameter('water_parameters_optimal_temperature')
+        # Note: optimal_temperature consolidated into phenology_parameters
+        config['water_parameters']['optimal_temperature'] = self.get_parameter('phenology_parameters_optimal_temperature_min')
         config['water_parameters']['temperature_sensitivity'] = self.get_parameter('water_parameters_temperature_sensitivity')
         config['water_parameters']['optimal_vpd_min'] = self.get_parameter('water_parameters_optimal_vpd_min')
         config['water_parameters']['optimal_vpd_max'] = self.get_parameter('water_parameters_optimal_vpd_max')
         config['water_parameters']['vpd_sensitivity'] = self.get_parameter('water_parameters_vpd_sensitivity')
         config['water_parameters']['metabolic_water_per_biomass'] = self.get_parameter('water_parameters_metabolic_water_per_biomass')
         config['water_parameters']['metabolic_water_per_lai'] = self.get_parameter('water_parameters_metabolic_water_per_lai')
-        config['water_parameters']['temp_tolerance'] = self.get_parameter('water_parameters_temp_tolerance')
-        config['water_parameters']['min_temp_factor'] = self.get_parameter('water_parameters_min_temp_factor')
+        config['water_parameters']['temp_tolerance'] = self.get_parameter('water_parameters_temperature_tolerance')
+        config['water_parameters']['min_temp_factor'] = self.get_parameter('water_parameters_minimum_temperature_factor')
         config['water_parameters']['stem_biomass_fraction'] = self.get_parameter('water_parameters_stem_biomass_fraction')
         config['water_parameters']['leaf_area_to_biomass_ratio'] = self.get_parameter('water_parameters_leaf_area_to_biomass_ratio')
 
@@ -857,11 +858,11 @@ class StrictParameterLoader:
         config['root_growth_auxin_decay_rate'] = self.get_parameter('root_system_auxin_decay_rate')
         config['root_optimal_density'] = self.get_parameter('root_system_optimal_density')
         config['root_density_stress_factor'] = self.get_parameter('root_system_density_stress_factor')
-        config['root_temp_optimum'] = self.get_parameter('root_system_temp_optimum')
-        config['root_temp_max'] = self.get_parameter('root_system_temp_max')
-        config['root_temp_min_factor'] = self.get_parameter('root_system_temp_min_factor')
+        config['root_temp_optimum'] = self.get_parameter('root_system_parameters_root_temperature_optimum')
+        config['root_temp_max'] = self.get_parameter('root_system_parameters_root_temperature_maximum')
+        config['root_temp_min_factor'] = self.get_parameter('root_system_parameters_root_temperature_minimum_factor')
         config['root_oxygen_optimum'] = self.get_parameter('root_system_oxygen_optimum')
-        config['root_oxygen_min_factor'] = self.get_parameter('root_system_oxygen_min_factor')
+        config['root_oxygen_min_factor'] = self.get_parameter('root_system_parameters_root_oxygen_minimum_factor')
 
         # pH and stress parameters
         config['ph_stress_range_acidic'] = self.get_parameter('root_system_ph_stress_range_acidic')
@@ -872,7 +873,7 @@ class StrictParameterLoader:
 
         # Additional hardcoded parameters extracted from code
         config['temperature_range_factor'] = self.get_parameter('root_system_temperature_range_factor')
-        config['min_temperature_factor'] = self.get_parameter('root_system_min_temperature_factor')
+        config['min_temperature_factor'] = self.get_parameter('root_system_parameters_minimum_temperature_factor')
         config['max_temperature_factor'] = self.get_parameter('root_system_max_temperature_factor')
         config['low_flow_factor'] = self.get_parameter('root_system_low_flow_factor')
         config['high_flow_factor'] = self.get_parameter('root_system_high_flow_factor')
@@ -907,13 +908,13 @@ class StrictParameterLoader:
         config['temperature_effect_weight'] = self.get_parameter('root_system_temperature_effect_weight')
         config['min_growth_potential'] = self.get_parameter('root_system_min_growth_potential')
         config['max_growth_potential'] = self.get_parameter('root_system_max_growth_potential')
-        config['max_temp_threshold'] = self.get_parameter('root_system_max_temp_threshold')
-        config['temp_decay_factor'] = self.get_parameter('root_system_temp_decay_factor')
+        config['max_temp_threshold'] = self.get_parameter('root_system_parameters_maximum_temperature_threshold')
+        config['temp_decay_factor'] = self.get_parameter('root_system_parameters_temperature_decay_factor')
 
         # Flow and transport parameters
         config['flow_rate_offset'] = self.get_parameter('root_system_flow_rate_offset')
         config['flow_rate_multiplier'] = self.get_parameter('root_system_flow_rate_multiplier')
-        config['transport_temp_exponent'] = self.get_parameter('root_system_transport_temp_exponent')
+        config['transport_temp_exponent'] = self.get_parameter('root_system_parameters_transport_temperature_exponent')
 
         # Minimum value parameters
         config['minimum_surface_area'] = self.get_parameter('root_system_minimum_surface_area')
@@ -989,7 +990,7 @@ class StrictParameterLoader:
         params_dict['max_humidity'] = self.get_parameter('environment_max_humidity')
         params_dict['day_temp'] = self.get_parameter('environment_day_temp')
         params_dict['night_temp'] = self.get_parameter('environment_night_temp')
-        params_dict['temp_tolerance'] = self.get_parameter('environment_temp_tolerance')
+        params_dict['temp_tolerance'] = self.get_parameter('environment_temperature_tolerance')
         params_dict['target_co2'] = self.get_parameter('environment_target_co2')
         params_dict['ambient_co2'] = self.get_parameter('environment_ambient_co2')
         params_dict['co2_tolerance'] = self.get_parameter('environment_co2_tolerance')
@@ -1147,7 +1148,7 @@ class StrictParameterLoader:
             'leaf_lifespan_thermal_time', 'senescence_threshold_age', 'senescence_rate_base',
             'minimum_active_leaf_area', 'minimum_visible_leaf_area', 'late_leaf_vstage_threshold',
             'very_late_leaf_vstage_threshold', 'early_leaf_position_threshold', 'middle_leaf_position_threshold',
-            'early_position_scaling_factor', 'late_position_scaling_factor', 'min_temp', 'max_temp', 'specific_leaf_area'
+            'early_position_scaling_factor', 'late_position_scaling_factor', 'minimum_temperature', 'maximum_temperature', 'specific_leaf_area'
         ]
 
         for param in leaf_dev_params:
@@ -1176,10 +1177,10 @@ class StrictParameterLoader:
 
         # Thermal time parameters (required by from_config)
         config['thermal_time'] = {}
-        config['thermal_time']['base_temp'] = self.get_parameter('leaf_development_min_temp')
+        config['thermal_time']['base_temp'] = self.get_parameter('leaf_development_minimum_temperature')
         config['thermal_time']['optimal_temp_min'] = self.get_parameter('phenology_parameters_optimal_temperature_min')
         config['thermal_time']['optimal_temp_max'] = self.get_parameter('phenology_parameters_optimal_temperature_max')
-        config['thermal_time']['max_temp'] = self.get_parameter('leaf_development_max_temp')
+        config['thermal_time']['max_temp'] = self.get_parameter('leaf_development_maximum_temperature')
 
         # Cache timeout
         config['leaf_development']['cache_timeout'] = self.get_parameter('simulator_defaults_cache_timeout_global')
@@ -1305,7 +1306,7 @@ class StrictParameterLoader:
 
         # Thermal dynamics parameters
         config['thermal_mass_factor'] = self.get_parameter('root_zone_temperature_parameters_rzt_thermal_mass_factor')
-        config['ambient_temp_amplitude'] = self.get_parameter('root_zone_temperature_parameters_rzt_ambient_temp_amplitude')
+        config['ambient_temp_amplitude'] = self.get_parameter('root_zone_temperature_parameters_rzt_ambient_temperature_amplitude')
         config['root_respiration_heat'] = self.get_parameter('root_zone_temperature_parameters_rzt_root_respiration_heat')
         config['pump_heat_generation'] = self.get_parameter('root_zone_temperature_parameters_rzt_pump_heat_generation')
         config['ambient_exchange_factor'] = self.get_parameter('root_zone_temperature_parameters_rzt_ambient_exchange_factor')
