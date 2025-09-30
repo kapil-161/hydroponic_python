@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 import pandas as pd
 
-from .communication_bus import (
+from simulations.communication_bus import (
     SimulationMessageBus, SimulationEvent, EventType, BaseSimulator,
     message_bus
 )

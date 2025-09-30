@@ -11,12 +11,12 @@ from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from .communication_bus import BaseSimulator, SimulationEvent, EventType
-from ..models.phenology_model import (
+from simulations.communication_bus import BaseSimulator, SimulationEvent, EventType
+from models.phenology_model import (
     ComprehensivePhenologyModel, PhenologyParameters,
     LettuceGrowthStage, DevelopmentalState
 )
-from ..models.base_model import DailyUpdateInput, DailyUpdateOutput
+from models.base_model import DailyUpdateInput, DailyUpdateOutput
 
 
 @dataclass
@@ -48,7 +48,7 @@ class PhenologySimulator(BaseSimulator):
         
         self.parameters = parameters
         # Model requires initial_stage parameter
-        from ..models.phenology_model import LettuceGrowthStage
+        from models.phenology_model import LettuceGrowthStage
         initial_stage = LettuceGrowthStage.GERMINATION  # Default starting stage
         self.model = ComprehensivePhenologyModel(self.parameters, initial_stage)
         self.model.initialize()  # Initialize temperature_history and other state

@@ -207,7 +207,7 @@ class PhotosynthesisModel:
 
     def _calculate_temperature_stress_factor(self, temp_c: float, optimal_temp_min: float, optimal_temp_max: float) -> float:
         """Use consolidated temperature stress factor calculation from core_utils."""
-        from src.utils.core_utils import calculate_temperature_stress_factor
+        from utils.core_utils import calculate_temperature_stress_factor
 
         # Create config structure for consolidated function
         # ALL parameters must come from CSV configuration - no hardcoded values like 5.0, 40.0

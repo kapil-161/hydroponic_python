@@ -197,7 +197,7 @@ class LeafDevelopmentModel:
     
     def calculate_thermal_time(self, temperature_list: list) -> list:
         """Use consolidated thermal time calculation from core_utils."""
-        from src.utils.core_utils import calculate_thermal_time_list
+        from utils.core_utils import calculate_thermal_time_list
 
         # Create config structure for consolidated function
         thermal_config = type('Config', (), {

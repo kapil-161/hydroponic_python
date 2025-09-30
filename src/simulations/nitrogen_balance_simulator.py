@@ -11,12 +11,12 @@ from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from .communication_bus import BaseSimulator, SimulationEvent, EventType
-from ..models.nitrogen_balance import (
+from simulations.communication_bus import BaseSimulator, SimulationEvent, EventType
+from models.nitrogen_balance import (
     NitrogenBalanceModel, NitrogenBalanceParameters, OrganNitrogenState,
     NitrogenUptakeResponse, NitrogenAllocationResponse
 )
-from ..models.base_model import DailyUpdateInput, DailyUpdateOutput
+from models.base_model import DailyUpdateInput, DailyUpdateOutput
 
 
 @dataclass

@@ -412,7 +412,7 @@ class WaterUptakeModel:
 
     def _calculate_temperature_factor(self, temperature: float) -> float:
         """Use consolidated temperature factor calculation from core_utils."""
-        from src.utils.core_utils import calculate_temperature_factor
+        from utils.core_utils import calculate_temperature_factor
 
         if not isinstance(temperature, (int, float)):
             raise ValueError("Temperature must be numeric")

@@ -183,7 +183,7 @@ class ComprehensivePhenologyModel:
 
     def calculate_thermal_time(self, temperature: float) -> float:
         """Use consolidated thermal time calculation from core_utils."""
-        from src.utils.core_utils import calculate_thermal_time
+        from utils.core_utils import calculate_thermal_time
 
         if temperature is None:
             raise ValueError("Temperature must be provided")
@@ -203,7 +203,7 @@ class ComprehensivePhenologyModel:
 
     def calculate_temperature_factor(self, temperature: float) -> float:
         """Use consolidated temperature factor calculation from core_utils."""
-        from src.utils.core_utils import calculate_temperature_factor
+        from utils.core_utils import calculate_temperature_factor
 
         # Create config structure for consolidated function
         temp_config = type('Config', (), {

@@ -24,7 +24,7 @@ def get_required_weather_param(weather_data: Dict[str, Any], param_name: str) ->
     return weather_data[param_name]
 
 
-from src.utils.core_utils import (
+from utils.core_utils import (
     get_strict_param,
     ParameterAccessError,
     validate_parameter_range

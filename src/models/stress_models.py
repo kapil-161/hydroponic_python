@@ -1340,7 +1340,7 @@ class UnifiedStressCalculator:
         if not ec_calculator or not solution_temp_calculator:
             raise ValueError("ec_calculator and solution_temp_calculator must be provided")
 
-        from src.utils.core_utils import calculate_ph_effect
+        from utils.core_utils import calculate_ph_effect
 
         actual_temperature = env_conditions['actual_temperature']
         actual_vpd = env_conditions['actual_vpd']

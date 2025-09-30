@@ -140,7 +140,7 @@ class StrictParameterLoader:
 
     def create_photosynthesis_parameters(self):
         """Create photosynthesis parameters from CSV"""
-        from ..models.photosynthesis_model import PhotosynthesisParameters
+        from models.photosynthesis_model import PhotosynthesisParameters
         
         params_dict = {}
         # Add photosynthesis-specific parameters using actual CSV parameter names
@@ -186,7 +186,7 @@ class StrictParameterLoader:
 
     def create_respiration_parameters(self):
         """Create respiration parameters from CSV"""
-        from ..models.respiration_model import RespirationParameters
+        from models.respiration_model import RespirationParameters
         
         params_dict = {}
         # Add respiration-specific parameters using actual CSV parameter names
@@ -266,7 +266,7 @@ class StrictParameterLoader:
 
     def create_biomass_allocation_parameters(self):
         """Create biomass allocation parameters from CSV"""
-        from ..models.biomass_allocation_model import BiomassAllocationParameters
+        from models.biomass_allocation_model import BiomassAllocationParameters
         
         params_dict = {}
         # Add biomass allocation-specific parameters using actual CSV parameter names
@@ -285,7 +285,7 @@ class StrictParameterLoader:
 
     def create_phenology_parameters(self):
         """Create phenology parameters from CSV"""
-        from ..models.phenology_model import PhenologyParameters
+        from models.phenology_model import PhenologyParameters
 
         params_dict = {}
         # Add phenology-specific parameters
@@ -364,7 +364,7 @@ class StrictParameterLoader:
 
     def create_stress_parameters(self):
         """Create stress parameters from CSV - follows Rules.md strictly"""
-        from ..models.stress_models import IntegratedStressParameters
+        from models.stress_models import IntegratedStressParameters
 
         config = {}
 
@@ -457,7 +457,7 @@ class StrictParameterLoader:
 
     def create_water_uptake_parameters(self):
         """Create water uptake parameters from CSV"""
-        from ..models.water_uptake_model import WaterUptakeParameters
+        from models.water_uptake_model import WaterUptakeParameters
 
         # Create config structure for WaterUptakeParameters.from_config()
         config = {
@@ -512,7 +512,7 @@ class StrictParameterLoader:
 
     def create_nutrient_parameters(self):
         """Create nutrient parameters from CSV"""
-        from ..models.nutrient_models import NutrientParameters
+        from models.nutrient_models import NutrientParameters
 
         config = {}
 
@@ -658,7 +658,7 @@ class StrictParameterLoader:
 
     def create_canopy_architecture_parameters(self):
         """Create canopy architecture parameters from CSV"""
-        from ..models.canopy_architecture import CanopyArchitectureParameters
+        from models.canopy_architecture import CanopyArchitectureParameters
 
         params_dict = {}
         # Add all canopy architecture parameters from CSV
@@ -705,7 +705,7 @@ class StrictParameterLoader:
 
     def create_ph_parameters(self):
         """Create pH parameters from CSV - follows Rules.md strictly"""
-        from ..models.ph_model import PHParameters
+        from models.ph_model import PHParameters
 
         config = {}
 
@@ -787,7 +787,7 @@ class StrictParameterLoader:
 
     def create_root_system_parameters(self):
         """Create root system parameters from CSV"""
-        from ..models.root_system_model import RootSystemParameters, HydroponicSystemType
+        from models.root_system_model import RootSystemParameters, HydroponicSystemType
 
         # Create configuration sections required by from_config
         config = {}
@@ -978,7 +978,7 @@ class StrictParameterLoader:
 
     def create_environmental_control_parameters(self):
         """Create environmental control parameters from CSV"""
-        from ..models.environmental_control import EnvironmentalSetpoints, ControlEquipment
+        from models.environmental_control import EnvironmentalSetpoints, ControlEquipment
 
         # Prepare parameter dictionary for EnvironmentalSetpoints
         params_dict = {}
@@ -1054,7 +1054,7 @@ class StrictParameterLoader:
 
     def create_genetic_parameters(self):
         """Create genetic parameters from CSV - follows Rules.md strictly"""
-        from ..models.genetic_parameters import (
+        from models.genetic_parameters import (
             GeneticParameterDatabase, CultivarProfile, GeneticCoefficients,
             LettuceType, GeneticTrait
         )
@@ -1133,7 +1133,7 @@ class StrictParameterLoader:
 
     def create_leaf_development_parameters(self):
         """Create leaf development parameters from CSV"""
-        from ..models.leaf_development import LeafParameters
+        from models.leaf_development import LeafParameters
 
         config = {}
 
@@ -1189,7 +1189,7 @@ class StrictParameterLoader:
 
     def create_nitrogen_balance_parameters(self):
         """Create nitrogen balance parameters from CSV"""
-        from ..models.nitrogen_balance import NitrogenBalanceParameters
+        from models.nitrogen_balance import NitrogenBalanceParameters
 
         config = {}
 
@@ -1266,7 +1266,7 @@ class StrictParameterLoader:
 
     def create_root_zone_temperature_parameters(self):
         """Create root zone temperature parameters from CSV - follows Rules.md strictly"""
-        from ..models.root_zone_temperature import RZTParameters
+        from models.root_zone_temperature import RZTParameters
 
         config = {}
 
@@ -1324,7 +1324,7 @@ class StrictParameterLoader:
 
     def create_senescence_parameters(self):
         """Create senescence parameters from CSV - follows Rules.md strictly"""
-        from ..models.senescence_model import SenescenceParameters
+        from models.senescence_model import SenescenceParameters
 
         config = {}
 

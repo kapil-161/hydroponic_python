@@ -18,30 +18,30 @@ parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-from .simulation_orchestrator import SimulationOrchestrator, SimulationConfig
-from .communication_bus import message_bus
+from simulations.simulation_orchestrator import SimulationOrchestrator, SimulationConfig
+from simulations.communication_bus import message_bus
 
 # Import all simulators
-from .photosynthesis_simulator import PhotosynthesisSimulator
-from .respiration_simulator import RespirationSimulator
-from .biomass_allocation_simulator import BiomassAllocationSimulator
-from .phenology_simulator import PhenologySimulator
-from .stress_models_simulator import StressModelsSimulator
-from .water_uptake_simulator import WaterUptakeSimulator
-from .nutrient_models_simulator import NutrientModelsSimulator
-from .canopy_architecture_simulator import CanopyArchitectureSimulator
-from .ph_model_simulator import PHModelSimulator
-from .root_system_simulator import RootSystemSimulator
-from .environmental_control_simulator import EnvironmentalControlSimulator
-from .genetic_parameters_simulator import GeneticParametersSimulator
-from .leaf_development_simulator import LeafDevelopmentSimulator
-from .nitrogen_balance_simulator import NitrogenBalanceSimulator
-from .root_zone_temperature_simulator import RootZoneTemperatureSimulator
-from .senescence_simulator import SenescenceSimulator
+from simulations.photosynthesis_simulator import PhotosynthesisSimulator
+from simulations.respiration_simulator import RespirationSimulator
+from simulations.biomass_allocation_simulator import BiomassAllocationSimulator
+from simulations.phenology_simulator import PhenologySimulator
+from simulations.stress_models_simulator import StressModelsSimulator
+from simulations.water_uptake_simulator import WaterUptakeSimulator
+from simulations.nutrient_models_simulator import NutrientModelsSimulator
+from simulations.canopy_architecture_simulator import CanopyArchitectureSimulator
+from simulations.ph_model_simulator import PHModelSimulator
+from simulations.root_system_simulator import RootSystemSimulator
+from simulations.environmental_control_simulator import EnvironmentalControlSimulator
+from simulations.genetic_parameters_simulator import GeneticParametersSimulator
+from simulations.leaf_development_simulator import LeafDevelopmentSimulator
+from simulations.nitrogen_balance_simulator import NitrogenBalanceSimulator
+from simulations.root_zone_temperature_simulator import RootZoneTemperatureSimulator
+from simulations.senescence_simulator import SenescenceSimulator
 
 # Import parameter loaders
-from ..utils.parameter_loader import StrictParameterLoader
-from ..utils.weather_loader import WeatherDataLoader
+from utils.parameter_loader import StrictParameterLoader
+from utils.weather_loader import WeatherDataLoader
 
 
 class DistributedSimulationRunner:

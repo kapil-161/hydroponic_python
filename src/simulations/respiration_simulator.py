@@ -11,12 +11,12 @@ from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from .communication_bus import BaseSimulator, SimulationEvent, EventType
-from src.models.respiration_model import (
+from simulations.communication_bus import BaseSimulator, SimulationEvent, EventType
+from models.respiration_model import (
     EnhancedRespirationModel, RespirationParameters, BiomassPool,
     RespirationComponents, TissueType
 )
-from src.models.base_model import DailyUpdateInput, DailyUpdateOutput
+from models.base_model import DailyUpdateInput, DailyUpdateOutput
 
 
 @dataclass

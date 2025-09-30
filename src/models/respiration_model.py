@@ -398,7 +398,7 @@ class EnhancedRespirationModel:
 
     def _calculate_temperature_stress_factor(self, temperature: float) -> float:
         """Use consolidated temperature stress factor calculation from core_utils."""
-        from src.utils.core_utils import calculate_temperature_stress_factor
+        from utils.core_utils import calculate_temperature_stress_factor
 
         if temperature is None:
             raise ValueError("Temperature must be provided")
