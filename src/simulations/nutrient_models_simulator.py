@@ -92,11 +92,37 @@ class NutrientModelsSimulator(BaseSimulator):
         print("Nutrient models simulator: Simulation started")
         self.state = NutrientState()
 
+        # Re-initialize nutrient dictionaries after state reset
+        for element in self.nutrient_elements:
+            self.state.nutrient_concentrations[element] = 0.0
+            self.state.nutrient_uptake_rates[element] = 0.0
+            self.state.nutrient_availability[element] = 0.0
+            self.state.root_nutrient_pools[element] = 0.0
+            self.state.shoot_nutrient_pools[element] = 0.0
+            self.state.xylem_flux[element] = 0.0
+            self.state.phloem_flux[element] = 0.0
+            self.state.cumulative_nutrient_uptake[element] = 0.0
+            self.state.daily_nutrient_uptake[element] = 0.0
+
         # Load initial nutrient concentrations from CSV
         initial_state = data.get('initial_state', {})
         if initial_state:
             self.state.solution_ec = initial_state.get('solution_ec', 2.0)
             self.state.solution_ph = initial_state.get('solution_ph', 6.0)
+
+            # Load initial nutrient concentrations if available
+            for element in self.nutrient_elements:
+                conc_key = f'nutrient_{element.lower().replace("-", "_")}_concentration'
+                if conc_key in initial_state:
+                    self.state.nutrient_concentrations[element] = initial_state[conc_key]
+                elif element in ['N-NO3', 'N-NH4', 'P-PO4', 'K']:
+                    # Set default starting concentrations for major nutrients
+                    defaults = {'N-NO3': 150.0, 'N-NH4': 10.0, 'P-PO4': 50.0, 'K': 200.0}
+                    self.state.nutrient_concentrations[element] = defaults.get(element, 0.1)
+                else:
+                    # Micronutrients start at trace levels
+                    self.state.nutrient_concentrations[element] = 0.1
+
             print(f"Nutrient: Initialized EC={self.state.solution_ec}, pH={self.state.solution_ph} from CSV")
 
         # Load system configuration from initials.csv into dependency cache

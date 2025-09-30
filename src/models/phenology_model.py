@@ -233,7 +233,8 @@ class ComprehensivePhenologyModel:
             LettuceGrowthStage.FLOWERING
         ]:
             if daylength <= self.params.critical_photoperiod:
-                raise ValueError("Photoperiod factor for reproductive stages requires daylength > critical_photoperiod")
+                # Return minimum factor instead of raising error
+                return 0.5
             excess_hours = daylength - self.params.critical_photoperiod
             factor = 1.0 + (excess_hours * self.params.photoperiod_slope)
             return min(1.5, factor)

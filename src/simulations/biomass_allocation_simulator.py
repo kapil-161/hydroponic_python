@@ -103,10 +103,19 @@ class BiomassAllocationSimulator(BaseSimulator):
         self.state = BiomassState()
         self.history.clear()
         self.dependency_cache.clear()
-        
+
+        # Load initial biomass from CSV initial_state
+        initial_state = data.get('initial_state', {})
+        if initial_state:
+            self.state.leaf_biomass = initial_state.get('leaf_biomass', 0.1)
+            self.state.stem_biomass = initial_state.get('stem_biomass', 0.05)
+            self.state.root_biomass = initial_state.get('root_biomass', 0.1)
+            self.state.total_biomass = self.state.leaf_biomass + self.state.stem_biomass + self.state.root_biomass
+            print(f"Biomass: Initialized leaf={self.state.leaf_biomass}, stem={self.state.stem_biomass}, root={self.state.root_biomass}")
+
         # Initialize model with parameters from CSV
         self.model.initialize()
-        
+
         # Publish initial state
         self.publish_event(EventType.BIOMASS_UPDATE, {
             'total_biomass': self.state.total_biomass,

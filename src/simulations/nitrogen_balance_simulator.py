@@ -362,7 +362,7 @@ class NitrogenBalanceSimulator(BaseSimulator):
             )
 
             demand_result = self.model.calculate_nitrogen_demand(
-                organ_growth_rates={'leaf': 0.1, 'stem': 0.05, 'root': 0.05},
+                organ_growth_rates={'leaves': 0.1, 'stems': 0.05, 'roots': 0.05},
                 growth_stage=growth_stage,
                 environmental_factors={
                     'temperature': weather_data.get('temperature', 20.0),

@@ -453,10 +453,14 @@ class NutrientModel:
         }
 
     def _calculate_sink_demands(self, organ_demands: Dict[str, Dict[str, float]], growth_stage: str) -> Dict[str, Dict[str, float]]:
-        if growth_stage not in self.params.sink_strength_coefficients:
+        # Map growth stages to sink strength coefficients stages
+        stage_map = {'mature': 'reproductive', 'head_formation': 'reproductive'}
+        mapped_stage = stage_map.get(growth_stage, growth_stage)
+
+        if mapped_stage not in self.params.sink_strength_coefficients:
             raise KeyError(f"Invalid growth stage: {growth_stage}")
         adjusted = {}
-        sink_coeffs = self.params.sink_strength_coefficients[growth_stage]
+        sink_coeffs = self.params.sink_strength_coefficients[mapped_stage]
         for organ_name, demands in organ_demands.items():
             adjusted[organ_name] = {}
             if organ_name not in sink_coeffs:

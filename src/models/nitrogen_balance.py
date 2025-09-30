@@ -238,7 +238,12 @@ class NitrogenBalanceModel:
         for key in required_env:
             if key not in environmental_factors:
                 raise KeyError(f"Missing environmental factor: {key}")
-        if growth_stage not in self.params.allocation_coefficients:
+
+        # Map growth stages to allocation coefficients stages
+        stage_map = {'mature': 'reproductive', 'head_formation': 'reproductive'}
+        mapped_stage = stage_map.get(growth_stage, growth_stage)
+
+        if mapped_stage not in self.params.allocation_coefficients:
             raise KeyError(f"Invalid growth stage: {growth_stage}")
 
         demand_by_organ = {}
@@ -252,9 +257,9 @@ class NitrogenBalanceModel:
                 raise KeyError(f"Missing critical N concentrations for {organ_name}")
             n_concs = self.params.critical_n_concentrations[organ_name]
             target_concentration = n_concs['optimal']
-            if growth_stage == 'vegetative' and organ_name == 'leaves':
+            if mapped_stage == 'vegetative' and organ_name == 'leaves':
                 target_concentration *= 1.1
-            elif growth_stage == 'reproductive' and organ_name == 'reproductive':
+            elif mapped_stage == 'reproductive' and organ_name == 'reproductive':
                 target_concentration *= 1.2
             demand_by_organ[organ_name] = growth_rate * target_concentration * demand_modifier if growth_rate > 0 else 0.0
 
@@ -262,9 +267,13 @@ class NitrogenBalanceModel:
 
     def allocate_nitrogen(self, available_nitrogen: float, nitrogen_demand: Dict[str, float],
                          growth_stage: str) -> NitrogenAllocationResponse:
-        if growth_stage not in self.params.allocation_coefficients:
+        # Map growth stages to allocation coefficients stages
+        stage_map = {'mature': 'reproductive', 'head_formation': 'reproductive'}
+        mapped_stage = stage_map.get(growth_stage, growth_stage)
+
+        if mapped_stage not in self.params.allocation_coefficients:
             raise KeyError(f"Invalid growth stage: {growth_stage}")
-        priorities = self.params.allocation_coefficients[growth_stage]
+        priorities = self.params.allocation_coefficients[mapped_stage]
         allocated_by_organ = {}
         demand_satisfaction = {}
         total_demand = sum(nitrogen_demand.values())

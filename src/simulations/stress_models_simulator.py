@@ -207,12 +207,23 @@ class StressModelsSimulator(BaseSimulator):
     def _execute_stress_step(self, weather_data: Dict[str, Any]):
         """Execute stress calculation using model functions - no shortcuts"""
         try:
-            # Get environmental conditions from environmental control simulator
+            # Get environmental conditions from weather data directly
+            # Environmental control simulator adjusts these but we use actual weather first
+            temperature = weather_data.get('temperature')
+            humidity = weather_data.get('humidity')
+            light_intensity = weather_data.get('light_intensity')
+            co2_concentration = weather_data.get('co2_concentration')
+
+            # Override with environmental control if available
             env_data = self.dependency_cache.get('environmental_control', {})
-            temperature = env_data.get('temperature')
-            humidity = env_data.get('humidity')
-            light_intensity = env_data.get('light_intensity')
-            co2_concentration = env_data.get('co2_concentration')
+            if env_data.get('temperature') is not None:
+                temperature = env_data.get('temperature')
+            if env_data.get('humidity') is not None:
+                humidity = env_data.get('humidity')
+            if env_data.get('light_intensity') is not None:
+                light_intensity = env_data.get('light_intensity')
+            if env_data.get('co2_concentration') is not None:
+                co2_concentration = env_data.get('co2_concentration')
             
             # Per Rules.md: raise error if missing, no defaults
             if temperature is None:

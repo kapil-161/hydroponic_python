@@ -658,8 +658,8 @@ class SimulationOrchestrator(BaseSimulator):
                 return False
             
             # Check if harvest maturity has been reached
-            from ..models.phenology_model import LettuceGrowthStage
-            harvest_maturity_reached = (current_stage == LettuceGrowthStage.HARVEST_MATURITY.value or 
+            from models.phenology_model import LettuceGrowthStage
+            harvest_maturity_reached = (current_stage == LettuceGrowthStage.HARVEST_MATURITY.value or
                                       str(current_stage) == "LettuceGrowthStage.HARVEST_MATURITY")
             
             if harvest_maturity_reached:

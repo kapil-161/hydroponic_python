@@ -585,7 +585,7 @@ class SenescenceSimulator(BaseSimulator):
         for sen_type in self.senescence_types:
             senescence_data[f'{sen_type}_senescence'] = self.state.senescence_type_distribution.get(sen_type, 0.0)
 
-        for factor in self.senescence_factors:
+        for factor in self.senescence_factor_types:
             senescence_data[f'{factor}_factor'] = self.state.senescence_factors.get(factor, 1.0)
 
         self.dependency_cache['senescence_simulator'] = senescence_data

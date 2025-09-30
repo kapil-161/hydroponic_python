@@ -34,13 +34,19 @@ class WeatherDataLoader:
             # Map actual column names to expected names
             column_mapping = {
                 'temp_avg': 'temperature',
-                'rel_humidity': 'humidity', 
+                'temp_min': 'temperature_min',
+                'temp_max': 'temperature_max',
+                'rel_humidity': 'humidity',
                 'par': 'light_intensity',
-                'co2_ppm': 'co2_concentration'
+                'co2_ppm': 'co2_concentration',
+                'rainfall': 'precipitation'
             }
-            
+
             # Rename columns to standard names
             self.weather_data = self.weather_data.rename(columns=column_mapping)
+
+            # Add vpd and rzt to expected columns since they're in the CSV
+            # These don't need mapping as they're already correctly named
             
             # Validate required columns
             required_columns = ['date', 'temperature', 'humidity', 'light_intensity', 'co2_concentration']
