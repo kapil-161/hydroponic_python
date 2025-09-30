@@ -8,6 +8,7 @@ Manages timing, synchronization, and coordination between all 17 simulators.
 import asyncio
 import threading
 import time
+import math
 from typing import Dict, Any, List, Optional, Set
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -22,35 +23,68 @@ from models.base_model import DailyUpdateInput, DailyUpdateOutput
 
 @dataclass
 class SimulationConfig:
-    """Configuration for the distributed simulation"""
-    total_days: int = 120  # Maximum days (safety limit), simulation stops at harvest maturity
-    steps_per_day: int = 24  # hourly steps
-    step_duration_seconds: float = 0.1  # Real-time duration of each step
-    start_day: int = 1
-    start_hour: int = 0
-    enable_real_time: bool = False
-    synchronization_mode: str = "sequential"  # sequential, parallel, event_driven
-    data_collection_interval: int = 1  # Collect data every N steps
-    max_concurrent_simulators: int = 17
+    """Configuration for the distributed simulation - per Rules.md: no hardcoded values"""
+    total_days: int
+    steps_per_day: int
+    step_duration_seconds: float
+    start_day: int
+    start_hour: int
+    enable_real_time: bool
+    synchronization_mode: str  # sequential, parallel, event_driven
+    data_collection_interval: int  # Collect data every N steps
+    max_concurrent_simulators: int
+    max_errors: int  # Maximum errors allowed before termination
+
+    @classmethod
+    def from_csv_parameters(cls, parameters: Dict[str, Any]) -> 'SimulationConfig':
+        """Create configuration from CSV parameters - per Rules.md: all from CSV"""
+        required_params = [
+            'total_days', 'steps_per_day', 'step_duration_seconds', 'start_day', 'start_hour',
+            'enable_real_time', 'synchronization_mode', 'data_collection_interval', 'max_concurrent_simulators', 'max_errors'
+        ]
+
+        for param in required_params:
+            if param not in parameters:
+                raise ValueError(f"Required simulation configuration parameter '{param}' missing from CSV parameters")
+
+        return cls(
+            total_days=int(parameters['total_days']),
+            steps_per_day=int(parameters['steps_per_day']),
+            step_duration_seconds=float(parameters['step_duration_seconds']),
+            start_day=int(parameters['start_day']),
+            start_hour=int(parameters['start_hour']),
+            enable_real_time=bool(parameters['enable_real_time']),
+            synchronization_mode=str(parameters['synchronization_mode']),
+            data_collection_interval=int(parameters['data_collection_interval']),
+            max_concurrent_simulators=int(parameters['max_concurrent_simulators']),
+            max_errors=int(parameters['max_errors'])
+        )
 
 
 class SimulationOrchestrator(BaseSimulator):
     """Central orchestrator for distributed hydroponic simulation"""
     
-    def __init__(self, config: SimulationConfig = None):
+    def __init__(self, config: SimulationConfig):
         super().__init__("orchestrator")
-        self.config = config or SimulationConfig()
+        # Per Rules.md: no default values, configuration must be provided from CSV
+        if config is None:
+            raise ValueError("SimulationConfig must be provided from CSV parameters - no defaults allowed per Rules.md")
+        self.config = config
         self.simulators: Dict[str, BaseSimulator] = {}
         self.simulation_data: List[Dict[str, Any]] = []
         self.start_time: Optional[datetime] = None
         self.end_time: Optional[datetime] = None
+
+        # Shared data cache for cross-simulator communication
+        self.shared_data_cache: Dict[str, Dict[str, Any]] = {}
         self.current_step = 0
         self.current_day = self.config.start_day
         self.current_hour = self.config.start_hour
         self.is_running = False
         self.is_paused = False
         self.error_count = 0
-        self.max_errors = 100  # Allow more errors during initial dependency building
+        # max_errors comes from configuration parameters per Rules.md
+        self.max_errors = config.max_errors
         
         # Performance tracking
         self.step_times: List[float] = []
@@ -73,35 +107,51 @@ class SimulationOrchestrator(BaseSimulator):
                 del self.simulator_performance[simulator_id]
             print(f"Orchestrator: Unregistered {simulator_id}")
     
-    def start_simulation(self, weather_data: pd.DataFrame = None):
-        """Start the distributed simulation"""
+    def start_simulation(self, weather_data: pd.DataFrame = None, initial_state: Dict[str, Any] = None):
+        """Start the distributed simulation with initial state from CSV"""
         if self.is_running:
             print("Simulation is already running")
             return
-        
+
         print(f"Starting distributed simulation with {len(self.simulators)} simulators")
         self.start_time = datetime.now()
         self.is_running = True
         self.is_paused = False
         self.current_step = 0
         self.error_count = 0
-        
+
         # Initialize data collection
         self.collected_data = {sim_id: [] for sim_id in self.simulators.keys()}
-        
+
         # Start message bus
         self.message_bus.start()
-        
-        # Send simulation start event
+
+        # Send simulation start event with initial state from CSV
         self.publish_event(
             EventType.SIMULATION_START,
             data={
                 'total_days': self.config.total_days,
                 'steps_per_day': self.config.steps_per_day,
-                'weather_data': weather_data.to_dict('records') if weather_data is not None else None
+                'weather_data': weather_data.to_dict('records') if weather_data is not None else None,
+                'initial_state': initial_state.get('initial_state', {}) if initial_state else {},
+                'system_config': initial_state.get('system_config', {}) if initial_state else {}
             }
         )
-        
+
+        # Allow time for all simulators to process SIMULATION_START and publish initial data
+        print("Waiting for simulators to publish initial state...")
+        time.sleep(0.5)  # Give time for all on_simulation_start() methods to complete
+
+        # Process all pending events multiple times to ensure all subscriptions are updated
+        for i in range(5):
+            self.message_bus._process_pending_events()
+            time.sleep(0.1)
+
+        # Collect initial data from all simulators into shared cache
+        self._collect_simulator_data_to_shared_cache()
+
+        print("Initial state published by all simulators")
+
         # Start simulation loop
         self._run_simulation_loop(weather_data)
     
@@ -189,28 +239,70 @@ class SimulationOrchestrator(BaseSimulator):
             if self.error_count >= self.max_errors:
                 print("Maximum errors reached, terminating simulation")
                 self.terminate_simulation()
-    
+
+    def _collect_simulator_data_to_shared_cache(self):
+        """Collect data from all simulators into shared cache for cross-simulator access"""
+        for simulator_id, simulator in self.simulators.items():
+            try:
+                # Use publish_state_data() method if available to get correctly-keyed data
+                if hasattr(simulator, 'publish_state_data') and callable(simulator.publish_state_data):
+                    # Call publish_state_data() to get properly formatted dict
+                    simulator.publish_state_data()
+
+                    # Then retrieve from dependency_cache (where publish_state_data stores it)
+                    if hasattr(simulator, 'dependency_cache') and simulator.simulator_id in simulator.dependency_cache:
+                        state_dict = simulator.dependency_cache[simulator.simulator_id]
+                        self.shared_data_cache[simulator_id] = state_dict
+                        print(f"Shared cache: Collected {len(state_dict)} values from {simulator_id}")
+                    else:
+                        print(f"Warning: {simulator_id} has no dependency_cache entry after publish_state_data()")
+                elif hasattr(simulator, 'state'):
+                    # Fallback: Convert state to dict directly
+                    state_dict = {}
+                    for attr in dir(simulator.state):
+                        if not attr.startswith('_'):
+                            try:
+                                value = getattr(simulator.state, attr, None)
+                                if value is not None and not callable(value):
+                                    state_dict[attr] = value
+                            except AttributeError:
+                                # Skip attributes that can't be accessed
+                                continue
+                    self.shared_data_cache[simulator_id] = state_dict
+                    print(f"Shared cache: Collected {len(state_dict)} values from {simulator_id} (fallback)")
+            except Exception as e:
+                # Make collection non-fatal - simulator will work with partial data
+                print(f"Warning: Could not collect data from {simulator_id}: {e}")
+                self.shared_data_cache[simulator_id] = {}
+
     def _execute_dependency_ordered_step(self, weather_data: Dict[str, Any]):
         """Execute simulators in dependency order to avoid circular dependencies"""
         # Define execution order based on dependencies - PROPER SCIENTIFIC ORDER
         # Level 1: Independent simulators that can run with just weather data
+        # Level 2: Simulators that depend on Level 1 outputs
+        # Level 3: Simulators that depend on Level 1 & 2 outputs (including genetic_parameters)
         execution_order = [
-            'genetic_parameters_simulator',
+            # Level 1: Independent simulators (weather data only or initial state from CSV)
             'phenology_simulator',
-            'environmental_control_simulator',
-            'stress_models_simulator',
+            'environmental_control',  # ID is 'environmental_control' not 'environmental_control_simulator'
+            'ph_model_simulator',
+            'genetic_parameters_simulator',  # Has initial traits from CSV
+            'root_system_simulator',  # Has initial biomass from CSV
+            'stress_models',  # ID is 'stress_models' not 'stress_models_simulator'
+
+            # Level 2: Basic physiological models (depend on Level 1)
             'photosynthesis_simulator',
             'respiration_simulator',
             'water_uptake_simulator',
-            'ph_model_simulator',
-            'root_zone_temperature_simulator',
-            'biomass_allocation_simulator',
-            'root_system_simulator',
-            'nutrient_models_simulator',
-            'nitrogen_balance_simulator',
+            'root_zone_temperature_simulator',  # Needs root data from root_system
+            'senescence_simulator',  # Needs stress data from stress_models
+            'biomass_allocation_simulator',  # Needs genetic data from genetic_parameters
+
+            # Level 3: Advanced models that require Level 1 & 2 data
+            'nitrogen_balance_simulator',  # Needs root data
+            'nutrient_models_simulator',  # Needs biomass data
             'leaf_development_simulator',
-            'canopy_architecture_simulator',
-            'senescence_simulator'
+            'canopy_architecture_simulator'
         ]
         
         # Execute simulators in dependency order
@@ -219,16 +311,42 @@ class SimulationOrchestrator(BaseSimulator):
                 try:
                     simulator = self.simulators[simulator_id]
                     
-                    # Create simulation step data
+                    # Create simulation step data with shared cache
                     step_data = {
                         'day': self.current_day,
                         'hour': self.current_hour,
                         'weather_data': weather_data,
-                        'step': self.current_step
+                        'step': self.current_step,
+                        'shared_data': self.shared_data_cache  # Provide shared cache
                     }
-                    
+
+                    # Inject shared data into simulator's dependency_cache before execution
+                    if hasattr(simulator, 'dependency_cache'):
+                        for dep_simulator_id, dep_data in self.shared_data_cache.items():
+                            if dep_simulator_id != simulator_id:  # Don't inject self
+                                simulator.dependency_cache[dep_simulator_id] = dep_data
+                                # Set cache timestamp to prevent _update_dependencies() from invalidating it
+                                if hasattr(simulator, 'cache_timestamp'):
+                                    simulator.cache_timestamp[dep_simulator_id] = datetime.now()
+
                     # Execute simulator step
                     simulator.on_simulation_step(step_data)
+
+                    # Update shared cache after execution using publish_state_data()
+                    if hasattr(simulator, 'publish_state_data') and callable(simulator.publish_state_data):
+                        simulator.publish_state_data()
+                        # Retrieve from dependency_cache where publish_state_data stores it
+                        if hasattr(simulator, 'dependency_cache') and simulator.simulator_id in simulator.dependency_cache:
+                            self.shared_data_cache[simulator_id] = simulator.dependency_cache[simulator.simulator_id]
+                    elif hasattr(simulator, 'state'):
+                        # Fallback: Convert state to dict directly
+                        state_dict = {}
+                        for attr in dir(simulator.state):
+                            if not attr.startswith('_'):
+                                value = getattr(simulator.state, attr, None)
+                                if value is not None and not callable(value):
+                                    state_dict[attr] = value
+                        self.shared_data_cache[simulator_id] = state_dict
                     
                     # Give time for data to be published to message bus
                     time.sleep(0.01)  # Increased delay to ensure data propagation
@@ -240,22 +358,52 @@ class SimulationOrchestrator(BaseSimulator):
                     print(f"Error in dependency-ordered execution of {simulator_id}: {e}")
                     self.error_count += 1
     
-    def _execute_sequential_step(self):
+    def _execute_sequential_step(self, weather_data: Dict[str, Any] = None):
         """Execute simulation step sequentially"""
+        # Per Rules.md: no hardcoded values, all data must come from weather data or CSV
+        if weather_data is None:
+            raise ValueError("Weather data required for simulation step - no hardcoded values allowed per Rules.md")
+
         for simulator_id, simulator in self.simulators.items():
             try:
                 step_start = time.time()
-                
-                # Create daily update input
+
+                # Create daily update input from weather data - per Rules.md: no hardcoded values
+                temperature = weather_data.get('temperature')
+                humidity = weather_data.get('humidity')
+
+                # Calculate VPD if not provided in weather data
+                vpd = weather_data.get('vpd')
+                if vpd is None and temperature is not None and humidity is not None:
+                    # Calculate VPD from temperature and humidity
+                    saturation_vapor_pressure = 0.6108 * math.exp((17.27 * temperature) / (temperature + 237.3))
+                    actual_vapor_pressure = saturation_vapor_pressure * (humidity / 100.0)
+                    vpd = saturation_vapor_pressure - actual_vapor_pressure
+
                 daily_input = DailyUpdateInput(
                     day=self.current_day,
-                    hour=self.current_hour,
-                    temperature=25.0,  # Default values - should come from weather data
-                    humidity=60.0,
-                    light_intensity=500.0,
-                    co2_concentration=400.0,
-                    nutrient_concentration={'N': 100, 'P': 50, 'K': 150}
+                    date=datetime.now(),
+                    temperature=temperature,
+                    humidity=humidity,
+                    solar_radiation=weather_data.get('solar_radiation'),
+                    vpd=vpd,
+                    co2_concentration=weather_data.get('co2_concentration'),
+                    environmental_conditions=weather_data.copy(),
+                    plant_state={},
+                    system_state={}
                 )
+
+                # Validate required weather data
+                if daily_input.temperature is None:
+                    raise ValueError("Temperature data required from weather data")
+                if daily_input.humidity is None:
+                    raise ValueError("Humidity data required from weather data")
+                if daily_input.solar_radiation is None:
+                    raise ValueError("Solar radiation data required from weather data")
+                if daily_input.vpd is None:
+                    raise ValueError("VPD data required (calculated from temperature and humidity) from weather data")
+                if daily_input.co2_concentration is None:
+                    raise ValueError("CO2 concentration data required from weather data")
                 
                 # Execute simulator step
                 if hasattr(simulator, 'daily_update'):
@@ -270,15 +418,19 @@ class SimulationOrchestrator(BaseSimulator):
                 print(f"Error in simulator {simulator_id}: {e}")
                 self.error_count += 1
     
-    def _execute_parallel_step(self):
+    def _execute_parallel_step(self, weather_data: Dict[str, Any] = None):
         """Execute simulation step in parallel"""
         import concurrent.futures
-        
+
+        # Per Rules.md: no hardcoded values, weather data required
+        if weather_data is None:
+            raise ValueError("Weather data required for parallel simulation step - no hardcoded values allowed per Rules.md")
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.config.max_concurrent_simulators) as executor:
             futures = {}
-            
+
             for simulator_id, simulator in self.simulators.items():
-                future = executor.submit(self._execute_simulator_step, simulator_id, simulator)
+                future = executor.submit(self._execute_simulator_step, simulator_id, simulator, weather_data)
                 futures[future] = simulator_id
             
             # Wait for all simulators to complete
@@ -298,18 +450,49 @@ class SimulationOrchestrator(BaseSimulator):
         # The orchestrator just publishes the step event and waits for responses
         pass
     
-    def _execute_simulator_step(self, simulator_id: str, simulator: BaseSimulator):
+    def _execute_simulator_step(self, simulator_id: str, simulator: BaseSimulator, weather_data: Dict[str, Any] = None):
         """Execute a single simulator step"""
         try:
+            # Per Rules.md: no hardcoded values, all data must come from weather data
+            if weather_data is None:
+                raise ValueError("Weather data required for simulator step - no hardcoded values allowed per Rules.md")
+
+            # Per Rules.md: calculate VPD from temperature and humidity if not provided
+            temperature = weather_data.get('temperature')
+            humidity = weather_data.get('humidity')
+
+            # Calculate VPD if not provided in weather data
+            vpd = weather_data.get('vpd')
+            if vpd is None and temperature is not None and humidity is not None:
+                # Calculate VPD from temperature and humidity
+                saturation_vapor_pressure = 0.6108 * math.exp((17.27 * temperature) / (temperature + 237.3))
+                actual_vapor_pressure = saturation_vapor_pressure * (humidity / 100.0)
+                vpd = saturation_vapor_pressure - actual_vapor_pressure
+
             daily_input = DailyUpdateInput(
                 day=self.current_day,
-                hour=self.current_hour,
-                temperature=25.0,
-                humidity=60.0,
-                light_intensity=500.0,
-                co2_concentration=400.0,
-                nutrient_concentration={'N': 100, 'P': 50, 'K': 150}
+                date=datetime.now(),
+                temperature=temperature,
+                humidity=humidity,
+                solar_radiation=weather_data.get('solar_radiation'),
+                vpd=vpd,
+                co2_concentration=weather_data.get('co2_concentration'),
+                environmental_conditions=weather_data.copy(),
+                plant_state={},
+                system_state={}
             )
+
+            # Validate required weather data
+            if daily_input.temperature is None:
+                raise ValueError(f"Temperature data required from weather data for {simulator_id}")
+            if daily_input.humidity is None:
+                raise ValueError(f"Humidity data required from weather data for {simulator_id}")
+            if daily_input.solar_radiation is None:
+                raise ValueError(f"Solar radiation data required from weather data for {simulator_id}")
+            if daily_input.vpd is None:
+                raise ValueError(f"VPD data required (calculated from temperature and humidity) from weather data for {simulator_id}")
+            if daily_input.co2_concentration is None:
+                raise ValueError(f"CO2 concentration data required from weather data for {simulator_id}")
             
             if hasattr(simulator, 'daily_update'):
                 return simulator.daily_update(daily_input)
@@ -320,17 +503,24 @@ class SimulationOrchestrator(BaseSimulator):
     
     def _process_simulator_output(self, simulator_id: str, output: DailyUpdateOutput):
         """Process output from a simulator"""
-        if output and hasattr(output, 'outputs'):
+        if output and hasattr(output, 'primary_results'):
             # Store simulator-specific data
             if simulator_id not in self.collected_data:
                 self.collected_data[simulator_id] = []
-            
+
+            # Combine primary and secondary results for storage
+            all_results = {}
+            all_results.update(output.primary_results)
+            all_results.update(output.secondary_results)
+
             self.collected_data[simulator_id].append({
                 'step': self.current_step,
                 'day': self.current_day,
                 'hour': self.current_hour,
                 'timestamp': datetime.now(),
-                'data': output.outputs
+                'success': output.success,
+                'model_name': output.model_name,
+                'data': all_results
             })
     
     def _collect_step_data(self):
@@ -420,7 +610,7 @@ class SimulationOrchestrator(BaseSimulator):
             return ""
         
         if output_path is None:
-            output_path = f"output/distributed_simulation_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            output_path = "output/simulation_results.csv"
         
         # Flatten simulation data
         flattened_data = []
@@ -468,7 +658,7 @@ class SimulationOrchestrator(BaseSimulator):
                 return False
             
             # Check if harvest maturity has been reached
-            from models.phenology_model import LettuceGrowthStage
+            from ..models.phenology_model import LettuceGrowthStage
             harvest_maturity_reached = (current_stage == LettuceGrowthStage.HARVEST_MATURITY.value or 
                                       str(current_stage) == "LettuceGrowthStage.HARVEST_MATURITY")
             

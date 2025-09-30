@@ -32,7 +32,6 @@
 ## Testing Requirements
 - test simulation runs after parameter changes
 - verify parameter count reduction
--src/cropgro_hydroponic_simulator.py should integrate all 17 specialized models
 - confirm same performance metrics after cleanup
 - validate all models work with consolidated parameters
 - prioritize to reduce paramters, because it makes hard for calibration
@@ -46,3 +45,6 @@
     ☒ Verify simulation runs correctly after parameter cleanup
     ☒ Confirm same performance metrics after cleanup
 - dont make premature success claims
+
+
+# dont make complicated software, this is for research purpose, research framework should be strong.

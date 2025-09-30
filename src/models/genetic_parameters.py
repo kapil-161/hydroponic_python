@@ -98,16 +98,10 @@ class CultivarProfile:
     cultivar_id: str
     cultivar_name: str
     lettuce_type: LettuceType
-    breeder: str
-    year_released: int
     genetic_coefficients: GeneticCoefficients
     yield_potential: float
     adaptation_score: float
     trait_values: Dict[GeneticTrait, float]
-    pedigree: List[str]
-    breeding_notes: str
-    breeding_generation: int = 1  # Default to F1 generation
-    origin: str = "Unknown"  # Geographic or breeding origin
     maturity_days: int = 60  # Days to harvest maturity
     
     def calculate_adaptation_index(self, environment_factors: Dict[str, float]) -> float:
@@ -344,151 +338,10 @@ class GenotypeEnvironmentModel:
         return performance_metrics
 
 
-class BreedingAssistant:
-    """Assistant for lettuce breeding applications"""
-    
-    def __init__(self, genetic_db: GeneticParameterDatabase, ge_model: GenotypeEnvironmentModel):
-        self.genetic_db = genetic_db
-        self.ge_model = ge_model
-    
-    def identify_breeding_targets(self, 
-                                target_environment: Dict[str, float],
-                                desired_traits: Dict[GeneticTrait, float]) -> Dict[str, Any]:
-        """Identify breeding targets for specific environment and traits"""
-        
-        # Analyze current cultivar performance
-        cultivar_analysis = {}
-        for cultivar_id, cultivar in self.genetic_db.cultivars.items():
-            performance = self.ge_model.predict_cultivar_performance(cultivar_id, target_environment)
-            
-            # Calculate trait gap (desired - current)
-            trait_gaps = {}
-            for trait, desired_value in desired_traits.items():
-                current_value = self.ge_model.calculate_phenotype_expression(
-                    cultivar_id, target_environment, trait
-                )
-                trait_gaps[trait] = desired_value - current_value
-            
-            cultivar_analysis[cultivar_id] = {
-                'performance': performance,
-                'trait_gaps': trait_gaps,
-                'overall_gap': np.mean([abs(gap) for gap in trait_gaps.values()])
-            }
-        
-        # Identify best parent candidates
-        parent_candidates = []
-        for cultivar_id, analysis in cultivar_analysis.items():
-            cultivar = self.genetic_db.get_cultivar(cultivar_id)
-            
-            # Score based on performance and complementary traits
-            complementary_score = 0
-            for trait, desired_value in desired_traits.items():
-                current_value = get_required_trait(cultivar.trait_values, trait)
-                if current_value > desired_value * 0.8:  # Has at least 80% of desired trait
-                    complementary_score += current_value
-            
-            parent_candidates.append({
-                'cultivar_id': cultivar_id,
-                'cultivar_name': cultivar.cultivar_name,
-                'complementary_score': complementary_score,
-                'performance_score': get_required_genetic_param(analysis['performance'], 'yield_index'),
-                'trait_gaps': analysis['trait_gaps']
-            })
-        
-        # Sort by combined score
-        parent_candidates.sort(
-            key=lambda x: x['complementary_score'] + x['performance_score'], 
-            reverse=True
-        )
-        
-        return {
-            'breeding_targets': desired_traits,
-            'target_environment': target_environment,
-            'parent_candidates': parent_candidates[:5],
-            'cultivar_analysis': cultivar_analysis
-        }
-    
-    def estimate_hybrid_performance(self, 
-                                  parent1_id: str, 
-                                  parent2_id: str,
-                                  environment_factors: Dict[str, float]) -> Dict[str, float]:
-        """Estimate performance of potential F1 hybrid"""
-        parent1 = self.genetic_db.get_cultivar(parent1_id)
-        parent2 = self.genetic_db.get_cultivar(parent2_id)
-        
-        if not parent1 or not parent2:
-            return {}
-        
-        # Simple additive genetic model for trait prediction
-        hybrid_traits = {}
-        for trait in GeneticTrait:
-            p1_value = get_required_trait(parent1.trait_values, trait)
-            p2_value = get_required_trait(parent2.trait_values, trait)
-            
-            # Mid-parent value with some heterosis
-            heterosis_factor = get_required_genetic_param(environment_factors, 'heterosis_factor')  # Heterosis factor from CSV
-            hybrid_traits[trait] = (p1_value + p2_value) / 2.0 * heterosis_factor
-        
-        # Estimate genetic coefficients (mid-parent values)
-        hybrid_coefficients = GeneticCoefficients(
-            EM_FL=(parent1.genetic_coefficients.EM_FL + parent2.genetic_coefficients.EM_FL) / 2,
-            FL_SH=(parent1.genetic_coefficients.FL_SH + parent2.genetic_coefficients.FL_SH) / 2,
-            FL_SD=(parent1.genetic_coefficients.FL_SD + parent2.genetic_coefficients.FL_SD) / 2,
-            SD_PM=(parent1.genetic_coefficients.SD_PM + parent2.genetic_coefficients.SD_PM) / 2,
-            FL_LF=(parent1.genetic_coefficients.FL_LF + parent2.genetic_coefficients.FL_LF) / 2,
-            LFMAX=(parent1.genetic_coefficients.LFMAX + parent2.genetic_coefficients.LFMAX) / 2,
-            SLAVR=(parent1.genetic_coefficients.SLAVR + parent2.genetic_coefficients.SLAVR) / 2,
-            SIZLF=(parent1.genetic_coefficients.SIZLF + parent2.genetic_coefficients.SIZLF) / 2,
-            XFRT=(parent1.genetic_coefficients.XFRT + parent2.genetic_coefficients.XFRT) / 2,
-            SFDUR=(parent1.genetic_coefficients.SFDUR + parent2.genetic_coefficients.SFDUR) / 2,
-            SDPDV=(parent1.genetic_coefficients.SDPDV + parent2.genetic_coefficients.SDPDV) / 2,
-            PODUR=(parent1.genetic_coefficients.PODUR + parent2.genetic_coefficients.PODUR) / 2,
-            WTPSD=(parent1.genetic_coefficients.WTPSD + parent2.genetic_coefficients.WTPSD) / 2,
-            THRSH=(parent1.genetic_coefficients.THRSH + parent2.genetic_coefficients.THRSH) / 2,
-            SDPRO=(parent1.genetic_coefficients.SDPRO + parent2.genetic_coefficients.SDPRO) / 2,
-            SDLIP=(parent1.genetic_coefficients.SDLIP + parent2.genetic_coefficients.SDLIP) / 2,
-            EC_TOLERANCE=(parent1.genetic_coefficients.EC_TOLERANCE + parent2.genetic_coefficients.EC_TOLERANCE) / 2,
-            ROOT_ACTIVITY=(parent1.genetic_coefficients.ROOT_ACTIVITY + parent2.genetic_coefficients.ROOT_ACTIVITY) / 2,
-            PHOTOSYNTHETIC_CAPACITY=(parent1.genetic_coefficients.PHOTOSYNTHETIC_CAPACITY + parent2.genetic_coefficients.PHOTOSYNTHETIC_CAPACITY) / 2,
-            NITRATE_EFFICIENCY=(parent1.genetic_coefficients.NITRATE_EFFICIENCY + parent2.genetic_coefficients.NITRATE_EFFICIENCY) / 2
-        )
-        
-        # Create temporary hybrid profile
-        hybrid_profile = CultivarProfile(
-            cultivar_id="HYBRID_TEMP",
-            cultivar_name=f"{parent1.cultivar_name} × {parent2.cultivar_name}",
-            lettuce_type=parent1.lettuce_type,
-            breeder="Predicted",
-            year_released=2024,
-            genetic_coefficients=hybrid_coefficients,
-            trait_values=hybrid_traits,
-            yield_potential=(parent1.yield_potential + parent2.yield_potential) / 2 * 1.1,  # Hybrid vigor
-            adaptation_score=(parent1.adaptation_score + parent2.adaptation_score) / 2,
-            pedigree=[parent1.cultivar_id, parent2.cultivar_id],
-            breeding_notes=f"Predicted F1 hybrid between {parent1.cultivar_name} and {parent2.cultivar_name}"
-        )
-        
-        # Temporarily add hybrid to database for prediction
-        self.genetic_db.add_cultivar(hybrid_profile)
-
-        # Predict performance
-        performance = {}
-        for trait in GeneticTrait:
-            performance[f"{trait.value}_expression"] = self.ge_model.calculate_phenotype_expression(
-                "HYBRID_TEMP", environment_factors, trait
-            )
-        
-        # Add overall performance metrics
-        performance['predicted_yield_index'] = hybrid_profile.yield_potential * hybrid_profile.calculate_adaptation_index(environment_factors)
-        performance['heterosis_advantage'] = performance['predicted_yield_index'] - max(
-            parent1.yield_potential * parent1.calculate_adaptation_index(environment_factors),
-            parent2.yield_potential * parent2.calculate_adaptation_index(environment_factors)
-        )
-        
-        return performance
+# Breeding functionality removed as requested
 
 
-def create_lettuce_genetic_system(system_config, cultivar_id) -> Tuple[GeneticParameterDatabase, GenotypeEnvironmentModel, BreedingAssistant]:
+def create_lettuce_genetic_system(system_config, cultivar_id) -> Tuple[GeneticParameterDatabase, GenotypeEnvironmentModel]:
     genetic_params = getattr(system_config, 'genetic_parameters', {})
 
     if not genetic_params:
@@ -538,31 +391,21 @@ def create_lettuce_genetic_system(system_config, cultivar_id) -> Tuple[GeneticPa
         GeneticTrait.DISEASE_RESISTANCE: genetic_params['trait_disease_resistance']
     }
 
-    # Handle pedigree and breeding_notes - can be lists/strings from CSV
-    pedigree = get_required_genetic_param(genetic_params, 'pedigree')
-    if isinstance(pedigree, str):
-        pedigree = [pedigree] if pedigree != 'Unknown' else []
-
     cultivar_profile = CultivarProfile(
         cultivar_id=cultivar_id,
         cultivar_name=genetic_params['cultivar_name'],
         lettuce_type=LettuceType(genetic_params['lettuce_type']),
-        breeder=genetic_params['breeder'],
-        year_released=int(genetic_params['year_released']),
         genetic_coefficients=genetic_coeffs,
         yield_potential=genetic_params['yield_potential'],
         adaptation_score=genetic_params['adaptation_score'],
-        trait_values=trait_values,
-        pedigree=pedigree,
-        breeding_notes=genetic_params['breeding_notes']
+        trait_values=trait_values
     )
 
     genetic_db.add_cultivar(cultivar_profile)
 
     ge_model = GenotypeEnvironmentModel(genetic_db)
-    breeding_assistant = BreedingAssistant(genetic_db, ge_model)
 
-    return genetic_db, ge_model, breeding_assistant
+    return genetic_db, ge_model
 
 
 """

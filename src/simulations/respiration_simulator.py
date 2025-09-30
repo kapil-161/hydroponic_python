@@ -169,8 +169,8 @@ class RespirationSimulator(BaseSimulator):
         """Execute respiration calculation using model functions - no shortcuts"""
         try:
             # Get environmental conditions from daily weather file
-            temperature = weather_data.get('temp_avg')
-            humidity = weather_data.get('rel_humidity')
+            temperature = weather_data.get('temperature')
+            humidity = weather_data.get('humidity')
             
             # Per Rules.md: raise error if missing, no defaults
             if temperature is None:

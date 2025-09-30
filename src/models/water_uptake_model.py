@@ -90,9 +90,13 @@ class WaterUptakeParameters:
 
     def __post_init__(self):
         """Validate parameter ranges to ensure physical realism."""
+        # Check for None values first
+        none_params = [k for k, v in vars(self).items() if v is None]
+        if none_params:
+            raise ValueError(f"Parameters cannot be None: {none_params}")
         if not all(isinstance(p, (int, float)) for p in vars(self).values()):
             raise ValueError("All parameters must be numeric")
-        if self.psychrometric_constant <= 0:
+        if self.psychrometric_constant is not None and self.psychrometric_constant <= 0:
             raise ValueError("Psychrometric constant must be positive")
         if self.wind_speed < 0:
             raise ValueError("Wind speed must be non-negative")

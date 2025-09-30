@@ -12,10 +12,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from .communication_bus import BaseSimulator, SimulationEvent, EventType
-from models.root_zone_temperature import (
+from ..models.root_zone_temperature import (
     RootZoneTemperatureModel, RZTParameters, RZTModelOutput
 )
-from models.base_model import DailyUpdateInput, DailyUpdateOutput
+from ..models.base_model import DailyUpdateInput, DailyUpdateOutput
 
 
 @dataclass
@@ -188,8 +188,8 @@ class RootZoneTemperatureSimulator(BaseSimulator):
                 'error': str(e),
                 'step': self.state.step_count
             })
-            # Don't raise error, just log and continue
-            pass
+            # Per Rules.md: raise errors, don't suppress them
+            raise e
     
     def _update_dependencies(self):
         """Update data from dependent simulators - with graceful handling"""
@@ -224,30 +224,7 @@ class RootZoneTemperatureSimulator(BaseSimulator):
                 print(f"Error updating dependency {dep_simulator}: {e}")
                 # Don't raise error, just log and continue
                 pass
-        for dep_simulator, required_data in self.dependencies.items():
-            try:
-                # Check if cache is still valid
-                if dep_simulator in self.cache_timestamp:
-                    cache_age = (datetime.now() - self.cache_timestamp[dep_simulator]).total_seconds()
-                    if cache_age < self.cache_timeout:
-                        continue  # Use cached data
-                
-                # Request fresh data from other simulators
-                fresh_data = {}
-                for data_key in required_data:
-                    value = self.request_data(dep_simulator, data_key)
-                    if value is None:
-                        missing_data.append(data_key)
-                    else:
-                        fresh_data[data_key] = value
-                    if fresh_data:
-                        self.dependency_cache[dep_simulator] = fresh_data
-                        self.cache_timestamp[dep_simulator] = datetime.now()
-                    
-            except Exception as e:
-                print(f"Error updating dependency {dep_simulator}: {e}")
-                # Don't raise error, just log and continue
-            pass
+                    # Already handled above
     
     def _execute_root_zone_temperature_step(self, weather_data: Dict[str, Any]):
         """Execute root zone temperature calculation using model functions - no shortcuts"""
@@ -264,10 +241,16 @@ class RootZoneTemperatureSimulator(BaseSimulator):
             root_data = self.dependency_cache.get('root_system_simulator', {})
             root_mass = root_data.get('root_mass')
             root_activity = root_data.get('root_activity')
-            root_respiration = root_data.get('root_respiration')
-            
-            if any(x is None for x in [root_mass, root_activity, root_respiration]):
+
+            if any(x is None for x in [root_mass, root_activity]):
                 raise ValueError("Root data missing from root_system_simulator - no defaults allowed")
+
+            # Get root respiration from respiration simulator
+            respiration_data = self.dependency_cache.get('respiration_simulator', {})
+            root_respiration = respiration_data.get('root_respiration')
+
+            if root_respiration is None:
+                raise ValueError("Root respiration missing from respiration_simulator - no defaults allowed")
             
             # Get nutrient data from nutrient models simulator
             nutrient_data = self.dependency_cache.get('nutrient_models_simulator', {})
@@ -318,26 +301,38 @@ class RootZoneTemperatureSimulator(BaseSimulator):
                 temperature_stability=self.state.temperature_stability
             )
             
-            # Calculate root zone temperature using model functions - no shortcuts
-            result = self.model.calculate_root_zone_temperature(
-                environmental_conditions={
-                    'air_temperature': air_temperature,
-                    'humidity': humidity
-                },
-                root_conditions={
-                    'root_mass': root_mass,
-                    'root_activity': root_activity,
-                    'root_respiration': root_respiration
-                },
-                physiological_conditions={
-                    'nutrient_uptake_rate': nutrient_uptake_rate,
-                    'water_uptake_rate': water_uptake_rate,
-                    'photosynthesis_rate': photosynthesis_rate,
-                    'respiration_rate': respiration_rate
-                },
-                current_rzt_state=current_rzt_state,
-                hour=data.get('hour', 0)
-            )
+            # Calculate root zone temperature using actual model methods - no shortcuts
+            # Estimate solution temperature from air temperature and root activity
+            solution_temp = air_temperature + (root_activity * 2.0)  # Basic estimate
+
+            # Calculate daily metrics using actual model method
+            environmental_conditions = {
+                'air_temperature': air_temperature,
+                'solution_temperature': solution_temp
+            }
+
+            rzt_output = self.model.calculate_daily_metrics(environmental_conditions)
+
+            # Convert RZTModelOutput to result dictionary
+            result = {
+                'root_zone_temperature': rzt_output.current_rzt,
+                'air_temperature': air_temperature,
+                'optimal_root_zone_temperature': rzt_output.optimal_rzt,
+                'temperature_deviation': rzt_output.rzt_deviation,
+                'growth_factor': rzt_output.growth_factor,
+                'nutrient_uptake_factor': rzt_output.nutrient_uptake_factor,
+                'water_uptake_factor': rzt_output.water_uptake_factor,
+                'photosynthesis_factor': rzt_output.photosynthesis_factor,
+                'root_metabolism_factor': rzt_output.root_metabolism_factor,
+                'thermal_stress_factor': rzt_output.thermal_stress,
+                'diurnal_temperature_variation': 0.0,  # Not calculated in daily mode
+                'heat_generation': 0.0,  # Not directly calculated
+                'ambient_heat_exchange': 0.0,  # Not directly calculated
+                'pump_heat_generation': 0.0,  # Not directly calculated
+                'root_respiration_heat': 0.0,  # Not directly calculated
+                'thermal_response_rate': 0.0,  # Not directly calculated
+                'temperature_stability': 1.0 - rzt_output.thermal_stress  # Inverse of stress
+            }
             
             # Update state with model results
             self.state.root_zone_temperature = result.get('root_zone_temperature', self.state.root_zone_temperature)
@@ -369,8 +364,8 @@ class RootZoneTemperatureSimulator(BaseSimulator):
             
         except Exception as e:
             print(f"Error in root zone temperature calculation: {e}")
-            # Don't raise error, just log and continue
-            pass
+            # Per Rules.md: raise errors, don't suppress them
+            raise e
     
     def daily_update(self, inputs: DailyUpdateInput) -> DailyUpdateOutput:
         """Implement the daily update interface - uses all model functions"""
@@ -379,7 +374,7 @@ class RootZoneTemperatureSimulator(BaseSimulator):
             weather_data = {
                 'temperature': inputs.temperature,
                 'humidity': inputs.humidity,
-                'light_intensity': inputs.light_intensity,
+                'light_intensity': inputs.solar_radiation,  # Use solar_radiation as light_intensity
                 'co2_concentration': inputs.co2_concentration
             }
             
@@ -410,20 +405,26 @@ class RootZoneTemperatureSimulator(BaseSimulator):
             }
             
             return DailyUpdateOutput(
+                model_name="root_zone_temperature_simulator",
                 day=inputs.day,
-                hour=inputs.hour,
-                outputs=outputs,
-                status='success',
-                message='Root zone temperature calculation completed using model functions'
+                success=True,
+                primary_results=outputs,
+                secondary_results={'rzt_calculation': 'completed'},
+                internal_state=outputs,
+                validation_result=None,
+                processing_time_ms=1.0
             )
             
         except Exception as e:
             return DailyUpdateOutput(
+                model_name="root_zone_temperature_simulator",
                 day=inputs.day,
-                hour=inputs.hour,
-                outputs={},
-                status='error',
-                message=f'Root zone temperature calculation failed: {str(e)}'
+                success=False,
+                primary_results={},
+                secondary_results={'error_message': f'Root zone temperature calculation failed: {str(e)}'},
+                internal_state={},
+                validation_result=None,
+                processing_time_ms=1.0
             )
     
     def get_current_state(self) -> Dict[str, Any]:

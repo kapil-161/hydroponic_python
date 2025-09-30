@@ -173,10 +173,10 @@ class PhotosynthesisSimulator(BaseSimulator):
         """Execute photosynthesis calculation using model functions - no shortcuts"""
         try:
             # Get environmental conditions from daily weather file
-            temperature = weather_data.get('temp_avg')
-            humidity = weather_data.get('rel_humidity')
-            light_intensity = weather_data.get('par')  # PAR is the light intensity
-            co2_concentration = weather_data.get('co2_ppm')
+            temperature = weather_data.get('temperature')
+            humidity = weather_data.get('humidity')
+            light_intensity = weather_data.get('light_intensity')  # PAR is the light intensity
+            co2_concentration = weather_data.get('co2_concentration')
             
             # Per Rules.md: raise error if missing, no defaults
             if any(x is None for x in [temperature, humidity, light_intensity, co2_concentration]):

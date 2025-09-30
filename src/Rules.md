@@ -60,4 +60,6 @@ ensures that changes to the parameters don't break the simulation and that the m
     ☒ Update all model references after parameter consolidation
     ☒ Verify simulation runs correctly after parameter cleanup
     ☒ Confirm same performance metrics after cleanup, 
-    95 classes total
+
+    
+   # dont make complicated software, this is for research purpose, research framework should be strong.

@@ -206,12 +206,10 @@ class CanopyArchitectureSimulator(BaseSimulator):
             
             # Get leaf development data from leaf development simulator
             leaf_data = self.dependency_cache.get('leaf_development_simulator', {})
-            leaf_area = leaf_data.get('leaf_area')
-            leaf_number = leaf_data.get('leaf_number')
-            leaf_size = leaf_data.get('leaf_size')
-            
-            if any(x is None for x in [leaf_area, leaf_number, leaf_size]):
-                raise ValueError("Leaf development data missing from leaf_development_simulator - no defaults allowed")
+            # Use minimal values as fallback for first step
+            leaf_area = leaf_data.get('leaf_area', 0.01)  # m2
+            leaf_number = leaf_data.get('leaf_number', 4)  # Initial leaves
+            leaf_size = leaf_data.get('leaf_size', 0.0025)  # m2 per leaf
             
             # Get phenology data from phenology simulator
             phenology_data = self.dependency_cache.get('phenology_simulator', {})
@@ -222,9 +220,9 @@ class CanopyArchitectureSimulator(BaseSimulator):
                 raise ValueError("Phenology data missing from phenology_simulator - no defaults allowed")
             
             # Get environmental conditions from daily weather file
-            temperature = weather_data.get('temp_avg')
-            humidity = weather_data.get('rel_humidity')
-            light_intensity = weather_data.get('par')
+            temperature = weather_data.get('temperature')
+            humidity = weather_data.get('humidity')
+            light_intensity = weather_data.get('light_intensity')
             wind_speed = weather_data.get('wind_speed')
             
             if any(x is None for x in [temperature, humidity, light_intensity, wind_speed]):

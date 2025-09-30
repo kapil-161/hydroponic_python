@@ -40,8 +40,8 @@ from .root_zone_temperature_simulator import RootZoneTemperatureSimulator
 from .senescence_simulator import SenescenceSimulator
 
 # Import parameter loaders
-from utils.parameter_loader import StrictParameterLoader
-from utils.weather_loader import WeatherDataLoader
+from ..utils.parameter_loader import StrictParameterLoader
+from ..utils.weather_loader import WeatherDataLoader
 
 
 class DistributedSimulationRunner:
@@ -63,16 +63,24 @@ class DistributedSimulationRunner:
         print("Loading parameters from CSV files...")
         self.parameter_loader = StrictParameterLoader(master_csv_path)
         self.weather_loader = WeatherDataLoader(weather_csv_path)
+
+        # Load initial state from initials.csv - all from CSV per Rules.md
+        print("Loading initial state from initials.csv...")
+        self.initial_state_data = self.parameter_loader.load_initial_state("input/initials.csv")
         
-        # Initialize simulation orchestrator
-        # These values must come from CSV parameters, not hardcoded
+        # Initialize simulation orchestrator - ALL values from CSV per Rules.md
         simulator_defaults = self.parameter_loader.get_category('simulator_defaults')
         self.config = SimulationConfig(
-            total_days=30,  # Will be determined by weather data length
-            steps_per_day=24,  # Hourly steps
+            total_days=int(self.parameter_loader.get_parameter('simulator_defaults_total_days_default')),
+            steps_per_day=int(self.parameter_loader.get_parameter('simulator_defaults_steps_per_day_default')),
             step_duration_seconds=float(simulator_defaults['step_duration_seconds']),
-            enable_real_time=False,  # Batch processing
-            synchronization_mode="sequential"  # Sequential for now, can be parallel
+            start_day=int(self.parameter_loader.get_parameter('simulator_defaults_start_day')),
+            start_hour=int(self.parameter_loader.get_parameter('simulator_defaults_start_hour')),
+            enable_real_time=bool(self.parameter_loader.get_parameter('simulator_defaults_enable_real_time_default')),
+            synchronization_mode=str(self.parameter_loader.get_parameter('simulator_defaults_synchronization_mode_default')),
+            data_collection_interval=int(self.parameter_loader.get_parameter('simulator_defaults_data_collection_interval')),
+            max_concurrent_simulators=int(self.parameter_loader.get_parameter('simulator_defaults_max_concurrent_simulators')),
+            max_errors=int(self.parameter_loader.get_parameter('simulator_defaults_max_errors'))
         )
         
         self.orchestrator = SimulationOrchestrator(self.config)
@@ -139,8 +147,7 @@ class DistributedSimulationRunner:
             self.orchestrator.register_simulator(self.simulators['root_system'])
             
             # 11. Environmental Control Simulator
-            env_setpoints = self.parameter_loader.create_environmental_setpoints()
-            env_equipment = self.parameter_loader.create_control_equipment()
+            env_setpoints, env_equipment = self.parameter_loader.create_environmental_control_parameters()
             self.simulators['environmental_control'] = EnvironmentalControlSimulator(env_setpoints, env_equipment)
             self.orchestrator.register_simulator(self.simulators['environmental_control'])
             
@@ -160,7 +167,7 @@ class DistributedSimulationRunner:
             self.orchestrator.register_simulator(self.simulators['nitrogen_balance'])
             
             # 15. Root Zone Temperature Simulator
-            rzt_params = self.parameter_loader.create_rzt_parameters()
+            rzt_params = self.parameter_loader.create_root_zone_temperature_parameters()
             self.simulators['root_zone_temperature'] = RootZoneTemperatureSimulator(rzt_params)
             self.orchestrator.register_simulator(self.simulators['root_zone_temperature'])
             
@@ -201,9 +208,9 @@ class DistributedSimulationRunner:
             self.config.total_days = len(weather_data)
             print(f"Running simulation for {self.config.total_days} days")
             
-            # Start simulation
+            # Start simulation with initial state from CSV
             start_time = time.time()
-            self.orchestrator.start_simulation(weather_data)
+            self.orchestrator.start_simulation(weather_data, initial_state=self.initial_state_data)
             end_time = time.time()
             
             # Get results

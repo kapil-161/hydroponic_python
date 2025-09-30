@@ -12,11 +12,11 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from .communication_bus import BaseSimulator, SimulationEvent, EventType
-from models.phenology_model import (
+from ..models.phenology_model import (
     ComprehensivePhenologyModel, PhenologyParameters,
     LettuceGrowthStage, DevelopmentalState
 )
-from models.base_model import DailyUpdateInput, DailyUpdateOutput
+from ..models.base_model import DailyUpdateInput, DailyUpdateOutput
 
 
 @dataclass
@@ -48,10 +48,11 @@ class PhenologySimulator(BaseSimulator):
         
         self.parameters = parameters
         # Model requires initial_stage parameter
-        from models.phenology_model import LettuceGrowthStage
+        from ..models.phenology_model import LettuceGrowthStage
         initial_stage = LettuceGrowthStage.GERMINATION  # Default starting stage
         self.model = ComprehensivePhenologyModel(self.parameters, initial_stage)
-        
+        self.model.initialize()  # Initialize temperature_history and other state
+
         # State tracking
         self.state = PhenologyState()
         self.history: List[PhenologyState] = []
@@ -69,7 +70,36 @@ class PhenologySimulator(BaseSimulator):
         self.cache_timeout = 1.0  # seconds
         
         print(f"Phenology simulator initialized with parameters from CSV")
-    
+
+    def _map_growth_stage_to_simplified(self, detailed_stage) -> str:
+        """Map detailed phenology stages to simplified water uptake stages"""
+        # Map detailed stages to simplified format expected by water uptake model
+        # Handle both string and LettuceGrowthStage enum
+        if hasattr(detailed_stage, 'value'):
+            # It's an enum - get the value
+            stage_str = str(detailed_stage.value)
+        elif hasattr(detailed_stage, 'name'):
+            # It's an enum - get the name
+            stage_str = str(detailed_stage.name)
+        else:
+            # It's already a string
+            stage_str = str(detailed_stage)
+
+        stage_upper = stage_str.upper()
+
+        # Germination through vegetative stages -> "vegetative"
+        if any(s in stage_upper for s in ['GERMINATION', 'EMERGENCE', 'LEAF', 'VEGETATIVE', 'GE', 'VE', 'V']):
+            return 'vegetative'
+        # Head stages -> "head_formation"
+        elif any(s in stage_upper for s in ['HEAD', 'HI', 'HD']):
+            return 'head_formation'
+        # Mature/harvest stages -> "mature"
+        elif any(s in stage_upper for s in ['MATURE', 'HARVEST', 'HM', 'BOLTING', 'FLOWER', 'SEED']):
+            return 'mature'
+        else:
+            # Default to vegetative for unknown stages
+            return 'vegetative'
+
     def on_simulation_start(self, data: Dict[str, Any]):
         """Handle simulation start"""
         print("Phenology simulator: Simulation started")
@@ -176,10 +206,10 @@ class PhenologySimulator(BaseSimulator):
     def _execute_phenology_step(self, weather_data: Dict[str, Any]):
         """Execute phenology calculation using model functions - no shortcuts"""
         try:
-            # Get environmental conditions from daily weather file
-            temperature = weather_data.get('temp_avg')
-            humidity = weather_data.get('rel_humidity')
-            light_intensity = weather_data.get('par')  # PAR is the light intensity
+            # Get environmental conditions from daily weather file (use standardized column names from weather_loader)
+            temperature = weather_data.get('temperature')
+            humidity = weather_data.get('humidity')
+            light_intensity = weather_data.get('light_intensity')
             
             # Calculate photoperiod from date or use scientific default
             # Per Rules.md: use lettuce-appropriate scientific value
@@ -294,9 +324,12 @@ class PhenologySimulator(BaseSimulator):
     
     def publish_state_data(self):
         """Publish current state data to dependency cache for other simulators"""
+        # Map detailed stage to simplified format for water uptake compatibility
+        simplified_stage = self._map_growth_stage_to_simplified(self.state.current_growth_stage)
+
         phenology_data = {
-            'current_growth_stage': self.state.current_growth_stage,
-            'growth_stage': self.state.current_growth_stage,
+            'current_growth_stage': self.state.current_growth_stage,  # Keep detailed for reference
+            'growth_stage': simplified_stage,  # Simplified for water uptake model
             'development_index': self.state.development_index,
             'thermal_time': self.state.thermal_time,
             'cumulative_thermal_time': self.state.cumulative_thermal_time,
@@ -318,9 +351,12 @@ class PhenologySimulator(BaseSimulator):
 
     def get_data(self, data_key: str) -> Any:
         """Provide data to other simulators"""
+        # Map to simplified stage format for compatibility
+        simplified_stage = self._map_growth_stage_to_simplified(self.state.current_growth_stage)
+
         data_map = {
-            'growth_stage': self.state.current_growth_stage,
-            'current_growth_stage': self.state.current_growth_stage,  # Alias for orchestrator
+            'growth_stage': simplified_stage,  # Simplified for water uptake
+            'current_growth_stage': self.state.current_growth_stage,  # Detailed for reference
             'development_index': self.state.development_index,
             'thermal_time': self.state.thermal_time,
             'photoperiod': self.state.photoperiod,

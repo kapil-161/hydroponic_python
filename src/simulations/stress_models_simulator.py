@@ -79,12 +79,25 @@ class StressModelsSimulator(BaseSimulator):
         print(f"Stress models simulator initialized with parameters from CSV")
     
     def on_simulation_start(self, data: Dict[str, Any]):
-        """Handle simulation start"""
+        """Handle simulation start - initialize with values from initials.csv"""
         print("Stress models simulator: Simulation started")
         self.state = StressState()
+
+        # Load initial stress levels from CSV (via initial_state)
+        initial_state = data.get('initial_state', {})
+        if initial_state:
+            self.state.temperature_stress = initial_state.get('temperature_stress', 0.0)
+            self.state.water_stress = initial_state.get('water_stress', 0.0)
+            self.state.nutrient_stress = initial_state.get('nutrient_stress', 0.0)
+            self.state.light_stress = initial_state.get('light_stress', 0.0)
+            self.state.ph_stress = initial_state.get('ph_stress', 0.0)
+            self.state.salinity_stress = initial_state.get('salinity_stress', 0.0)
+            self.state.integrated_stress = 0.0  # Will be calculated
+            print(f"Stress: Initialized all stress levels from CSV")
+
         self.history.clear()
         self.dependency_cache.clear()
-        
+
         # Initialize model with parameters from CSV
         self.model.initialize()
 
@@ -105,9 +118,9 @@ class StressModelsSimulator(BaseSimulator):
         try:
             # Get current weather data from daily weather file
             weather_data = data.get('weather_data', {})
-            
-            # Update dependency data from other simulators
-            self._update_dependencies()
+
+            # Note: dependency data is injected by orchestrator before this method is called
+            # No need to call _update_dependencies() since shared cache is managed centrally
             
             # Execute stress calculation using model functions
             self._execute_stress_step(weather_data)

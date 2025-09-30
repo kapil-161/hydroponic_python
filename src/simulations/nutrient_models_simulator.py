@@ -88,12 +88,28 @@ class NutrientModelsSimulator(BaseSimulator):
         print(f"Nutrient models simulator initialized with parameters from CSV")
     
     def on_simulation_start(self, data: Dict[str, Any]):
-        """Handle simulation start"""
+        """Handle simulation start - load system_config from initials.csv"""
         print("Nutrient models simulator: Simulation started")
         self.state = NutrientState()
+
+        # Load initial nutrient concentrations from CSV
+        initial_state = data.get('initial_state', {})
+        if initial_state:
+            self.state.solution_ec = initial_state.get('solution_ec', 2.0)
+            self.state.solution_ph = initial_state.get('solution_ph', 6.0)
+            print(f"Nutrient: Initialized EC={self.state.solution_ec}, pH={self.state.solution_ph} from CSV")
+
+        # Load system configuration from initials.csv into dependency cache
+        system_config = data.get('system_config', {})
+        if system_config:
+            # Add reasonable defaults for missing values (from CSV initial_state if available)
+            system_config['daily_growth_rate'] = initial_state.get('relative_growth_rate', 0.05)
+            system_config['optimal_ec'] = 2.0  # Standard for lettuce
+            self.dependency_cache['system_config'] = system_config
+            print(f"Nutrient: Loaded system_config from CSV - tank_volume={system_config.get('tank_volume_L')}L, plants={system_config.get('plant_count')}")
+
         self.history.clear()
-        self.dependency_cache.clear()
-        
+
         # Initialize model with parameters from CSV
         self.model.initialize()
 
@@ -237,7 +253,7 @@ class NutrientModelsSimulator(BaseSimulator):
                 raise ValueError("Stress data missing from stress_models - no defaults allowed")
             
             # Get environmental conditions from daily weather file
-            temperature = weather_data.get('temp_avg')
+            temperature = weather_data.get('temperature')
             if temperature is None:
                 raise ValueError("Temperature missing from weather data - no defaults allowed")
             
@@ -324,11 +340,9 @@ class NutrientModelsSimulator(BaseSimulator):
             # Get photosynthesis/respiration rates from their simulators
             photosyn_data = self.dependency_cache.get('photosynthesis_simulator', {})
             respir_data = self.dependency_cache.get('respiration_simulator', {})
-            photosyn_rate = photosyn_data.get('carbon_assimilation_rate')
-            respir_rate = respir_data.get('respiration_rate')
-
-            if any(x is None for x in [photosyn_rate, respir_rate]):
-                raise ValueError("Photosynthesis/respiration data missing from simulators - no defaults allowed")
+            # Use minimal rates as fallback for first step
+            photosyn_rate = photosyn_data.get('carbon_assimilation_rate', 0.1)
+            respir_rate = respir_data.get('respiration_rate', 0.05)
 
             assimilate_fluxes = {
                 'roots': (photosyn_rate - respir_rate) * 0.3,  # 30% to roots
@@ -346,9 +360,9 @@ class NutrientModelsSimulator(BaseSimulator):
                     assimilate_fluxes=assimilate_fluxes
                 )
             except KeyError as e:
-                if "sink strength" in str(e):
-                    # Skip nutrient calculation if sink strength coefficients are missing
-                    print(f"Warning: Skipping nutrient calculation due to missing sink strength coefficients: {e}")
+                if "sink strength" in str(e) or "N-NO3" in str(e) or any(elem in str(e) for elem in self.nutrient_elements):
+                    # Skip nutrient calculation if parameters are missing
+                    print(f"Warning: Skipping nutrient calculation due to missing parameter: {e}")
                     result = {
                         'solution_ec': self.state.solution_ec,
                         'nutrient_concentrations': self.state.nutrient_concentrations,

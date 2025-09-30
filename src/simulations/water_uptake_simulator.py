@@ -176,9 +176,9 @@ class WaterUptakeSimulator(BaseSimulator):
         """Execute water uptake calculation using model functions - no shortcuts"""
         try:
             # Get environmental conditions from daily weather file
-            temperature = weather_data.get('temp_avg')
-            humidity = weather_data.get('rel_humidity')
-            light_intensity = weather_data.get('par')  # PAR is the light intensity
+            temperature = weather_data.get('temperature')
+            humidity = weather_data.get('humidity')
+            light_intensity = weather_data.get('light_intensity')  # PAR is the light intensity
             wind_speed = weather_data.get('wind_speed')
             
             # Per Rules.md: raise error if missing, no defaults

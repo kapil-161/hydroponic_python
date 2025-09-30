@@ -95,9 +95,52 @@ class StrictParameterLoader:
             raise ParameterError(f"Parameter '{key}' not found in CSV - no defaults allowed")
         return self.parameters[key]
 
+    def get_category(self, category: str) -> Dict[str, Any]:
+        """Get all parameters for a category"""
+        result = {}
+        for key, param in self.parameters.items():
+            if param['category'] == category:
+                # Remove category prefix from parameter name for dict key
+                param_name = param['parameter']
+                result[param_name] = param['value']
+        return result
+
+    def load_initial_state(self, initials_csv_path: str = "input/initials.csv") -> Dict[str, Any]:
+        """Load initial state values from initials.csv - follows Rules.md strictly"""
+        if not os.path.exists(initials_csv_path):
+            raise ParameterError(f"Initials CSV file not found: {initials_csv_path}")
+
+        initial_state = {}
+        system_config = {}
+
+        try:
+            df = pd.read_csv(initials_csv_path, comment='#', on_bad_lines='skip')
+
+            for _, row in df.iterrows():
+                if pd.isna(row['category']) or pd.isna(row['parameter_name']):
+                    continue
+
+                category = str(row['category']).strip()
+                parameter = str(row['parameter_name']).strip()
+                value = self._convert_value_type(row['value'])
+
+                # Organize by category
+                if category == 'initial_state':
+                    initial_state[parameter] = value
+                elif category == 'system_config':
+                    system_config[parameter] = value
+
+            return {
+                'initial_state': initial_state,
+                'system_config': system_config
+            }
+
+        except Exception as e:
+            raise ParameterError(f"Failed to load initial state from CSV: {e}")
+
     def create_photosynthesis_parameters(self):
         """Create photosynthesis parameters from CSV"""
-        from models.photosynthesis_model import PhotosynthesisParameters
+        from ..models.photosynthesis_model import PhotosynthesisParameters
         
         params_dict = {}
         # Add photosynthesis-specific parameters using actual CSV parameter names
@@ -143,7 +186,7 @@ class StrictParameterLoader:
 
     def create_respiration_parameters(self):
         """Create respiration parameters from CSV"""
-        from models.respiration_model import RespirationParameters
+        from ..models.respiration_model import RespirationParameters
         
         params_dict = {}
         # Add respiration-specific parameters using actual CSV parameter names
@@ -223,7 +266,7 @@ class StrictParameterLoader:
 
     def create_biomass_allocation_parameters(self):
         """Create biomass allocation parameters from CSV"""
-        from models.biomass_allocation_model import BiomassAllocationParameters
+        from ..models.biomass_allocation_model import BiomassAllocationParameters
         
         params_dict = {}
         # Add biomass allocation-specific parameters using actual CSV parameter names
@@ -242,7 +285,7 @@ class StrictParameterLoader:
 
     def create_phenology_parameters(self):
         """Create phenology parameters from CSV"""
-        from models.phenology_model import PhenologyParameters
+        from ..models.phenology_model import PhenologyParameters
 
         params_dict = {}
         # Add phenology-specific parameters
@@ -321,7 +364,7 @@ class StrictParameterLoader:
 
     def create_stress_parameters(self):
         """Create stress parameters from CSV - follows Rules.md strictly"""
-        from models.stress_models import IntegratedStressParameters
+        from ..models.stress_models import IntegratedStressParameters
 
         config = {}
 
@@ -331,34 +374,34 @@ class StrictParameterLoader:
         config['temperature']['optimal_max'] = self.get_parameter('phenology_parameters_optimal_temperature_max')
         config['temperature']['critical_min'] = self.get_parameter('photosynthesis_parameters_photosynthesis_cold_limit')
         config['temperature']['critical_max'] = self.get_parameter('photosynthesis_parameters_photosynthesis_heat_limit')
-        config['temperature']['lethal_min'] = 2.0  # Calculated as minimum survival temperature
+        config['temperature']['lethal_min'] = self.get_parameter('stress_parameters_temperature_lethal_min')
         config['temperature']['lethal_max'] = self.get_parameter('phenology_parameters_maximum_temperature')
         config['temperature']['stress_factor_slope'] = self.get_parameter('photosynthesis_parameters_min_stress_factor')
         config['temperature']['acclimation_rate'] = self.get_parameter('phenology_parameters_stress_acceleration_factor')
-        config['temperature']['recovery_rate'] = 0.2  # Derived from acceleration factor
+        config['temperature']['recovery_rate'] = self.get_parameter('stress_parameters_temperature_recovery_rate')
 
         # Water stress parameters
         config['water'] = {}
         config['water']['drought_threshold'] = self.get_parameter('phenology_parameters_drought_threshold')
-        config['water']['critical_threshold'] = 0.15  # Calculated as half of drought threshold
+        config['water']['critical_threshold'] = self.get_parameter('stress_parameters_water_critical_threshold')
         config['water']['osmotic_adjustment_max'] = self.get_parameter('stress_parameters_max_osmotic_adjustment')
         config['water']['salt_stress_factor'] = self.get_parameter('stress_parameters_salt_stress_osmotic_factor')
-        config['water']['recovery_rate'] = 0.3
+        config['water']['recovery_rate'] = self.get_parameter('stress_parameters_water_recovery_rate')
 
         # Nutrient stress parameters (using N stress as representative)
         config['nutrient'] = {}
         config['nutrient']['deficiency_threshold'] = self.get_parameter('leaf_development_n_stress_threshold')
-        config['nutrient']['critical_threshold'] = 0.1  # Calculated as third of deficiency threshold
-        config['nutrient']['toxicity_threshold'] = 3.0  # High threshold for nutrient toxicity
-        config['nutrient']['recovery_rate'] = 0.25
+        config['nutrient']['critical_threshold'] = self.get_parameter('stress_parameters_nutrient_critical_threshold')
+        config['nutrient']['toxicity_threshold'] = self.get_parameter('stress_parameters_nutrient_toxicity_threshold')
+        config['nutrient']['recovery_rate'] = self.get_parameter('stress_parameters_nutrient_recovery_rate')
 
         # Light stress parameters
         config['light'] = {}
         config['light']['min_ppfd'] = self.get_parameter('leaf_development_initial_ppfd_above_canopy')
         config['light']['optimal_ppfd'] = self.get_parameter('environment_light_saturation_threshold')
-        config['light']['max_ppfd'] = 2000.0  # Calculated as 2x saturation point for stress
-        config['light']['photoinhibition_threshold'] = 1800.0  # 90% of max for stress onset
-        config['light']['recovery_rate'] = 0.4
+        config['light']['max_ppfd'] = self.get_parameter('stress_parameters_light_max_ppfd')
+        config['light']['photoinhibition_threshold'] = self.get_parameter('stress_parameters_light_photoinhibition_threshold')
+        config['light']['recovery_rate'] = self.get_parameter('stress_parameters_light_recovery_rate')
 
         # pH stress parameters
         config['ph'] = {}
@@ -366,49 +409,49 @@ class StrictParameterLoader:
         config['ph']['optimal_max'] = self.get_parameter('ph_parameters_ph_target_max')
         config['ph']['critical_min'] = self.get_parameter('ph_parameters_ph_min_limit')
         config['ph']['critical_max'] = self.get_parameter('ph_parameters_ph_max_limit')
-        config['ph']['stress_sensitivity'] = 2.0
-        config['ph']['recovery_rate'] = 0.5
+        config['ph']['stress_sensitivity'] = self.get_parameter('stress_parameters_ph_stress_sensitivity')
+        config['ph']['recovery_rate'] = self.get_parameter('stress_parameters_ph_recovery_rate')
 
         # Salinity/EC stress parameters
         config['salinity'] = {}
-        config['salinity']['threshold_ec'] = 2.5  # Based on typical hydroponic EC range
-        config['salinity']['critical_ec'] = 4.0  # High EC causing stress
+        config['salinity']['threshold_ec'] = self.get_parameter('stress_parameters_salinity_threshold_ec')
+        config['salinity']['critical_ec'] = self.get_parameter('stress_parameters_salinity_critical_ec')
         config['salinity']['osmotic_factor'] = self.get_parameter('stress_parameters_salt_stress_osmotic_factor')
-        config['salinity']['recovery_rate'] = 0.2
+        config['salinity']['recovery_rate'] = self.get_parameter('stress_parameters_salinity_recovery_rate')
 
         # Oxygen stress parameters
         config['oxygen'] = {}
-        config['oxygen']['critical_min'] = 3.0  # mg/L critical dissolved oxygen
-        config['oxygen']['optimal_min'] = 5.0   # mg/L optimal dissolved oxygen
-        config['oxygen']['recovery_rate'] = 0.6
+        config['oxygen']['critical_min'] = self.get_parameter('stress_parameters_oxygen_critical_min')
+        config['oxygen']['optimal_min'] = self.get_parameter('stress_parameters_oxygen_optimal_min')
+        config['oxygen']['recovery_rate'] = self.get_parameter('stress_parameters_oxygen_recovery_rate')
 
         # Integrated stress parameters
         config['integration'] = {}
         config['integration']['temperature_weight'] = self.get_parameter('genetic_parameters_default_temperature_stress_weight')
-        config['integration']['water_weight'] = 0.3  # Calculated to sum to 1.0 with other weights
-        config['integration']['nutrient_weight'] = 0.15
-        config['integration']['light_weight'] = 0.05
-        config['integration']['interaction_factor'] = 1.2  # Multiplicative interaction strength
-        config['integration']['threshold_severe'] = 0.3  # Severe stress threshold
-        config['integration']['threshold_critical'] = 0.15 # Critical stress threshold
+        config['integration']['water_weight'] = self.get_parameter('stress_parameters_integration_water_weight')
+        config['integration']['nutrient_weight'] = self.get_parameter('stress_parameters_integration_nutrient_weight')
+        config['integration']['light_weight'] = self.get_parameter('stress_parameters_integration_light_weight')
+        config['integration']['interaction_factor'] = self.get_parameter('stress_parameters_integration_interaction_factor')
+        config['integration']['threshold_severe'] = self.get_parameter('stress_parameters_integration_threshold_severe')
+        config['integration']['threshold_critical'] = self.get_parameter('stress_parameters_integration_threshold_critical')
 
         # Memory and acclimation parameters
         config['acclimation'] = {}
         config['acclimation']['temperature_rate'] = self.get_parameter('phenology_parameters_stress_acceleration_factor')
         config['acclimation']['memory_days'] = self.get_parameter('phenology_parameters_environmental_buffer_days')
-        config['acclimation']['max_adjustment'] = 0.5  # Maximum acclimation adjustment
-        config['acclimation']['decay_rate'] = 0.1  # Daily decay of acclimation
+        config['acclimation']['max_adjustment'] = self.get_parameter('stress_parameters_acclimation_max_adjustment')
+        config['acclimation']['decay_rate'] = self.get_parameter('stress_parameters_acclimation_decay_rate')
 
         # Process sensitivity parameters
         config['sensitivity'] = {}
-        config['sensitivity']['photosynthesis'] = 0.8  # High sensitivity to stress
-        config['sensitivity']['respiration'] = 0.4     # Moderate sensitivity
-        config['sensitivity']['transpiration'] = 0.6   # Moderate-high sensitivity
-        config['sensitivity']['growth'] = 0.9          # Very high sensitivity
-        config['sensitivity']['development'] = 0.5     # Moderate sensitivity
+        config['sensitivity']['photosynthesis'] = self.get_parameter('stress_parameters_sensitivity_photosynthesis')
+        config['sensitivity']['respiration'] = self.get_parameter('stress_parameters_sensitivity_respiration')
+        config['sensitivity']['transpiration'] = self.get_parameter('stress_parameters_sensitivity_transpiration')
+        config['sensitivity']['growth'] = self.get_parameter('stress_parameters_sensitivity_growth')
+        config['sensitivity']['development'] = self.get_parameter('stress_parameters_sensitivity_development')
 
         # Cache timeout
-        config['cache_timeout'] = 300.0  # 5 minutes
+        config['cache_timeout'] = self.get_parameter('simulator_defaults_cache_timeout_global')
 
         return IntegratedStressParameters.from_config(config)
 
@@ -434,7 +477,7 @@ class StrictParameterLoader:
         config['water_parameters']['vegetative_stage_factor'] = self.get_parameter('water_parameters_vegetative_stage_factor')
         config['water_parameters']['head_formation_stage_factor'] = self.get_parameter('water_parameters_head_formation_stage_factor')
         config['water_parameters']['mature_stage_factor'] = self.get_parameter('water_parameters_mature_stage_factor')
-        config['water_parameters']['optimal_temperature'] = 22.0  # From phenology parameters
+        config['water_parameters']['optimal_temperature'] = self.get_parameter('water_parameters_optimal_temperature')
         config['water_parameters']['temperature_sensitivity'] = self.get_parameter('water_parameters_temperature_sensitivity')
         config['water_parameters']['optimal_vpd_min'] = self.get_parameter('water_parameters_optimal_vpd_min')
         config['water_parameters']['optimal_vpd_max'] = self.get_parameter('water_parameters_optimal_vpd_max')
@@ -582,27 +625,33 @@ class StrictParameterLoader:
             config[f'phloem_transport_rates_{nutrient}'] = config[f'xylem_transport_rates_{nutrient}'] * 0.4
 
         # Provide minimal required parameters for complex data structures
-        # These would typically come from a more complete parameter set
+        # Load base values from CSV - per Rules.md: no hardcoded values
+        base_buffering = self.get_parameter('nitrogen_balance_buffering_capacity_base')
+        base_storage = self.get_parameter('nitrogen_balance_storage_pool_size_base')
+        redistribution_threshold = self.get_parameter('nitrogen_balance_redistribution_threshold')
+        redistribution_rate = self.get_parameter('nitrogen_balance_redistribution_rate')
+        sink_strength_base = self.get_parameter('nitrogen_balance_sink_strength_base')
+        sink_strength_repro = self.get_parameter('nitrogen_balance_sink_strength_reproductive')
+
         organs = ["leaves", "stems", "roots"]
         major_nutrients = ["N-NO3", "N-NH4", "P-PO4", "K"]
         for organ in organs:
             for nutrient in major_nutrients:
-                # Use reasonable defaults based on scientific literature
-                config[f'buffering_capacities_{organ}_{nutrient}'] = 1.0  # Base buffering capacity
-                config[f'storage_pool_sizes_{organ}_{nutrient}'] = 10.0  # Base storage pool size
+                config[f'buffering_capacities_{organ}_{nutrient}'] = base_buffering
+                config[f'storage_pool_sizes_{organ}_{nutrient}'] = base_storage
 
         for nutrient in ["N-NO3", "N-NH4", "P-PO4", "K", "Ca", "Mg", "S-SO4"]:
-            config[f'redistribution_thresholds_{nutrient}'] = 0.5  # 50% threshold
-            config[f'stress_redistribution_rates_{nutrient}'] = 0.1  # 10% redistribution rate
+            config[f'redistribution_thresholds_{nutrient}'] = redistribution_threshold
+            config[f'stress_redistribution_rates_{nutrient}'] = redistribution_rate
 
         stages = ["vegetative", "reproductive", "senescence"]
         for stage in stages:
             for organ in ["leaves", "stems", "roots"]:
-                config[f'sink_strength_coefficients_{stage}_{organ}'] = 1.0  # Base sink strength
+                config[f'sink_strength_coefficients_{stage}_{organ}'] = sink_strength_base
             if stage == "reproductive":
-                config[f'sink_strength_coefficients_{stage}_reproductive'] = 2.0  # Higher for reproductive organs
+                config[f'sink_strength_coefficients_{stage}_reproductive'] = sink_strength_repro
 
-        config['cache_timeout'] = 300.0  # 5 minutes cache timeout
+        config['cache_timeout'] = self.get_parameter('simulator_defaults_cache_timeout_global')
 
         return NutrientParameters.from_config(config)
 
@@ -654,15 +703,86 @@ class StrictParameterLoader:
         return CanopyArchitectureParameters.from_config(params_dict)
 
     def create_ph_parameters(self):
-        """Create pH parameters from CSV"""
-        from models.ph_model import PHParameters
-        
-        params_dict = {}
-        # Add pH-specific parameters
-        params_dict['optimal_ph'] = self.get_parameter('ph_parameters_optimal_ph')
-        params_dict['ph_tolerance'] = self.get_parameter('ph_parameters_ph_tolerance')
-        
-        return PHParameters(**params_dict)
+        """Create pH parameters from CSV - follows Rules.md strictly"""
+        from ..models.ph_model import PHParameters
+
+        config = {}
+
+        # Basic pH control parameters
+        config['ph_target_min'] = self.get_parameter('ph_parameters_ph_target_min')
+        config['ph_target_max'] = self.get_parameter('ph_parameters_ph_target_max')
+        config['ph_buffer_capacity'] = self.get_parameter('ph_parameters_ph_buffer_capacity')
+        config['ph_drift_rate'] = self.get_parameter('ph_parameters_ph_drift_rate')
+
+        # Nutrient uptake pH effects
+        config['nitrate_acidification_factor'] = self.get_parameter('ph_parameters_nitrate_acidification_factor')
+        config['ammonium_alkalinization_factor'] = self.get_parameter('ph_parameters_ammonium_alkalinization_factor')
+        config['phosphate_acidification_factor'] = self.get_parameter('ph_parameters_phosphate_acidification_factor')
+
+        # Buffer system parameters
+        config['carbonate_buffer_pka'] = self.get_parameter('ph_parameters_carbonate_buffer_pka')
+        config['phosphate_buffer_pka1'] = self.get_parameter('ph_parameters_phosphate_buffer_pka1')
+        config['phosphate_buffer_pka2'] = self.get_parameter('ph_parameters_phosphate_buffer_pka2')
+        config['phosphate_buffer_pka3'] = self.get_parameter('ph_parameters_phosphate_buffer_pka3')
+
+        # pH control system parameters
+        config['ph_adjustment_rate'] = self.get_parameter('ph_parameters_ph_adjustment_rate')
+        config['ph_deadband'] = self.get_parameter('ph_parameters_ph_deadband')
+        config['temperature_correction_factor'] = self.get_parameter('ph_parameters_temperature_correction_factor')
+        config['ec_buffer_factor'] = self.get_parameter('ph_parameters_ec_buffer_factor')
+        config['proportional_control_factor'] = self.get_parameter('ph_parameters_proportional_control_factor')
+
+        # System state parameters
+        config['current_ph'] = self.get_parameter('ph_parameters_current_ph')
+        config['total_alkalinity'] = self.get_parameter('ph_parameters_total_alkalinity')
+        config['carbonate_conc'] = self.get_parameter('ph_parameters_carbonate_conc')
+        config['phosphate_total'] = self.get_parameter('ph_parameters_phosphate_total')
+        config['ionic_strength'] = self.get_parameter('ph_parameters_ionic_strength')
+        config['ph_min_limit'] = self.get_parameter('ph_parameters_ph_min_limit')
+        config['ph_max_limit'] = self.get_parameter('ph_parameters_ph_max_limit')
+
+        # Solubility constants
+        config['calcium_phosphate_ksp'] = self.get_parameter('ph_parameters_calcium_phosphate_ksp')
+        config['magnesium_phosphate_ksp'] = self.get_parameter('ph_parameters_magnesium_phosphate_ksp')
+
+        # Molecular weights
+        config['co2_molecular_weight'] = self.get_parameter('ph_parameters_co2_molecular_weight')
+        config['nitrogen_atomic_weight'] = self.get_parameter('ph_parameters_nitrogen_atomic_weight')
+        config['no3_molecular_weight'] = self.get_parameter('ph_parameters_no3_molecular_weight')
+        config['nh4_molecular_weight'] = self.get_parameter('ph_parameters_nh4_molecular_weight')
+        config['phosphorus_atomic_weight'] = self.get_parameter('ph_parameters_phosphorus_atomic_weight')
+        config['po4_molecular_weight'] = self.get_parameter('ph_parameters_po4_molecular_weight')
+        config['unit_conversion_factor'] = self.get_parameter('ph_parameters_unit_conversion_factor')
+
+        # Build phosphate solubility data from CSV
+        config['phosphate_solubility_data'] = {
+            '4.0': self.get_parameter('ph_parameters_phosphate_solubility_ph_4_0'),
+            '5.0': self.get_parameter('ph_parameters_phosphate_solubility_ph_5_0'),
+            '6.0': self.get_parameter('ph_parameters_phosphate_solubility_ph_6_0'),
+            '7.0': self.get_parameter('ph_parameters_phosphate_solubility_ph_7_0'),
+            '8.0': self.get_parameter('ph_parameters_phosphate_solubility_ph_8_0')
+        }
+
+        # Build iron solubility data from CSV
+        config['iron_solubility_data'] = {
+            '4.0': self.get_parameter('ph_parameters_iron_solubility_ph_4_0'),
+            '5.0': self.get_parameter('ph_parameters_iron_solubility_ph_5_0'),
+            '6.0': self.get_parameter('ph_parameters_iron_solubility_ph_6_0'),
+            '7.0': self.get_parameter('ph_parameters_iron_solubility_ph_7_0'),
+            '8.0': self.get_parameter('ph_parameters_iron_solubility_ph_8_0')
+        }
+
+        # Default simulation parameters - ALL from CSV per Rules.md
+        config['default_nitrate_uptake'] = self.get_parameter('ph_parameters_default_nitrate_uptake_rate')
+        config['default_ammonium_uptake'] = self.get_parameter('ph_parameters_default_ammonium_uptake_rate')
+        config['default_phosphate_uptake'] = self.get_parameter('ph_parameters_default_phosphate_uptake_rate')
+        config['default_phosphate_concentration'] = config['phosphate_total']  # Use total from CSV
+        config['default_iron_concentration'] = self.get_parameter('ph_parameters_default_iron_concentration_value')
+        config['default_time_step'] = self.get_parameter('ph_parameters_default_time_step_hours')
+        config['cache_timeout'] = self.get_parameter('simulator_defaults_cache_timeout_global')
+        config['hours_per_day'] = self.get_parameter('ph_parameters_hours_per_day_standard')
+
+        return PHParameters.from_config(config)
 
     def create_root_system_parameters(self):
         """Create root system parameters from CSV"""
@@ -671,26 +791,25 @@ class StrictParameterLoader:
         # Create configuration sections required by from_config
         config = {}
 
-        # For testing purposes, provide minimal parameter set with defaults for missing CSV parameters
-        # Core root system parameters - use defaults since CSV doesn't have complete set
-        config['container_volume'] = 50000.0  # 50L in cm³
-        config['channel_length'] = 100.0  # cm
-        config['system_type'] = 'deep_water_culture'  # Default system type
-        config['channel_width'] = 10.0  # cm
-        config['channel_depth'] = 5.0  # cm
-        config['n_channels'] = 4
+        # Core root system parameters - ALL from CSV per Rules.md
+        config['container_volume'] = self.get_parameter('root_system_container_volume_default')
+        config['channel_length'] = self.get_parameter('root_system_channel_length_default')
+        config['system_type'] = 'deep_water_culture'  # System type - keeping as constant
+        config['channel_width'] = self.get_parameter('root_system_channel_width_default')
+        config['channel_depth'] = self.get_parameter('root_system_channel_depth_default')
+        config['n_channels'] = self.get_parameter('root_system_n_channels_default')
         config['root_zone_independent'] = True
 
-        # Root growth parameters - provide defaults since CSV doesn't have these
-        config['primary_root_growth_rate'] = 2.0  # cm/day
-        config['lateral_root_density'] = 5.0  # roots/cm
-        config['branching_angle_mean'] = 45.0  # degrees
-        config['branching_angle_std'] = 15.0  # degrees
+        # Root growth parameters - ALL from CSV per Rules.md
+        config['primary_root_growth_rate'] = self.get_parameter('root_system_primary_root_growth_rate_default')
+        config['lateral_root_density'] = self.get_parameter('root_system_lateral_root_density_default')
+        config['branching_angle_mean'] = self.get_parameter('root_system_branching_angle_mean_default')
+        config['branching_angle_std'] = self.get_parameter('root_system_branching_angle_std_default')
 
-        # Root type fractions - must sum to 1.0
-        config['fine_root_fraction'] = 0.6
-        config['medium_root_fraction'] = 0.3
-        config['coarse_root_fraction'] = 0.1
+        # Root type fractions - ALL from CSV per Rules.md
+        config['fine_root_fraction'] = self.get_parameter('root_system_fine_root_fraction_default')
+        config['medium_root_fraction'] = self.get_parameter('root_system_medium_root_fraction_default')
+        config['coarse_root_fraction'] = self.get_parameter('root_system_coarse_root_fraction_default')
 
         # Root diameter parameters
         config['fine_diameter_mean'] = self.get_parameter('root_system_fine_diameter_mean')
@@ -722,9 +841,15 @@ class StrictParameterLoader:
         config['coarse_root_effectiveness'] = self.get_parameter('root_system_coarse_effectiveness')
 
         # Temperature parameters - use consolidated from phenology
-        config['optimal_temperature_min'] = self.get_parameter('phenology_optimal_temperature_min')
-        config['optimal_temperature_max'] = self.get_parameter('phenology_optimal_temperature_max')
+        config['optimal_temperature_min'] = self.get_parameter('phenology_parameters_optimal_temperature_min')
+        config['optimal_temperature_max'] = self.get_parameter('phenology_parameters_optimal_temperature_max')
         config['q10_factor'] = self.get_parameter('root_system_q10_factor')
+
+        # Phenology parameters sub-dict (required by RootSystemParameters.from_config)
+        config['phenology_parameters'] = {
+            'optimal_temperature_min': self.get_parameter('phenology_parameters_optimal_temperature_min'),
+            'optimal_temperature_max': self.get_parameter('phenology_parameters_optimal_temperature_max')
+        }
 
         # Flow and environmental parameters
         config['optimal_flow_rate'] = self.get_parameter('root_system_optimal_flow_rate')
@@ -904,7 +1029,7 @@ class StrictParameterLoader:
         params_dict['default_air_temperature'] = params_dict['day_temp']  # Use day_temp as default
         params_dict['default_humidity'] = (min_hum + max_hum) / 2.0  # Middle of min/max range from CSV
         params_dict['default_light_intensity'] = params_dict['light_intensity_control']
-        params_dict['cache_timeout'] = 30.0  # 30 seconds cache timeout
+        params_dict['cache_timeout'] = self.get_parameter('simulator_defaults_cache_timeout_global')
 
         # Create setpoints
         setpoints = EnvironmentalSetpoints.from_config(params_dict)
@@ -927,19 +1052,82 @@ class StrictParameterLoader:
         return setpoints, equipment
 
     def create_genetic_parameters(self):
-        """Create genetic parameters from CSV"""
-        from models.genetic_parameters import GeneticParameterDatabase, CultivarProfile
-        
-        # Create genetic database
-        genetic_db = GeneticParameterDatabase()
-        
-        # Create cultivar profile
-        cultivar_profile = CultivarProfile(
-            cultivar_name="Boston Bibb",
-            lettuce_type="butterhead",
-            maturity_days=60
+        """Create genetic parameters from CSV - follows Rules.md strictly"""
+        from ..models.genetic_parameters import (
+            GeneticParameterDatabase, CultivarProfile, GeneticCoefficients,
+            LettuceType, GeneticTrait
         )
-        
+
+        # Build configuration from CSV parameters - ALL from CSV per Rules.md
+        config = {
+            'default_air_temperature': self.get_parameter('simulator_defaults_default_air_temperature'),
+            'default_humidity': self.get_parameter('simulator_defaults_default_humidity'),
+            'default_light_intensity': self.get_parameter('simulator_defaults_default_light_intensity'),
+            'cache_timeout': self.get_parameter('simulator_defaults_cache_timeout_global')
+        }
+
+        # Create genetic database with CSV config
+        genetic_db = GeneticParameterDatabase(config)
+
+        # Build genetic coefficients from CSV
+        genetic_coeffs = GeneticCoefficients(
+            EM_FL=self.get_parameter('genetic_parameters_EM_FL'),
+            FL_SH=self.get_parameter('genetic_parameters_FL_SH'),
+            FL_SD=self.get_parameter('genetic_parameters_FL_SD'),
+            SD_PM=self.get_parameter('genetic_parameters_SD_PM'),
+            FL_LF=self.get_parameter('genetic_parameters_FL_LF'),
+            LFMAX=self.get_parameter('genetic_parameters_LFMAX'),
+            SLAVR=self.get_parameter('genetic_parameters_SLAVR'),
+            SIZLF=self.get_parameter('genetic_parameters_SIZLF'),
+            XFRT=self.get_parameter('genetic_parameters_XFRT'),
+            SFDUR=self.get_parameter('genetic_parameters_SFDUR'),
+            SDPDV=self.get_parameter('genetic_parameters_SDPDV'),
+            PODUR=self.get_parameter('genetic_parameters_PODUR'),
+            WTPSD=self.get_parameter('genetic_parameters_WTPSD'),
+            THRSH=self.get_parameter('genetic_parameters_THRSH'),
+            SDPRO=self.get_parameter('genetic_parameters_SDPRO'),
+            SDLIP=self.get_parameter('genetic_parameters_SDLIP'),
+            EC_TOLERANCE=self.get_parameter('genetic_parameters_EC_TOLERANCE'),
+            ROOT_ACTIVITY=self.get_parameter('genetic_parameters_ROOT_ACTIVITY'),
+            PHOTOSYNTHETIC_CAPACITY=self.get_parameter('genetic_parameters_PHOTOSYNTHETIC_CAPACITY'),
+            NITRATE_EFFICIENCY=self.get_parameter('genetic_parameters_NITRATE_EFFICIENCY')
+        )
+
+        # Build trait values from CSV
+        trait_values = {
+            GeneticTrait.DAYS_TO_EMERGENCE: self.get_parameter('genetic_parameters_trait_days_to_emergence'),
+            GeneticTrait.DAYS_TO_HARVEST: self.get_parameter('genetic_parameters_trait_days_to_harvest'),
+            GeneticTrait.BOLTING_TOLERANCE: self.get_parameter('genetic_parameters_trait_bolting_tolerance'),
+            GeneticTrait.LEAF_SIZE: self.get_parameter('genetic_parameters_trait_leaf_size'),
+            GeneticTrait.PLANT_ARCHITECTURE: self.get_parameter('genetic_parameters_trait_plant_architecture'),
+            GeneticTrait.ROOT_DEVELOPMENT: self.get_parameter('genetic_parameters_trait_root_development'),
+            GeneticTrait.YIELD_POTENTIAL: self.get_parameter('genetic_parameters_trait_yield_potential'),
+            GeneticTrait.CHLOROPHYLL_CONTENT: self.get_parameter('genetic_parameters_trait_chlorophyll_content'),
+            GeneticTrait.CAROTENOID_CONTENT: self.get_parameter('genetic_parameters_trait_carotenoid_content'),
+            GeneticTrait.VITAMIN_C_CONTENT: self.get_parameter('genetic_parameters_trait_vitamin_c_content'),
+            GeneticTrait.NITRATE_ACCUMULATION: self.get_parameter('genetic_parameters_trait_nitrate_accumulation'),
+            GeneticTrait.HEAT_TOLERANCE: self.get_parameter('genetic_parameters_trait_heat_tolerance'),
+            GeneticTrait.COLD_TOLERANCE: self.get_parameter('genetic_parameters_trait_cold_tolerance'),
+            GeneticTrait.SALINITY_TOLERANCE: self.get_parameter('genetic_parameters_trait_salinity_tolerance'),
+            GeneticTrait.DISEASE_RESISTANCE: self.get_parameter('genetic_parameters_trait_disease_resistance'),
+            GeneticTrait.GROWTH_RATE: self.get_parameter('genetic_parameters_trait_growth_rate')
+        }
+
+        # Create cultivar profile from CSV
+        cultivar_profile = CultivarProfile(
+            cultivar_id=self.get_parameter('genetic_parameters_cultivar_id'),
+            cultivar_name=self.get_parameter('genetic_parameters_cultivar_name'),
+            lettuce_type=LettuceType(self.get_parameter('genetic_parameters_lettuce_type')),
+            genetic_coefficients=genetic_coeffs,
+            yield_potential=self.get_parameter('genetic_parameters_yield_potential'),
+            adaptation_score=self.get_parameter('genetic_parameters_adaptation_score'),
+            trait_values=trait_values,
+            maturity_days=60  # Default maturity days
+        )
+
+        # Add cultivar to database
+        genetic_db.add_cultivar(cultivar_profile)
+
         return genetic_db, cultivar_profile
 
     def create_leaf_development_parameters(self):
@@ -994,7 +1182,7 @@ class StrictParameterLoader:
         config['thermal_time']['max_temp'] = self.get_parameter('leaf_development_max_temp')
 
         # Cache timeout
-        config['leaf_development']['cache_timeout'] = 300.0  # 5 minutes default
+        config['leaf_development']['cache_timeout'] = self.get_parameter('simulator_defaults_cache_timeout_global')
 
         return LeafParameters.from_config(config)
 
@@ -1071,24 +1259,71 @@ class StrictParameterLoader:
                     f'nitrogen_parameters_pool_fractions_{organ}_{pool}')
 
         # Cache timeout - use system default if no specific N balance timeout
-        config['cache_timeout'] = 300.0  # 5 minutes default
+        config['cache_timeout'] = self.get_parameter('simulator_defaults_cache_timeout_global')
 
         return NitrogenBalanceParameters.from_config(config)
 
     def create_root_zone_temperature_parameters(self):
-        """Create root zone temperature parameters from CSV"""
-        from models.root_zone_temperature import RZTParameters
-        
-        params_dict = {}
-        # Add root zone temperature-specific parameters
-        params_dict['optimal_temperature'] = self.get_parameter('root_zone_temperature_optimal')
-        params_dict['temperature_tolerance'] = self.get_parameter('root_zone_temperature_tolerance')
-        
-        return RZTParameters(**params_dict)
+        """Create root zone temperature parameters from CSV - follows Rules.md strictly"""
+        from ..models.root_zone_temperature import RZTParameters
+
+        config = {}
+
+        # Basic RZT parameters
+        config['optimal_rzt_offset'] = self.get_parameter('root_zone_temperature_parameters_optimal_rzt_offset')
+        config['min_effective_rzt'] = self.get_parameter('root_zone_temperature_parameters_min_effective_rzt')
+        config['max_effective_rzt'] = self.get_parameter('root_zone_temperature_parameters_max_effective_rzt')
+        config['linear_growth_slope'] = self.get_parameter('root_zone_temperature_parameters_linear_growth_slope')
+        config['rapid_decline_slope'] = self.get_parameter('root_zone_temperature_parameters_rapid_decline_slope')
+        config['base_growth_factor'] = self.get_parameter('root_zone_temperature_parameters_base_growth_factor')
+
+        # Sensitivity parameters
+        config['nutrient_uptake_sensitivity_low'] = self.get_parameter('root_zone_temperature_parameters_nutrient_uptake_sensitivity_low')
+        config['nutrient_uptake_sensitivity_high'] = self.get_parameter('root_zone_temperature_parameters_nutrient_uptake_sensitivity_high')
+        config['photosynthesis_sensitivity_low'] = self.get_parameter('root_zone_temperature_parameters_photosynthesis_sensitivity_low')
+        config['photosynthesis_sensitivity_high'] = self.get_parameter('root_zone_temperature_parameters_photosynthesis_sensitivity_high')
+        config['root_metabolism_sensitivity_low'] = self.get_parameter('root_zone_temperature_parameters_root_metabolism_sensitivity_low')
+        config['root_metabolism_sensitivity_high'] = self.get_parameter('root_zone_temperature_parameters_root_metabolism_sensitivity_high')
+
+        # Water uptake sensitivity from water parameters (as referenced in model)
+        config['water_uptake_sensitivity_low'] = self.get_parameter('water_uptake_sensitivity_low')
+        config['water_uptake_sensitivity_high'] = self.get_parameter('water_uptake_sensitivity_high')
+
+        # Factor limits - minimum values
+        config['min_growth_factor'] = self.get_parameter('root_zone_temperature_parameters_rzt_min_growth_factor')
+        config['min_nutrient_uptake_factor'] = self.get_parameter('root_zone_temperature_parameters_min_nutrient_uptake_factor')
+        config['min_water_uptake_factor'] = self.get_parameter('root_zone_temperature_parameters_min_water_uptake_factor')
+        config['min_photosynthesis_factor'] = self.get_parameter('root_zone_temperature_parameters_min_photosynthesis_factor')
+        config['min_root_metabolism_factor'] = self.get_parameter('root_zone_temperature_parameters_min_root_metabolism_factor')
+
+        # Factor limits - maximum values
+        config['max_growth_factor'] = self.get_parameter('root_zone_temperature_parameters_max_growth_factor')
+        config['max_nutrient_uptake_factor'] = self.get_parameter('root_zone_temperature_parameters_max_nutrient_uptake_factor')
+        config['max_water_uptake_factor'] = self.get_parameter('root_zone_temperature_parameters_max_water_uptake_factor')
+        config['max_photosynthesis_factor'] = self.get_parameter('root_zone_temperature_parameters_max_photosynthesis_factor')
+        config['max_root_metabolism_factor'] = self.get_parameter('root_zone_temperature_parameters_max_root_metabolism_factor')
+
+        # Thermal dynamics parameters
+        config['thermal_mass_factor'] = self.get_parameter('root_zone_temperature_parameters_rzt_thermal_mass_factor')
+        config['ambient_temp_amplitude'] = self.get_parameter('root_zone_temperature_parameters_rzt_ambient_temp_amplitude')
+        config['root_respiration_heat'] = self.get_parameter('root_zone_temperature_parameters_rzt_root_respiration_heat')
+        config['pump_heat_generation'] = self.get_parameter('root_zone_temperature_parameters_rzt_pump_heat_generation')
+        config['ambient_exchange_factor'] = self.get_parameter('root_zone_temperature_parameters_rzt_ambient_exchange_factor')
+        config['thermal_response_time'] = self.get_parameter('root_zone_temperature_parameters_rzt_thermal_response_time')
+        config['heat_transfer_coefficient'] = self.get_parameter('root_zone_temperature_parameters_rzt_heat_transfer_coefficient')
+
+        # Calculation parameters
+        config['base_factor_constant'] = self.get_parameter('root_zone_temperature_parameters_base_factor_constant')
+        config['thermal_stress_normalizer'] = self.get_parameter('root_zone_temperature_parameters_thermal_stress_normalizer')
+        config['diurnal_cycle_shift'] = self.get_parameter('root_zone_temperature_parameters_diurnal_cycle_shift')
+        config['diurnal_cycle_period'] = self.get_parameter('root_zone_temperature_parameters_diurnal_cycle_period')
+        config['daily_representative_hour'] = self.get_parameter('root_zone_temperature_parameters_daily_representative_hour')
+
+        return RZTParameters.from_config(config)
 
     def create_senescence_parameters(self):
         """Create senescence parameters from CSV - follows Rules.md strictly"""
-        from models.senescence_model import SenescenceParameters
+        from ..models.senescence_model import SenescenceParameters
 
         config = {}
 

@@ -12,24 +12,24 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from .communication_bus import BaseSimulator, SimulationEvent, EventType
-from models.genetic_parameters import (
+from ..models.genetic_parameters import (
     GenotypeEnvironmentModel, GeneticParameterDatabase, CultivarProfile,
     GeneticCoefficients, GeneticTrait, LettuceType
 )
-from models.base_model import DailyUpdateInput, DailyUpdateOutput
+from ..models.base_model import DailyUpdateInput, DailyUpdateOutput
 
 
 @dataclass
 class GeneticState:
     """State tracking for genetic parameters simulator"""
-    cultivar_name: str = "default"
+    cultivar_name: str = ""
     lettuce_type: str = "butterhead"
     genetic_coefficients: Dict[str, float] = field(default_factory=dict)
     cultivar_profile: Dict[str, Any] = field(default_factory=dict)
     trait_expressions: Dict[str, float] = field(default_factory=dict)
     environmental_modifiers: Dict[str, float] = field(default_factory=dict)
-    adaptation_index: float = 1.0
-    performance_index: float = 1.0
+    adaptation_index: float = 0.0
+    performance_index: float = 0.0
     phenotype_expression: Dict[str, float] = field(default_factory=dict)
     genetic_variance: Dict[str, float] = field(default_factory=dict)
     heritability: Dict[str, float] = field(default_factory=dict)
@@ -61,23 +61,27 @@ class GeneticParametersSimulator(BaseSimulator):
         self.state = GeneticState()
         self.history: List[GeneticState] = []
         
-        # Initialize genetic traits
+        # Initialize genetic traits - must match GeneticTrait enum values
         self.genetic_traits = [
-            'growth_rate', 'leaf_size', 'head_weight', 'disease_resistance',
-            'temperature_tolerance', 'drought_tolerance', 'nutrient_efficiency',
-            'photosynthesis_rate', 'respiration_rate', 'bolting_resistance'
+            'growth_rate', 'leaf_size', 'yield_potential', 'disease_resistance',
+            'heat_tolerance', 'cold_tolerance', 'bolting_tolerance',
+            'chlorophyll_content', 'root_development', 'plant_architecture'
         ]
         
+        # Initialize trait values from cultivar profile - per Rules.md: all from CSV
         for trait in self.genetic_traits:
-            self.state.trait_expressions[trait] = 1.0
-            self.state.phenotype_expression[trait] = 1.0
-            self.state.genetic_variance[trait] = 0.1
-            self.state.heritability[trait] = 0.5
-        
-        # Initialize environmental modifiers
+            trait_enum = getattr(GeneticTrait, trait.upper(), None)
+            if trait_enum and trait_enum in self.cultivar_profile.trait_values:
+                self.state.trait_expressions[trait] = self.cultivar_profile.trait_values[trait_enum]
+                self.state.phenotype_expression[trait] = self.cultivar_profile.trait_values[trait_enum]
+            else:
+                # Per Rules.md: no fallback values
+                raise ValueError(f"Trait {trait} not found in cultivar profile CSV data")
+
+        # Initialize environmental modifiers from genetic coefficients - per Rules.md: all from CSV
         self.environmental_factors = ['temperature', 'humidity', 'light', 'nutrients', 'stress']
         for factor in self.environmental_factors:
-            self.state.environmental_modifiers[factor] = 1.0
+            self.state.environmental_modifiers[factor] = 0.0  # Will be updated based on environment
         
         # Inter-simulator dependencies - all data comes from other simulators
         self.dependencies = {
@@ -105,9 +109,23 @@ class GeneticParametersSimulator(BaseSimulator):
         self.cache_timestamp['environmental_control'] = datetime.now()
     
     def on_simulation_start(self, data: Dict[str, Any]):
-        """Handle simulation start"""
+        """Handle simulation start - initialize with values from initials.csv"""
         print("Genetic parameters simulator: Simulation started")
         self.state = GeneticState()
+
+        # Load initial trait expressions from CSV (via initial_state)
+        initial_state = data.get('initial_state', {})
+        if initial_state:
+            # Initialize trait expressions from initials.csv
+            for trait in self.genetic_traits:
+                trait_key = f'trait_{trait}'
+                if trait_key in initial_state:
+                    self.state.trait_expressions[trait] = initial_state[trait_key]
+                    self.state.phenotype_expression[trait] = initial_state[trait_key]
+                    print(f"Genetic: Initialized {trait} = {initial_state[trait_key]} from CSV")
+
+        # Publish initial trait data immediately so other simulators can access it
+        self.publish_state_data()
         self.history.clear()
         self.dependency_cache.clear()
         
@@ -120,8 +138,6 @@ class GeneticParametersSimulator(BaseSimulator):
         self.state.cultivar_profile = {
             'cultivar_name': self.cultivar_profile.cultivar_name,
             'lettuce_type': self.cultivar_profile.lettuce_type.value,
-            'breeding_generation': self.cultivar_profile.breeding_generation,
-            'origin': self.cultivar_profile.origin,
             'maturity_days': self.cultivar_profile.maturity_days
         }
         
@@ -181,8 +197,8 @@ class GeneticParametersSimulator(BaseSimulator):
                 'error': str(e),
                 'step': self.state.step_count
             })
-            # Don't raise error, just log and continue
-            pass
+            # Per Rules.md: raise errors, don't suppress them
+            raise e
     
     def _update_dependencies(self):
         """Update data from dependent simulators - with graceful handling"""
@@ -217,30 +233,7 @@ class GeneticParametersSimulator(BaseSimulator):
                 print(f"Error updating dependency {dep_simulator}: {e}")
                 # Don't raise error, just log and continue
                 pass
-        for dep_simulator, required_data in self.dependencies.items():
-            try:
-                # Check if cache is still valid
-                if dep_simulator in self.cache_timestamp:
-                    cache_age = (datetime.now() - self.cache_timestamp[dep_simulator]).total_seconds()
-                    if cache_age < self.cache_timeout:
-                        continue  # Use cached data
-                
-                # Request fresh data from other simulators
-                fresh_data = {}
-                for data_key in required_data:
-                    value = self.request_data(dep_simulator, data_key)
-                    if value is None:
-                        missing_data.append(data_key)
-                    else:
-                        fresh_data[data_key] = value
-                    if fresh_data:
-                        self.dependency_cache[dep_simulator] = fresh_data
-                        self.cache_timestamp[dep_simulator] = datetime.now()
-                    
-            except Exception as e:
-                print(f"Error updating dependency {dep_simulator}: {e}")
-                # Don't raise error, just log and continue
-            pass
+                    # Already handled above
     
     def _execute_genetic_parameters_step(self, weather_data: Dict[str, Any]):
         """Execute genetic parameters calculation using model functions - no shortcuts"""
@@ -251,14 +244,19 @@ class GeneticParametersSimulator(BaseSimulator):
             humidity = env_data.get('humidity')
             light_intensity = env_data.get('light_intensity')
             
-            # Use initialized values if dependency data is missing
-            # These values must come from CSV parameters, not hardcoded
+            # Per Rules.md: no fallback values, all data must come from dependencies
             if temperature is None:
-                temperature = self.genetic_db.default_air_temperature
+                temperature = weather_data.get('temperature')
+                if temperature is None:
+                    raise ValueError("Temperature data required from environmental control simulator or weather data")
             if humidity is None:
-                humidity = self.genetic_db.default_humidity
+                humidity = weather_data.get('humidity')
+                if humidity is None:
+                    raise ValueError("Humidity data required from environmental control simulator or weather data")
             if light_intensity is None:
-                light_intensity = self.genetic_db.default_light_intensity
+                light_intensity = weather_data.get('light_intensity')
+                if light_intensity is None:
+                    raise ValueError("Light intensity data required from environmental control simulator or weather data")
             
             # Get stress data from stress models simulator
             stress_data = self.dependency_cache.get('stress_models', {})
@@ -266,32 +264,32 @@ class GeneticParametersSimulator(BaseSimulator):
             water_stress = stress_data.get('water_stress')
             nutrient_stress = stress_data.get('nutrient_stress')
             
-            # Use initialized values if dependency data is missing
+            # Per Rules.md: no fallback values, data must come from stress models
             if temperature_stress is None:
-                temperature_stress = 0.0  # Use default no stress
+                raise ValueError("Temperature stress data required from stress models simulator")
             if water_stress is None:
-                water_stress = 0.0  # Use default no stress
+                raise ValueError("Water stress data required from stress models simulator")
             if nutrient_stress is None:
-                nutrient_stress = 0.0  # Use default no stress
+                raise ValueError("Nutrient stress data required from stress models simulator")
             
             # Get phenology data from phenology simulator
             phenology_data = self.dependency_cache.get('phenology_simulator', {})
             growth_stage = phenology_data.get('growth_stage')
             development_index = phenology_data.get('development_index')
             
-            # Use initialized values if dependency data is missing
+            # Per Rules.md: no fallback values, data must come from phenology simulator
             if growth_stage is None:
-                growth_stage = 'vegetative'  # Use default growth stage
+                raise ValueError("Growth stage data required from phenology simulator")
             if development_index is None:
-                development_index = 0.1  # Use default development index
+                raise ValueError("Development index data required from phenology simulator")
             
             # Get nutrient data from nutrient models simulator
             nutrient_data = self.dependency_cache.get('nutrient_models_simulator', {})
             nutrient_availability = nutrient_data.get('nutrient_availability')
             
-            # Use initialized values if dependency data is missing
+            # Per Rules.md: no fallback values, data must come from nutrient models
             if nutrient_availability is None:
-                nutrient_availability = 1.0  # Use default full availability
+                raise ValueError("Nutrient availability data required from nutrient models simulator")
             
             # Get physiological data from photosynthesis and respiration simulators
             photosynthesis_data = self.dependency_cache.get('photosynthesis_simulator', {})
@@ -299,11 +297,11 @@ class GeneticParametersSimulator(BaseSimulator):
             photosynthesis_rate = photosynthesis_data.get('photosynthesis_rate')
             respiration_rate = respiration_data.get('respiration_rate')
             
-            # Use initialized values if dependency data is missing
+            # Per Rules.md: no fallback values, data must come from physiological simulators
             if photosynthesis_rate is None:
-                photosynthesis_rate = 0.1  # Use default photosynthesis rate
+                raise ValueError("Photosynthesis rate data required from photosynthesis simulator")
             if respiration_rate is None:
-                respiration_rate = 0.05  # Use default respiration rate
+                raise ValueError("Respiration rate data required from respiration simulator")
             
             # Calculate genetic parameters using model functions - no shortcuts
             try:
@@ -317,16 +315,8 @@ class GeneticParametersSimulator(BaseSimulator):
                     trait=GeneticTrait.GROWTH_RATE
                 )
             except KeyError as e:
-                if "not found in database" in str(e):
-                    # Skip genetic calculation if cultivar is not found
-                    print(f"Warning: Skipping genetic calculation due to missing cultivar: {e}")
-                    result = {
-                        'genetic_coefficients': self.state.genetic_coefficients,
-                        'adaptation_index': self.state.adaptation_index,
-                        'performance_index': self.state.performance_index
-                    }
-                else:
-                    raise
+                # Per Rules.md: no fallback values, raise errors properly
+                raise ValueError(f"Cultivar data required in genetic database: {e}") from e
             
             # Update state with model results - result is a float (trait expression value)
             trait_value = result  # result is the trait expression value (float)
@@ -340,8 +330,8 @@ class GeneticParametersSimulator(BaseSimulator):
             
         except Exception as e:
             print(f"Error in genetic parameters calculation: {e}")
-            # Don't raise error, just log and continue
-            pass
+            # Per Rules.md: raise errors, don't suppress them
+            raise e
     
     def daily_update(self, inputs: DailyUpdateInput) -> DailyUpdateOutput:
         """Implement the daily update interface - uses all model functions"""
@@ -350,7 +340,7 @@ class GeneticParametersSimulator(BaseSimulator):
             weather_data = {
                 'temperature': inputs.temperature,
                 'humidity': inputs.humidity,
-                'light_intensity': inputs.light_intensity,
+                'light_intensity': inputs.solar_radiation,  # Use solar_radiation as light_intensity
                 'co2_concentration': inputs.co2_concentration
             }
             
@@ -375,20 +365,26 @@ class GeneticParametersSimulator(BaseSimulator):
             }
             
             return DailyUpdateOutput(
+                model_name='genetic_parameters',
                 day=inputs.day,
-                hour=inputs.hour,
-                outputs=outputs,
-                status='success',
-                message='Genetic parameters calculation completed using model functions'
+                success=True,
+                primary_results=outputs,
+                secondary_results={},
+                internal_state=outputs,
+                validation_result=None,
+                processing_time_ms=0.0
             )
             
         except Exception as e:
             return DailyUpdateOutput(
+                model_name='genetic_parameters',
                 day=inputs.day,
-                hour=inputs.hour,
-                outputs={},
-                status='error',
-                message=f'Genetic parameters calculation failed: {str(e)}'
+                success=False,
+                primary_results={},
+                secondary_results={},
+                internal_state={'error': str(e)},
+                validation_result=None,
+                processing_time_ms=0.0
             )
     
     def get_current_state(self) -> Dict[str, Any]:
@@ -427,12 +423,16 @@ class GeneticParametersSimulator(BaseSimulator):
             'daily_genetic_response': self.state.daily_genetic_response
         }
         
-        # Add individual trait data
+        # Add individual trait data - per Rules.md: no fallback values
         for trait in self.genetic_traits:
-            data_map[f'{trait}_expression'] = self.state.trait_expressions.get(trait, 1.0)
-            data_map[f'{trait}_phenotype'] = self.state.phenotype_expression.get(trait, 1.0)
-            data_map[f'{trait}_variance'] = self.state.genetic_variance.get(trait, 0.1)
-            data_map[f'{trait}_heritability'] = self.state.heritability.get(trait, 0.5)
+            if trait not in self.state.trait_expressions:
+                raise ValueError(f"Trait {trait} expression data missing from state")
+            if trait not in self.state.phenotype_expression:
+                raise ValueError(f"Trait {trait} phenotype data missing from state")
+            data_map[f'{trait}_expression'] = self.state.trait_expressions[trait]
+            data_map[f'{trait}_phenotype'] = self.state.phenotype_expression[trait]
+            data_map[f'{trait}_variance'] = self.state.genetic_variance.get(trait, 0.0)
+            data_map[f'{trait}_heritability'] = self.state.heritability.get(trait, 0.0)
         
         return data_map.get(data_key)
 
@@ -454,12 +454,16 @@ class GeneticParametersSimulator(BaseSimulator):
             'daily_genetic_response': self.state.daily_genetic_response
         }
 
-        # Add individual trait data
+        # Add individual trait data - per Rules.md: no fallback values
         for trait in self.genetic_traits:
-            genetic_data[f'{trait}_expression'] = self.state.trait_expressions.get(trait, 1.0)
-            genetic_data[f'{trait}_phenotype'] = self.state.phenotype_expression.get(trait, 1.0)
-            genetic_data[f'{trait}_variance'] = self.state.genetic_variance.get(trait, 0.1)
-            genetic_data[f'{trait}_heritability'] = self.state.heritability.get(trait, 0.5)
+            if trait not in self.state.trait_expressions:
+                raise ValueError(f"Trait {trait} expression data missing from state")
+            if trait not in self.state.phenotype_expression:
+                raise ValueError(f"Trait {trait} phenotype data missing from state")
+            genetic_data[f'{trait}_expression'] = self.state.trait_expressions[trait]
+            genetic_data[f'{trait}_phenotype'] = self.state.phenotype_expression[trait]
+            genetic_data[f'{trait}_variance'] = self.state.genetic_variance.get(trait, 0.0)
+            genetic_data[f'{trait}_heritability'] = self.state.heritability.get(trait, 0.0)
 
         self.dependency_cache['genetic_parameters_simulator'] = genetic_data
 
@@ -529,7 +533,13 @@ class GeneticParametersSimulator(BaseSimulator):
         # Calculate trait stability metrics
         trait_stability = {}
         for trait in self.genetic_traits:
-            trait_values = [s.trait_expressions.get(trait, 1.0) for s in self.history]
+            # Per Rules.md: no fallback values
+            trait_values = []
+            for s in self.history:
+                if trait not in s.trait_expressions:
+                    raise ValueError(f"Trait {trait} expression missing from history state")
+                trait_values.append(s.trait_expressions[trait])
+
             if trait_values:
                 variance = sum((v - sum(trait_values)/len(trait_values))**2 for v in trait_values) / len(trait_values)
                 trait_stability[trait] = 1.0 / (1.0 + variance) if variance > 0 else 1.0

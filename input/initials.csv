@@ -1,0 +1,81 @@
+category,parameter_name,value,unit,description
+# System Configuration
+system_config,tank_volume_L,100.0,L,Hydroponic tank volume
+system_config,plant_count,20,count,Number of plants in system
+system_config,solution_volume,100.0,L,Nutrient solution volume
+system_config,grow_area,2.0,m2,Growing area
+
+# Initial Plant State (at planting/germination)
+initial_state,root_biomass,0.1,g,Initial root biomass at planting
+initial_state,shoot_biomass,0.05,g,Initial shoot biomass at planting
+initial_state,leaf_biomass,0.03,g,Initial leaf biomass at planting
+initial_state,stem_biomass,0.02,g,Initial stem biomass at planting
+initial_state,total_biomass,0.2,g,Initial total plant biomass
+initial_state,lai,0.05,m2_m2,Initial leaf area index
+initial_state,leaf_area,0.001,m2,Initial leaf area per plant
+initial_state,plant_height,0.02,m,Initial plant height (2 cm)
+initial_state,root_length,0.05,m,Initial root length
+
+# Initial Stress Levels (no stress at start)
+initial_state,water_stress,0.0,fraction,Initial water stress level
+initial_state,nutrient_stress,0.0,fraction,Initial nutrient stress level
+initial_state,temperature_stress,0.0,fraction,Initial temperature stress level
+initial_state,light_stress,0.0,fraction,Initial light stress level
+initial_state,salinity_stress,0.0,fraction,Initial salinity stress level
+initial_state,oxygen_stress,0.0,fraction,Initial oxygen stress level
+initial_state,ph_stress,0.0,fraction,Initial pH stress level
+
+# Initial Genetic Expression (baseline trait expression)
+initial_state,trait_growth_rate,0.5,dimensionless,Initial growth rate trait expression
+initial_state,trait_leaf_size,0.5,dimensionless,Initial leaf size trait expression
+initial_state,trait_yield_potential,0.5,dimensionless,Initial yield potential trait expression
+initial_state,trait_disease_resistance,0.5,dimensionless,Initial disease resistance trait expression
+initial_state,trait_heat_tolerance,0.5,dimensionless,Initial heat tolerance trait expression
+initial_state,trait_cold_tolerance,0.5,dimensionless,Initial cold tolerance trait expression
+initial_state,trait_bolting_tolerance,0.5,dimensionless,Initial bolting tolerance trait expression
+initial_state,trait_chlorophyll_content,0.5,dimensionless,Initial chlorophyll content trait expression
+initial_state,trait_root_development,0.5,dimensionless,Initial root development trait expression
+initial_state,trait_plant_architecture,0.5,dimensionless,Initial plant architecture trait expression
+
+# Initial Nutrient Concentrations (typical hydroponic starting solution)
+initial_state,solution_n_concentration,150.0,mg_L,Initial nitrogen concentration in solution
+initial_state,solution_p_concentration,50.0,mg_L,Initial phosphorus concentration in solution
+initial_state,solution_k_concentration,200.0,mg_L,Initial potassium concentration in solution
+initial_state,solution_ca_concentration,150.0,mg_L,Initial calcium concentration in solution
+initial_state,solution_mg_concentration,50.0,mg_L,Initial magnesium concentration in solution
+initial_state,solution_s_concentration,60.0,mg_L,Initial sulfur concentration in solution
+initial_state,solution_fe_concentration,2.0,mg_L,Initial iron concentration in solution
+initial_state,solution_ec,2.0,dS_m,Initial electrical conductivity
+initial_state,solution_ph,6.0,pH,Initial solution pH
+
+# Initial Environmental State
+initial_state,root_zone_temperature,22.0,C,Initial root zone temperature
+initial_state,canopy_temperature,22.0,C,Initial canopy temperature
+
+# Initial Uptake Rates (very low at germination)
+initial_state,water_uptake_rate,0.01,L_day,Initial water uptake rate
+initial_state,n_uptake_rate,0.5,mg_day,Initial nitrogen uptake rate
+initial_state,p_uptake_rate,0.1,mg_day,Initial phosphorus uptake rate
+initial_state,k_uptake_rate,0.3,mg_day,Initial potassium uptake rate
+
+# Initial Growth Rates
+initial_state,relative_growth_rate,0.05,per_day,Initial relative growth rate
+initial_state,leaf_expansion_rate,0.001,m2_day,Initial leaf expansion rate
+initial_state,root_growth_rate,0.01,cm_day,Initial root growth rate
+
+# Initial Development State
+initial_state,thermal_time_accumulated,0.0,degree_days,Initial accumulated thermal time
+initial_state,development_index,0.0,dimensionless,Initial development index
+initial_state,days_from_planting,0,days,Initial days counter
+initial_state,growth_stage,vegetative,stage,Initial growth stage (simplified)
+initial_state,detailed_growth_stage,GERMINATION,stage,Initial detailed growth stage
+
+# Initial Photosynthesis State
+initial_state,gross_photosynthesis,0.1,g_CO2_m2_day,Initial gross photosynthesis rate
+initial_state,net_photosynthesis,0.05,g_CO2_m2_day,Initial net photosynthesis rate
+initial_state,stomatal_conductance,0.05,mol_m2_s,Initial stomatal conductance
+
+# Initial Respiration State
+initial_state,maintenance_respiration,0.02,g_CO2_day,Initial maintenance respiration
+initial_state,growth_respiration,0.01,g_CO2_day,Initial growth respiration
+initial_state,total_respiration,0.03,g_CO2_day,Initial total respiration

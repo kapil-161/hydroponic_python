@@ -143,8 +143,8 @@ class PHModelSimulator(BaseSimulator):
                 'error': str(e),
                 'step': self.state.step_count
             })
-            # Don't raise error, just log and continue
-            pass
+            # Per Rules.md: raise errors, don't suppress them
+            raise e
     
     def _update_dependencies(self):
         """Update data from dependent simulators - with graceful handling"""
@@ -179,30 +179,7 @@ class PHModelSimulator(BaseSimulator):
                 print(f"Error updating dependency {dep_simulator}: {e}")
                 # Don't raise error, just log and continue
                 pass
-        for dep_simulator, required_data in self.dependencies.items():
-            try:
-                # Check if cache is still valid
-                if dep_simulator in self.cache_timestamp:
-                    cache_age = (datetime.now() - self.cache_timestamp[dep_simulator]).total_seconds()
-                    if cache_age < self.cache_timeout:
-                        continue  # Use cached data
-                
-                # Request fresh data from other simulators
-                fresh_data = {}
-                for data_key in required_data:
-                    value = self.request_data(dep_simulator, data_key)
-                    if value is None:
-                        missing_data.append(data_key)
-                    else:
-                        fresh_data[data_key] = value
-                    if fresh_data:
-                        self.dependency_cache[dep_simulator] = fresh_data
-                        self.cache_timestamp[dep_simulator] = datetime.now()
-                    
-            except Exception as e:
-                print(f"Error updating dependency {dep_simulator}: {e}")
-                # Don't raise error, just log and continue
-            pass
+                    # Already handled above
     
     def _execute_ph_step(self, weather_data: Dict[str, Any]):
         """Execute pH calculation using model functions - no shortcuts"""
@@ -223,12 +200,14 @@ class PHModelSimulator(BaseSimulator):
             if any(x is None for x in [water_uptake_rate, transpiration_rate]):
                 raise ValueError("Water data missing from water_uptake_simulator - no defaults allowed")
             
-            # Get environmental conditions from daily weather file
-            temperature = weather_data.get('temp_avg')
-            humidity = weather_data.get('rel_humidity')
-            
+            # Get environmental conditions from dependency cache and weather data
+            env_data = self.dependency_cache.get('environmental_control', {})
+            temperature = env_data.get('temperature') or weather_data.get('temperature')
+            humidity = env_data.get('humidity') or weather_data.get('humidity')
+
             if any(x is None for x in [temperature, humidity]):
-                raise ValueError("Environmental data missing from weather data - no defaults allowed")
+                # Per Rules.md: raise errors, no defaults allowed
+                raise ValueError("Environmental data missing from environmental_control and weather data - no defaults allowed")
             
             # Get stress factors from stress models simulator
             stress_data = self.dependency_cache.get('stress_models', {})
@@ -295,8 +274,8 @@ class PHModelSimulator(BaseSimulator):
             
         except Exception as e:
             print(f"Error in pH calculation: {e}")
-            # Don't raise error, just log and continue
-            pass
+            # Per Rules.md: raise errors, don't suppress them
+            raise e
     
     def daily_update(self, inputs: DailyUpdateInput) -> DailyUpdateOutput:
         """Implement the daily update interface - uses all model functions"""
@@ -329,20 +308,26 @@ class PHModelSimulator(BaseSimulator):
             }
             
             return DailyUpdateOutput(
+                model_name="ph_model_simulator",
                 day=inputs.day,
-                hour=inputs.hour,
-                outputs=outputs,
-                status='success',
-                message='pH calculation completed using model functions'
+                success=True,
+                primary_results=outputs,
+                secondary_results={'ph_calculation': 'completed'},
+                internal_state=outputs,
+                validation_result=None,
+                processing_time_ms=1.0
             )
             
         except Exception as e:
             return DailyUpdateOutput(
+                model_name="ph_model_simulator",
                 day=inputs.day,
-                hour=inputs.hour,
-                outputs={},
-                status='error',
-                message=f'pH calculation failed: {str(e)}'
+                success=False,
+                primary_results={},
+                secondary_results={'error_message': f'pH calculation failed: {str(e)}'},
+                internal_state={},
+                validation_result=None,
+                processing_time_ms=1.0
             )
     
     def get_current_state(self) -> Dict[str, Any]:

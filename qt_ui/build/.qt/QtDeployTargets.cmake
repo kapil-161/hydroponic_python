@@ -1,2 +1,0 @@
-set(__QT_DEPLOY_TARGET_HydroponicCSVEditor_FILE /Users/kapilbhattarai/hydroponic_python/qt_ui/build/HydroponicCSVEditor)
-set(__QT_DEPLOY_TARGET_HydroponicCSVEditor_TYPE EXECUTABLE)

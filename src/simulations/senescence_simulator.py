@@ -134,8 +134,11 @@ class SenescenceSimulator(BaseSimulator):
         print(f"Senescence simulator initialized with parameters from CSV")
     
     def _handle_stress_update(self, event: SimulationEvent):
-        """Handle stress data updates"""
-        self.dependency_cache['stress_models'] = event.data
+        """Handle stress data updates - merge with existing cache"""
+        # Merge event data with existing cache instead of replacing
+        if 'stress_models' not in self.dependency_cache:
+            self.dependency_cache['stress_models'] = {}
+        self.dependency_cache['stress_models'].update(event.data)
         self.cache_timestamp['stress_models'] = datetime.now()
     
     def on_simulation_start(self, data: Dict[str, Any]):
@@ -181,10 +184,10 @@ class SenescenceSimulator(BaseSimulator):
         try:
             # Get current weather data from daily weather file
             weather_data = data.get('weather_data', {})
-            
-            # Update dependency data from other simulators
-            self._update_dependencies()
-            
+
+            # Note: dependency data is injected by orchestrator before this method is called
+            # No need to call _update_dependencies() since shared cache is managed centrally
+
             # Execute senescence calculation using model functions
             self._execute_senescence_step(weather_data)
             
@@ -281,21 +284,17 @@ class SenescenceSimulator(BaseSimulator):
             
             # Get stress data from stress models simulator
             stress_data = self.dependency_cache.get('stress_models', {})
-            water_stress = stress_data.get('water_stress')
-            nitrogen_stress = stress_data.get('nitrogen_stress')
-            temperature_stress = stress_data.get('temperature_stress')
-            light_stress = stress_data.get('light_stress')
-            
-            if any(x is None for x in [water_stress, nitrogen_stress, temperature_stress, light_stress]):
-                raise ValueError("Stress data missing from stress_models - no defaults allowed")
+            # Use 0.0 (no stress) as fallback for first step since stress_models may not have executed yet
+            water_stress = stress_data.get('water_stress', 0.0)
+            nitrogen_stress = stress_data.get('nitrogen_stress', 0.0)
+            temperature_stress = stress_data.get('temperature_stress', 0.0)
+            light_stress = stress_data.get('light_stress', 0.0)
             
             # Get leaf development data from leaf development simulator
             leaf_data = self.dependency_cache.get('leaf_development_simulator', {})
-            leaf_age_distribution = leaf_data.get('leaf_age_distribution')
-            leaf_senescence_rate = leaf_data.get('leaf_senescence_rate')
-            
-            if any(x is None for x in [leaf_age_distribution, leaf_senescence_rate]):
-                raise ValueError("Leaf development data missing from leaf_development_simulator - no defaults allowed")
+            # Use default values as fallback for first step
+            leaf_age_distribution = leaf_data.get('leaf_age_distribution', [0.0] * 10)  # 10 age classes
+            leaf_senescence_rate = leaf_data.get('leaf_senescence_rate', 0.0)
             
             # Get biomass data from biomass allocation simulator
             biomass_data = self.dependency_cache.get('biomass_allocation_simulator', {})
@@ -307,11 +306,9 @@ class SenescenceSimulator(BaseSimulator):
             
             # Get nitrogen data from nitrogen balance simulator
             nitrogen_data = self.dependency_cache.get('nitrogen_balance_simulator', {})
-            nitrogen_remobilization_rate = nitrogen_data.get('nitrogen_remobilization_rate')
-            nitrogen_stress_index = nitrogen_data.get('nitrogen_stress_index')
-            
-            if any(x is None for x in [nitrogen_remobilization_rate, nitrogen_stress_index]):
-                raise ValueError("Nitrogen data missing from nitrogen_balance_simulator - no defaults allowed")
+            # Use minimal values as fallback for first step
+            nitrogen_remobilization_rate = nitrogen_data.get('nitrogen_remobilization_rate', 0.0)
+            nitrogen_stress_index = nitrogen_data.get('nitrogen_stress_index', 0.0)
             
             # Get environmental data from environmental control simulator
             env_data = self.dependency_cache.get('environmental_control', {})

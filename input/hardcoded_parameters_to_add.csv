@@ -1,0 +1,112 @@
+category,parameter_name,value,unit,description,source_file,source_line
+# Simulation Configuration (4 parameters)
+simulator_defaults,total_days,30,days,Total simulation duration (overridden by weather data),distributed_simulation_runner.py,71
+simulator_defaults,steps_per_day,24,steps,Timesteps per day (24=hourly),distributed_simulation_runner.py,72
+simulator_defaults,enable_real_time,false,boolean,Real-time simulation mode,distributed_simulation_runner.py,74
+simulator_defaults,synchronization_mode,sequential,string,Simulator execution mode (sequential/parallel),distributed_simulation_runner.py,75
+
+# Stress Model - Temperature (2 parameters)
+stress_parameters,temperature_lethal_min,2.0,°C,Minimum survival temperature,parameter_loader.py,334
+stress_parameters,temperature_recovery_rate,0.2,per_day,Recovery rate from temperature stress,parameter_loader.py,338
+
+# Stress Model - Water (2 parameters)
+stress_parameters,water_critical_threshold,0.15,fraction,Critical water stress threshold,parameter_loader.py,343
+stress_parameters,water_recovery_rate,0.3,per_day,Recovery rate from water stress,parameter_loader.py,346
+
+# Stress Model - Nutrient (3 parameters)
+stress_parameters,nutrient_critical_threshold,0.1,fraction,Critical nutrient deficiency threshold,parameter_loader.py,351
+stress_parameters,nutrient_toxicity_threshold,3.0,dimensionless,Threshold for nutrient toxicity,parameter_loader.py,352
+stress_parameters,nutrient_recovery_rate,0.25,per_day,Recovery rate from nutrient stress,parameter_loader.py,353
+
+# Stress Model - Light (3 parameters)
+stress_parameters,light_max_ppfd,2000.0,μmol_m2_s,Maximum PPFD before stress,parameter_loader.py,359
+stress_parameters,light_photoinhibition_threshold,1800.0,μmol_m2_s,PPFD for photoinhibition onset,parameter_loader.py,360
+stress_parameters,light_recovery_rate,0.4,per_day,Recovery rate from light stress,parameter_loader.py,361
+
+# Stress Model - pH (2 parameters)
+stress_parameters,ph_stress_sensitivity,2.0,dimensionless,Sensitivity factor for pH stress,parameter_loader.py,369
+stress_parameters,ph_recovery_rate,0.5,per_day,Recovery rate from pH stress,parameter_loader.py,370
+
+# Stress Model - Salinity (3 parameters)
+stress_parameters,salinity_threshold_ec,2.5,dS_m,EC threshold for salinity stress,parameter_loader.py,374
+stress_parameters,salinity_critical_ec,4.0,dS_m,EC for severe salinity stress,parameter_loader.py,375
+stress_parameters,salinity_recovery_rate,0.2,per_day,Recovery rate from salinity stress,parameter_loader.py,377
+
+# Stress Model - Oxygen (3 parameters)
+stress_parameters,oxygen_critical_min,3.0,mg_L,Critical minimum dissolved oxygen,parameter_loader.py,381
+stress_parameters,oxygen_optimal_min,5.0,mg_L,Optimal minimum dissolved oxygen,parameter_loader.py,382
+stress_parameters,oxygen_recovery_rate,0.6,per_day,Recovery rate from oxygen stress,parameter_loader.py,383
+
+# Stress Model - Integration (6 parameters)
+stress_parameters,integration_water_weight,0.3,dimensionless,Water stress weight in integration,parameter_loader.py,388
+stress_parameters,integration_nutrient_weight,0.15,dimensionless,Nutrient stress weight in integration,parameter_loader.py,389
+stress_parameters,integration_light_weight,0.05,dimensionless,Light stress weight in integration,parameter_loader.py,390
+stress_parameters,integration_interaction_factor,1.2,dimensionless,Multiplicative interaction strength,parameter_loader.py,391
+stress_parameters,integration_threshold_severe,0.3,fraction,Severe combined stress threshold,parameter_loader.py,392
+stress_parameters,integration_threshold_critical,0.15,fraction,Critical combined stress threshold,parameter_loader.py,393
+
+# Stress Model - Acclimation (2 parameters)
+stress_parameters,acclimation_max_adjustment,0.5,dimensionless,Maximum acclimation adjustment,parameter_loader.py,399
+stress_parameters,acclimation_decay_rate,0.1,per_day,Daily decay of acclimation,parameter_loader.py,400
+
+# Stress Model - Sensitivity (5 parameters)
+stress_parameters,sensitivity_photosynthesis,0.8,dimensionless,Photosynthesis sensitivity to stress,parameter_loader.py,404
+stress_parameters,sensitivity_respiration,0.4,dimensionless,Respiration sensitivity to stress,parameter_loader.py,405
+stress_parameters,sensitivity_transpiration,0.6,dimensionless,Transpiration sensitivity to stress,parameter_loader.py,406
+stress_parameters,sensitivity_growth,0.9,dimensionless,Growth sensitivity to stress,parameter_loader.py,407
+stress_parameters,sensitivity_development,0.5,dimensionless,Development sensitivity to stress,parameter_loader.py,408
+
+# Cache Timeout (1 global parameter - consolidate 4 duplicates)
+simulator_defaults,cache_timeout,300.0,seconds,Dependency cache timeout,parameter_loader.py,"411,605,733,1131,1208"
+
+# Water Parameters (1 parameter)
+water_parameters,optimal_temperature,22.0,°C,Optimal water temperature,parameter_loader.py,437
+
+# Nitrogen Balance - Base Values (4 parameters instead of 48 loop-generated)
+nitrogen_balance,buffering_capacity_base,1.0,g_plant,Base buffering capacity for all organs/nutrients,parameter_loader.py,591
+nitrogen_balance,storage_pool_size_base,10.0,g_plant,Base storage pool size for all organs/nutrients,parameter_loader.py,592
+nitrogen_balance,redistribution_threshold,0.5,fraction,Redistribution threshold for all nutrients,parameter_loader.py,595
+nitrogen_balance,redistribution_rate,0.1,per_day,Redistribution rate for all nutrients,parameter_loader.py,596
+nitrogen_balance,sink_strength_base,1.0,dimensionless,Base sink strength for vegetative organs,parameter_loader.py,601
+nitrogen_balance,sink_strength_reproductive,2.0,dimensionless,Sink strength for reproductive organs,parameter_loader.py,603
+
+# pH Model (6 parameters)
+ph_parameters,default_nitrate_uptake,10.0,mg_per_day,Default nitrate uptake rate,parameter_loader.py,727
+ph_parameters,default_ammonium_uptake,2.0,mg_per_day,Default ammonium uptake rate,parameter_loader.py,728
+ph_parameters,default_phosphate_uptake,3.0,mg_per_day,Default phosphate uptake rate,parameter_loader.py,729
+ph_parameters,default_iron_concentration,2.0,mg_L,Default iron concentration,parameter_loader.py,731
+ph_parameters,default_time_step,24.0,hours,Default time step,parameter_loader.py,732
+ph_parameters,hours_per_day,24.0,hours,Standard hours per day,parameter_loader.py,734
+
+# Root System - Geometry (5 parameters)
+root_system,container_volume,50000.0,cm3,Container volume (50L),parameter_loader.py,747
+root_system,channel_length,100.0,cm,NFT/DWC channel length,parameter_loader.py,748
+root_system,channel_width,10.0,cm,Channel width,parameter_loader.py,750
+root_system,channel_depth,5.0,cm,Channel depth,parameter_loader.py,751
+root_system,n_channels,4,count,Number of channels,parameter_loader.py,752
+
+# Root System - Growth (4 parameters)
+root_system,primary_root_growth_rate,2.0,cm_per_day,Primary root elongation rate,parameter_loader.py,756
+root_system,lateral_root_density,5.0,roots_per_cm,Lateral root density,parameter_loader.py,757
+root_system,branching_angle_mean,45.0,degrees,Mean branching angle,parameter_loader.py,758
+root_system,branching_angle_std,15.0,degrees,Std dev of branching angle,parameter_loader.py,759
+
+# Root System - Fractions (3 parameters)
+root_system,fine_root_fraction,0.6,fraction,Fine root biomass fraction,parameter_loader.py,762
+root_system,medium_root_fraction,0.3,fraction,Medium root biomass fraction,parameter_loader.py,763
+root_system,coarse_root_fraction,0.1,fraction,Coarse root biomass fraction,parameter_loader.py,764
+
+# Genetic Parameters (3 parameters)
+genetic_parameters,default_air_temperature,20.0,°C,Default air temperature for initialization,parameter_loader.py,1009
+genetic_parameters,default_humidity,60.0,%,Default humidity for initialization,parameter_loader.py,1010
+genetic_parameters,default_light_intensity,200.0,μmol_m2_s,Default light intensity for initialization,parameter_loader.py,1011
+
+# Leaf Development (1 parameter)
+leaf_development,cache_timeout,300.0,seconds,Cache timeout (duplicate - use simulator_defaults),parameter_loader.py,1131
+
+# Senescence (1 parameter)
+senescence,cache_timeout,300.0,seconds,Cache timeout (duplicate - use simulator_defaults),parameter_loader.py,1208
+
+# Water Uptake (2 parameters)
+water_uptake,sensitivity_low,0.06,dimensionless,Low water uptake sensitivity,parameter_loader.py,1235
+water_uptake,sensitivity_high,0.10,dimensionless,High water uptake sensitivity,parameter_loader.py,1236

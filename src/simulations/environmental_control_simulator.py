@@ -203,10 +203,10 @@ class EnvironmentalControlSimulator(BaseSimulator):
         """Execute environmental control calculation using model functions - no shortcuts"""
         try:
             # Get external weather conditions from daily weather file
-            external_temperature = weather_data.get('temp_avg')
-            external_humidity = weather_data.get('rel_humidity')
-            external_light = weather_data.get('par')  # PAR is the light intensity
-            external_co2 = weather_data.get('co2_ppm')
+            external_temperature = weather_data.get('temperature')
+            external_humidity = weather_data.get('humidity')
+            external_light = weather_data.get('light_intensity')  # PAR is the light intensity
+            external_co2 = weather_data.get('co2_concentration')
             external_wind = weather_data.get('wind_speed')
             
             # Per Rules.md: raise error if missing, no defaults

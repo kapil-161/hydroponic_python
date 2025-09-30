@@ -87,12 +87,23 @@ class RootSystemSimulator(BaseSimulator):
         print(f"Root system simulator initialized with parameters from CSV")
     
     def on_simulation_start(self, data: Dict[str, Any]):
-        """Handle simulation start"""
+        """Handle simulation start - initialize with values from initials.csv"""
         print("Root system simulator: Simulation started")
         self.state = RootSystemState()
+
+        # Load initial root state from CSV (via initial_state)
+        initial_state = data.get('initial_state', {})
+        if initial_state:
+            self.state.root_biomass = initial_state.get('root_biomass', 0.1)
+            self.state.root_length = initial_state.get('root_length', 0.05)
+            self.state.root_surface_area = self.state.root_length * 0.001  # Estimate from length
+            self.state.root_depth = self.state.root_length  # Initially depth = length
+            self.state.root_activity = 1.0  # Fully active at start
+            print(f"Root: Initialized root_biomass={self.state.root_biomass}g, root_length={self.state.root_length}m from CSV")
+
         self.history.clear()
         self.dependency_cache.clear()
-        
+
         # Initialize model with parameters from CSV
         self.model.initialize()
 
@@ -283,7 +294,7 @@ class RootSystemSimulator(BaseSimulator):
                 raise ValueError("Root zone temperature missing from root_zone_temperature_simulator - no defaults allowed")
             
             # Get environmental conditions from daily weather file
-            temperature = weather_data.get('temp_avg')
+            temperature = weather_data.get('temperature')
             if temperature is None:
                 raise ValueError("Temperature missing from weather data - no defaults allowed")
             
@@ -429,6 +440,7 @@ class RootSystemSimulator(BaseSimulator):
         root_data = {
             'root_depth': self.state.root_depth,
             'root_biomass': self.state.root_biomass,
+            'root_mass': self.state.root_biomass,  # Alias for compatibility
             'root_length': self.state.root_length,
             'root_surface_area': self.state.root_surface_area,
             'root_distribution': self.state.root_distribution,
