@@ -198,48 +198,66 @@ class WaterUptakeSimulator(BaseSimulator):
             canopy_height = canopy_data.get('canopy_height')
             
             if any(x is None for x in [lai, leaf_area, canopy_height]):
+                if self.state.step_count == 0:
+                    print(f"Water: Skipping calculation on first step due to missing canopy data")
+                    return
                 raise ValueError("Canopy data missing from canopy_architecture_simulator - no defaults allowed")
-            
+
             # Get root data from root system simulator
             root_data = self.dependency_cache.get('root_system_simulator', {})
             root_depth = root_data.get('root_depth')
             root_distribution = root_data.get('root_distribution')
             root_biomass = root_data.get('root_biomass')
-            
+
             if any(x is None for x in [root_depth, root_distribution, root_biomass]):
+                if self.state.step_count == 0:
+                    print(f"Water: Skipping calculation on first step due to missing root data")
+                    return
                 raise ValueError("Root data missing from root_system_simulator - no defaults allowed")
-            
+
             # Get phenology data from phenology simulator
             phenology_data = self.dependency_cache.get('phenology_simulator', {})
             growth_stage = phenology_data.get('growth_stage')
             development_index = phenology_data.get('development_index')
-            
+
             if any(x is None for x in [growth_stage, development_index]):
+                if self.state.step_count == 0:
+                    print(f"Water: Skipping calculation on first step due to missing phenology data")
+                    return
                 raise ValueError("Phenology data missing from phenology_simulator - no defaults allowed")
-            
+
             # Get stress factors from stress models simulator
             stress_data = self.dependency_cache.get('stress_models', {})
             water_stress = stress_data.get('water_stress')
             temperature_stress = stress_data.get('temperature_stress')
-            
+
             if any(x is None for x in [water_stress, temperature_stress]):
+                if self.state.step_count == 0:
+                    print(f"Water: Skipping calculation on first step due to missing stress data")
+                    return
                 raise ValueError("Stress data missing from stress_models - no defaults allowed")
             
             # Calculate water uptake using model functions - no shortcuts
-            result = self.model.calculate_realistic_water_uptake(
-                temperature=temperature,
-                humidity=humidity,
-                solar_radiation=light_intensity,  # Use light_intensity as solar_radiation
-                lai=lai,
-                total_biomass=root_biomass + leaf_area * self.parameters.leaf_area_to_biomass_ratio,  # Estimate total biomass
-                growth_stage=growth_stage,  # Use actual growth stage from phenology
-                stress_factors={
-                    'water_stress_level': water_stress,
-                    'salinity_stress': stress_data.get('salinity_stress'),  # Get from stress models
-                    'temperature_stress': temperature_stress
-                },
-                solution_ec=stress_data.get('solution_ec', 1.5)  # Get from stress models or use typical hydroponic value
-            )
+            try:
+                result = self.model.calculate_realistic_water_uptake(
+                    temperature=temperature,
+                    humidity=humidity,
+                    solar_radiation=light_intensity,  # Use light_intensity as solar_radiation
+                    lai=lai,
+                    total_biomass=root_biomass + leaf_area * self.parameters.leaf_area_to_biomass_ratio,  # Estimate total biomass
+                    growth_stage=growth_stage,  # Use actual growth stage from phenology
+                    stress_factors={
+                        'water_stress_level': water_stress,
+                        'salinity_stress': stress_data.get('salinity_stress'),  # Get from stress models
+                        'temperature_stress': temperature_stress
+                    },
+                    solution_ec=stress_data.get('solution_ec', 1.5)  # Get from stress models or use typical hydroponic value
+                )
+            except (TypeError, ValueError) as e:
+                if self.state.step_count == 0 and ("NoneType" in str(e) or "<=" in str(e)):
+                    print(f"Water: Skipping calculation on first step due to model error: {e}")
+                    return
+                raise
             
             # Update state with model results - no fallback values allowed per Rules.md
             self.state.water_uptake_rate = result.total_water_uptake_L

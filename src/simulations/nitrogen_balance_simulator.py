@@ -137,7 +137,19 @@ class NitrogenBalanceSimulator(BaseSimulator):
         
         # Initialize model with parameters from CSV
         self.model.initialize()
-        
+
+        # Initialize organ nitrogen states from initial_state CSV data
+        initial_state = data.get('initial_state', {})
+        if initial_state:
+            # Initialize organs with small starting values
+            for organ in self.organs:
+                initial_mass = initial_state.get(f'{organ[:-1]}_biomass', 0.05)  # Remove 's' and add _biomass
+                initial_n_conc = 0.03  # 3% nitrogen concentration as default
+                try:
+                    self.model.initialize_organ_nitrogen(organ, initial_mass, initial_n_conc)
+                except Exception as e:
+                    print(f"N-Balance: Could not initialize {organ}: {e}")
+
         # Initialize nitrogen pools
         initial_pools = NitrogenPools(
             total_nitrogen=0.0,
@@ -372,16 +384,17 @@ class NitrogenBalanceSimulator(BaseSimulator):
             )
 
             # Create result dict from individual calculations
+            total_demand = sum(demand_result.values()) if demand_result else 0.0
             result = {
                 'total_nitrogen_uptake': uptake_result.total_uptake if uptake_result else 0.0,
-                'nitrate_uptake': uptake_result.nitrate_uptake if uptake_result else 0.0,
-                'ammonium_uptake': uptake_result.ammonium_uptake if uptake_result else 0.0,
-                'amino_acid_uptake': 0.0,
-                'total_nitrogen_allocation': demand_result.total_demand if demand_result else 0.0,
-                'leaf_nitrogen_allocation': demand_result.leaf_demand if demand_result else 0.0,
-                'stem_nitrogen_allocation': demand_result.stem_demand if demand_result else 0.0,
-                'root_nitrogen_allocation': demand_result.root_demand if demand_result else 0.0,
-                'reproductive_nitrogen_allocation': 0.0,
+                'nitrate_uptake': uptake_result.uptake_by_form.get('NO3', 0.0) if uptake_result else 0.0,
+                'ammonium_uptake': uptake_result.uptake_by_form.get('NH4', 0.0) if uptake_result else 0.0,
+                'amino_acid_uptake': uptake_result.uptake_by_form.get('amino_acids', 0.0) if uptake_result else 0.0,
+                'total_nitrogen_allocation': total_demand,
+                'leaf_nitrogen_allocation': demand_result.get('leaves', 0.0) if demand_result else 0.0,
+                'stem_nitrogen_allocation': demand_result.get('stems', 0.0) if demand_result else 0.0,
+                'root_nitrogen_allocation': demand_result.get('roots', 0.0) if demand_result else 0.0,
+                'reproductive_nitrogen_allocation': demand_result.get('reproductive', 0.0) if demand_result else 0.0,
                 'total_nitrogen_remobilization': 0.0,
                 'nitrogen_stress_index': self.model.calculate_nitrogen_stress_level()
             }

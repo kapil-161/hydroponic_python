@@ -299,7 +299,7 @@ class StrictParameterLoader:
         params_dict['bolting_photoperiod_threshold'] = self.get_parameter('phenology_parameters_bolting_photoperiod_threshold')
         params_dict['bolting_temperature_threshold'] = self.get_parameter('phenology_parameters_bolting_temperature_threshold')
 
-        # Build thermal_requirements dictionary from individual transition parameters
+        # Build thermal_requirements dictionary from CSV parameters
         thermal_requirements = {}
         transitions = [
             'GE_to_VE', 'VE_to_V1', 'V1_to_V2', 'V2_to_V3', 'V3_to_V4', 'V4_to_V5',
@@ -308,30 +308,10 @@ class StrictParameterLoader:
             'AN_to_SD', 'SD_to_PM'
         ]
 
-        # Since thermal requirements aren't in CSV yet, use scientific defaults
-        # These should eventually be moved to CSV per Rules.md
-        thermal_requirements = {
-            'GE_to_VE': 60.0,   # Germination to emergence (Scaife & Turner, 1983)
-            'VE_to_V1': 80.0,   # Emergence to first leaf
-            'V1_to_V2': 50.0,   # First to second leaf
-            'V2_to_V3': 50.0,   # Second to third leaf
-            'V3_to_V4': 50.0,   # Third to fourth leaf
-            'V4_to_V5': 50.0,   # Fourth to fifth leaf
-            'V5_to_V6': 50.0,   # Fifth to sixth leaf
-            'V6_to_V7': 50.0,   # Sixth to seventh leaf
-            'V7_to_V8': 50.0,   # Seventh to eighth leaf
-            'V8_to_V9': 50.0,   # Eighth to ninth leaf
-            'V9_to_V10': 50.0,  # Ninth to tenth leaf
-            'V10_to_V11+': 60.0, # Tenth to mature vegetative
-            'V11+_to_HI': 100.0, # Mature vegetative to head initiation
-            'HI_to_HD': 200.0,   # Head initiation to development
-            'HD_to_HM': 300.0,   # Head development to harvest maturity
-            'HM_to_BI': 100.0,   # Harvest maturity to bolting initiation
-            'BI_to_FL': 150.0,   # Bolting initiation to flowering
-            'FL_to_AN': 100.0,   # Flowering to anthesis
-            'AN_to_SD': 200.0,   # Anthesis to seed development
-            'SD_to_PM': 300.0    # Seed development to physiological maturity
-        }
+        # Load all thermal requirements from CSV - no hardcoded values
+        for transition in transitions:
+            param_name = f'phenology_parameters_thermal_transition_{transition}'
+            thermal_requirements[transition] = self.get_parameter(param_name)
 
         params_dict['thermal_requirements'] = thermal_requirements
 
@@ -622,8 +602,9 @@ class StrictParameterLoader:
                 config[f'mobility_classifications_{nutrient}_retranslocation_rate'] = self.get_parameter(f'nutrient_mobility_retranslocation_rate_{csv_key}')
 
             config[f'xylem_transport_rates_{nutrient}'] = self.get_parameter(f'nutrient_mobility_xylem_transport_rates_{csv_key}')
-            # Calculate phloem rates as fraction of xylem rates (reasonable approximation)
-            config[f'phloem_transport_rates_{nutrient}'] = config[f'xylem_transport_rates_{nutrient}'] * 0.4
+            # Calculate phloem rates as fraction of xylem rates from CSV parameter
+            phloem_factor = self.get_parameter('nutrient_parameters_phloem_transport_factor')
+            config[f'phloem_transport_rates_{nutrient}'] = config[f'xylem_transport_rates_{nutrient}'] * phloem_factor
 
         # Provide minimal required parameters for complex data structures
         # Load base values from CSV - per Rules.md: no hardcoded values
@@ -795,11 +776,11 @@ class StrictParameterLoader:
         # Core root system parameters - ALL from CSV per Rules.md
         config['container_volume'] = self.get_parameter('root_system_container_volume_default')
         config['channel_length'] = self.get_parameter('root_system_channel_length_default')
-        config['system_type'] = 'deep_water_culture'  # System type - keeping as constant
+        config['system_type'] = self.get_parameter('root_system_parameters_system_type')
         config['channel_width'] = self.get_parameter('root_system_channel_width_default')
         config['channel_depth'] = self.get_parameter('root_system_channel_depth_default')
         config['n_channels'] = self.get_parameter('root_system_n_channels_default')
-        config['root_zone_independent'] = True
+        config['root_zone_independent'] = bool(self.get_parameter('root_system_parameters_root_zone_independent'))
 
         # Root growth parameters - ALL from CSV per Rules.md
         config['primary_root_growth_rate'] = self.get_parameter('root_system_primary_root_growth_rate_default')
@@ -1123,7 +1104,7 @@ class StrictParameterLoader:
             yield_potential=self.get_parameter('genetic_parameters_yield_potential'),
             adaptation_score=self.get_parameter('genetic_parameters_adaptation_score'),
             trait_values=trait_values,
-            maturity_days=60  # Default maturity days
+            maturity_days=int(self.get_parameter('genetic_parameters_maturity_days'))
         )
 
         # Add cultivar to database

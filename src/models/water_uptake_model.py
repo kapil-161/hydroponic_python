@@ -435,6 +435,8 @@ class WaterUptakeModel:
         """Calculate VPD response factor (0 to 1)."""
         if not isinstance(vpd, (int, float)):
             raise ValueError("VPD must be numeric")
+        if self.params.optimal_vpd_min is None or self.params.optimal_vpd_max is None:
+            raise ValueError("optimal_vpd_min and optimal_vpd_max must be provided from CSV")
         if self.params.optimal_vpd_min <= vpd <= self.params.optimal_vpd_max:
             return 1.0
         optimal_mid = (self.params.optimal_vpd_min + self.params.optimal_vpd_max) / 2

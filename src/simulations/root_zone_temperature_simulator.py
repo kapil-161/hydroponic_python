@@ -243,14 +243,24 @@ class RootZoneTemperatureSimulator(BaseSimulator):
             root_activity = root_data.get('root_activity')
 
             if any(x is None for x in [root_mass, root_activity]):
-                raise ValueError("Root data missing from root_system_simulator - no defaults allowed")
+                # On first step, root data may not be available yet
+                if self.state.step_count == 0:
+                    print(f"RZT: Skipping calculation on first step due to missing root data")
+                    return
+                else:
+                    raise ValueError("Root data missing from root_system_simulator - no defaults allowed")
 
             # Get root respiration from respiration simulator
             respiration_data = self.dependency_cache.get('respiration_simulator', {})
             root_respiration = respiration_data.get('root_respiration')
 
             if root_respiration is None:
-                raise ValueError("Root respiration missing from respiration_simulator - no defaults allowed")
+                # On first step, respiration may not be available yet
+                if self.state.step_count == 0:
+                    print(f"RZT: Skipping calculation on first step due to missing respiration data")
+                    return
+                else:
+                    raise ValueError("Root respiration missing from respiration_simulator - no defaults allowed")
             
             # Get nutrient data from nutrient models simulator
             nutrient_data = self.dependency_cache.get('nutrient_models_simulator', {})

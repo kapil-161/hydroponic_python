@@ -319,7 +319,12 @@ class NutrientModelsSimulator(BaseSimulator):
             stem_biomass = biomass_data.get('stem_biomass')
 
             if any(x is None for x in [leaf_biomass, stem_biomass]):
-                raise ValueError("Biomass data missing from biomass_allocation_simulator - no defaults allowed")
+                # On first step, biomass may not be available yet
+                if self.state.step_count == 0:
+                    print(f"Nutrient: Skipping calculation on first step due to missing biomass data")
+                    return
+                else:
+                    raise ValueError("Biomass data missing from biomass_allocation_simulator - no defaults allowed")
             
             shoot_biomass = leaf_biomass + stem_biomass
             if shoot_biomass > 0:

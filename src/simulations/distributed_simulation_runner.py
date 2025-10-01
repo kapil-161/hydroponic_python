@@ -80,7 +80,11 @@ class DistributedSimulationRunner:
             synchronization_mode=str(self.parameter_loader.get_parameter('simulator_defaults_synchronization_mode_default')),
             data_collection_interval=int(self.parameter_loader.get_parameter('simulator_defaults_data_collection_interval')),
             max_concurrent_simulators=int(self.parameter_loader.get_parameter('simulator_defaults_max_concurrent_simulators')),
-            max_errors=int(self.parameter_loader.get_parameter('simulator_defaults_max_errors'))
+            max_errors=int(self.parameter_loader.get_parameter('simulator_defaults_max_errors')),
+            progress_report_interval=int(self.parameter_loader.get_parameter('simulator_defaults_progress_report_interval')),
+            initialization_wait_time=float(self.parameter_loader.get_parameter('simulator_defaults_initialization_wait_time')),
+            event_processing_wait_time=float(self.parameter_loader.get_parameter('simulator_defaults_event_processing_wait_time')),
+            initialization_cycles=int(self.parameter_loader.get_parameter('simulator_defaults_initialization_cycles'))
         )
         
         self.orchestrator = SimulationOrchestrator(self.config)

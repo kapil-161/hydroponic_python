@@ -280,7 +280,12 @@ class SenescenceSimulator(BaseSimulator):
             thermal_time = phenology_data.get('thermal_time')
             
             if any(x is None for x in [growth_stage, development_index, thermal_time]):
-                raise ValueError("Phenology data missing from phenology_simulator - no defaults allowed")
+                # On first step, phenology may not be available yet
+                if self.state.step_count == 0:
+                    print(f"Senescence: Skipping calculation on first step due to missing phenology data")
+                    return
+                else:
+                    raise ValueError("Phenology data missing from phenology_simulator - no defaults allowed")
             
             # Get stress data from stress models simulator
             stress_data = self.dependency_cache.get('stress_models', {})

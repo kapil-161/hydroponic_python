@@ -1955,3 +1955,31 @@ root_system,multipliers_kratky_root_length_multiplier,1.3,dimensionless,Kratky s
 root_system,multipliers_kratky_surface_area_multiplier,1.2,dimensionless,Kratky system surface area multiplier
 root_system,multipliers_kratky_branching_multiplier,1.1,dimensionless,Kratky system branching multiplier
 root_system,cache_timeout,300.0,seconds,Cache timeout for root system
+phenology_parameters,thermal_transition_GE_to_VE,60.0,°Cd,Germination to emergence thermal requirement (Scaife & Turner 1983)
+phenology_parameters,thermal_transition_VE_to_V1,80.0,°Cd,Emergence to first leaf
+phenology_parameters,thermal_transition_V1_to_V2,50.0,°Cd,First to second leaf
+phenology_parameters,thermal_transition_V2_to_V3,50.0,°Cd,Second to third leaf
+phenology_parameters,thermal_transition_V3_to_V4,50.0,°Cd,Third to fourth leaf
+phenology_parameters,thermal_transition_V4_to_V5,50.0,°Cd,Fourth to fifth leaf
+phenology_parameters,thermal_transition_V5_to_V6,50.0,°Cd,Fifth to sixth leaf
+phenology_parameters,thermal_transition_V6_to_V7,50.0,°Cd,Sixth to seventh leaf
+phenology_parameters,thermal_transition_V7_to_V8,50.0,°Cd,Seventh to eighth leaf
+phenology_parameters,thermal_transition_V8_to_V9,50.0,°Cd,Eighth to ninth leaf
+phenology_parameters,thermal_transition_V9_to_V10,50.0,°Cd,Ninth to tenth leaf
+phenology_parameters,thermal_transition_V10_to_V11+,60.0,°Cd,Tenth to mature vegetative
+phenology_parameters,thermal_transition_V11+_to_HI,100.0,°Cd,Mature vegetative to head initiation
+phenology_parameters,thermal_transition_HI_to_HD,200.0,°Cd,Head initiation to development
+phenology_parameters,thermal_transition_HD_to_HM,300.0,°Cd,Head development to harvest maturity
+phenology_parameters,thermal_transition_HM_to_BI,100.0,°Cd,Harvest maturity to bolting initiation
+phenology_parameters,thermal_transition_BI_to_FL,150.0,°Cd,Bolting initiation to flowering
+phenology_parameters,thermal_transition_FL_to_AN,100.0,°Cd,Flowering to anthesis
+phenology_parameters,thermal_transition_AN_to_SD,200.0,°Cd,Anthesis to seed development
+phenology_parameters,thermal_transition_SD_to_PM,300.0,°Cd,Seed development to physiological maturity
+root_system_parameters,system_type,deep_water_culture,string,Hydroponic system type
+root_system_parameters,root_zone_independent,1,boolean,Whether root zones are independent
+genetic_parameters,maturity_days,60,days,Days to maturity for standard lettuce cultivar
+nutrient_parameters,phloem_transport_factor,0.4,fraction,Phloem transport rate as fraction of xylem rate
+simulator_defaults,progress_report_interval,24,steps,Number of steps between progress reports
+simulator_defaults,initialization_wait_time,0.5,seconds,Time to wait for simulator initialization
+simulator_defaults,event_processing_wait_time,0.1,seconds,Time between event processing cycles
+simulator_defaults,initialization_cycles,5,integer,Number of initialization event processing cycles

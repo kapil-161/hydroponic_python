@@ -34,13 +34,18 @@ class SimulationConfig:
     data_collection_interval: int  # Collect data every N steps
     max_concurrent_simulators: int
     max_errors: int  # Maximum errors allowed before termination
+    progress_report_interval: int  # Steps between progress reports
+    initialization_wait_time: float  # Seconds to wait for initialization
+    event_processing_wait_time: float  # Seconds between event processing
+    initialization_cycles: int  # Number of initialization event cycles
 
     @classmethod
     def from_csv_parameters(cls, parameters: Dict[str, Any]) -> 'SimulationConfig':
         """Create configuration from CSV parameters - per Rules.md: all from CSV"""
         required_params = [
             'total_days', 'steps_per_day', 'step_duration_seconds', 'start_day', 'start_hour',
-            'enable_real_time', 'synchronization_mode', 'data_collection_interval', 'max_concurrent_simulators', 'max_errors'
+            'enable_real_time', 'synchronization_mode', 'data_collection_interval', 'max_concurrent_simulators', 'max_errors',
+            'progress_report_interval', 'initialization_wait_time', 'event_processing_wait_time', 'initialization_cycles'
         ]
 
         for param in required_params:
@@ -57,7 +62,11 @@ class SimulationConfig:
             synchronization_mode=str(parameters['synchronization_mode']),
             data_collection_interval=int(parameters['data_collection_interval']),
             max_concurrent_simulators=int(parameters['max_concurrent_simulators']),
-            max_errors=int(parameters['max_errors'])
+            max_errors=int(parameters['max_errors']),
+            progress_report_interval=int(parameters['progress_report_interval']),
+            initialization_wait_time=float(parameters['initialization_wait_time']),
+            event_processing_wait_time=float(parameters['event_processing_wait_time']),
+            initialization_cycles=int(parameters['initialization_cycles'])
         )
 
 
@@ -140,12 +149,12 @@ class SimulationOrchestrator(BaseSimulator):
 
         # Allow time for all simulators to process SIMULATION_START and publish initial data
         print("Waiting for simulators to publish initial state...")
-        time.sleep(0.5)  # Give time for all on_simulation_start() methods to complete
+        time.sleep(self.config.initialization_wait_time)  # From CSV parameters
 
         # Process all pending events multiple times to ensure all subscriptions are updated
-        for i in range(5):
+        for i in range(self.config.initialization_cycles):
             self.message_bus._process_pending_events()
-            time.sleep(0.1)
+            time.sleep(self.config.event_processing_wait_time)
 
         # Collect initial data from all simulators into shared cache
         self._collect_simulator_data_to_shared_cache()
@@ -217,7 +226,7 @@ class SimulationOrchestrator(BaseSimulator):
                         time.sleep(sleep_time)
                     
                     # Progress reporting
-                    if self.current_step % 24 == 0:  # Every day
+                    if self.current_step % self.config.progress_report_interval == 0:  # From CSV
                         progress = (self.current_step / total_steps) * 100
                         print(f"Day {self.current_day}: {progress:.1f}% complete")
             
@@ -604,15 +613,21 @@ class SimulationOrchestrator(BaseSimulator):
         return metrics
     
     def export_results(self, output_path: str = None) -> str:
-        """Export simulation results to CSV"""
+        """Export simulation results to organized CSV files"""
         if not self.simulation_data:
             print("No simulation data to export")
             return ""
-        
+
         if output_path is None:
             output_path = "output/simulation_results.csv"
-        
-        # Flatten simulation data
+
+        # Create output directory if it doesn't exist
+        import os
+        output_dir = os.path.dirname(output_path)
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        # Export combined results
         flattened_data = []
         for step_data in self.simulation_data:
             base_record = {
@@ -621,19 +636,45 @@ class SimulationOrchestrator(BaseSimulator):
                 'hour': step_data['hour'],
                 'timestamp': step_data['timestamp']
             }
-            
+
             # Add simulator-specific data
             for simulator_id, simulator_data in step_data.get('simulators', {}).items():
                 for key, value in simulator_data.items():
                     base_record[f"{simulator_id}_{key}"] = value
-            
+
             flattened_data.append(base_record)
-        
-        # Create DataFrame and save
+
+        # Create combined DataFrame and save
         df = pd.DataFrame(flattened_data)
         df.to_csv(output_path, index=False)
-        
-        print(f"Results exported to: {output_path}")
+        print(f"Combined results exported to: {output_path}")
+
+        # Export separate CSV files for each simulator
+        base_cols = ['step', 'day', 'hour', 'timestamp']
+        exported_files = []
+
+        for simulator_id in self.simulators.keys():
+            # Get columns for this simulator
+            sim_cols = [col for col in df.columns if col.startswith(f"{simulator_id}_")]
+
+            if sim_cols:
+                # Create DataFrame with base columns + simulator columns
+                sim_df = df[base_cols + sim_cols].copy()
+
+                # Rename columns to remove simulator prefix
+                rename_dict = {col: col.replace(f"{simulator_id}_", "") for col in sim_cols}
+                sim_df.rename(columns=rename_dict, inplace=True)
+
+                # Create clean, short filename
+                short_name = simulator_id.replace("_simulator", "")
+                sim_output_path = os.path.join(output_dir, f'{short_name}.csv')
+                sim_df.to_csv(sim_output_path, index=False)
+                exported_files.append(sim_output_path)
+
+        print(f"\nExported {len(exported_files)} individual simulator files:")
+        for file_path in sorted(exported_files):
+            print(f"  - {os.path.basename(file_path)}")
+
         return output_path
     
     def _check_harvest_maturity(self) -> bool:
