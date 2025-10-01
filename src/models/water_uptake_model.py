@@ -88,6 +88,32 @@ class WaterUptakeParameters:
     phenology_optimal_temperature_max: float  # Maximum optimal temperature from phenology
     leaf_area_to_biomass_ratio: float  # Ratio for converting leaf area to biomass
 
+    # Physical constants (from CSV) - shared across models
+    kelvin_conversion: float
+    saturation_vapor_pressure_constant: float
+    vapor_pressure_temp_coefficient: float
+    vapor_pressure_base_temp: float
+    saturation_curve_slope_constant: float
+    penman_monteith_conversion: float
+    aerodynamic_resistance_coefficient: float
+    wind_speed_coefficient: float
+
+    # Hardcoded value replacements (from CSV)
+    minimum_vpd_threshold: float
+    minimum_et0_threshold: float
+    max_lai_coverage_factor: float
+    max_root_surface_area_factor: float
+    cavitation_gradient_denominator: float
+    lai_to_light_interception_factor: float
+    temperature_response_exponent_denominator: float
+    vpd_effect_divisor: float
+    transpiration_base_rate_scale_factor: float
+    transpiration_scaling_multiplier: float
+    lai_coefficient_threshold: float
+    minimum_coverage_factor: float
+    minimum_cavitation_factor: float
+    maximum_vpd_effect: float
+
     def __post_init__(self):
         """Validate parameter ranges to ensure physical realism."""
         # Check for None values first
@@ -145,7 +171,17 @@ class WaterUptakeParameters:
             'base_xylem_conductance', 'xylem_conductance_scaling_factor', 'base_leaf_potential',
             'transpiration_potential_factor', 'solution_potential_factor', 'cavitation_threshold',
             'max_osmotic_adjustment', 'salt_stress_osmotic_factor', 'temp_tolerance', 'min_temp_factor', 'stem_biomass_fraction',
-            'optimal_temperature_min', 'optimal_temperature_max', 'leaf_area_to_biomass_ratio'
+            'optimal_temperature_min', 'optimal_temperature_max', 'leaf_area_to_biomass_ratio',
+            # Physical constants
+            'kelvin_conversion', 'saturation_vapor_pressure_constant', 'vapor_pressure_temp_coefficient',
+            'vapor_pressure_base_temp', 'saturation_curve_slope_constant', 'penman_monteith_conversion',
+            'aerodynamic_resistance_coefficient', 'wind_speed_coefficient',
+            # Hardcoded value replacements
+            'minimum_vpd_threshold', 'minimum_et0_threshold', 'max_lai_coverage_factor',
+            'max_root_surface_area_factor', 'cavitation_gradient_denominator', 'lai_to_light_interception_factor',
+            'temperature_response_exponent_denominator', 'vpd_effect_divisor', 'transpiration_base_rate_scale_factor',
+            'transpiration_scaling_multiplier', 'lai_coefficient_threshold', 'minimum_coverage_factor',
+            'minimum_cavitation_factor', 'maximum_vpd_effect'
         ]
         for param in required_params:
             if (param not in water_params and
@@ -183,9 +219,33 @@ class WaterUptakeParameters:
             temp_tolerance=float(water_params['temp_tolerance']),
             min_temp_factor=float(water_params['min_temp_factor']),
             stem_biomass_fraction=float(water_params['stem_biomass_fraction']),
-            phenology_optimal_temperature_min=float(phenology_params['optimal_temperature_min']),
-            phenology_optimal_temperature_max=float(phenology_params['optimal_temperature_max']),
-            leaf_area_to_biomass_ratio=float(water_params['leaf_area_to_biomass_ratio'])
+            phenology_optimal_temperature_min=float(get_required_water_param(phenology_params, 'optimal_temperature_min')),
+            phenology_optimal_temperature_max=float(get_required_water_param(phenology_params, 'optimal_temperature_max')),
+            leaf_area_to_biomass_ratio=float(water_params['leaf_area_to_biomass_ratio']),
+            # Physical constants
+            kelvin_conversion=float(water_params['kelvin_conversion']),
+            saturation_vapor_pressure_constant=float(water_params['saturation_vapor_pressure_constant']),
+            vapor_pressure_temp_coefficient=float(water_params['vapor_pressure_temp_coefficient']),
+            vapor_pressure_base_temp=float(water_params['vapor_pressure_base_temp']),
+            saturation_curve_slope_constant=float(water_params['saturation_curve_slope_constant']),
+            penman_monteith_conversion=float(water_params['penman_monteith_conversion']),
+            aerodynamic_resistance_coefficient=float(water_params['aerodynamic_resistance_coefficient']),
+            wind_speed_coefficient=float(water_params['wind_speed_coefficient']),
+            # Hardcoded value replacements
+            minimum_vpd_threshold=float(water_params['minimum_vpd_threshold']),
+            minimum_et0_threshold=float(water_params['minimum_et0_threshold']),
+            max_lai_coverage_factor=float(water_params['max_lai_coverage_factor']),
+            max_root_surface_area_factor=float(water_params['max_root_surface_area_factor']),
+            cavitation_gradient_denominator=float(water_params['cavitation_gradient_denominator']),
+            lai_to_light_interception_factor=float(water_params['lai_to_light_interception_factor']),
+            temperature_response_exponent_denominator=float(water_params['temperature_response_exponent_denominator']),
+            vpd_effect_divisor=float(water_params['vpd_effect_divisor']),
+            transpiration_base_rate_scale_factor=float(water_params['transpiration_base_rate_scale_factor']),
+            transpiration_scaling_multiplier=float(water_params['transpiration_scaling_multiplier']),
+            lai_coefficient_threshold=float(water_params['lai_coefficient_threshold']),
+            minimum_coverage_factor=float(water_params['minimum_coverage_factor']),
+            minimum_cavitation_factor=float(water_params['minimum_cavitation_factor']),
+            maximum_vpd_effect=float(water_params['maximum_vpd_effect'])
         )
 
 @dataclass
@@ -257,21 +317,21 @@ class WaterUptakeModel:
             raise ValueError(f"Growth stage must be one of {[e.value for e in GrowthStage]}")
 
         # Calculate VPD
-        es = 0.6108 * math.exp(17.27 * temperature / (temperature + 237.3))
+        es = self.params.saturation_vapor_pressure_constant * math.exp(self.params.vapor_pressure_temp_coefficient * temperature / (temperature + self.params.vapor_pressure_base_temp))
         ea = es * (humidity / 100.0)
-        vpd = max(0.1, es - ea)
+        vpd = max(self.params.minimum_vpd_threshold, es - ea)
 
         # Penman-Monteith reference evapotranspiration
-        delta = 4098 * es / ((temperature + 237.3) ** 2)
+        delta = self.params.saturation_curve_slope_constant * es / ((temperature + self.params.vapor_pressure_base_temp) ** 2)
         net_radiation = solar_radiation * self.params.net_radiation_factor - self.params.radiation_offset
-        numerator = (0.408 * delta * net_radiation +
-                     self.params.psychrometric_constant * 900 / (temperature + 273) *
+        numerator = (self.params.penman_monteith_conversion * delta * net_radiation +
+                     self.params.psychrometric_constant * self.params.aerodynamic_resistance_coefficient / (temperature + self.params.kelvin_conversion) *
                      self.params.wind_speed * vpd)
-        denominator = delta + self.params.psychrometric_constant * (1 + 0.34 * self.params.wind_speed)
-        et0_mm = max(0.1, numerator / denominator if denominator != 0 else 0.1)
+        denominator = delta + self.params.psychrometric_constant * (1 + self.params.wind_speed_coefficient * self.params.wind_speed)
+        et0_mm = max(self.params.minimum_et0_threshold, numerator / denominator if denominator != 0 else self.params.minimum_et0_threshold)
 
         # Crop coefficient
-        lai_factor = min(1.0, lai / self.params.lai_coefficient_factor) if lai > 0.1 else 0.1
+        lai_factor = min(1.0, lai / self.params.lai_coefficient_factor) if lai > self.params.lai_coefficient_threshold else self.params.lai_coefficient_threshold
         stage_factors = {
             GrowthStage.VEGETATIVE.value: self.params.vegetative_stage_factor,
             GrowthStage.HEAD_FORMATION.value: self.params.head_formation_stage_factor,
@@ -291,7 +351,7 @@ class WaterUptakeModel:
         etc_mm = et0_mm * kc * environmental_factor
 
         # Scale by canopy coverage
-        coverage_factor = min(1.0, lai / 2.0) if lai > 0 else 0.01
+        coverage_factor = min(1.0, lai / self.params.max_lai_coverage_factor) if lai > 0 else self.params.minimum_coverage_factor
         transpiration_mm = etc_mm * coverage_factor
         transpiration_L = transpiration_mm / 1000.0
 
@@ -310,7 +370,7 @@ class WaterUptakeModel:
             raise ValueError("Stress factors must be provided - no defaults allowed per Rules.md")
 
         hydraulic_uptake, total_conductance = self.calculate_hydraulic_water_uptake(
-            light_interception=min(1.0, lai / 2.0),
+            light_interception=min(1.0, lai / self.params.lai_to_light_interception_factor),
             temperature=temperature,
             humidity=humidity,
             solar_radiation=solar_radiation,
@@ -405,10 +465,10 @@ class WaterUptakeModel:
 
         # Cavitation check
         if adjusted_leaf_potential < self.params.cavitation_threshold:
-            cavitation_factor = max(0.1, 1.0 + (adjusted_leaf_potential - self.params.cavitation_threshold) / 1.0)
+            cavitation_factor = max(self.params.minimum_cavitation_factor, 1.0 + (adjusted_leaf_potential - self.params.cavitation_threshold) / self.params.cavitation_gradient_denominator)
             hydraulic_water_uptake *= cavitation_factor
 
-        return max(0.1, hydraulic_water_uptake + metabolic_water), total_conductance
+        return max(self.params.minimum_et0_threshold, hydraulic_water_uptake + metabolic_water), total_conductance
 
     def _calculate_temperature_factor(self, temperature: float) -> float:
         """Use consolidated temperature factor calculation from core_utils."""
@@ -451,12 +511,12 @@ class WaterUptakeModel:
         """Calculate transpiration demand (mm/day)."""
         if not all(isinstance(x, (int, float)) for x in [light_interception, temperature, vpd, humidity, solar_radiation]):
             raise ValueError("All inputs must be numeric")
-        energy_available = solar_radiation * max(0.1, min(1.0, light_interception))
-        temp_effect = max(0.1, math.exp(-(temperature - self.params.optimal_temperature) ** 2 / 200))
-        vpd_effect = min(2.0, vpd / 1.0) if vpd > 0 else 0.1
-        base_rate = self.params.base_crop_coefficient * 2.0  # Scaled base rate
-        transpiration = base_rate * energy_available * temp_effect * vpd_effect * 0.1
-        return max(0.1, transpiration)
+        energy_available = solar_radiation * max(self.params.minimum_et0_threshold, min(1.0, light_interception))
+        temp_effect = max(self.params.minimum_et0_threshold, math.exp(-(temperature - self.params.optimal_temperature) ** 2 / self.params.temperature_response_exponent_denominator))
+        vpd_effect = min(self.params.maximum_vpd_effect, vpd / self.params.vpd_effect_divisor) if vpd > 0 else self.params.minimum_et0_threshold
+        base_rate = self.params.base_crop_coefficient * self.params.transpiration_base_rate_scale_factor  # Scaled base rate
+        transpiration = base_rate * energy_available * temp_effect * vpd_effect * self.params.transpiration_scaling_multiplier
+        return max(self.params.minimum_et0_threshold, transpiration)
 
     def _calculate_osmotic_adjustment(self, stress_factors: Dict[str, Any]) -> float:
         """Calculate osmotic adjustment under stress (MPa)."""

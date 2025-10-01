@@ -82,15 +82,6 @@ photosynthesis_parameters,shaded_light_fraction,0.15,dimensionless,Fraction of P
 photosynthesis_parameters,photosynthesis_cold_limit,5.0,°C,Cold temperature limit for photosynthesis stress
 photosynthesis_parameters,photosynthesis_heat_limit,40.0,°C,Heat temperature limit for photosynthesis stress
 photosynthesis_parameters,min_stress_factor,0.1,dimensionless,Minimum temperature stress factor for photosynthesis
-photosynthesis_parameters,initial_ci_fraction,0.7,dimensionless,Initial internal CO2 concentration as fraction of external
-photosynthesis_parameters,ci_convergence_max_iterations,20,iterations,Maximum iterations for CO2 convergence
-photosynthesis_parameters,ci_convergence_tolerance_ppm,0.01,ppm,CO2 concentration convergence tolerance
-photosynthesis_parameters,stomatal_conductance_co2_diffusion_ratio,1.6,dimensionless,Stomatal conductance CO2 diffusion ratio
-photosynthesis_parameters,minimum_stomatal_conductance_threshold,1e-9,mol/m²/s,Minimum stomatal conductance threshold
-photosynthesis_parameters,minimum_vpd_threshold,0.1,kPa,Minimum VPD threshold for photosynthesis
-photosynthesis_parameters,reference_leaf_nitrogen,2.5,g_N_m2,Reference leaf nitrogen content
-photosynthesis_parameters,nitrogen_sensitivity,0.6,dimensionless,Sensitivity of photosynthesis to nitrogen content
-photosynthesis_parameters,water_stress_sensitivity,0.8,dimensionless,Sensitivity of photosynthesis to water stress
 
 # Respiration Model Parameters
 respiration_parameters,maintenance_base_rate,0.005,g_C_g_biomass_day,Base maintenance respiration rate at 25°C
@@ -148,10 +139,6 @@ respiration_parameters,lipid_fraction,0.08,dimensionless,Fraction of growth allo
 respiration_parameters,organic_acid_fraction,0.12,dimensionless,Fraction of growth allocated to organic acids
 respiration_parameters,lignin_fraction,0.15,dimensionless,Fraction of growth allocated to lignin
 respiration_parameters,mineral_fraction,0.10,dimensionless,Fraction of growth allocated to minerals
-respiration_parameters,max_temperature_factor,4.0,dimensionless,Maximum temperature factor for respiration
-respiration_parameters,minimum_temperature_factor,0.1,dimensionless,Minimum temperature factor for respiration
-respiration_parameters,minimum_respiration_rate_fraction,0.001,dimensionless,Minimum respiration as fraction of biomass per day
-respiration_parameters,default_total_biomass_g,0.02,g,Default total biomass when pools are empty
 
 # Water Uptake Model Parameters
 water_parameters,psychrometric_constant,0.665,kPa_°C,Psychrometric constant for Penman-Monteith
@@ -176,20 +163,6 @@ water_parameters,stem_biomass_fraction,0.3,dimensionless,Fraction of total bioma
 water_parameters,leaf_area_to_biomass_ratio,0.1,g_per_m2,Ratio for converting leaf area to biomass
 water_parameters,water_uptake_sensitivity_low,0.06,per_°C,Water uptake sensitivity per °C below optimum for RZT
 water_parameters,water_uptake_sensitivity_high,0.10,per_°C,Water uptake sensitivity per °C above optimum for RZT
-water_parameters,minimum_vpd_threshold,0.1,kPa,Minimum vapor pressure deficit threshold
-water_parameters,minimum_et0_threshold,0.1,mm/day,Minimum reference evapotranspiration threshold
-water_parameters,max_lai_coverage_factor,2.0,dimensionless,Maximum LAI for full coverage
-water_parameters,max_root_surface_area_factor,2.0,dimensionless,Maximum root surface area factor
-water_parameters,cavitation_gradient_denominator,1.0,MPa,Cavitation gradient denominator
-water_parameters,lai_to_light_interception_factor,2.0,dimensionless,LAI to light interception conversion factor
-water_parameters,temperature_response_exponent_denominator,200,dimensionless,Temperature response exponent denominator
-water_parameters,vpd_effect_divisor,1.0,kPa,VPD effect divisor
-water_parameters,transpiration_base_rate_scale_factor,2.0,dimensionless,Base rate scaling factor for transpiration
-water_parameters,transpiration_scaling_multiplier,0.1,dimensionless,Transpiration scaling multiplier
-water_parameters,lai_coefficient_threshold,0.1,dimensionless,LAI threshold for coefficient calculation
-water_parameters,minimum_coverage_factor,0.01,dimensionless,Minimum coverage factor when LAI is zero
-water_parameters,minimum_cavitation_factor,0.1,dimensionless,Minimum cavitation factor
-water_parameters,maximum_vpd_effect,2.0,dimensionless,Maximum VPD effect multiplier
 
 # Root System Parameters
 root_system_parameters,base_root_conductance,0.5,L_day_MPa_m2,Base root hydraulic conductance
@@ -2010,8 +1983,7 @@ simulator_defaults,progress_report_interval,24,steps,Number of steps between pro
 simulator_defaults,initialization_wait_time,0.5,seconds,Time to wait for simulator initialization
 simulator_defaults,event_processing_wait_time,0.1,seconds,Time between event processing cycles
 simulator_defaults,initialization_cycles,5,integer,Number of initialization event processing cycles
-
-# Physical Constants
+# Physical Constants (shared across models)
 physical_constants,kelvin_conversion,273.15,K,Kelvin to Celsius conversion constant
 physical_constants,reference_temp_kelvin,298.15,K,Reference temperature in Kelvin (25°C)
 physical_constants,saturation_vapor_pressure_constant,0.6108,kPa,Saturation vapor pressure constant (Magnus formula)
@@ -2021,3 +1993,85 @@ physical_constants,saturation_curve_slope_constant,4098,Pa/K,Slope of saturation
 physical_constants,penman_monteith_conversion,0.408,dimensionless,Penman-Monteith conversion constant
 physical_constants,aerodynamic_resistance_coefficient,900,s/m,Aerodynamic resistance coefficient
 physical_constants,wind_speed_coefficient,0.34,s/m,Wind speed coefficient for ET calculation
+# Water Uptake Model Constants
+water_parameters,minimum_vpd_threshold,0.1,kPa,Minimum vapor pressure deficit threshold
+water_parameters,minimum_et0_threshold,0.1,mm/day,Minimum reference evapotranspiration threshold
+water_parameters,max_lai_coverage_factor,2.0,dimensionless,Maximum LAI for full coverage
+water_parameters,max_root_surface_area_factor,2.0,dimensionless,Maximum root surface area factor
+water_parameters,cavitation_gradient_denominator,1.0,MPa,Cavitation gradient denominator
+water_parameters,lai_to_light_interception_factor,2.0,dimensionless,LAI to light interception conversion factor
+water_parameters,temperature_response_exponent_denominator,200,dimensionless,Temperature response exponent denominator
+water_parameters,vpd_effect_divisor,1.0,kPa,VPD effect divisor
+water_parameters,transpiration_base_rate_scale_factor,2.0,dimensionless,Base rate scaling factor for transpiration
+water_parameters,transpiration_scaling_multiplier,0.1,dimensionless,Transpiration scaling multiplier
+water_parameters,lai_coefficient_threshold,0.1,dimensionless,LAI threshold for coefficient calculation
+water_parameters,minimum_coverage_factor,0.01,dimensionless,Minimum coverage factor when LAI is zero
+water_parameters,minimum_cavitation_factor,0.1,dimensionless,Minimum cavitation factor
+water_parameters,maximum_vpd_effect,2.0,dimensionless,Maximum VPD effect multiplier
+# Nutrient Model Constants
+nutrient_parameters,ec_stress_min_threshold,0.3,dimensionless,Minimum EC stress threshold
+nutrient_parameters,ec_boost_max_n,1.3,dimensionless,Maximum EC boost for nitrogen
+nutrient_parameters,ec_boost_max_p,1.2,dimensionless,Maximum EC boost for phosphorus
+nutrient_parameters,ec_boost_max_k,1.4,dimensionless,Maximum EC boost for potassium
+nutrient_parameters,ec_boost_max_fe,1.3,dimensionless,Maximum EC boost for iron
+nutrient_parameters,nutrient_uptake_reference_temp,22.0,°C,Reference temperature for nutrient uptake Q10
+nutrient_parameters,max_temp_factor_nutrient_uptake,3.0,dimensionless,Maximum temperature factor for nutrient uptake
+nutrient_parameters,optimal_ph_nutrient_uptake,6.0,pH,Optimal pH for nutrient uptake
+nutrient_parameters,ph_deviation_penalty_factor,0.5,dimensionless,pH deviation penalty factor
+nutrient_parameters,temperature_factor_base,1.0,dimensionless,Base temperature factor for nutrient calculations
+nutrient_parameters,ph_factor_base,1.0,dimensionless,Base pH factor for nutrient calculations
+nutrient_parameters,reference_daily_growth_rate,1.0,g/day,Reference daily growth rate
+nutrient_parameters,rhizosphere_thickness_cm,0.1,cm,Rhizosphere thickness
+nutrient_parameters,minimum_root_zone_volume_L,0.01,L,Minimum root zone volume
+nutrient_parameters,transport_pool_fraction_multiplier,0.2,dimensionless,Transport pool fraction multiplier
+nutrient_parameters,deficiency_mobility_very_high_factor,1.2,dimensionless,Deficiency mobility factor for very high mobility
+nutrient_parameters,deficiency_mobility_high_factor,1.1,dimensionless,Deficiency mobility factor for high mobility
+nutrient_parameters,deficiency_mobility_low_factor,0.8,dimensionless,Deficiency mobility factor for low mobility
+nutrient_parameters,deficiency_mobility_very_low_factor,0.6,dimensionless,Deficiency mobility factor for very low mobility
+nutrient_parameters,base_supply_storage_pool_fraction,0.1,dimensionless,Base supply storage pool fraction
+nutrient_parameters,base_supply_buffer_pool_fraction,0.05,dimensionless,Base supply buffer pool fraction
+nutrient_parameters,stress_redistribution_threshold,0.3,dimensionless,Stress threshold for nutrient redistribution
+nutrient_parameters,max_transportable_nutrient_fraction,0.3,dimensionless,Maximum transportable nutrient fraction
+nutrient_parameters,transport_reference_temperature,25.0,°C,Reference temperature for transport Q10
+nutrient_parameters,bidirectional_xylem_fraction,0.6,dimensionless,Bidirectional xylem transport fraction
+nutrient_parameters,bidirectional_phloem_fraction,0.4,dimensionless,Bidirectional phloem transport fraction
+nutrient_parameters,metabolic_pool_export_limit_fraction,0.1,dimensionless,Metabolic pool export limit fraction
+nutrient_parameters,transport_pool_max_fraction,0.1,dimensionless,Maximum transport pool fraction
+nutrient_parameters,transport_pool_target_fraction,0.05,dimensionless,Target transport pool fraction
+nutrient_parameters,excess_to_metabolic_fraction,0.6,dimensionless,Excess nutrients to metabolic pool fraction
+nutrient_parameters,excess_to_storage_fraction,0.3,dimensionless,Excess nutrients to storage pool fraction
+nutrient_parameters,excess_to_buffer_fraction,0.1,dimensionless,Excess nutrients to buffer pool fraction
+nutrient_parameters,highly_mobile_base_efficiency,0.8,dimensionless,Base efficiency for highly mobile nutrients
+nutrient_parameters,moderately_mobile_base_efficiency,0.6,dimensionless,Base efficiency for moderately mobile nutrients
+nutrient_parameters,poorly_mobile_base_efficiency,0.3,dimensionless,Base efficiency for poorly mobile nutrients
+nutrient_parameters,immobile_base_efficiency,0.1,dimensionless,Base efficiency for immobile nutrients
+nutrient_parameters,bidirectional_transport_factor,1.2,dimensionless,Transport mechanism efficiency - bidirectional
+nutrient_parameters,complex_transport_factor,0.9,dimensionless,Transport mechanism efficiency - complex
+nutrient_parameters,xylem_only_transport_factor,0.7,dimensionless,Transport mechanism efficiency - xylem only
+nutrient_parameters,phloem_only_transport_factor,1.0,dimensionless,Transport mechanism efficiency - phloem only
+nutrient_parameters,transport_limitation_threshold,0.8,dimensionless,Transport limitation threshold
+# Root System Model Constants
+root_system_parameters,min_flow_rate_multiplier,0.5,dimensionless,Minimum flow rate multiplier for optimal flow
+root_system_parameters,default_michaelis_constant,50.0,µM,Default Michaelis constant for unknown nutrients
+root_system_parameters,default_reference_nutrient_concentration,200.0,µM,Default reference nutrient concentration
+root_system_parameters,nutrient_inhibition_minimum_factor,0.1,dimensionless,Minimum nutrient competitive inhibition factor
+root_system_parameters,competition_effect_minimum_factor,0.2,dimensionless,Minimum competition effect factor
+root_system_parameters,heat_stress_minimum_factor,0.1,dimensionless,Minimum heat stress factor
+root_system_parameters,optimization_temp_min,16,°C,Minimum temperature for optimization
+root_system_parameters,optimization_temp_max,27,°C,Maximum temperature for optimization
+root_system_parameters,optimization_temp_step,2,°C,Temperature step for optimization
+root_system_parameters,optimization_flow_min,0.5,L/min,Minimum flow rate for optimization
+root_system_parameters,optimization_flow_max,3.0,L/min,Maximum flow rate for optimization
+root_system_parameters,optimization_flow_step,0.5,L/min,Flow rate step for optimization
+# Respiration Model Constants
+respiration_parameters,max_temperature_factor,4.0,dimensionless,Maximum temperature factor for respiration
+respiration_parameters,minimum_temperature_factor,0.1,dimensionless,Minimum temperature factor for respiration
+respiration_parameters,minimum_respiration_rate_fraction,0.001,dimensionless,Minimum respiration as fraction of biomass per day
+respiration_parameters,default_total_biomass_g,0.02,g,Default total biomass when pools are empty
+# Photosynthesis Model Constants  
+photosynthesis_parameters,initial_ci_fraction,0.7,dimensionless,Initial internal CO2 concentration as fraction of external
+photosynthesis_parameters,ci_convergence_max_iterations,20,iterations,Maximum iterations for CO2 convergence
+photosynthesis_parameters,ci_convergence_tolerance_ppm,0.01,ppm,CO2 concentration convergence tolerance
+photosynthesis_parameters,stomatal_conductance_co2_diffusion_ratio,1.6,dimensionless,Stomatal conductance CO2 diffusion ratio
+photosynthesis_parameters,minimum_stomatal_conductance_threshold,1e-9,mol/m²/s,Minimum stomatal conductance threshold
+photosynthesis_parameters,minimum_vpd_threshold,0.1,kPa,Minimum VPD threshold for photosynthesis

@@ -60,6 +60,45 @@ class NutrientParameters:
     sink_strength_coefficients: Dict[str, Dict[str, float]]
     cache_timeout: float
 
+    # Hardcoded value replacements (from CSV)
+    ec_stress_min_threshold: float
+    ec_boost_max_n: float
+    ec_boost_max_p: float
+    ec_boost_max_k: float
+    ec_boost_max_fe: float
+    temperature_factor_base: float
+    ph_factor_base: float
+    reference_daily_growth_rate: float
+    rhizosphere_thickness_cm: float
+    minimum_root_zone_volume_L: float
+    transport_pool_fraction_multiplier: float
+    deficiency_mobility_very_high_factor: float
+    deficiency_mobility_high_factor: float
+    deficiency_mobility_low_factor: float
+    deficiency_mobility_very_low_factor: float
+    base_supply_storage_pool_fraction: float
+    base_supply_buffer_pool_fraction: float
+    stress_redistribution_threshold: float
+    max_transportable_nutrient_fraction: float
+    transport_reference_temperature: float
+    bidirectional_xylem_fraction: float
+    bidirectional_phloem_fraction: float
+    metabolic_pool_export_limit_fraction: float
+    transport_pool_max_fraction: float
+    transport_pool_target_fraction: float
+    excess_to_metabolic_fraction: float
+    excess_to_storage_fraction: float
+    excess_to_buffer_fraction: float
+    highly_mobile_base_efficiency: float
+    moderately_mobile_base_efficiency: float
+    poorly_mobile_base_efficiency: float
+    immobile_base_efficiency: float
+    bidirectional_transport_factor: float
+    complex_transport_factor: float
+    xylem_only_transport_factor: float
+    phloem_only_transport_factor: float
+    transport_limitation_threshold: float
+
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'NutrientParameters':
         required_params = [
@@ -75,7 +114,22 @@ class NutrientParameters:
             'kinetics_n_nh4_km', 'kinetics_n_nh4_min_conc', 'kinetics_p_po4_vmax',
             'kinetics_p_po4_km', 'kinetics_p_po4_min_conc', 'kinetics_k_vmax',
             'kinetics_k_km', 'kinetics_k_min_conc', 'kinetics_ca_vmax', 'kinetics_ca_km',
-            'kinetics_ca_min_conc', 'kinetics_mg_vmax', 'kinetics_mg_km', 'kinetics_mg_min_conc'
+            'kinetics_ca_min_conc', 'kinetics_mg_vmax', 'kinetics_mg_km', 'kinetics_mg_min_conc',
+            # Hardcoded value replacements
+            'ec_stress_min_threshold', 'ec_boost_max_n', 'ec_boost_max_p', 'ec_boost_max_k', 'ec_boost_max_fe',
+            'temperature_factor_base', 'ph_factor_base', 'reference_daily_growth_rate',
+            'rhizosphere_thickness_cm', 'minimum_root_zone_volume_L', 'transport_pool_fraction_multiplier',
+            'deficiency_mobility_very_high_factor', 'deficiency_mobility_high_factor',
+            'deficiency_mobility_low_factor', 'deficiency_mobility_very_low_factor',
+            'base_supply_storage_pool_fraction', 'base_supply_buffer_pool_fraction',
+            'stress_redistribution_threshold', 'max_transportable_nutrient_fraction',
+            'transport_reference_temperature', 'bidirectional_xylem_fraction', 'bidirectional_phloem_fraction',
+            'metabolic_pool_export_limit_fraction', 'transport_pool_max_fraction', 'transport_pool_target_fraction',
+            'excess_to_metabolic_fraction', 'excess_to_storage_fraction', 'excess_to_buffer_fraction',
+            'highly_mobile_base_efficiency', 'moderately_mobile_base_efficiency',
+            'poorly_mobile_base_efficiency', 'immobile_base_efficiency',
+            'bidirectional_transport_factor', 'complex_transport_factor',
+            'xylem_only_transport_factor', 'phloem_only_transport_factor', 'transport_limitation_threshold'
         ]
         for param in required_params:
             if param not in config:
@@ -201,7 +255,45 @@ class NutrientParameters:
             redistribution_thresholds=redist_thresh,
             stress_redistribution_rates=stress_redist,
             sink_strength_coefficients=sink_coeffs,
-            cache_timeout=float(config['cache_timeout'])
+            cache_timeout=float(config['cache_timeout']),
+            # Hardcoded value replacements
+            ec_stress_min_threshold=float(config['ec_stress_min_threshold']),
+            ec_boost_max_n=float(config['ec_boost_max_n']),
+            ec_boost_max_p=float(config['ec_boost_max_p']),
+            ec_boost_max_k=float(config['ec_boost_max_k']),
+            ec_boost_max_fe=float(config['ec_boost_max_fe']),
+            temperature_factor_base=float(config['temperature_factor_base']),
+            ph_factor_base=float(config['ph_factor_base']),
+            reference_daily_growth_rate=float(config['reference_daily_growth_rate']),
+            rhizosphere_thickness_cm=float(config['rhizosphere_thickness_cm']),
+            minimum_root_zone_volume_L=float(config['minimum_root_zone_volume_L']),
+            transport_pool_fraction_multiplier=float(config['transport_pool_fraction_multiplier']),
+            deficiency_mobility_very_high_factor=float(config['deficiency_mobility_very_high_factor']),
+            deficiency_mobility_high_factor=float(config['deficiency_mobility_high_factor']),
+            deficiency_mobility_low_factor=float(config['deficiency_mobility_low_factor']),
+            deficiency_mobility_very_low_factor=float(config['deficiency_mobility_very_low_factor']),
+            base_supply_storage_pool_fraction=float(config['base_supply_storage_pool_fraction']),
+            base_supply_buffer_pool_fraction=float(config['base_supply_buffer_pool_fraction']),
+            stress_redistribution_threshold=float(config['stress_redistribution_threshold']),
+            max_transportable_nutrient_fraction=float(config['max_transportable_nutrient_fraction']),
+            transport_reference_temperature=float(config['transport_reference_temperature']),
+            bidirectional_xylem_fraction=float(config['bidirectional_xylem_fraction']),
+            bidirectional_phloem_fraction=float(config['bidirectional_phloem_fraction']),
+            metabolic_pool_export_limit_fraction=float(config['metabolic_pool_export_limit_fraction']),
+            transport_pool_max_fraction=float(config['transport_pool_max_fraction']),
+            transport_pool_target_fraction=float(config['transport_pool_target_fraction']),
+            excess_to_metabolic_fraction=float(config['excess_to_metabolic_fraction']),
+            excess_to_storage_fraction=float(config['excess_to_storage_fraction']),
+            excess_to_buffer_fraction=float(config['excess_to_buffer_fraction']),
+            highly_mobile_base_efficiency=float(config['highly_mobile_base_efficiency']),
+            moderately_mobile_base_efficiency=float(config['moderately_mobile_base_efficiency']),
+            poorly_mobile_base_efficiency=float(config['poorly_mobile_base_efficiency']),
+            immobile_base_efficiency=float(config['immobile_base_efficiency']),
+            bidirectional_transport_factor=float(config['bidirectional_transport_factor']),
+            complex_transport_factor=float(config['complex_transport_factor']),
+            xylem_only_transport_factor=float(config['xylem_only_transport_factor']),
+            phloem_only_transport_factor=float(config['phloem_only_transport_factor']),
+            transport_limitation_threshold=float(config['transport_limitation_threshold'])
         )
 
 class NutrientMobility(Enum):
@@ -333,21 +425,21 @@ class NutrientModel:
         modifiers = {}
         if ec_ratio > self.params.ec_uptake_high_threshold:
             modifiers = {
-                "N-NO3": max(0.3, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_n_high),
-                "P-PO4": max(0.4, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_p_high),
-                "K": max(0.5, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_k_high),
-                "Ca": max(0.6, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_ca_high),
-                "Mg": max(0.5, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_k_high),
-                "Fe": max(0.4, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_p_high),
+                "N-NO3": max(self.params.ec_stress_min_threshold, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_n_high),
+                "P-PO4": max(self.params.ec_stress_min_threshold, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_p_high),
+                "K": max(self.params.ec_stress_min_threshold, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_k_high),
+                "Ca": max(self.params.ec_stress_min_threshold, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_ca_high),
+                "Mg": max(self.params.ec_stress_min_threshold, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_ca_high),
+                "Fe": max(self.params.ec_stress_min_threshold, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_p_high),
             }
         elif ec_ratio < self.params.ec_uptake_low_threshold:
             modifiers = {
-                "N-NO3": min(1.3, 1.0 + (self.params.ec_uptake_low_threshold - ec_ratio) * self.params.ec_uptake_modifier_n_low),
-                "P-PO4": min(1.2, 1.0 + (self.params.ec_uptake_low_threshold - ec_ratio) * self.params.ec_uptake_modifier_p_low),
-                "K": min(1.2, 1.0 + (self.params.ec_uptake_low_threshold - ec_ratio) * self.params.ec_uptake_modifier_p_low),
-                "Ca": 1.0,
-                "Mg": 1.0,
-                "Fe": min(1.4, 1.0 + (self.params.ec_uptake_low_threshold - ec_ratio) * self.params.ec_uptake_modifier_fe_low),
+                "N-NO3": min(self.params.ec_boost_max_n, 1.0 + (self.params.ec_uptake_low_threshold - ec_ratio) * self.params.ec_uptake_modifier_n_low),
+                "P-PO4": min(self.params.ec_boost_max_p, 1.0 + (self.params.ec_uptake_low_threshold - ec_ratio) * self.params.ec_uptake_modifier_p_low),
+                "K": min(self.params.ec_boost_max_k, 1.0 + (self.params.ec_uptake_low_threshold - ec_ratio) * self.params.ec_uptake_modifier_p_low),
+                "Ca": self.params.ph_factor_base,
+                "Mg": self.params.ph_factor_base,
+                "Fe": min(self.params.ec_boost_max_fe, 1.0 + (self.params.ec_uptake_low_threshold - ec_ratio) * self.params.ec_uptake_modifier_fe_low),
             }
         else:
             modifiers = {nutrient: 1.0 for nutrient in self.ec_factors.keys()}
@@ -387,13 +479,13 @@ class NutrientModel:
 
         # Calculate root zone volume based on root surface area instead of tank volume
         root_surface_area = plant_status['root_surface_area']  # cm²
-        # Assume 1mm (0.1 cm) rhizosphere layer around roots for nutrient depletion
-        rhizosphere_thickness = 0.1  # cm
+        # Rhizosphere layer thickness around roots for nutrient depletion (from CSV)
+        rhizosphere_thickness = self.params.rhizosphere_thickness_cm  # cm
         root_zone_volume_cm3 = root_surface_area * rhizosphere_thickness  # cm³
         root_zone_volume_L = root_zone_volume_cm3 / 1000.0  # Convert to L
 
-        # Minimum root zone volume to prevent unrealistic depletion
-        min_root_zone_volume = 0.01  # 10 mL minimum
+        # Minimum root zone volume to prevent unrealistic depletion (from CSV)
+        min_root_zone_volume = self.params.minimum_root_zone_volume_L  # L
         root_zone_volume_L = max(min_root_zone_volume, root_zone_volume_L)
 
         for nutrient, initial_conc in concentrations.items():

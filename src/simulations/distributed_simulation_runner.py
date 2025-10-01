@@ -2,7 +2,7 @@
 Distributed Simulation Runner
 
 Main entry point for running the distributed hydroponic simulation system
-with all 17 interconnected simulators. Follows Rules.md strictly.
+with all 16 interconnected simulators. Follows Rules.md strictly.
 """
 
 import pandas as pd
@@ -96,7 +96,7 @@ class DistributedSimulationRunner:
         print(f"Distributed simulation system initialized with {len(self.simulators)} simulators")
     
     def _initialize_all_simulators(self):
-        """Initialize all 17 simulators with parameters from CSV"""
+        """Initialize all 16 simulators with parameters from CSV"""
         print("Initializing all simulators...")
         
         try:

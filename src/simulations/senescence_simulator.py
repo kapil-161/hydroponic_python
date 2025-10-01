@@ -236,40 +236,7 @@ class SenescenceSimulator(BaseSimulator):
             # Per Rules.md: raise errors, don't suppress them
             raise e
     
-    def _update_dependencies(self):
-        """Update data from dependent simulators - with graceful handling"""
-        for dep_simulator, required_data in self.dependencies.items():
-            try:
-                # Check if cache is still valid
-                if dep_simulator in self.cache_timestamp:
-                    cache_age = (datetime.now() - self.cache_timestamp[dep_simulator]).total_seconds()
-                    if cache_age < self.cache_timeout:
-                        continue  # Use cached data
-                
-                # Request fresh data from other simulators
-                fresh_data = {}
-                missing_data = []
-                
-                for data_key in required_data:
-                    value = self.request_data(dep_simulator, data_key)
-                    if value is not None:
-                        fresh_data[data_key] = value
-                    else:
-                        missing_data.append(data_key)
-                
-                # If we have some data, use it; if completely missing, skip this dependency
-                if fresh_data:
-                    self.dependency_cache[dep_simulator] = fresh_data
-                    self.cache_timestamp[dep_simulator] = datetime.now()
-                elif missing_data:
-                    # Log missing data but don't fail completely
-                    print(f"Warning: Missing data {missing_data} from {dep_simulator}, skipping this dependency")
-                    
-            except Exception as e:
-                print(f"Error updating dependency {dep_simulator}: {e}")
-                # Don't raise error, just log and continue
-                pass
-    
+
     def _execute_senescence_step(self, weather_data: Dict[str, Any]):
         """Execute senescence calculation using model functions - no shortcuts"""
         try:
@@ -344,30 +311,28 @@ class SenescenceSimulator(BaseSimulator):
                 stress_history=self.state.stress_history
             )
             
-            # Calculate senescence using actual model methods - no shortcuts
-            # Create mock cohort data for senescence calculation
-            cohort_data = {
-                1: {  # Single cohort for testing
-                    'age_gdd': thermal_time,
-                    'area': leaf_biomass / 10.0,  # Estimate area from biomass
-                    'biomass': leaf_biomass,
-                    'nutrient_content': {
-                        'nitrogen': nitrogen_remobilization_rate * 10,
-                        'phosphorus': 0.5,
-                        'potassium': 1.0,
-                        'magnesium': 0.3,
-                        'sulfur': 0.2,
-                        'calcium': 0.4,
-                        'iron': 0.1,
-                        'manganese': 0.05,
-                        'zinc': 0.02,
-                        'copper': 0.01,
-                        'boron': 0.01,
-                        'molybdenum': 0.005
-                    },
-                    'canopy_position': 0.5  # Middle canopy position
+            # CRITICAL: Get REAL leaf cohorts from leaf development simulator
+            # No more mock data - use actual leaf cohorts being tracked
+            leaf_cohorts = leaf_data.get('leaf_cohorts', {})
+
+            if not leaf_cohorts:
+                # If no cohorts exist yet (early simulation), skip senescence calculation
+                if self.state.step_count <= 1:
+                    print(f"Senescence: No leaf cohorts yet, skipping calculation")
+                    return
+                else:
+                    raise ValueError("No leaf cohorts available from leaf_development_simulator - cannot calculate senescence")
+
+            # Convert leaf cohorts to format expected by senescence model
+            cohort_data = {}
+            for cohort_id, cohort in leaf_cohorts.items():
+                cohort_data[cohort_id] = {
+                    'age_gdd': cohort.thermal_time_since_appearance,
+                    'area': cohort.current_area,
+                    'biomass': cohort.current_biomass,
+                    'nutrient_content': cohort.nutrient_content,
+                    'canopy_position': cohort.position  # Use actual canopy position
                 }
-            }
 
             environmental_stress = {
                 'water': water_stress,

@@ -79,6 +79,10 @@ class EnvironmentalSetpoints:
     light_hours: float
     light_intensity: float
     co2_enrichment_start_hour: float
+    co2_enrichment_duration: float
+    co2_enrichment_strategy: str
+    co2_morning_target: float
+    co2_afternoon_target: float
     humidity_deadband: float
     max_temperature_change_per_hour: float
     ambient_temperature: float
@@ -132,6 +136,10 @@ class EnvironmentalSetpoints:
             light_hours=float(config_dict['light_hours']),
             light_intensity=float(config_dict['light_intensity_control']),
             co2_enrichment_start_hour=float(config_dict['co2_enrichment_start_hour']),
+            co2_enrichment_duration=float(config_dict['co2_enrichment_duration']),
+            co2_enrichment_strategy=str(config_dict['co2_enrichment_strategy']),
+            co2_morning_target=float(config_dict['co2_morning_target']),
+            co2_afternoon_target=float(config_dict['co2_afternoon_target']),
             humidity_deadband=float(config_dict['humidity_deadband']),
             max_temperature_change_per_hour=float(config_dict['max_temperature_change_per_hour']),
             ambient_temperature=float(config_dict['ambient_temperature']),
@@ -396,30 +404,18 @@ class EnvironmentalControlSystem:
         # All strategies must be properly configured - no default fallback
         raise ValueError(f"Unhandled humidity control strategy: {strategy}")
     
-    def _calculate_time_based_co2_target(self, base_target: float, photoperiod_time: float, 
-                                       light_on: bool, config_dict: Optional[Dict[str, Any]] = None) -> float:
+    def _calculate_time_based_co2_target(self, base_target: float, photoperiod_time: float,
+                                       light_on: bool) -> float:
         """Calculate CO2 target based on time within photoperiod using CSV parameters."""
         if not light_on:
             return self.setpoints.ambient_co2
-        
-        if not config_dict:
-            raise ValueError("CO2 configuration must be provided - no fallback allowed")
-        
-        # Load time-based parameters from CSV - ERROR if missing
-        required_params = [
-            'co2_enrichment_start_hour', 'co2_enrichment_duration', 
-            'co2_enrichment_strategy', 'co2_morning_target', 'co2_afternoon_target'
-        ]
-        
-        for param in required_params:
-            if param not in config_dict:
-                raise KeyError(f"Required CO2 enrichment parameter '{param}' not found in CSV configuration")
-        
-        start_hour = config_dict['co2_enrichment_start_hour']
-        duration = config_dict['co2_enrichment_duration']
-        strategy = config_dict['co2_enrichment_strategy']
-        morning_target = config_dict['co2_morning_target']
-        afternoon_target = config_dict['co2_afternoon_target']
+
+        # Load time-based parameters from setpoints (loaded from CSV)
+        start_hour = self.setpoints.co2_enrichment_start_hour
+        duration = self.setpoints.co2_enrichment_duration
+        strategy = self.setpoints.co2_enrichment_strategy
+        morning_target = self.setpoints.co2_morning_target
+        afternoon_target = self.setpoints.co2_afternoon_target
         
         if strategy == "morning_only":
             # Enrichment only during specific morning hours
@@ -613,9 +609,16 @@ class EnvironmentalControlSystem:
         humidity_action = self.calculate_humidity_control_action(
             humidity, target_humidity, strategy
         )
-        
+
+        # Calculate time-based CO2 target using dynamic enrichment strategy
+        target_co2 = self._calculate_time_based_co2_target(
+            self.setpoints.target_co2,
+            photoperiod_time if photoperiod_time >= 0 else 0.0,
+            light_on
+        )
+
         co2_action = self.calculate_co2_control_action(
-            co2, self.setpoints.target_co2, light_on, strategy, 
+            co2, target_co2, light_on, strategy,
             photoperiod_time if photoperiod_time >= 0 else 0.0
         )
         

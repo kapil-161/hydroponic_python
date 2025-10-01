@@ -172,10 +172,9 @@ class NitrogenBalanceSimulator(BaseSimulator):
         try:
             # Get current weather data from daily weather file
             weather_data = data.get('weather_data', {})
-            
-            # Update dependency data from other simulators
-            self._update_dependencies()
-            
+            # Dependency data is provided by orchestrator in self.dependency_cache
+            # No need to manually update - orchestrator injects shared_data_cache
+
             # Execute nitrogen balance calculation using model functions
             self._execute_nitrogen_balance_step(weather_data)
             
@@ -228,64 +227,7 @@ class NitrogenBalanceSimulator(BaseSimulator):
             # Raise error according to Rules.md - no error suppression
             raise
     
-    def _update_dependencies(self):
-        """Update data from dependent simulators - with graceful handling"""
-        for dep_simulator, required_data in self.dependencies.items():
-            try:
-                # Check if cache is still valid
-                if dep_simulator in self.cache_timestamp:
-                    cache_age = (datetime.now() - self.cache_timestamp[dep_simulator]).total_seconds()
-                    if cache_age < self.cache_timeout:
-                        continue  # Use cached data
-                
-                # Request fresh data from other simulators
-                fresh_data = {}
-                missing_data = []
-                
-                for data_key in required_data:
-                    value = self.request_data(dep_simulator, data_key)
-                    if value is not None:
-                        fresh_data[data_key] = value
-                    else:
-                        missing_data.append(data_key)
-                
-                # If we have some data, use it; if completely missing, skip this dependency
-                if fresh_data:
-                    self.dependency_cache[dep_simulator] = fresh_data
-                    self.cache_timestamp[dep_simulator] = datetime.now()
-                elif missing_data:
-                    # Log missing data but don't fail completely
-                    print(f"Warning: Missing data {missing_data} from {dep_simulator}, skipping this dependency")
-                    
-            except Exception as e:
-                print(f"Error updating dependency {dep_simulator}: {e}")
-                # Raise error according to Rules.md - no error suppression
-                raise
-        for dep_simulator, required_data in self.dependencies.items():
-            try:
-                # Check if cache is still valid
-                if dep_simulator in self.cache_timestamp:
-                    cache_age = (datetime.now() - self.cache_timestamp[dep_simulator]).total_seconds()
-                    if cache_age < self.cache_timeout:
-                        continue  # Use cached data
-                
-                # Request fresh data from other simulators
-                fresh_data = {}
-                for data_key in required_data:
-                    value = self.request_data(dep_simulator, data_key)
-                    if value is None:
-                        missing_data.append(data_key)
-                    else:
-                        fresh_data[data_key] = value
-                    if fresh_data:
-                        self.dependency_cache[dep_simulator] = fresh_data
-                        self.cache_timestamp[dep_simulator] = datetime.now()
-                    
-            except Exception as e:
-                print(f"Error updating dependency {dep_simulator}: {e}")
-                # Raise error according to Rules.md - no error suppression
-                raise
-    
+
     def _execute_nitrogen_balance_step(self, weather_data: Dict[str, Any]):
         """Execute nitrogen balance calculation using model functions - no shortcuts"""
         try:

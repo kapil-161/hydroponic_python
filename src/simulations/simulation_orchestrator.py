@@ -2,7 +2,7 @@
 Simulation Orchestrator
 
 Central coordinator for the distributed hydroponic simulation system.
-Manages timing, synchronization, and coordination between all 17 simulators.
+Manages timing, synchronization, and coordination between all 16 simulators.
 """
 
 import asyncio
@@ -173,16 +173,18 @@ class SimulationOrchestrator(BaseSimulator):
             for day in range(self.config.start_day, self.config.total_days + 1):
                 if not self.is_running or harvest_maturity_reached:
                     break
-                
+
                 self.current_day = day
-                
+
                 # Get weather data for this day
                 daily_weather = None
                 if weather_data is not None and not weather_data.empty:
                     if day <= len(weather_data):
                         daily_weather = weather_data.iloc[day - 1].to_dict()
-                
-                for hour in range(self.config.start_hour, self.config.steps_per_day):
+
+                # Start at configured start_hour only on first day, then 0 for subsequent days
+                start_hour = self.config.start_hour if day == self.config.start_day else 0
+                for hour in range(start_hour, self.config.steps_per_day):
                     if not self.is_running:
                         break
                     
@@ -242,7 +244,18 @@ class SimulationOrchestrator(BaseSimulator):
             
             print(f"Simulation completed: {self.current_step} steps in {self.end_time - self.start_time}")
             
+        except ValueError as e:
+            # Configuration errors should halt simulation immediately
+            print(f"Configuration error: {e}")
+            self.terminate_simulation()
+            raise
+        except KeyError as e:
+            # Missing required data should halt simulation
+            print(f"Missing required data: {e}")
+            self.terminate_simulation()
+            raise
         except Exception as e:
+            # Other exceptions can be logged and counted
             print(f"Simulation error: {e}")
             self.error_count += 1
             if self.error_count >= self.max_errors:
@@ -285,11 +298,23 @@ class SimulationOrchestrator(BaseSimulator):
                 self.shared_data_cache[simulator_id] = {}
 
     def _execute_dependency_ordered_step(self, weather_data: Dict[str, Any]):
-        """Execute simulators in dependency order to avoid circular dependencies"""
-        # Define execution order based on dependencies - PROPER SCIENTIFIC ORDER
-        # Level 1: Independent simulators that can run with just weather data
-        # Level 2: Simulators that depend on Level 1 outputs
-        # Level 3: Simulators that depend on Level 1 & 2 outputs (including genetic_parameters)
+        """
+        Execute simulators in dependency order to handle circular dependencies.
+
+        IMPORTANT: This execution order is INTENTIONALLY HARDCODED to break circular
+        dependencies in the biological feedback loops. Analysis revealed 31 circular
+        dependencies representing real biological feedbacks (e.g., biomass → photosynthesis
+        → canopy → biomass). Pure topological sort is impossible.
+
+        This order creates one-step data lag, which is scientifically valid for daily timesteps.
+        See CRITICAL_ARCHITECTURE_ANALYSIS.md for detailed explanation.
+
+        Cycle-Breaking Strategy:
+        - phenology before genetic_parameters (breaks phenology ↔ genetic cycle)
+        - root_system before water_uptake (breaks root ↔ water cycle)
+        - ph_model before nutrient (breaks pH ↔ nutrient cycle)
+        - biomass before canopy (breaks biomass ↔ photosynthesis ↔ canopy cycle)
+        """
         execution_order = [
             # Level 1: Independent simulators (weather data only or initial state from CSV)
             'phenology_simulator',
@@ -334,7 +359,7 @@ class SimulationOrchestrator(BaseSimulator):
                         for dep_simulator_id, dep_data in self.shared_data_cache.items():
                             if dep_simulator_id != simulator_id:  # Don't inject self
                                 simulator.dependency_cache[dep_simulator_id] = dep_data
-                                # Set cache timestamp to prevent _update_dependencies() from invalidating it
+                                # Update cache timestamp for freshness tracking
                                 if hasattr(simulator, 'cache_timestamp'):
                                     simulator.cache_timestamp[dep_simulator_id] = datetime.now()
 

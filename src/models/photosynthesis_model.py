@@ -37,6 +37,22 @@ class PhotosynthesisParameters:
     light_saturation_threshold: float
     optimal_vpd_min: float
     optimal_vpd_max: float
+    reference_leaf_nitrogen: float
+    nitrogen_sensitivity: float
+    water_stress_sensitivity: float
+    # Physical constants (from CSV)
+    kelvin_conversion: float
+    reference_temp_kelvin: float
+    saturation_vapor_pressure_constant: float
+    vapor_pressure_temp_coefficient: float
+    vapor_pressure_base_temp: float
+    # Model-specific constants (from CSV)
+    initial_ci_fraction: float
+    ci_convergence_max_iterations: int
+    ci_convergence_tolerance_ppm: float
+    stomatal_conductance_co2_diffusion_ratio: float
+    minimum_stomatal_conductance_threshold: float
+    minimum_vpd_threshold: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'PhotosynthesisParameters':
@@ -48,7 +64,15 @@ class PhotosynthesisParameters:
             'theta', 'alpha', 'rd_25', 'eaj', 'eav', 'ear', 'o2_mmol_mol',
             'shaded_light_fraction', 'photosynthesis_cold_limit', 'photosynthesis_heat_limit',
             'min_stress_factor', 'optimal_temperature_min', 'optimal_temperature_max',
-            'light_saturation_threshold', 'optimal_vpd_min', 'optimal_vpd_max'
+            'light_saturation_threshold', 'optimal_vpd_min', 'optimal_vpd_max',
+            'reference_leaf_nitrogen', 'nitrogen_sensitivity', 'water_stress_sensitivity',
+            # Physical constants
+            'kelvin_conversion', 'reference_temp_kelvin', 'saturation_vapor_pressure_constant',
+            'vapor_pressure_temp_coefficient', 'vapor_pressure_base_temp',
+            # Model-specific constants
+            'initial_ci_fraction', 'ci_convergence_max_iterations', 'ci_convergence_tolerance_ppm',
+            'stomatal_conductance_co2_diffusion_ratio', 'minimum_stomatal_conductance_threshold',
+            'minimum_vpd_threshold'
         ]
         for param in required_params:
             if param not in config:
@@ -100,7 +124,23 @@ class PhotosynthesisParameters:
             optimal_temperature_max=float(config['optimal_temperature_max']),
             light_saturation_threshold=float(config['light_saturation_threshold']),
             optimal_vpd_min=float(config['optimal_vpd_min']),
-            optimal_vpd_max=float(config['optimal_vpd_max'])
+            optimal_vpd_max=float(config['optimal_vpd_max']),
+            reference_leaf_nitrogen=float(config['reference_leaf_nitrogen']),
+            nitrogen_sensitivity=float(config['nitrogen_sensitivity']),
+            water_stress_sensitivity=float(config['water_stress_sensitivity']),
+            # Physical constants
+            kelvin_conversion=float(config['kelvin_conversion']),
+            reference_temp_kelvin=float(config['reference_temp_kelvin']),
+            saturation_vapor_pressure_constant=float(config['saturation_vapor_pressure_constant']),
+            vapor_pressure_temp_coefficient=float(config['vapor_pressure_temp_coefficient']),
+            vapor_pressure_base_temp=float(config['vapor_pressure_base_temp']),
+            # Model-specific constants
+            initial_ci_fraction=float(config['initial_ci_fraction']),
+            ci_convergence_max_iterations=int(config['ci_convergence_max_iterations']),
+            ci_convergence_tolerance_ppm=float(config['ci_convergence_tolerance_ppm']),
+            stomatal_conductance_co2_diffusion_ratio=float(config['stomatal_conductance_co2_diffusion_ratio']),
+            minimum_stomatal_conductance_threshold=float(config['minimum_stomatal_conductance_threshold']),
+            minimum_vpd_threshold=float(config['minimum_vpd_threshold'])
         )
 
 @dataclass
@@ -123,16 +163,17 @@ class PhotosynthesisModel:
     def _arrhenius_temp_response(self, rate_25: float, ea: float, temp_c: float) -> float:
         if temp_c is None:
             raise ValueError("Temperature must be provided")
-        temp_k = float(temp_c) + 273.15
+        temp_k = float(temp_c) + self.params.kelvin_conversion
         if temp_k <= 0:
             raise ValueError("Temperature in Kelvin must be positive")
-        return rate_25 * math.exp(ea * (temp_k - 298.15) / (298.15 * self.params.r * temp_k))
+        return rate_25 * math.exp(ea * (temp_k - self.params.reference_temp_kelvin) / (self.params.reference_temp_kelvin * self.params.r * temp_k))
 
     def _calculate_instantaneous_assimilation(self, par_umol_m2_s: float, co2_ppm: float,
                                             temp_c: float, humidity: float, lai: float,
-                                            ec_factor: float, config: Dict[str, Any]) -> Tuple[float, float]:
-        if any(x is None for x in [par_umol_m2_s, co2_ppm, temp_c, humidity, lai, ec_factor, config]):
-            raise ValueError("All inputs (par, co2, temp, humidity, lai, ec_factor, config) must be provided")
+                                            ec_factor: float, config: Dict[str, Any],
+                                            leaf_nitrogen: float, water_stress: float) -> Tuple[float, float]:
+        if any(x is None for x in [par_umol_m2_s, co2_ppm, temp_c, humidity, lai, ec_factor, config, leaf_nitrogen, water_stress]):
+            raise ValueError("All inputs (par, co2, temp, humidity, lai, ec_factor, config, leaf_nitrogen, water_stress) must be provided")
         if par_umol_m2_s < self.params.min_par_threshold:
             return 0.0, 0.0
         if lai < 0 or ec_factor < 0 or humidity < 0 or humidity > 100:
@@ -144,6 +185,11 @@ class PhotosynthesisModel:
         jmax = self._arrhenius_temp_response(self.params.jmax_25, self.params.eaj, temp_c)
         rd = self._arrhenius_temp_response(self.params.rd_25, self.params.ear, temp_c)
 
+        # Apply nitrogen effect
+        nitrogen_factor = 1 + self.params.nitrogen_sensitivity * (leaf_nitrogen - self.params.reference_leaf_nitrogen)
+        vcmax *= nitrogen_factor
+        jmax *= nitrogen_factor
+
         enzyme_saturation_lai = config.get('enzyme_saturation_lai', self.params.enzyme_saturation_lai)
         if lai > enzyme_saturation_lai:
             enzyme_saturation_factor = 1.0 - self.params.enzyme_saturation_rate * (lai - enzyme_saturation_lai)
@@ -151,9 +197,9 @@ class PhotosynthesisModel:
             vcmax *= enzyme_saturation_factor
             jmax *= enzyme_saturation_factor
 
-        es = 0.6108 * math.exp(17.27 * temp_c / (temp_c + 237.3))
+        es = self.params.saturation_vapor_pressure_constant * math.exp(self.params.vapor_pressure_temp_coefficient * temp_c / (temp_c + self.params.vapor_pressure_base_temp))
         ea = es * (humidity / 100.0)
-        vpd = max(0.1, es - ea)
+        vpd = max(self.params.minimum_vpd_threshold, es - ea)
 
         # All parameters must come from CSV per Rules.md
         if 'light_saturation_threshold' not in config:
@@ -170,18 +216,23 @@ class PhotosynthesisModel:
         optimal_vpd = (optimal_vpd_min + optimal_vpd_max) / 2.0
 
         if vpd <= optimal_vpd:
-            f_vpd = max(0.1, vpd / optimal_vpd)
+            f_vpd = max(self.params.minimum_vpd_threshold, vpd / optimal_vpd)
         else:
             vpd_decline_range = optimal_vpd_max - optimal_vpd_min
-            f_vpd = max(0.1, 1.0 - (vpd - optimal_vpd) / vpd_decline_range)
+            f_vpd = max(self.params.minimum_vpd_threshold, 1.0 - (vpd - optimal_vpd) / vpd_decline_range)
 
         gs = self.params.g_max * f_light * f_temp * f_vpd
-        ci = co2_ppm * 0.7
+
+        # Apply water stress effect
+        water_stress_factor = 1 - self.params.water_stress_sensitivity * water_stress
+        gs *= water_stress_factor
+
+        ci = co2_ppm * self.params.initial_ci_fraction
         net_photosynthesis_rate = 0.0
 
         # Iterate until CO2 concentration converges (proper numerical solution)
-        max_iterations = 20
-        tolerance = 0.01  # CO2 concentration convergence tolerance (ppm)
+        max_iterations = self.params.ci_convergence_max_iterations
+        tolerance = self.params.ci_convergence_tolerance_ppm  # CO2 concentration convergence tolerance (ppm)
 
         for iteration in range(max_iterations):
             ci_prev = ci
@@ -192,8 +243,8 @@ class PhotosynthesisModel:
             aj = j * (ci - self.params.gamma_star) / (4 * (ci + 2 * self.params.gamma_star))
             net_photosynthesis_rate = max(0.0, min(ac, aj) - rd)
 
-            if gs > 1e-9:
-                ci = co2_ppm - (net_photosynthesis_rate * 1.6 / gs)
+            if gs > self.params.minimum_stomatal_conductance_threshold:
+                ci = co2_ppm - (net_photosynthesis_rate * self.params.stomatal_conductance_co2_diffusion_ratio / gs)
                 ci = max(self.params.gamma_star, ci)
             else:
                 ci = co2_ppm
@@ -227,14 +278,15 @@ class PhotosynthesisModel:
     def calculate_hourly_assimilation(self, par_umol_m2_s: float, co2_ppm: float, temp_c: float, humidity: float,
                                      lai: float, ec_factor: float, config: Dict[str, Any],
                                      sunlit_lai: float, shaded_lai: float,
+                                     leaf_nitrogen: float, water_stress: float,
                                      dynamic_shaded_par: Optional[float] = None) -> Tuple[float, float]:
-        if any(x is None for x in [par_umol_m2_s, co2_ppm, temp_c, humidity, lai, ec_factor, config, sunlit_lai, shaded_lai]):
+        if any(x is None for x in [par_umol_m2_s, co2_ppm, temp_c, humidity, lai, ec_factor, config, sunlit_lai, shaded_lai, leaf_nitrogen, water_stress]):
             raise ValueError("All inputs must be provided")
         if abs((sunlit_lai + shaded_lai) - lai) > 0.001:
             raise ValueError("Sum of sunlit_lai and shaded_lai must equal lai")
 
         sunlit_photosynthesis, sunlit_gs = self._calculate_instantaneous_assimilation(
-            par_umol_m2_s, co2_ppm, temp_c, humidity, sunlit_lai, ec_factor, config
+            par_umol_m2_s, co2_ppm, temp_c, humidity, sunlit_lai, ec_factor, config, leaf_nitrogen, water_stress
         )
         shaded_photosynthesis = 0.0
         shaded_gs = 0.0
@@ -245,7 +297,7 @@ class PhotosynthesisModel:
             else:
                 shaded_par = par_umol_m2_s * self.params.shaded_light_fraction  # Fallback to static fraction
             shaded_photosynthesis, shaded_gs = self._calculate_instantaneous_assimilation(
-                shaded_par, co2_ppm, temp_c, humidity, shaded_lai, ec_factor, config
+                shaded_par, co2_ppm, temp_c, humidity, shaded_lai, ec_factor, config, leaf_nitrogen, water_stress
             )
         total_gs = (sunlit_gs * sunlit_lai + shaded_gs * shaded_lai) / lai if lai > 0 else 0.0
         return sunlit_photosynthesis + shaded_photosynthesis, total_gs
@@ -253,8 +305,9 @@ class PhotosynthesisModel:
     def calculate_daily_assimilation(self, par_umol_m2_s: float, co2_ppm: float, temp_c: float, humidity: float,
                                     lai: float, photoperiod_hours: float, ec_factor: float,
                                     config: Dict[str, Any], sunlit_lai: float, shaded_lai: float,
+                                    leaf_nitrogen: float, water_stress: float,
                                     dynamic_dark_respiration_rate: Optional[float] = None) -> PhotosynthesisResponse:
-        if any(x is None for x in [par_umol_m2_s, co2_ppm, temp_c, humidity, lai, photoperiod_hours, ec_factor, config, sunlit_lai, shaded_lai]):
+        if any(x is None for x in [par_umol_m2_s, co2_ppm, temp_c, humidity, lai, photoperiod_hours, ec_factor, config, sunlit_lai, shaded_lai, leaf_nitrogen, water_stress]):
             raise ValueError("All inputs must be provided")
         if photoperiod_hours < 0 or photoperiod_hours > self.params.hours_per_day:
             raise ValueError("photoperiod_hours must be between 0 and hours_per_day")
@@ -262,7 +315,7 @@ class PhotosynthesisModel:
             raise ValueError("lai and ec_factor must be non-negative")
 
         hourly_assimilation, stomatal_conductance = self.calculate_hourly_assimilation(
-            par_umol_m2_s, co2_ppm, temp_c, humidity, lai, ec_factor, config, sunlit_lai, shaded_lai
+            par_umol_m2_s, co2_ppm, temp_c, humidity, lai, ec_factor, config, sunlit_lai, shaded_lai, leaf_nitrogen, water_stress
         )
         daily_assimilation = hourly_assimilation * photoperiod_hours
 

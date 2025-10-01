@@ -65,6 +65,12 @@ class RespirationParameters:
     lignin_fraction: float
     mineral_fraction: float
 
+    # Hardcoded value replacements (from CSV)
+    max_temperature_factor: float
+    minimum_temperature_factor: float
+    minimum_respiration_rate_fraction: float
+    default_total_biomass_g: float
+
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'RespirationParameters':
         # Load phenology parameters for temperature consolidation
@@ -89,7 +95,9 @@ class RespirationParameters:
             # 'early_leaf_biomass', 'early_stem_biomass', 'early_root_biomass', 'early_total_biomass',
             # 'early_growth_stage', 'early_development_index', 'optimal_temperature_stress', 'cache_timeout',  # Not in CSV
             'protein_fraction', 'carbohydrate_fraction', 'lipid_fraction', 'organic_acid_fraction',
-            'lignin_fraction', 'mineral_fraction'
+            'lignin_fraction', 'mineral_fraction',
+            # Hardcoded value replacements
+            'max_temperature_factor', 'minimum_temperature_factor', 'minimum_respiration_rate_fraction', 'default_total_biomass_g'
         ]
         for param in required_params:
             if param not in config and param not in phenology_params:
@@ -120,7 +128,7 @@ class RespirationParameters:
         if config['day_start_hour'] >= config['day_end_hour']:
             raise ValueError("day_start_hour must be less than day_end_hour")
         # Get optimal temperature from phenology parameters (consolidation per Rules.md)
-        phenology_optimal_temp = (phenology_params.get('optimal_temperature_min', 18.0) + phenology_params.get('optimal_temperature_max', 24.0)) / 2.0
+        phenology_optimal_temp = (phenology_params.get('optimal_temperature_min', config.get('optimal_temperature_min', 18.0)) + phenology_params.get('optimal_temperature_max', config.get('optimal_temperature_max', 24.0))) / 2.0
         if phenology_optimal_temp < config['min_acclimation_temperature'] or phenology_optimal_temp > config['max_acclimation_temperature']:
             raise ValueError("consolidated optimal_temperature must be within acclimation bounds")
         if config['moderate_stress_threshold'] >= config['severe_stress_threshold']:
@@ -175,7 +183,12 @@ class RespirationParameters:
             lipid_fraction=float(config['lipid_fraction']),
             organic_acid_fraction=float(config['organic_acid_fraction']),
             lignin_fraction=float(config['lignin_fraction']),
-            mineral_fraction=float(config['mineral_fraction'])
+            mineral_fraction=float(config['mineral_fraction']),
+            # Hardcoded value replacements
+            max_temperature_factor=float(config['max_temperature_factor']),
+            minimum_temperature_factor=float(config['minimum_temperature_factor']),
+            minimum_respiration_rate_fraction=float(config['minimum_respiration_rate_fraction']),
+            default_total_biomass_g=float(config['default_total_biomass_g'])
         )
 
     def get_required_growth_composition(self, config: Dict[str, Any]) -> Dict[str, float]:
@@ -229,7 +242,7 @@ class EnhancedRespirationModel:
         reference_temp = acclimated_temp or self.acclimated_reference_temp
         temp_diff = temperature - reference_temp
         factor = self.params.q10_factor ** (temp_diff / 10.0)
-        factor = max(0.1, min(4.0, factor))
+        factor = max(self.params.minimum_temperature_factor, min(self.params.max_temperature_factor, factor))
         if temperature > self.params.max_temperature_threshold:
             excess_temp = temperature - self.params.max_temperature_threshold
             factor *= math.exp(-self.params.temperature_decay_factor * excess_temp)
@@ -250,7 +263,7 @@ class EnhancedRespirationModel:
             raise ValueError("reference_leaf_n must be positive")
         n_ratio = nitrogen_content / self.params.reference_leaf_n
         factor = 1.0 + self.params.n_effect_slope * (n_ratio - 1.0)
-        return max(0.1, factor)
+        return max(self.params.minimum_temperature_factor, factor)
 
     def calculate_maintenance_respiration(self, biomass_pool: BiomassPool, temperature: float) -> Tuple[float, Dict[str, float]]:
         if not biomass_pool or temperature is None:
@@ -367,9 +380,9 @@ class EnhancedRespirationModel:
 
         # Ensure minimum biological respiration rate proportional to actual biomass (following "model output" rule)
         # Use realistic minimum respiration proportional to biomass, not fixed minimum
-        total_biomass = sum(pool.dry_mass for pool in biomass_pools) if biomass_pools else 0.02
+        total_biomass = sum(pool.dry_mass for pool in biomass_pools) if biomass_pools else self.params.default_total_biomass_g
         # Minimum respiration = 0.1% of biomass per day (realistic for plant maintenance)
-        biomass_based_min = total_biomass * 0.001  # 0.1% of biomass per day
+        biomass_based_min = total_biomass * self.params.minimum_respiration_rate_fraction  # 0.1% of biomass per day
         adjusted_total = max(biomass_based_min, adjusted_total)
         co2_release_rate = adjusted_total * self.params.carbon_to_co2_ratio
         respiratory_quotient = self._calculate_respiratory_quotient(hour)

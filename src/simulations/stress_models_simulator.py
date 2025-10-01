@@ -164,46 +164,7 @@ class StressModelsSimulator(BaseSimulator):
             # Per Rules.md: raise errors, don't suppress them
             raise e
     
-    def _update_dependencies(self):
-        """Update data from dependent simulators - with graceful handling"""
-        for dep_simulator, required_data in self.dependencies.items():
-            try:
-                # Check if cache is still valid
-                if dep_simulator in self.cache_timestamp:
-                    cache_age = (datetime.now() - self.cache_timestamp[dep_simulator]).total_seconds()
-                    if cache_age < self.cache_timeout:
-                        continue  # Use cached data
-                
-                # Request fresh data from other simulators with retry
-                fresh_data = {}
-                missing_data = []
-                
-                for data_key in required_data:
-                    # Try multiple times to get data
-                    value = None
-                    for attempt in range(3):
-                        value = self.request_data(dep_simulator, data_key)
-                        if value is not None:
-                            break
-                        time.sleep(0.001)  # Small delay between attempts
-                    
-                    if value is not None:
-                        fresh_data[data_key] = value
-                    else:
-                        missing_data.append(data_key)
-                
-                # If we have some data, use it; if completely missing, skip this dependency
-                if fresh_data:
-                    self.dependency_cache[dep_simulator] = fresh_data
-                    self.cache_timestamp[dep_simulator] = datetime.now()
-                elif missing_data:
-                    # Log missing data but don't fail completely
-                    print(f"Warning: Missing data {missing_data} from {dep_simulator}, skipping this dependency")
-                    
-            except Exception as e:
-                # Per Rules.md: raise errors, don't suppress them
-                raise ValueError(f"Error updating dependency {dep_simulator}: {e}")
-    
+
     def _execute_stress_step(self, weather_data: Dict[str, Any]):
         """Execute stress calculation using model functions - no shortcuts"""
         try:
