@@ -620,12 +620,20 @@ class NitrogenBalanceSimulator(BaseSimulator):
         # Print nitrogen allocation
         print("Final nitrogen allocation:")
         for organ, allocation in self.state.allocation_rates.items():
-            print(f"  {organ}: {allocation:.2f} g")
-        
+            # Handle case where allocation might be a list or other type
+            if isinstance(allocation, (int, float)):
+                print(f"  {organ}: {allocation:.2f} g")
+            else:
+                print(f"  {organ}: {allocation}")
+
         # Print nitrogen pools
         print("Final nitrogen pools:")
         for pool, amount in self.state.nitrogen_pools.items():
-            print(f"  {pool}: {amount:.2f} g")
+            # Handle case where amount might be a list or other type
+            if isinstance(amount, (int, float)):
+                print(f"  {pool}: {amount:.2f} g")
+            else:
+                print(f"  {pool}: {amount}")
         
         # Publish final results
         self.publish_event(EventType.NITROGEN_BALANCE_UPDATE, {

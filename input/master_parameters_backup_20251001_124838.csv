@@ -601,7 +601,10 @@ ph_parameters,ph_deadband,0.1,pH,pH control deadband to prevent oscillation
 ph_parameters,temperature_correction_factor,0.01,pH_per_°C,pH correction factor per degree C from 25°C
 ph_parameters,ec_buffer_factor,0.2,dimensionless,Buffer capacity multiplier per EC unit (dS/m)
 ph_parameters,proportional_control_factor,0.8,dimensionless,Proportional control multiplier for dosing calculations
+ph_parameters,current_ph,6.0,pH,Initial pH of the nutrient solution
+ph_parameters,total_alkalinity,3.0,mEq_L,Total alkalinity of the solution
 ph_parameters,carbonate_conc,50.0,mg_L,Carbonate concentration as HCO3-
+ph_parameters,phosphate_total,15.0,mg_L_P,Total phosphate concentration as P
 ph_parameters,ionic_strength,0.02,M,Ionic strength of the solution
 ph_parameters,ph_min_limit,4.0,pH,Absolute minimum allowable pH
 ph_parameters,ph_max_limit,8.5,pH,Absolute maximum allowable pH
@@ -1036,6 +1039,8 @@ stress_parameters,acclimation_capacity_water,0.8,dimensionless,Water stress accl
 stress_parameters,acclimation_capacity_temperature,0.7,dimensionless,Temperature stress acclimation capacity
 stress_parameters,acclimation_memory_water,168.0,hours,Water stress acclimation memory duration
 stress_parameters,acclimation_memory_temperature,240.0,hours,Temperature stress acclimation memory duration
+stress_parameters,stress_onset_threshold_water,0.2,dimensionless,Water stress onset threshold
+stress_parameters,stress_onset_threshold_temperature,0.25,dimensionless,Temperature stress onset threshold
 # Note: damage_threshold_water consolidated above (removed duplicate)
 # Note: damage_threshold_temperature consolidated above (removed duplicate)
 stress_parameters,process_sensitivity_photosynthesis_water,0.9,dimensionless,Photosynthesis sensitivity to water stress
@@ -1386,6 +1391,7 @@ root_system,initial_medium_root_length,3.0,cm,Initial medium root length
 root_system,initial_coarse_root_length,1.0,cm,Initial coarse root length
 root_system,initial_fine_root_fraction,0.6,dimensionless,Initial fine root fraction
 root_system,initial_root_age_days,0,days,Initial root age in days
+root_system,initial_cumulative_growth,0.0,cm,Initial cumulative growth
 root_system,initial_total_nutrient_uptake,0.0,g,Initial total nutrient uptake
 root_system,initial_uptake_per_surface_area,0.0,g_cm2,Initial uptake per surface area
 root_system,initial_uptake_temperature_factor,1.0,dimensionless,Initial uptake temperature factor
@@ -1548,6 +1554,7 @@ stress_parameters,minimum_light_stress,0.0,dimensionless,Minimum baseline light 
 # Removed static hydroponic_water_stress - should be calculated dynamically by UnifiedStressCalculator
 # based on VPD, EC, temperature, humidity, and system conditions
 stress_parameters,minimum_nutrient_stress,0.0,dimensionless,Minimum baseline nutrient stress
+stress_parameters,water_salinity_interaction_factor,0.3,dimensionless,Water-salinity stress interaction factor
 stress_parameters,ph_stress_sensitivity,0.3,dimensionless,pH stress sensitivity factor
 stress_parameters,nutrient_stress_sensitivity,0.3,dimensionless,Nutrient stress sensitivity factor
 stress_parameters,salinity_stress_sensitivity,0.3,dimensionless,Salinity stress sensitivity factor
@@ -1617,6 +1624,7 @@ stress_parameters,light_photoinhibition_threshold,1800.0,μmol_m2_s,PPFD thresho
 stress_parameters,light_recovery_rate,0.4,per_day,Recovery rate from light stress
 
 # pH Stress
+stress_parameters,ph_stress_sensitivity,2.0,dimensionless,Sensitivity factor for pH stress
 stress_parameters,ph_recovery_rate,0.5,per_day,Recovery rate from pH stress
 
 # Salinity Stress
@@ -1639,6 +1647,7 @@ stress_parameters,integration_threshold_critical,0.15,fraction,Threshold for cri
 
 # Acclimation Parameters
 stress_parameters,acclimation_max_adjustment,0.5,dimensionless,Maximum stress acclimation adjustment
+stress_parameters,acclimation_decay_rate,0.1,per_day,Daily decay rate of acclimation
 
 # Physiological Process Sensitivity to Stress
 stress_parameters,sensitivity_photosynthesis,0.8,dimensionless,Photosynthesis sensitivity to stress (high)
@@ -1664,6 +1673,37 @@ simulator_defaults,max_concurrent_simulators,16,count,Maximum concurrent simulat
 simulator_defaults,max_errors,10,count,Maximum errors before termination
 
 # Stress Model Parameters (32 parameters from parameter_loader.py lines 334-411)
+stress_parameters,temperature_lethal_min,2.0,°C,Minimum survival temperature
+stress_parameters,temperature_recovery_rate,0.2,per_day,Recovery rate from temperature stress
+stress_parameters,water_critical_threshold,0.15,fraction,Critical water stress threshold
+stress_parameters,water_recovery_rate,0.3,per_day,Recovery rate from water stress
+stress_parameters,nutrient_critical_threshold,0.1,fraction,Critical nutrient deficiency threshold
+stress_parameters,nutrient_toxicity_threshold,3.0,dimensionless,Threshold for nutrient toxicity
+stress_parameters,nutrient_recovery_rate,0.25,per_day,Recovery rate from nutrient stress
+stress_parameters,light_max_ppfd,2000.0,μmol_m2_s,Maximum PPFD before stress
+stress_parameters,light_photoinhibition_threshold,1800.0,μmol_m2_s,PPFD for photoinhibition onset
+stress_parameters,light_recovery_rate,0.4,per_day,Recovery rate from light stress
+stress_parameters,ph_stress_sensitivity,2.0,dimensionless,Sensitivity factor for pH stress
+stress_parameters,ph_recovery_rate,0.5,per_day,Recovery rate from pH stress
+stress_parameters,salinity_threshold_ec,2.5,dS_m,EC threshold for salinity stress
+stress_parameters,salinity_critical_ec,4.0,dS_m,EC for severe salinity stress
+stress_parameters,salinity_recovery_rate,0.2,per_day,Recovery rate from salinity stress
+stress_parameters,oxygen_critical_min,3.0,mg_L,Critical minimum dissolved oxygen
+stress_parameters,oxygen_optimal_min,5.0,mg_L,Optimal minimum dissolved oxygen
+stress_parameters,oxygen_recovery_rate,0.6,per_day,Recovery rate from oxygen stress
+stress_parameters,integration_water_weight,0.3,dimensionless,Water stress weight in integration
+stress_parameters,integration_nutrient_weight,0.15,dimensionless,Nutrient stress weight
+stress_parameters,integration_light_weight,0.05,dimensionless,Light stress weight
+stress_parameters,integration_interaction_factor,1.2,dimensionless,Multiplicative interaction strength
+stress_parameters,integration_threshold_severe,0.3,fraction,Severe combined stress threshold
+stress_parameters,integration_threshold_critical,0.15,fraction,Critical combined stress threshold
+stress_parameters,acclimation_max_adjustment,0.5,dimensionless,Maximum acclimation adjustment
+stress_parameters,acclimation_decay_rate,0.1,per_day,Daily decay of acclimation
+stress_parameters,sensitivity_photosynthesis,0.8,dimensionless,Photosynthesis sensitivity to stress
+stress_parameters,sensitivity_respiration,0.4,dimensionless,Respiration sensitivity to stress
+stress_parameters,sensitivity_transpiration,0.6,dimensionless,Transpiration sensitivity to stress
+stress_parameters,sensitivity_growth,0.9,dimensionless,Growth sensitivity to stress
+stress_parameters,sensitivity_development,0.5,dimensionless,Development sensitivity to stress
 
 # Nitrogen Balance - Base Values (6 parameters instead of 48 loop-generated)
 nitrogen_balance,buffering_capacity_base,1.0,g_plant,Base buffering capacity for all organs/nutrients
@@ -1790,9 +1830,21 @@ root_system,branching_angle_std,15.0,degrees,Standard deviation of branching ang
 root_system,fine_root_fraction,0.6,dimensionless,Fraction of fine roots
 root_system,medium_root_fraction,0.3,dimensionless,Fraction of medium roots
 root_system,coarse_root_fraction,0.1,dimensionless,Fraction of coarse roots
+root_system,fine_diameter_mean,0.2,mm,Mean diameter of fine roots
+root_system,fine_diameter_std,0.05,mm,Standard deviation of fine root diameter
+root_system,medium_diameter_mean,0.8,mm,Mean diameter of medium roots
+root_system,medium_diameter_std,0.2,mm,Standard deviation of medium root diameter
+root_system,coarse_diameter_mean,2.0,mm,Mean diameter of coarse roots
+root_system,coarse_diameter_std,0.5,mm,Standard deviation of coarse root diameter
+root_system,fine_turnover_rate,0.05,fraction_per_day,Fine root turnover rate
+root_system,medium_turnover_rate,0.02,fraction_per_day,Medium root turnover rate
+root_system,coarse_turnover_rate,0.01,fraction_per_day,Coarse root turnover rate
 root_system,fine_root_half_life_days,20.0,days,Fine root activity half-life
 root_system,medium_root_half_life_days,40.0,days,Medium root activity half-life
 root_system,coarse_root_half_life_days,80.0,days,Coarse root activity half-life
+root_system,fine_min_activity,0.2,dimensionless,Minimum activity factor for fine roots
+root_system,medium_min_activity,0.15,dimensionless,Minimum activity factor for medium roots
+root_system,coarse_min_activity,0.1,dimensionless,Minimum activity factor for coarse roots
 root_system,establishment_plateau_days,7.0,days,Days of establishment plateau for root activity
 root_system,initial_root_activity,1.0,dimensionless,Initial activity factor for new roots
 root_system,fine_root_effectiveness,1.0,dimensionless,Fine root effectiveness factor
@@ -1868,16 +1920,36 @@ root_system,ph_optimum_mg_max,8.0,pH,Mg optimal pH maximum
 root_system,root_zone_efficiency_factor,0.8,dimensionless,Root zone efficiency factor
 root_system,zone_efficiency_factor,0.9,dimensionless,Root zone efficiency factor
 root_system,auxin_decay_rate,0.1,per_day,Auxin decay rate
+root_system,auxin_gradient_weight,0.5,dimensionless,Auxin gradient weight
 root_system,biomass_density,0.5,g_per_cm3,Root biomass density
+root_system,competition_effect_weight,0.3,dimensionless,Competition effect weight
 root_system,density_stress_factor,0.8,dimensionless,Density stress factor
+root_system,diameter_minimum_limit,0.01,mm,Minimum diameter limit
+root_system,effective_area_minimum,0.01,m2,Minimum effective area
+root_system,establishment_plateau_days,7,days,Establishment plateau days
+root_system,flow_rate_multiplier,1.0,dimensionless,Flow rate multiplier
+root_system,flow_rate_offset,0.1,L_per_min,Flow rate offset
 root_system,initial_activity,0.8,dimensionless,Initial activity
+root_system,max_growth_potential,1.0,dimensionless,Max growth potential
 # Note: max_temp_threshold consolidated into root_system_parameters section
+root_system,min_growth_potential,0.1,dimensionless,Min growth potential
+root_system,minimum_biomass,0.01,g,Minimum biomass
+root_system,minimum_surface_area,0.001,m2,Minimum surface area
+root_system,minimum_volume,0.0001,cm3,Minimum volume
+root_system,nutrient_signal_weight,0.4,dimensionless,Nutrient signal weight
+root_system,old_root_activity,0.3,dimensionless,Old root activity
 root_system,optimal_density,0.5,g_per_cm3,Optimal density
+root_system,oxygen_effect_weight,0.5,dimensionless,Oxygen effect weight
 root_system,oxygen_minimum_factor,0.2,dimensionless,Oxygen minimum factor
 root_system,oxygen_optimum,8.0,mg_L,Oxygen optimum
+root_system,q10_factor,2.0,dimensionless,Q10 factor
+root_system,temperature_decay_factor,0.1,per_°C,Temperature decay factor
 root_system,temperature_maximum,35.0,°C,Temperature maximum
 root_system,temperature_minimum_factor,0.1,dimensionless,Temperature minimum factor
 # Note: temp_optimum consolidated into phenology_parameters section
+root_system,temperature_effect_weight,0.4,dimensionless,Temperature effect weight
+root_system,transport_temperature_exponent,2.0,dimensionless,Transport temperature exponent
+root_system,young_root_activity,1.0,dimensionless,Young root activity
 
 # Root System Multipliers (system-specific adjustments)
 root_system,multipliers_nutrient_film_technique_root_length_multiplier,1.2,dimensionless,NFT root length multiplier
@@ -1932,6 +2004,8 @@ phenology_parameters,thermal_transition_FL_to_AN,100.0,°Cd,Flowering to anthesi
 phenology_parameters,thermal_transition_AN_to_SD,200.0,°Cd,Anthesis to seed development
 phenology_parameters,thermal_transition_SD_to_PM,300.0,°Cd,Seed development to physiological maturity
 
+root_system_parameters,system_type,deep_water_culture,string,Hydroponic system type
+root_system_parameters,root_zone_independent,1,boolean,Whether root zones are independent
 root_system_parameters,min_flow_rate_multiplier,0.5,dimensionless,Minimum flow rate multiplier for optimal flow
 root_system_parameters,default_michaelis_constant,50.0,µM,Default Michaelis constant for unknown nutrients
 root_system_parameters,default_reference_nutrient_concentration,200.0,µM,Default reference nutrient concentration

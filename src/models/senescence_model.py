@@ -182,8 +182,9 @@ class AdvancedSenescenceModel:
     def initialize_cohort(self, cohort_id: int, initial_nutrient_content: Dict[str, float]):
         if cohort_id in self.cohort_states:
             raise ValueError(f"Cohort {cohort_id} already initialized")
-        if not initial_nutrient_content:
-            raise ValueError("initial_nutrient_content must be provided")
+        # Allow empty nutrient_content - will be populated by nitrogen balance model
+        if initial_nutrient_content is None:
+            initial_nutrient_content = {}
         remobilizable_nutrients = {}
         for nutrient, content in initial_nutrient_content.items():
             if nutrient not in self.params.remobilization_efficiency:

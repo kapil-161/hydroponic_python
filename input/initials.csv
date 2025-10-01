@@ -79,3 +79,7 @@ initial_state,stomatal_conductance,0.05,mol_m2_s,Initial stomatal conductance
 initial_state,maintenance_respiration,0.02,g_CO2_day,Initial maintenance respiration
 initial_state,growth_respiration,0.01,g_CO2_day,Initial growth respiration
 initial_state,total_respiration,0.03,g_CO2_day,Initial total respiration
+ph_parameters,initial_ph,6.0
+ph_parameters,initial_alkalinity,3.0
+ph_parameters,initial_phosphate_total,15.0
+root_system,cumulative_root_growth,0.0

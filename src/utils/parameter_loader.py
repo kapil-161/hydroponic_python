@@ -91,6 +91,14 @@ class StrictParameterLoader:
             raise ParameterError(f"Parameter '{key}' not found in CSV - no defaults allowed")
         return self.parameters[key]['value']
 
+    def get_initial(self, key: str, default: Any = None) -> Any:
+        """Get initial state value - try parameters first, then use default if provided"""
+        if key in self.parameters:
+            return self.parameters[key]['value']
+        if default is not None:
+            return default
+        raise ParameterError(f"Initial value '{key}' not found in CSV and no default provided")
+
     def get_parameter_with_unit(self, key: str) -> Dict[str, Any]:
         """Get parameter with unit and description"""
         if key not in self.parameters:
@@ -805,11 +813,11 @@ class StrictParameterLoader:
         config['ec_buffer_factor'] = self.get_parameter('ph_parameters_ec_buffer_factor')
         config['proportional_control_factor'] = self.get_parameter('ph_parameters_proportional_control_factor')
 
-        # System state parameters
-        config['current_ph'] = self.get_parameter('ph_parameters_current_ph')
-        config['total_alkalinity'] = self.get_parameter('ph_parameters_total_alkalinity')
+        # System state parameters - now from initials.csv
+        config['current_ph'] = self.get_initial('ph_parameters_initial_ph', 6.0)
+        config['total_alkalinity'] = self.get_initial('ph_parameters_initial_alkalinity', 3.0)
         config['carbonate_conc'] = self.get_parameter('ph_parameters_carbonate_conc')
-        config['phosphate_total'] = self.get_parameter('ph_parameters_phosphate_total')
+        config['phosphate_total'] = self.get_initial('ph_parameters_initial_phosphate_total', 15.0)
         config['ionic_strength'] = self.get_parameter('ph_parameters_ionic_strength')
         config['ph_min_limit'] = self.get_parameter('ph_parameters_ph_min_limit')
         config['ph_max_limit'] = self.get_parameter('ph_parameters_ph_max_limit')

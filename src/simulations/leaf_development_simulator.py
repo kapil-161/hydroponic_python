@@ -524,7 +524,7 @@ class LeafDevelopmentSimulator(BaseSimulator):
         # Print leaf stage distribution
         print("Final leaf stage distribution:")
         for stage, count in self.state.leaf_age_distribution.items():
-            print(f"  {stage}: {count} leaves")
+            print(f"  {stage}: {count}")
         
         # Publish final results
         self.publish_event(EventType.LEAF_DEVELOPMENT_UPDATE, {

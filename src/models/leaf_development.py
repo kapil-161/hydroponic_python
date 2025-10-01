@@ -166,12 +166,17 @@ class LeafCohort:
     thermal_time_since_appearance: float
     senescence_rate: float
     current_biomass: float = None # Current leaf biomass (g DM) - calculated from area if not provided
+    nutrient_content: Dict[str, float] = None  # Nutrient content in leaf (g)
+    position: float = 0.5  # Canopy position (0=bottom, 1=top)
     
     def __post_init__(self):
         # Calculate current_biomass from current_area if not provided
         if self.current_biomass is None:
             # This should be calculated using parameters from CSV, not hardcoded
             raise ValueError("current_biomass must be provided or calculated using CSV parameters")
+        # Initialize nutrient_content if not provided
+        if self.nutrient_content is None:
+            self.nutrient_content = {}
 
 
 class LeafDevelopmentModel:
@@ -438,7 +443,9 @@ class LeafDevelopmentModel:
             max_potential_area=self.params.max_individual_leaf_area,
             stage=LeafStage.EXPANDING,
             thermal_time_since_appearance=self.params.leaf_maturation_thermal_time * self.params.initial_thermal_time_factor,
-            senescence_rate=0.0
+            senescence_rate=0.0,
+            nutrient_content={},
+            position=0.5
         )
         self.leaf_cohorts[cohort_id] = cohort
     
@@ -456,7 +463,9 @@ class LeafDevelopmentModel:
             max_potential_area=max_area,
             stage=LeafStage.EMERGING,
             thermal_time_since_appearance=0.0,
-            senescence_rate=0.0
+            senescence_rate=0.0,
+            nutrient_content={},
+            position=1.0
         )
         
         self.leaf_cohorts[self.next_cohort_id] = cohort
