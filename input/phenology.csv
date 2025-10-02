@@ -29,42 +29,43 @@ vernalization_days,30,days,Days of vernalization required
 stress_acceleration_factor,1.5,dimensionless,Acceleration factor under stress conditions
 drought_threshold,0.3,fraction,Water stress threshold for development acceleration
 heat_threshold,30.0,°C,Temperature threshold for heat stress effects
-optimal_water_stress,1.0,dimensionless,Optimal water stress factor for phenology calculations
-GE_to_VE,60.0,GDD,Germination to emergence
-VE_to_V1,80.0,GDD,Emergence to first leaf
-V1_to_V2,50.0,GDD,First to second leaf
-V2_to_V3,50.0,GDD,Second to third leaf
-V3_to_V4,50.0,GDD,Third to fourth leaf
-V4_to_V5,50.0,GDD,Fourth to fifth leaf
-V5_to_V6,50.0,GDD,Fifth to sixth leaf
-V6_to_V7,50.0,GDD,Sixth to seventh leaf
-V7_to_V8,50.0,GDD,Seventh to eighth leaf
-V8_to_V9,50.0,GDD,Eighth to ninth leaf
-V9_to_V10,50.0,GDD,Ninth to tenth leaf
-V10_to_V11+,50.0,GDD,Tenth leaf to mature vegetative
-V11+_to_HI,100.0,GDD,Mature vegetative to head initiation
-HI_to_HD,80.0,GDD,Head initiation to head development
-HD_to_HM,60.0,GDD,Head development to harvest maturity
+optimal_water_stress,1.0,dimensionless,Optimal water stress factor
+GE_to_VE,240.0,GDD,Germination to emergence (4x slower for extended simulation)
+VE_to_V1,320.0,GDD,Emergence to first leaf (4x slower for extended simulation)
+V1_to_V2,200.0,GDD,First to second leaf (4x slower for extended simulation)
+V2_to_V3,200.0,GDD,Second to third leaf (4x slower for extended simulation)
+V3_to_V4,200.0,GDD,Third to fourth leaf (4x slower for extended simulation)
+V4_to_V5,200.0,GDD,Fourth to fifth leaf (4x slower for extended simulation)
+V5_to_V6,200.0,GDD,Fifth to sixth leaf (4x slower for extended simulation)
+V6_to_V7,200.0,GDD,Sixth to seventh leaf (4x slower for extended simulation)
+V7_to_V8,200.0,GDD,Seventh to eighth leaf (4x slower for extended simulation)
+V8_to_V9,200.0,GDD,Eighth to ninth leaf (4x slower for extended simulation)
+V9_to_V10,200.0,GDD,Ninth to tenth leaf (4x slower for extended simulation)
+V10_to_V11+,200.0,GDD,Tenth leaf to mature vegetative (4x slower for extended simulation)
+V11+_to_HI,400.0,GDD,Mature vegetative to head initiation (4x slower for extended simulation)
+HI_to_HD,320.0,GDD,Head initiation to head development (4x slower for extended simulation)
+HD_to_HM,240.0,GDD,Head development to harvest maturity (4x slower for extended simulation)
 HM_to_BI,300.0,GDD,Harvest maturity to bolting initiation
 BI_to_FL,120.0,GDD,Bolting initiation to flowering
 FL_to_AN,50.0,GDD,Flowering to anthesis
 AN_to_SD,200.0,GDD,Anthesis to seed development
 SD_to_PM,150.0,GDD,Seed development to physiological maturity
-thermal_transition_GE_to_VE,60.0,°Cd,Germination to emergence thermal requirement
-thermal_transition_VE_to_V1,80.0,°Cd,Emergence to first leaf
-thermal_transition_V1_to_V2,50.0,°Cd,First to second leaf
-thermal_transition_V2_to_V3,50.0,°Cd,Second to third leaf
-thermal_transition_V3_to_V4,50.0,°Cd,Third to fourth leaf
-thermal_transition_V4_to_V5,50.0,°Cd,Fourth to fifth leaf
-thermal_transition_V5_to_V6,50.0,°Cd,Fifth to sixth leaf
-thermal_transition_V6_to_V7,50.0,°Cd,Sixth to seventh leaf
-thermal_transition_V7_to_V8,50.0,°Cd,Seventh to eighth leaf
-thermal_transition_V8_to_V9,50.0,°Cd,Eighth to ninth leaf
-thermal_transition_V9_to_V10,50.0,°Cd,Ninth to tenth leaf
-thermal_transition_V10_to_V11+,60.0,°Cd,Tenth to mature vegetative
-thermal_transition_V11+_to_HI,100.0,°Cd,Mature vegetative to head initiation
-thermal_transition_HI_to_HD,200.0,°Cd,Head initiation to development
-thermal_transition_HD_to_HM,300.0,°Cd,Head development to harvest maturity
+
+thermal_transition_GE_to_VE,90.0,°Cd,Germination to emergence thermal requirement (1.5x from original)
+thermal_transition_VE_to_V1,120.0,°Cd,Emergence to first leaf (1.5x from original)
+thermal_transition_V1_to_V2,75.0,°Cd,First to second leaf (1.5x from original)
+thermal_transition_V2_to_V3,75.0,°Cd,Second to third leaf (1.5x from original)
+thermal_transition_V3_to_V4,75.0,°Cd,Third to fourth leaf (1.5x from original)
+thermal_transition_V4_to_V5,75.0,°Cd,Fourth to fifth leaf (1.5x from original)
+thermal_transition_V5_to_V6,75.0,°Cd,Fifth to sixth leaf (1.5x from original)
+thermal_transition_V6_to_V7,75.0,°Cd,Sixth to seventh leaf (1.5x from original)
+thermal_transition_V7_to_V8,75.0,°Cd,Seventh to eighth leaf (1.5x from original)
+thermal_transition_V8_to_V9,75.0,°Cd,Eighth to ninth leaf (1.5x from original)
+thermal_transition_V9_to_V10,75.0,°Cd,Ninth to tenth leaf (1.5x from original)
+thermal_transition_V10_to_V11+,75.0,°Cd,Tenth to mature vegetative (1.5x from original)
+thermal_transition_V11+_to_HI,150.0,°Cd,Mature vegetative to head initiation (1.5x from original)
+thermal_transition_HI_to_HD,120.0,°Cd,Head initiation to development (1.5x from original)
+thermal_transition_HD_to_HM,90.0,°Cd,Head development to harvest maturity (1.5x from original)
 thermal_transition_HM_to_BI,100.0,°Cd,Harvest maturity to bolting initiation
 thermal_transition_BI_to_FL,150.0,°Cd,Bolting initiation to flowering
 thermal_transition_FL_to_AN,100.0,°Cd,Flowering to anthesis

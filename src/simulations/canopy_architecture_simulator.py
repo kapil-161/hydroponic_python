@@ -63,7 +63,6 @@ class CanopyArchitectureSimulator(BaseSimulator):
             'biomass_allocation_simulator': ['leaf_biomass', 'total_biomass'],
             'leaf_development_simulator': ['leaf_area', 'leaf_number', 'leaf_size'],
             'phenology_simulator': ['growth_stage', 'development_index'],
-            'environmental_control': ['temperature', 'humidity', 'light_intensity', 'wind_speed'],
             'stress_models': ['light_stress', 'temperature_stress']
         }
         
@@ -177,10 +176,13 @@ class CanopyArchitectureSimulator(BaseSimulator):
                     return
                 raise ValueError("Biomass data missing from biomass_allocation_simulator - no defaults allowed")
             
-            # Get leaf development data from leaf development simulator
+            # Calculate leaf area from leaf biomass using SLA (Specific Leaf Area)
+            # For lettuce: SLA ≈ 250 cm²/g = 0.025 m²/g (from scientific literature)
+            specific_leaf_area = 0.025  # m²/g
+            leaf_area = leaf_biomass * specific_leaf_area  # m²
+
+            # Get leaf development data for additional metrics
             leaf_data = self.dependency_cache.get('leaf_development_simulator', {})
-            # Use minimal values as fallback for first step
-            leaf_area = leaf_data.get('leaf_area', 0.01)  # m2
             leaf_number = leaf_data.get('leaf_number', 4)  # Initial leaves
             leaf_size = leaf_data.get('leaf_size', 0.0025)  # m2 per leaf
             

@@ -75,8 +75,7 @@ class RootSystemSimulator(BaseSimulator):
             'water_uptake_simulator': ['water_uptake_rate', 'root_water_potential'],
             'nutrient_models_simulator': ['nutrient_availability', 'solution_ec'],
             'phenology_simulator': ['growth_stage', 'development_index'],
-            'stress_models': ['water_stress', 'nutrient_stress'],
-            'root_zone_temperature_simulator': ['root_zone_temperature']
+            'stress_models': ['water_stress', 'nutrient_stress']
         }
         
         # Data cache for dependencies
@@ -228,20 +227,13 @@ class RootSystemSimulator(BaseSimulator):
                 water_stress = 1.0  # Default optimal water stress
                 nutrient_stress = 1.0  # Default optimal nutrient stress
             
-            # Get root zone temperature from root zone temperature simulator
-            rzt_data = self.dependency_cache.get('root_zone_temperature_simulator', {})
-            root_zone_temperature = rzt_data.get('root_zone_temperature')
-
-            if root_zone_temperature is None:
-                if self.state.step_count == 0:
-                    print(f"Root: Skipping calculation on step 0 due to missing root_zone_temperature data")
-                    return
-                raise ValueError("Root zone temperature missing from root_zone_temperature_simulator - no defaults allowed")
-            
             # Get environmental conditions from daily weather file
             temperature = weather_data.get('temperature')
             if temperature is None:
                 raise ValueError("Temperature missing from weather data - no defaults allowed")
+            
+            # Use air temperature as root zone temperature (simplified approach)
+            root_zone_temperature = temperature
             
             # Calculate root system growth using model functions - no shortcuts
             environmental_conditions = {

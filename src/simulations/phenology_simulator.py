@@ -59,7 +59,6 @@ class PhenologySimulator(BaseSimulator):
         
         # Inter-simulator dependencies - proper scientific dependencies
         self.dependencies = {
-            'environmental_control': ['temperature', 'humidity', 'light_intensity', 'photoperiod'],
             'stress_models': ['temperature_stress', 'light_stress'],
             'genetic_parameters_simulator': ['genetic_coefficients', 'cultivar_profile']
         }
@@ -126,13 +125,21 @@ class PhenologySimulator(BaseSimulator):
             # Dependency data is provided by orchestrator in self.dependency_cache
             # No need to manually update - orchestrator injects shared_data_cache
 
-# Execute phenology calculation using model functions
-            self._execute_phenology_step(weather_data)
-            
+            # Phenology model expects daily updates, so only call it once per day
+            hour = data.get('hour', 0)
+            if hour == 0:
+                # Execute phenology calculation using model functions (once per day)
+                self._execute_phenology_step(weather_data)
+
+                # Daily reset
+                self.state.daily_thermal_time = 0.0
+                self.state.days_in_current_stage += 1
+                self.state.total_days_from_planting += 1
+
             # Update state
             self.state.step_count += 1
             self.state.last_update = datetime.now()
-            
+
             # Store history
             self.history.append(PhenologyState(**self.state.__dict__))
 
@@ -151,12 +158,6 @@ class PhenologySimulator(BaseSimulator):
                 'stage_progress_fraction': self.state.stage_progress_fraction,
                 'step': self.state.step_count
             })
-            
-            # Daily reset
-            if data.get('hour', 0) == 0:  # Start of new day
-                self.state.daily_thermal_time = 0.0
-                self.state.days_in_current_stage += 1
-                self.state.total_days_from_planting += 1
                 
         except Exception as e:
             print(f"Phenology simulator error in step {self.state.step_count}: {e}")
@@ -206,8 +207,8 @@ class PhenologySimulator(BaseSimulator):
                 water_stress=self.parameters.optimal_water_stress,
                 temperature_stress=temperature_stress if temperature_stress is not None else self.parameters.optimal_water_stress
             )
-            
-            # Update state with model results
+
+            # Update state with model results (called once per day)
             if result.stage_changed and result.new_stage:
                 self.state.current_growth_stage = result.new_stage
             self.state.thermal_time += result.daily_thermal_time
@@ -215,11 +216,10 @@ class PhenologySimulator(BaseSimulator):
             self.state.photoperiod = photoperiod
             self.state.bolting_risk = result.bolting_risk
             self.state.stage_progress_fraction = min(1.0, self.state.thermal_time / 500.0)  # Scientific stage progress for lettuce
-            
+
             # Update cumulative values
-            hourly_thermal_time = result.daily_thermal_time / 24.0  # Convert daily to hourly
-            self.state.cumulative_thermal_time += hourly_thermal_time
-            self.state.daily_thermal_time += hourly_thermal_time
+            self.state.cumulative_thermal_time += result.daily_thermal_time
+            self.state.daily_thermal_time += result.daily_thermal_time
             
         except Exception as e:
             print(f"Error in phenology calculation: {e}")

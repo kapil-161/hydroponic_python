@@ -169,7 +169,7 @@ class SimulationOrchestrator(BaseSimulator):
         try:
             total_steps = self.config.total_days * self.config.steps_per_day
             harvest_maturity_reached = False
-            
+
             for day in range(self.config.start_day, self.config.total_days + 1):
                 if not self.is_running or harvest_maturity_reached:
                     break
@@ -187,12 +187,12 @@ class SimulationOrchestrator(BaseSimulator):
                 for hour in range(start_hour, self.config.steps_per_day):
                     if not self.is_running:
                         break
-                    
+
                     self.current_hour = hour
                     self.current_step += 1
-                    
+
                     step_start_time = time.time()
-                    
+
                     # Send simulation step event
                     self.publish_event(
                         EventType.SIMULATION_STEP,
@@ -204,29 +204,32 @@ class SimulationOrchestrator(BaseSimulator):
                             'progress': (self.current_step / total_steps) * 100
                         }
                     )
-                    
-                    # Execute simulation step with dependency resolution
-                    self._execute_dependency_ordered_step(daily_weather)
-                    
-                    # Check for harvest maturity
+
+                    # Execute simulation step based on synchronization mode
+                    if self.config.synchronization_mode == "parallel":
+                        self._execute_parallel_step(daily_weather)
+                    else:
+                        self._execute_dependency_ordered_step(daily_weather)
+
+                    # Check for harvest maturity (adjusted for extended simulation)
                     harvest_maturity_reached = self._check_harvest_maturity()
                     if harvest_maturity_reached:
                         print(f"Harvest maturity reached on day {self.current_day}, hour {self.current_hour}")
                         break
-                    
+
                     # Collect data if needed
                     if self.current_step % self.config.data_collection_interval == 0:
                         self._collect_step_data()
-                    
+
                     # Track performance
                     step_duration = time.time() - step_start_time
                     self.step_times.append(step_duration)
-                    
+
                     # Real-time delay if enabled
                     if self.config.enable_real_time:
                         sleep_time = max(0, self.config.step_duration_seconds - step_duration)
                         time.sleep(sleep_time)
-                    
+
                     # Progress reporting
                     if self.current_step % self.config.progress_report_interval == 0:  # From CSV
                         progress = (self.current_step / total_steps) * 100
@@ -312,31 +315,35 @@ class SimulationOrchestrator(BaseSimulator):
         Cycle-Breaking Strategy:
         - phenology before genetic_parameters (breaks phenology ↔ genetic cycle)
         - root_system before water_uptake (breaks root ↔ water cycle)
-        - ph_model before nutrient (breaks pH ↔ nutrient cycle)
         - biomass before canopy (breaks biomass ↔ photosynthesis ↔ canopy cycle)
         """
         execution_order = [
             # Level 1: Independent simulators (weather data only or initial state from CSV)
             'phenology_simulator',
-            'environmental_control',  # ID is 'environmental_control' not 'environmental_control_simulator'
-            'ph_model_simulator',
-            'genetic_parameters_simulator',  # Has initial traits from CSV
-            'root_system_simulator',  # Has initial biomass from CSV
-            'stress_models',  # ID is 'stress_models' not 'stress_models_simulator'
+            'genetic_parameters_simulator',
+            'root_system_simulator',
 
-            # Level 2: Basic physiological models (depend on Level 1)
+            # Level 2: Water, nutrients, and environmental before stress calculation
+            'water_uptake_simulator',
+            'nutrient_models_simulator',
+            'leaf_development_simulator',
+
+            # Level 3: Stress models (needs water, nutrients data)
+            'stress_models',
+
+            # Level 4: Canopy and biomass (needs stress data)
+            'canopy_architecture_simulator',
+
+            # Level 5: Photosynthesis and respiration (need canopy and stress)
             'photosynthesis_simulator',
             'respiration_simulator',
-            'water_uptake_simulator',
-            'root_zone_temperature_simulator',  # Needs root data from root_system
-            'senescence_simulator',  # Needs stress data from stress_models
-            'biomass_allocation_simulator',  # Needs genetic data from genetic_parameters
 
-            # Level 3: Advanced models that require Level 1 & 2 data
-            'nitrogen_balance_simulator',  # Needs root data
-            'nutrient_models_simulator',  # Needs biomass data
-            'leaf_development_simulator',
-            'canopy_architecture_simulator'
+            # Level 6: Biomass allocation (needs photosynthesis and respiration)
+            'biomass_allocation_simulator',
+
+            # Level 7: Senescence (needs stress and phenology)
+            'nitrogen_balance_simulator',
+            'senescence_simulator'
         ]
         
         # Execute simulators in dependency order
@@ -665,7 +672,11 @@ class SimulationOrchestrator(BaseSimulator):
             # Add simulator-specific data
             for simulator_id, simulator_data in step_data.get('simulators', {}).items():
                 for key, value in simulator_data.items():
-                    base_record[f"{simulator_id}_{key}"] = value
+                    # Convert lists/dicts to string to avoid formatting errors
+                    if isinstance(value, (list, dict)):
+                        base_record[f"{simulator_id}_{key}"] = str(value)
+                    else:
+                        base_record[f"{simulator_id}_{key}"] = value
 
             flattened_data.append(base_record)
 
@@ -723,14 +734,14 @@ class SimulationOrchestrator(BaseSimulator):
                 print("Warning: Could not get current growth stage from phenology simulator")
                 return False
             
-            # Check if harvest maturity has been reached
+            # Check if harvest maturity has been reached (natural plant development)
             from models.phenology_model import LettuceGrowthStage
             harvest_maturity_reached = (current_stage == LettuceGrowthStage.HARVEST_MATURITY.value or
                                       str(current_stage) == "LettuceGrowthStage.HARVEST_MATURITY")
-            
+
             if harvest_maturity_reached:
-                print(f"Harvest maturity reached! Current stage: {current_stage}")
-            
+                print(f"Harvest maturity reached! Current stage: {current_stage} on day {self.current_day}")
+
             return harvest_maturity_reached
             
         except Exception as e:

@@ -56,7 +56,6 @@ class WaterUptakeSimulator(BaseSimulator):
         
         # Inter-simulator dependencies - all data comes from other simulators
         self.dependencies = {
-            'environmental_control': ['temperature', 'humidity', 'light_intensity', 'wind_speed'],
             'canopy_architecture_simulator': ['lai', 'leaf_area', 'canopy_height'],
             'root_system_simulator': ['root_depth', 'root_distribution', 'root_biomass'],
             'phenology_simulator': ['growth_stage', 'development_index'],

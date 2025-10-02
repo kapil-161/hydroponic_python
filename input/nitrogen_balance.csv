@@ -1,0 +1,66 @@
+# Nitrogen Balance Parameters
+category,parameter_name,value,unit,description
+
+# Buffering and Storage Parameters
+nitrogen_balance,buffering_capacity_base,100.0,mg_N_g_dry_matter,Base buffering capacity for nitrogen
+nitrogen_balance,storage_pool_size_base,50.0,mg_N_g_dry_matter,Base storage pool size for nitrogen
+nitrogen_balance,redistribution_threshold,0.8,dimensionless,Threshold for nitrogen redistribution
+nitrogen_balance,redistribution_rate,0.1,per_day,Rate of nitrogen redistribution
+nitrogen_balance,sink_strength_base,1.0,dimensionless,Base sink strength for nitrogen
+nitrogen_balance,sink_strength_reproductive,1.5,dimensionless,Reproductive sink strength for nitrogen
+
+# Nitrogen Metabolism Parameters
+nitrogen_parameters,nitrate_reduction_rate,0.5,per_day,Nitrate reduction rate
+nitrogen_parameters,ammonium_assimilation_rate,0.3,per_day,Ammonium assimilation rate
+nitrogen_parameters,amino_acid_uptake_rate,0.2,per_day,Amino acid uptake rate
+nitrogen_parameters,photosynthetic_n_use_efficiency,0.8,dimensionless,Photosynthetic nitrogen use efficiency
+nitrogen_parameters,growth_n_use_efficiency,0.6,dimensionless,Growth nitrogen use efficiency
+nitrogen_parameters,luxury_uptake_threshold,1.2,dimensionless,Luxury uptake threshold
+nitrogen_parameters,specific_root_activity,0.4,per_day,Specific root activity
+nitrogen_parameters,root_zone_exploration,0.7,dimensionless,Root zone exploration factor
+
+# Nitrogen Uptake Kinetics Parameters
+nitrogen_parameters,uptake_kinetics_NO3_vmax,0.03,g_N_g_root_day,Maximum nitrate uptake rate
+nitrogen_parameters,uptake_kinetics_NO3_km,0.5,mg_N_L,Michaelis constant for nitrate
+nitrogen_parameters,uptake_kinetics_NO3_min_conc,0.1,mg_N_L,Minimum nitrate concentration for uptake
+nitrogen_parameters,uptake_kinetics_NO3_inhibition_ki,2.0,mg_N_L,Ammonium inhibition constant for nitrate uptake
+nitrogen_parameters,uptake_kinetics_NH4_vmax,0.02,g_N_g_root_day,Maximum ammonium uptake rate
+nitrogen_parameters,uptake_kinetics_NH4_km,0.3,mg_N_L,Michaelis constant for ammonium
+nitrogen_parameters,uptake_kinetics_NH4_min_conc,0.05,mg_N_L,Minimum ammonium concentration for uptake
+nitrogen_parameters,uptake_kinetics_NH4_inhibition_ki,1.5,mg_N_L,Nitrate inhibition constant for ammonium uptake
+
+# Nitrogen Allocation Coefficients
+allocation_coefficients_vegetative_leaves,0.4,dimensionless,N allocation to vegetative leaves
+allocation_coefficients_vegetative_stems,0.2,dimensionless,N allocation to vegetative stems
+allocation_coefficients_vegetative_roots,0.3,dimensionless,N allocation to vegetative roots
+allocation_coefficients_reproductive_leaves,0.3,dimensionless,N allocation to reproductive leaves
+allocation_coefficients_reproductive_stems,0.2,dimensionless,N allocation to reproductive stems
+allocation_coefficients_reproductive_roots,0.2,dimensionless,N allocation to reproductive roots
+
+# Critical Nitrogen Concentrations
+critical_n_concentrations_leaves_vegetative,4.0,percent,Critical N concentration in vegetative leaves
+critical_n_concentrations_leaves_reproductive,3.5,percent,Critical N concentration in reproductive leaves
+critical_n_concentrations_stems_vegetative,2.5,percent,Critical N concentration in vegetative stems
+critical_n_concentrations_stems_reproductive,2.0,percent,Critical N concentration in reproductive stems
+critical_n_concentrations_roots_vegetative,3.0,percent,Critical N concentration in vegetative roots
+critical_n_concentrations_roots_reproductive,2.5,percent,Critical N concentration in reproductive roots
+
+# Nitrogen Remobilization Parameters
+nitrogen_parameters_remobilization_rates_vegetative,0.1,per_day,N remobilization rate from vegetative tissues
+nitrogen_parameters_remobilization_rates_reproductive,0.05,per_day,N remobilization rate from reproductive tissues
+nitrogen_parameters_remobilization_efficiency_leaves,0.8,dimensionless,N remobilization efficiency from leaves
+nitrogen_parameters_remobilization_efficiency_stems,0.6,dimensionless,N remobilization efficiency from stems
+nitrogen_parameters_remobilization_efficiency_roots,0.4,dimensionless,N remobilization efficiency from roots
+
+# Organ Weight Parameters
+nitrogen_parameters_organ_weights_leaves,0.4,dimensionless,Leaf weight fraction
+nitrogen_parameters_organ_weights_stems,0.3,dimensionless,Stem weight fraction
+nitrogen_parameters_organ_weights_roots,0.3,dimensionless,Root weight fraction
+
+# Pool Fraction Parameters
+nitrogen_parameters_pool_fractions_leaves_structural,0.6,dimensionless,Structural N fraction in leaves
+nitrogen_parameters_pool_fractions_leaves_metabolic,0.4,dimensionless,Metabolic N fraction in leaves
+nitrogen_parameters_pool_fractions_stems_structural,0.7,dimensionless,Structural N fraction in stems
+nitrogen_parameters_pool_fractions_stems_metabolic,0.3,dimensionless,Metabolic N fraction in stems
+nitrogen_parameters_pool_fractions_roots_structural,0.5,dimensionless,Structural N fraction in roots
+nitrogen_parameters_pool_fractions_roots_metabolic,0.5,dimensionless,Metabolic N fraction in roots

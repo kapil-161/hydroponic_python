@@ -137,16 +137,6 @@ class SimulatorRangeValidator:
                                'Fraction of ground covered by canopy'),
             ],
             
-            'ph_model_simulator': [
-                RangeValidation('ph', 4.0, 9.0, 'pH units',
-                               'Solution pH level'),
-                RangeValidation('ph_stability', 0.0, 1.0, 'dimensionless',
-                               'pH stability factor'),
-                RangeValidation('buffer_capacity', 0.0, 50.0, 'mmol/L/pH',
-                               'Buffer capacity'),
-                RangeValidation('nutrient_solubility_factor', 0.0, 1.0, 'dimensionless',
-                               'Effect of pH on nutrient solubility'),
-            ],
             
             'root_system_simulator': [
                 RangeValidation('root_mass', 0.0, 100.0, 'g',
@@ -161,20 +151,6 @@ class SimulatorRangeValidator:
                                'Root activity factor'),
             ],
             
-            'environmental_control_simulator': [
-                RangeValidation('air_temperature', 15.0, 35.0, '°C',
-                               'Controlled air temperature'),
-                RangeValidation('humidity', 40.0, 90.0, '%',
-                               'Relative humidity'),
-                RangeValidation('light_intensity', 0.0, 2000.0, 'μmol/m²/s',
-                               'Photosynthetic photon flux density'),
-                RangeValidation('co2_concentration', 300.0, 2000.0, 'ppm',
-                               'CO₂ concentration'),
-                RangeValidation('control_efficiency', 0.7, 1.0, 'dimensionless',
-                               'Environmental control efficiency'),
-                RangeValidation('energy_consumption', 0.0, 50.0, 'kWh/day',
-                               'Daily energy consumption'),
-            ],
             
             'genetic_parameters_simulator': [
                 RangeValidation('adaptation_index', 0.0, 1.0, 'dimensionless',
@@ -217,18 +193,6 @@ class SimulatorRangeValidator:
                                'Nitrogen remobilization efficiency'),
             ],
             
-            'root_zone_temperature_simulator': [
-                RangeValidation('root_zone_temperature', 15.0, 35.0, '°C',
-                               'Root zone temperature'),
-                RangeValidation('temperature_deviation', -10.0, 10.0, '°C',
-                               'Deviation from optimal temperature'),
-                RangeValidation('growth_factor', 0.0, 1.5, 'dimensionless',
-                               'Temperature effect on growth'),
-                RangeValidation('nutrient_uptake_factor', 0.0, 1.5, 'dimensionless',
-                               'Temperature effect on nutrient uptake'),
-                RangeValidation('thermal_stress_factor', 0.0, 1.0, 'dimensionless',
-                               'Thermal stress factor'),
-            ],
             
             'senescence_simulator': [
                 RangeValidation('total_senescence_rate', 0.0, 1.0, 'day⁻¹',

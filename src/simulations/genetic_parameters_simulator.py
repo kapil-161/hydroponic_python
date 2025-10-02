@@ -85,7 +85,6 @@ class GeneticParametersSimulator(BaseSimulator):
         
         # Inter-simulator dependencies - all data comes from other simulators
         self.dependencies = {
-            'environmental_control': ['temperature', 'humidity', 'light_intensity'],
             'stress_models': ['temperature_stress', 'water_stress', 'nutrient_stress'],
             'phenology_simulator': ['growth_stage', 'development_index'],
             'nutrient_models_simulator': ['nutrient_availability'],
@@ -98,15 +97,9 @@ class GeneticParametersSimulator(BaseSimulator):
         self.cache_timestamp: Dict[str, datetime] = {}
         self.cache_timeout = self.genetic_db.cache_timeout  # seconds
         
-        # Subscribe to environmental events
-        self.message_bus.subscribe(EventType.ENVIRONMENT_UPDATE, self._handle_environment_update)
         
         print(f"Genetic parameters simulator initialized with parameters from CSV")
     
-    def _handle_environment_update(self, event: SimulationEvent):
-        """Handle environmental data updates"""
-        self.dependency_cache['environmental_control'] = event.data
-        self.cache_timestamp['environmental_control'] = datetime.now()
     
     def on_simulation_start(self, data: Dict[str, Any]):
         """Handle simulation start - initialize with values from initials.csv"""
@@ -204,25 +197,18 @@ class GeneticParametersSimulator(BaseSimulator):
     def _execute_genetic_parameters_step(self, weather_data: Dict[str, Any]):
         """Execute genetic parameters calculation using model functions - no shortcuts"""
         try:
-            # Get environmental data from environmental control simulator
-            env_data = self.dependency_cache.get('environmental_control', {})
-            temperature = env_data.get('temperature')
-            humidity = env_data.get('humidity')
-            light_intensity = env_data.get('light_intensity')
+            # Use weather data directly (no environmental control)
+            temperature = weather_data.get('temperature')
+            humidity = weather_data.get('humidity')
+            light_intensity = weather_data.get('light_intensity')
             
             # Per Rules.md: no fallback values, all data must come from dependencies
             if temperature is None:
-                temperature = weather_data.get('temperature')
-                if temperature is None:
-                    raise ValueError("Temperature data required from environmental control simulator or weather data")
+                raise ValueError("Temperature data required from weather data")
             if humidity is None:
-                humidity = weather_data.get('humidity')
-                if humidity is None:
-                    raise ValueError("Humidity data required from environmental control simulator or weather data")
+                raise ValueError("Humidity data required from weather data")
             if light_intensity is None:
-                light_intensity = weather_data.get('light_intensity')
-                if light_intensity is None:
-                    raise ValueError("Light intensity data required from environmental control simulator or weather data")
+                raise ValueError("Light intensity data required from weather data")
             
             # Get stress data from stress models simulator
             stress_data = self.dependency_cache.get('stress_models', {})

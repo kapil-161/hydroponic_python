@@ -75,7 +75,6 @@ class NutrientModelsSimulator(BaseSimulator):
         self.dependencies = {
             'water_uptake_simulator': ['water_uptake_rate', 'transpiration_rate'],
             'root_system_simulator': ['root_depth', 'root_distribution', 'root_biomass', 'root_surface_area'],
-            'ph_model_simulator': ['ph', 'ph_stability'],
             'phenology_simulator': ['growth_stage', 'development_index'],
             'stress_models': ['nutrient_stress', 'temperature_stress']
         }
@@ -227,16 +226,8 @@ class NutrientModelsSimulator(BaseSimulator):
                     return
                 raise ValueError("Root data missing from root_system_simulator - no defaults allowed")
 
-            # Get pH data from pH model simulator
-            ph_data = self.dependency_cache.get('ph_model_simulator', {})
-            ph = ph_data.get('ph')
-            ph_stability = ph_data.get('ph_stability')
-
-            if any(x is None for x in [ph, ph_stability]):
-                if self.state.step_count == 0:
-                    print(f"Nutrient: Skipping calculation on step 0 due to missing ph_model data")
-                    return
-                raise ValueError("pH data missing from ph_model_simulator - no defaults allowed")
+            # Use default pH (no pH model)
+            ph = 6.0  # Default optimal pH for lettuce
 
             # Get phenology data from phenology simulator
             phenology_data = self.dependency_cache.get('phenology_simulator', {})

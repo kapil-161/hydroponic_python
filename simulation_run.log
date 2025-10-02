@@ -1,0 +1,750 @@
+Initializing Distributed Hydroponic Simulation System
+Loading parameters from CSV files...
+Loaded 22 universal constants from input/constants.csv
+Loaded 170 parameters from input/stress.csv (category: stress_parameters)
+Loaded 161 parameters from input/roots.csv (category: root_system_parameters)
+Loaded 75 parameters from input/genetics.csv (category: genetic_parameters)
+Loaded 47 parameters from input/senescence.csv (category: senescence_parameters)
+Loaded 33 parameters from input/photo.csv (category: photosynthesis_parameters)
+Loaded 56 parameters from input/respiration.csv (category: respiration_parameters)
+Loaded 12 parameters from input/allocation.csv (category: allocation_parameters)
+Loaded 68 parameters from input/phenology.csv (category: phenology_parameters)
+Loading initial state from initials.csv...
+Registered simulator: orchestrator
+Initializing all simulators...
+Registered simulator: photosynthesis_simulator
+Photosynthesis simulator initialized with parameters from CSV
+Orchestrator: Registered photosynthesis_simulator
+Registered simulator: respiration_simulator
+Respiration simulator initialized with parameters from CSV
+Orchestrator: Registered respiration_simulator
+Registered simulator: biomass_allocation_simulator
+Biomass allocation simulator initialized with parameters from CSV
+Orchestrator: Registered biomass_allocation_simulator
+Registered simulator: phenology_simulator
+Phenology simulator initialized with parameters from CSV
+Orchestrator: Registered phenology_simulator
+Registered simulator: stress_models
+Stress models simulator initialized with parameters from CSV
+Orchestrator: Registered stress_models
+Registered simulator: water_uptake_simulator
+Water uptake simulator initialized with parameters from CSV
+Orchestrator: Registered water_uptake_simulator
+Registered simulator: nutrient_models_simulator
+Nutrient models simulator initialized with parameters from CSV
+Orchestrator: Registered nutrient_models_simulator
+Registered simulator: canopy_architecture_simulator
+Canopy architecture simulator initialized with parameters from CSV
+Orchestrator: Registered canopy_architecture_simulator
+Registered simulator: ph_model_simulator
+pH model simulator initialized with parameters from CSV
+Orchestrator: Registered ph_model_simulator
+Registered simulator: root_system_simulator
+Root system simulator initialized with parameters from CSV
+Orchestrator: Registered root_system_simulator
+Registered simulator: environmental_control
+Environmental control simulator initialized with parameters from CSV
+Orchestrator: Registered environmental_control
+Registered simulator: genetic_parameters_simulator
+Genetic parameters simulator initialized with parameters from CSV
+Orchestrator: Registered genetic_parameters_simulator
+Registered simulator: leaf_development_simulator
+Leaf development simulator initialized with parameters from CSV
+Orchestrator: Registered leaf_development_simulator
+Registered simulator: nitrogen_balance_simulator
+Nitrogen balance simulator initialized with parameters from CSV
+Orchestrator: Registered nitrogen_balance_simulator
+Registered simulator: root_zone_temperature_simulator
+Root zone temperature simulator initialized with parameters from CSV
+Orchestrator: Registered root_zone_temperature_simulator
+Registered simulator: senescence_simulator
+Senescence simulator initialized with parameters from CSV
+Orchestrator: Registered senescence_simulator
+Initialized 16 simulators successfully
+Distributed simulation system initialized with 16 simulators
+Starting distributed hydroponic simulation...
+Loading weather data...
+Running simulation for 92 days (up to harvest maturity)
+Starting distributed simulation with 16 simulators
+Simulation message bus started
+Waiting for simulators to publish initial state...
+Photosynthesis simulator: Simulation started
+Respiration simulator: Simulation started
+Biomass allocation simulator: Simulation started
+Biomass: Initialized leaf=0.03, stem=0.02, root=0.1
+Phenology simulator: Simulation started
+Stress models simulator: Simulation started
+Stress: Initialized all stress levels from CSV
+Water uptake simulator: Simulation started
+Nutrient models simulator: Simulation started
+Nutrient: Initialized EC=2, pH=6 from CSV
+Nutrient: Loaded system_config from CSV - tank_volume=100L, plants=20
+Canopy architecture simulator: Simulation started
+pH model simulator: Simulation started
+Root system simulator: Simulation started
+Root: Initialized root_biomass=0.1g, root_length=0.05m from CSV
+Environmental control simulator: Simulation started
+Genetic parameters simulator: Simulation started
+Genetic: Initialized growth_rate = 0.5 from CSV
+Genetic: Initialized leaf_size = 0.5 from CSV
+Genetic: Initialized yield_potential = 0.5 from CSV
+Genetic: Initialized disease_resistance = 0.5 from CSV
+Genetic: Initialized heat_tolerance = 0.5 from CSV
+Genetic: Initialized cold_tolerance = 0.5 from CSV
+Genetic: Initialized bolting_tolerance = 0.5 from CSV
+Genetic: Initialized chlorophyll_content = 0.5 from CSV
+Genetic: Initialized root_development = 0.5 from CSV
+Genetic: Initialized plant_architecture = 0.5 from CSV
+Leaf development simulator: Simulation started
+Nitrogen balance simulator: Simulation started
+Root zone temperature simulator: Simulation started
+Senescence simulator: Simulation started
+Shared cache: Collected 11 values from photosynthesis_simulator
+Shared cache: Collected 11 values from respiration_simulator
+Shared cache: Collected 10 values from biomass_allocation_simulator
+Shared cache: Collected 17 values from phenology_simulator
+Shared cache: Collected 12 values from stress_models
+Shared cache: Collected 12 values from water_uptake_simulator
+Shared cache: Collected 47 values from nutrient_models_simulator
+Shared cache: Collected 14 values from canopy_architecture_simulator
+Shared cache: Collected 23 values from ph_model_simulator
+Shared cache: Collected 14 values from root_system_simulator
+Shared cache: Collected 16 values from environmental_control
+Shared cache: Collected 53 values from genetic_parameters_simulator
+Shared cache: Collected 34 values from leaf_development_simulator
+Shared cache: Collected 41 values from nitrogen_balance_simulator
+Shared cache: Collected 19 values from root_zone_temperature_simulator
+Shared cache: Collected 39 values from senescence_simulator
+Initial state published by all simulators
+Biomass: Skipping calculation on first step - waiting for photosynthesis data
+Stress: Skipping calculation on first step due to missing dependencies: ['water_uptake_rate', 'transpiration_rate', 'water_availability', 'nutrient_availability', 'nutrient_uptake_rate', 'ph', 'ph_stability', 'growth_stage', 'development_index']
+Water: Skipping calculation on first step due to missing canopy data
+Nutrient: Skipping calculation on step 0 due to missing water_uptake data
+Canopy: Skipping calculation on step 0 due to missing biomass_allocation data
+pH: Skipping calculation on step 0 due to missing nutrient_models data
+Warning: Using default total biomass value: 1.0
+Root: Skipping calculation on step 0 due to missing root_zone_temperature data
+Genetic: Skipping calculation on step 0 due to missing stress_models data
+Leaf Dev: Skipping calculation on step 0 due to missing environmental_control data
+N-Balance: Skipping calculation on step 0 due to missing nutrient_models data
+RZT: Skipping calculation on step 0 due to missing environmental_control data
+Senescence: Skipping calculation on first step due to missing phenology data
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Day 1: 1.1% complete
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Warning: Effective surface area 0.0 is below minimum 0.1, using minimum
+Harvest maturity reached! Current stage: LettuceGrowthStage.HARVEST_MATURITY
+Harvest maturity reached on day 2, hour 1
+Simulation completed: 26 steps in 0:00:06.640837
+Photosynthesis simulator: Simulation ended after 52 steps
+Final net assimilation rate: 0.000 μmol CO2/m²/s
+Final gross photosynthesis rate: 0.000 μmol CO2/m²/s
+Final light use efficiency: 0.000
+Final CO2 uptake rate: 0.000 μmol CO2/m²/s
+Total carbon gained: 2780.51 g C
+Respiration simulator: Simulation ended after 52 steps
+Total respiration: 343.56 g C
+Biomass allocation simulator: Simulation ended after 52 steps
+Total biomass: 0.15 g DM
+Leaf biomass: 0.03 g DM
+Stem biomass: 0.02 g DM
+Root biomass: 0.10 g DM
+Phenology simulator: Simulation ended after 52 steps
+Final growth stage: LettuceGrowthStage.HARVEST_MATURITY
+Total thermal time: 39.61 °C days
+Development index: 0.040
+Final bolting risk: 0.420
+Stress models simulator: Simulation ended after 52 steps
+Final integrated stress: 1.000
+Final stress severity: critical
+Total cumulative stress: 0.00
+Final acclimation level: 0.000
+Final damage level: 0.000
+Water uptake simulator: Simulation ended after 52 steps
+Total water uptake: 2387.37 L
+Total transpiration: 113.61 L
+Final water availability: 0.999
+Final crop coefficient: 0.100
+Nutrient models simulator: Simulation ended after 52 steps
+Final solution EC: 2.00 mS/cm
+Final solution pH: 6.36
+N-NO3: 0.00 mg/L, Total uptake: 0.00 mg
+N-NH4: 0.00 mg/L, Total uptake: 0.00 mg
+P-PO4: 0.00 mg/L, Total uptake: 0.00 mg
+K: 0.00 mg/L, Total uptake: 0.00 mg
+Ca: 0.00 mg/L, Total uptake: 0.00 mg
+Mg: 0.00 mg/L, Total uptake: 0.00 mg
+S-SO4: 0.00 mg/L, Total uptake: 0.00 mg
+Fe: 0.00 mg/L, Total uptake: 0.00 mg
+Mn: 0.00 mg/L, Total uptake: 0.00 mg
+Zn: 0.00 mg/L, Total uptake: 0.00 mg
+Cu: 0.00 mg/L, Total uptake: 0.00 mg
+B: 0.00 mg/L, Total uptake: 0.00 mg
+Mo: 0.00 mg/L, Total uptake: 0.00 mg
+Canopy architecture simulator: Simulation ended after 52 steps
+Final LAI: 0.167
+Final canopy height: 0.00 cm
+Final ground coverage: 0.095
+Final light interception efficiency: 0.125
+Total light interception: 33988580.30 MJ/m²
+pH model simulator: Simulation ended after 52 steps
+Final pH: 6.36
+Final pH stability: 0.997
+Final total alkalinity: 7.00 mg/L
+Final buffer capacity: 7.00
+Total pH adjustment: 50766.58
+Root system simulator: Simulation ended after 52 steps
+Final root depth: 0.05 cm
+Final root biomass: 0.03 g DM
+Final root length: 0.00 cm
+Final root surface area: 0.00 cm²
+Final root density: 0.000 g/cm³
+Total root growth: 0.00 cm
+Environmental control simulator: Simulation ended after 52 steps
+Final temperature: 22.00 °C
+Final humidity: 60.0 %
+Final light intensity: 200 μmol/m²/s
+Final CO2 concentration: 400 ppm
+Final control efficiency: 1.000
+Total energy consumption: 0.00 kWh
+Genetic parameters simulator: Simulation ended after 52 steps
+Cultivar: Boston Bibb (butterhead)
+Final adaptation index: 0.000
+Final performance index: 0.000
+Total genetic response: 128520.000
+Final trait expressions:
+  growth_rate: 0.500
+  leaf_size: 0.500
+  yield_potential: 0.500
+  disease_resistance: 0.500
+  heat_tolerance: 0.500
+  cold_tolerance: 0.500
+  bolting_tolerance: 0.500
+  chlorophyll_content: 0.500
+  root_development: 0.500
+  plant_architecture: 0.500
+  GeneticTrait.GROWTH_RATE: 0.700
+Leaf development simulator: Simulation ended after 52 steps
+Final total leaves: 0
+Final leaf area: 0.00 cm²
+Final leaf weight: 0.00 g
+Nitrogen balance simulator: Simulation ended after 52 steps
+Final total nitrogen uptake: 0.00 g
+Final nitrogen use efficiency: 1.000
+Final nitrogen stress index: 0.542
+Final luxury uptake factor: 1.000
+Total nitrogen uptake: 0.00 g
+Final nitrogen allocation:
+Final nitrogen pools:
+Root zone temperature simulator: Simulation ended after 52 steps
+Final root zone temperature: 23.05 °C
+Final air temperature: 22.00 °C
+Final temperature deviation: -1.95 °C
+Final growth factor: 1.292
+Final nutrient uptake factor: 1.156
+Final water uptake factor: 1.117
+Final photosynthesis factor: 1.097
+Final root metabolism factor: 1.195
+Final thermal stress factor: 0.390
+Final temperature stability: 0.610
+Total heat generation: 0.00 J
+Senescence simulator: Simulation ended after 52 steps
+Final total senescence rate: 0.000
+Final age senescence rate: 0.000
+Final stress senescence rate: 0.000
+Final developmental senescence rate: 0.000
+Final total remobilization rate: 0.000
+Final recovery rate: 0.010
+Total senescence: 0.00
+Total remobilization: 0.00
+Final senescence stage distribution:
+  healthy: 1 leaves
+  early_senescence: 0 leaves
+  active_senescence: 0 leaves
+  late_senescence: 0 leaves
+  dead: 0 leaves
+Final senescence type distribution:
+Combined results exported to: output/simulation_results.csv
+
+Exported 16 individual simulator files:
+  - biomass_allocation.csv
+  - canopy_architecture.csv
+  - environmental_control.csv
+  - genetic_parameters.csv
+  - leaf_development.csv
+  - nitrogen_balance.csv
+  - nutrient_models.csv
+  - ph_model.csv
+  - phenology.csv
+  - photosynthesis.csv
+  - respiration.csv
+  - root_system.csv
+  - root_zone_temperature.csv
+  - senescence.csv
+  - stress_models.csv
+  - water_uptake.csv
+
+============================================================
+SIMULATION PERFORMANCE METRICS
+============================================================
+Total simulation time: 6.64 seconds
+Steps per second: 3.92
+Total steps executed: 26
+Simulators registered: 16
+Data points collected: 25
+
+Per-Simulator Performance:
+
+Message Bus Status:
+  Queue size: 0
+  Event handlers: 72
+  Registered simulators: 17
+
+Simulation completed successfully!
+Results saved to: output/simulation_results.csv
+
+Final system status:
+  Total simulators: 16
+  Total steps: 26
+Cleaning up distributed simulation system...
+Unregistered simulator: photosynthesis_simulator
+Unregistered simulator: respiration_simulator
+Unregistered simulator: biomass_allocation_simulator
+Unregistered simulator: phenology_simulator
+Unregistered simulator: stress_models
+Unregistered simulator: water_uptake_simulator
+Unregistered simulator: nutrient_models_simulator
+Unregistered simulator: canopy_architecture_simulator
+Unregistered simulator: ph_model_simulator
+Unregistered simulator: root_system_simulator
+Unregistered simulator: environmental_control
+Unregistered simulator: genetic_parameters_simulator
+Unregistered simulator: leaf_development_simulator
+Unregistered simulator: nitrogen_balance_simulator
+Unregistered simulator: root_zone_temperature_simulator
+Unregistered simulator: senescence_simulator
+Simulation terminated
+Photosynthesis simulator: Terminating
+Respiration simulator: Terminating
+Biomass allocation simulator: Terminating
+Phenology simulator: Terminating
+Stress models simulator: Terminating
+Water uptake simulator: Terminating
+Nutrient models simulator: Terminating
+Canopy architecture simulator: Terminating
+pH model simulator: Terminating
+Root system simulator: Terminating
+Environmental control simulator: Terminating
+Genetic parameters simulator: Terminating
+Leaf development simulator: Terminating
+Nitrogen balance simulator: Terminating
+Root zone temperature simulator: Terminating
+Senescence simulator: Terminating
+Simulation message bus stopped
+Unregistered simulator: orchestrator
+Cleanup completed

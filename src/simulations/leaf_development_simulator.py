@@ -95,7 +95,6 @@ class LeafDevelopmentSimulator(BaseSimulator):
         
         # Inter-simulator dependencies - all data comes from other simulators
         self.dependencies = {
-            'environmental_control': ['temperature', 'humidity', 'light_intensity'],
             'phenology_simulator': ['growth_stage', 'development_index'],
             'biomass_allocation_simulator': ['leaf_biomass', 'total_biomass'],
             'stress_models': ['temperature_stress', 'water_stress', 'nutrient_stress'],
@@ -207,18 +206,17 @@ class LeafDevelopmentSimulator(BaseSimulator):
     def _execute_leaf_development_step(self, weather_data: Dict[str, Any]):
         """Execute leaf development calculation using model functions - no shortcuts"""
         try:
-            # Get environmental data from environmental control simulator
-            env_data = self.dependency_cache.get('environmental_control', {})
-            temperature = env_data.get('temperature')
-            humidity = env_data.get('humidity')
-            light_intensity = env_data.get('light_intensity')
-
-            # Skip on first step if environmental data not available yet (circular dependency)
+            # Use weather data directly (no environmental control)
+            temperature = weather_data.get('temperature')
+            humidity = weather_data.get('humidity')
+            light_intensity = weather_data.get('light_intensity')
+            
+            # Skip on first step if weather data not available yet
             if any(x is None for x in [temperature, humidity, light_intensity]):
                 if self.state.step_count == 0:
-                    print(f"Leaf Dev: Skipping calculation on step 0 due to missing environmental_control data")
+                    print(f"Leaf Dev: Skipping calculation on step 0 due to missing weather data")
                     return
-                raise ValueError("Environmental data missing from environmental_control - no defaults allowed")
+                raise ValueError("Weather data missing - no defaults allowed")
             
             # Get phenology data from phenology simulator
             phenology_data = self.dependency_cache.get('phenology_simulator', {})
@@ -226,6 +224,9 @@ class LeafDevelopmentSimulator(BaseSimulator):
             development_index = phenology_data.get('development_index')
             
             if any(x is None for x in [growth_stage, development_index]):
+                if self.state.step_count == 0:
+                    print(f"Leaf Dev: Skipping calculation on step 0 due to missing phenology data")
+                    return
                 raise ValueError("Phenology data missing from phenology_simulator - no defaults allowed")
             
             # Get biomass data from biomass allocation simulator

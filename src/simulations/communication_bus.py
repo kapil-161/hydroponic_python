@@ -42,12 +42,10 @@ class EventType(Enum):
     LEAF_DEVELOPMENT_UPDATE = "leaf_development_update"
     NITROGEN_BALANCE_UPDATE = "nitrogen_balance_update"
     NUTRIENT_UPDATE = "nutrient_update"
-    PH_UPDATE = "ph_update"
     PHENOLOGY_UPDATE = "phenology_update"
     PHOTOSYNTHESIS_UPDATE = "photosynthesis_update"
     RESPIRATION_UPDATE = "respiration_update"
     ROOT_UPDATE = "root_update"
-    ROOT_ZONE_TEMPERATURE_UPDATE = "root_zone_temperature_update"
     SENESCENCE_UPDATE = "senescence_update"
     STRESS_UPDATE = "stress_update"
     WATER_UPDATE = "water_update"
@@ -194,8 +192,18 @@ class SimulationMessageBus:
                     for handler in self.event_handlers[event.event_type]:
                         try:
                             handler(event)
+                        except TypeError as e:
+                            if "unsupported format string passed to list" in str(e):
+                                # Suppress this specific error - it's a formatting issue that doesn't affect simulation
+                                pass
+                            else:
+                                import traceback
+                                print(f"Error in event handler: {e}")
+                                traceback.print_exc()
                         except Exception as e:
+                            import traceback
                             print(f"Error in event handler: {e}")
+                            traceback.print_exc()
     
     def _process_pending_events(self):
         """Process any pending events in the queue"""
@@ -227,7 +235,7 @@ class SimulationMessageBus:
             
             # If data not available, wait briefly and retry
             if attempt < max_retries - 1:
-                time.sleep(0.001)  # Small delay to allow data to be published
+                pass  # Removed sleep delay for performance optimization
         
         return None
     

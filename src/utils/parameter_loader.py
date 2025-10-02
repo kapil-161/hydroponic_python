@@ -28,7 +28,8 @@ class StrictParameterLoader:
                  photo_csv_path: Optional[str] = None,
                  respiration_csv_path: Optional[str] = None,
                  allocation_csv_path: Optional[str] = None,
-                 phenology_csv_path: Optional[str] = None):
+                 phenology_csv_path: Optional[str] = None,
+                 nitrogen_balance_csv_path: Optional[str] = None):
         self.master_csv_path = master_csv_path
         self.constants_csv_path = constants_csv_path
         self.stress_csv_path = stress_csv_path
@@ -39,6 +40,7 @@ class StrictParameterLoader:
         self.respiration_csv_path = respiration_csv_path
         self.allocation_csv_path = allocation_csv_path
         self.phenology_csv_path = phenology_csv_path
+        self.nitrogen_balance_csv_path = nitrogen_balance_csv_path
         self.parameters = {}
         self.constants = {}
 
@@ -77,6 +79,10 @@ class StrictParameterLoader:
         # Load phenology parameters if path provided
         if self.phenology_csv_path:
             self._load_specialized_file(self.phenology_csv_path, 'phenology_parameters')
+
+        # Load nitrogen balance parameters if path provided
+        if self.nitrogen_balance_csv_path:
+            self._load_specialized_file(self.nitrogen_balance_csv_path, 'nitrogen_balance')
 
         # Load parameters from master file
         self._load_parameters()
@@ -171,16 +177,19 @@ class StrictParameterLoader:
                 unit = str(row['unit']).strip() if not pd.isna(row['unit']) else ''
                 description = str(row['description']).strip() if not pd.isna(row['description']) else ''
 
+                # Use category from CSV if available, otherwise use provided category_name
+                actual_category = str(row['category']).strip() if 'category' in row and not pd.isna(row['category']) else category_name
+
                 # Convert value to appropriate type
                 converted_value = self._convert_value_type(value)
 
                 # Store parameter with category prefix
-                key = f"{category_name}_{parameter}"
+                key = f"{actual_category}_{parameter}"
                 self.parameters[key] = {
                     'value': converted_value,
                     'unit': unit,
                     'description': description,
-                    'category': category_name,
+                    'category': actual_category,
                     'parameter': parameter
                 }
                 param_count += 1
@@ -375,11 +384,11 @@ class StrictParameterLoader:
         params_dict['optimal_vpd_max'] = self.get_parameter('stress_parameters_optimal_vpd_max')
 
         # Physical constants (shared across models)
-        params_dict['kelvin_conversion'] = self.get_parameter('physical_constants_kelvin_conversion')
-        params_dict['reference_temp_kelvin'] = self.get_parameter('physical_constants_reference_temp_kelvin')
-        params_dict['saturation_vapor_pressure_constant'] = self.get_parameter('physical_constants_saturation_vapor_pressure_constant')
-        params_dict['vapor_pressure_temp_coefficient'] = self.get_parameter('physical_constants_vapor_pressure_temp_coefficient')
-        params_dict['vapor_pressure_base_temp'] = self.get_parameter('physical_constants_vapor_pressure_base_temp')
+        params_dict['kelvin_conversion'] = self.get_constant('kelvin_conversion')
+        params_dict['reference_temp_kelvin'] = self.get_constant('reference_temp_kelvin')
+        params_dict['saturation_vapor_pressure_constant'] = self.get_constant('saturation_vapor_pressure_constant')
+        params_dict['vapor_pressure_temp_coefficient'] = self.get_constant('vapor_pressure_temp_coefficient')
+        params_dict['vapor_pressure_base_temp'] = self.get_constant('vapor_pressure_base_temp')
 
         # Model-specific constants
         params_dict['initial_ci_fraction'] = self.get_parameter('photosynthesis_parameters_initial_ci_fraction')
@@ -599,14 +608,6 @@ class StrictParameterLoader:
         config['light']['photoinhibition_threshold'] = self.get_parameter('stress_parameters_light_photoinhibition_threshold')
         config['light']['recovery_rate'] = self.get_parameter('stress_parameters_light_recovery_rate')
 
-        # pH stress parameters
-        config['ph'] = {}
-        config['ph']['optimal_min'] = self.get_parameter('ph_parameters_ph_target_min')
-        config['ph']['optimal_max'] = self.get_parameter('ph_parameters_ph_target_max')
-        config['ph']['critical_min'] = self.get_parameter('ph_parameters_ph_min_limit')
-        config['ph']['critical_max'] = self.get_parameter('ph_parameters_ph_max_limit')
-        config['ph']['stress_sensitivity'] = self.get_parameter('stress_parameters_ph_stress_sensitivity')
-        config['ph']['recovery_rate'] = self.get_parameter('stress_parameters_ph_recovery_rate')
 
         # Salinity/EC stress parameters
         config['salinity'] = {}
@@ -705,14 +706,14 @@ class StrictParameterLoader:
         config['phenology_parameters']['optimal_temperature_max'] = self.get_parameter('phenology_parameters_optimal_temperature_max')
 
         # Physical constants (shared across models)
-        config['water_parameters']['kelvin_conversion'] = self.get_parameter('physical_constants_kelvin_conversion')
-        config['water_parameters']['saturation_vapor_pressure_constant'] = self.get_parameter('physical_constants_saturation_vapor_pressure_constant')
-        config['water_parameters']['vapor_pressure_temp_coefficient'] = self.get_parameter('physical_constants_vapor_pressure_temp_coefficient')
-        config['water_parameters']['vapor_pressure_base_temp'] = self.get_parameter('physical_constants_vapor_pressure_base_temp')
-        config['water_parameters']['saturation_curve_slope_constant'] = self.get_parameter('physical_constants_saturation_curve_slope_constant')
-        config['water_parameters']['penman_monteith_conversion'] = self.get_parameter('physical_constants_penman_monteith_conversion')
-        config['water_parameters']['aerodynamic_resistance_coefficient'] = self.get_parameter('physical_constants_aerodynamic_resistance_coefficient')
-        config['water_parameters']['wind_speed_coefficient'] = self.get_parameter('physical_constants_wind_speed_coefficient')
+        config['water_parameters']['kelvin_conversion'] = self.get_constant('kelvin_conversion')
+        config['water_parameters']['saturation_vapor_pressure_constant'] = self.get_constant('saturation_vapor_pressure_constant')
+        config['water_parameters']['vapor_pressure_temp_coefficient'] = self.get_constant('vapor_pressure_temp_coefficient')
+        config['water_parameters']['vapor_pressure_base_temp'] = self.get_constant('vapor_pressure_base_temp')
+        config['water_parameters']['saturation_curve_slope_constant'] = self.get_constant('saturation_curve_slope_constant')
+        config['water_parameters']['penman_monteith_conversion'] = self.get_constant('penman_monteith_conversion')
+        config['water_parameters']['aerodynamic_resistance_coefficient'] = self.get_constant('aerodynamic_resistance_coefficient')
+        config['water_parameters']['wind_speed_coefficient'] = self.get_constant('wind_speed_coefficient')
 
         # Hardcoded value replacements
         config['water_parameters']['minimum_vpd_threshold'] = self.get_parameter('water_parameters_minimum_vpd_threshold')
@@ -965,87 +966,6 @@ class StrictParameterLoader:
 
         return CanopyArchitectureParameters.from_config(params_dict)
 
-    def create_ph_parameters(self):
-        """Create pH parameters from CSV - follows Rules.md strictly"""
-        from models.ph_model import PHParameters
-
-        config = {}
-
-        # Basic pH control parameters
-        config['ph_target_min'] = self.get_parameter('ph_parameters_ph_target_min')
-        config['ph_target_max'] = self.get_parameter('ph_parameters_ph_target_max')
-        config['ph_buffer_capacity'] = self.get_parameter('ph_parameters_ph_buffer_capacity')
-        config['ph_drift_rate'] = self.get_parameter('ph_parameters_ph_drift_rate')
-
-        # Nutrient uptake pH effects
-        config['nitrate_acidification_factor'] = self.get_parameter('ph_parameters_nitrate_acidification_factor')
-        config['ammonium_alkalinization_factor'] = self.get_parameter('ph_parameters_ammonium_alkalinization_factor')
-        config['phosphate_acidification_factor'] = self.get_parameter('ph_parameters_phosphate_acidification_factor')
-
-        # Buffer system parameters
-        config['carbonate_buffer_pka'] = self.get_parameter('ph_parameters_carbonate_buffer_pka')
-        config['phosphate_buffer_pka1'] = self.get_parameter('ph_parameters_phosphate_buffer_pka1')
-        config['phosphate_buffer_pka2'] = self.get_parameter('ph_parameters_phosphate_buffer_pka2')
-        config['phosphate_buffer_pka3'] = self.get_parameter('ph_parameters_phosphate_buffer_pka3')
-
-        # pH control system parameters
-        config['ph_adjustment_rate'] = self.get_parameter('ph_parameters_ph_adjustment_rate')
-        config['ph_deadband'] = self.get_parameter('ph_parameters_ph_deadband')
-        config['temperature_correction_factor'] = self.get_parameter('ph_parameters_temperature_correction_factor')
-        config['ec_buffer_factor'] = self.get_parameter('ph_parameters_ec_buffer_factor')
-        config['proportional_control_factor'] = self.get_parameter('ph_parameters_proportional_control_factor')
-
-        # System state parameters - now from initials.csv
-        config['current_ph'] = self.get_initial('ph_parameters_initial_ph', 6.0)
-        config['total_alkalinity'] = self.get_initial('ph_parameters_initial_alkalinity', 3.0)
-        config['carbonate_conc'] = self.get_parameter('ph_parameters_carbonate_conc')
-        config['phosphate_total'] = self.get_initial('ph_parameters_initial_phosphate_total', 15.0)
-        config['ionic_strength'] = self.get_parameter('ph_parameters_ionic_strength')
-        config['ph_min_limit'] = self.get_parameter('ph_parameters_ph_min_limit')
-        config['ph_max_limit'] = self.get_parameter('ph_parameters_ph_max_limit')
-
-        # Solubility constants
-        config['calcium_phosphate_ksp'] = self.get_parameter('ph_parameters_calcium_phosphate_ksp')
-        config['magnesium_phosphate_ksp'] = self.get_parameter('ph_parameters_magnesium_phosphate_ksp')
-
-        # Molecular weights
-        config['co2_molecular_weight'] = self.get_parameter('ph_parameters_co2_molecular_weight')
-        config['nitrogen_atomic_weight'] = self.get_parameter('ph_parameters_nitrogen_atomic_weight')
-        config['no3_molecular_weight'] = self.get_parameter('ph_parameters_no3_molecular_weight')
-        config['nh4_molecular_weight'] = self.get_parameter('ph_parameters_nh4_molecular_weight')
-        config['phosphorus_atomic_weight'] = self.get_parameter('ph_parameters_phosphorus_atomic_weight')
-        config['po4_molecular_weight'] = self.get_parameter('ph_parameters_po4_molecular_weight')
-        config['unit_conversion_factor'] = self.get_parameter('ph_parameters_unit_conversion_factor')
-
-        # Build phosphate solubility data from CSV
-        config['phosphate_solubility_data'] = {
-            '4.0': self.get_parameter('ph_parameters_phosphate_solubility_ph_4_0'),
-            '5.0': self.get_parameter('ph_parameters_phosphate_solubility_ph_5_0'),
-            '6.0': self.get_parameter('ph_parameters_phosphate_solubility_ph_6_0'),
-            '7.0': self.get_parameter('ph_parameters_phosphate_solubility_ph_7_0'),
-            '8.0': self.get_parameter('ph_parameters_phosphate_solubility_ph_8_0')
-        }
-
-        # Build iron solubility data from CSV
-        config['iron_solubility_data'] = {
-            '4.0': self.get_parameter('ph_parameters_iron_solubility_ph_4_0'),
-            '5.0': self.get_parameter('ph_parameters_iron_solubility_ph_5_0'),
-            '6.0': self.get_parameter('ph_parameters_iron_solubility_ph_6_0'),
-            '7.0': self.get_parameter('ph_parameters_iron_solubility_ph_7_0'),
-            '8.0': self.get_parameter('ph_parameters_iron_solubility_ph_8_0')
-        }
-
-        # Default simulation parameters - ALL from CSV per Rules.md
-        config['default_nitrate_uptake'] = self.get_parameter('ph_parameters_default_nitrate_uptake_rate')
-        config['default_ammonium_uptake'] = self.get_parameter('ph_parameters_default_ammonium_uptake_rate')
-        config['default_phosphate_uptake'] = self.get_parameter('ph_parameters_default_phosphate_uptake_rate')
-        config['default_phosphate_concentration'] = config['phosphate_total']  # Use total from CSV
-        config['default_iron_concentration'] = self.get_parameter('ph_parameters_default_iron_concentration_value')
-        config['default_time_step'] = self.get_parameter('ph_parameters_default_time_step_hours')
-        config['cache_timeout'] = self.get_parameter('simulator_defaults_cache_timeout_global')
-        config['hours_per_day'] = self.get_parameter('ph_parameters_hours_per_day_standard')
-
-        return PHParameters.from_config(config)
 
     def create_root_system_parameters(self):
         """Create root system parameters from CSV"""
@@ -1055,58 +975,58 @@ class StrictParameterLoader:
         config = {}
 
         # Core root system parameters - ALL from CSV per Rules.md
-        config['container_volume'] = self.get_parameter('root_system_container_volume_default')
-        config['channel_length'] = self.get_parameter('root_system_channel_length_default')
+        config['container_volume'] = self.get_parameter('root_system_parameters_container_volume_default')
+        config['channel_length'] = self.get_parameter('root_system_parameters_channel_length_default')
         config['system_type'] = self.get_parameter('root_system_parameters_system_type')
-        config['channel_width'] = self.get_parameter('root_system_channel_width_default')
-        config['channel_depth'] = self.get_parameter('root_system_channel_depth_default')
-        config['n_channels'] = self.get_parameter('root_system_n_channels_default')
+        config['channel_width'] = self.get_parameter('root_system_parameters_channel_width_default')
+        config['channel_depth'] = self.get_parameter('root_system_parameters_channel_depth_default')
+        config['n_channels'] = self.get_parameter('root_system_parameters_n_channels_default')
         config['root_zone_independent'] = bool(self.get_parameter('root_system_parameters_root_zone_independent'))
 
         # Root growth parameters - ALL from CSV per Rules.md
-        config['primary_root_growth_rate'] = self.get_parameter('root_system_primary_root_growth_rate_default')
-        config['lateral_root_density'] = self.get_parameter('root_system_lateral_root_density_default')
-        config['branching_angle_mean'] = self.get_parameter('root_system_branching_angle_mean_default')
-        config['branching_angle_std'] = self.get_parameter('root_system_branching_angle_std_default')
+        config['primary_root_growth_rate'] = self.get_parameter('root_system_parameters_primary_root_growth_rate_default')
+        config['lateral_root_density'] = self.get_parameter('root_system_parameters_lateral_root_density_default')
+        config['branching_angle_mean'] = self.get_parameter('root_system_parameters_branching_angle_mean_default')
+        config['branching_angle_std'] = self.get_parameter('root_system_parameters_branching_angle_std_default')
 
         # Root type fractions - ALL from CSV per Rules.md
-        config['fine_root_fraction'] = self.get_parameter('root_system_fine_root_fraction_default')
-        config['medium_root_fraction'] = self.get_parameter('root_system_medium_root_fraction_default')
-        config['coarse_root_fraction'] = self.get_parameter('root_system_coarse_root_fraction_default')
+        config['fine_root_fraction'] = self.get_parameter('root_system_parameters_fine_root_fraction_default')
+        config['medium_root_fraction'] = self.get_parameter('root_system_parameters_medium_root_fraction_default')
+        config['coarse_root_fraction'] = self.get_parameter('root_system_parameters_coarse_root_fraction_default')
 
         # Root diameter parameters
-        config['fine_diameter_mean'] = self.get_parameter('root_system_fine_diameter_mean')
-        config['fine_diameter_std'] = self.get_parameter('root_system_fine_diameter_std')
-        config['medium_diameter_mean'] = self.get_parameter('root_system_medium_diameter_mean')
-        config['medium_diameter_std'] = self.get_parameter('root_system_medium_diameter_std')
-        config['coarse_diameter_mean'] = self.get_parameter('root_system_coarse_diameter_mean')
-        config['coarse_diameter_std'] = self.get_parameter('root_system_coarse_diameter_std')
+        config['fine_diameter_mean'] = self.get_parameter('root_system_parameters_fine_diameter_mean')
+        config['fine_diameter_std'] = self.get_parameter('root_system_parameters_fine_diameter_std')
+        config['medium_diameter_mean'] = self.get_parameter('root_system_parameters_medium_diameter_mean')
+        config['medium_diameter_std'] = self.get_parameter('root_system_parameters_medium_diameter_std')
+        config['coarse_diameter_mean'] = self.get_parameter('root_system_parameters_coarse_diameter_mean')
+        config['coarse_diameter_std'] = self.get_parameter('root_system_parameters_coarse_diameter_std')
 
         # Root turnover and longevity
-        config['fine_turnover_rate'] = self.get_parameter('root_system_fine_turnover_rate')
-        config['medium_turnover_rate'] = self.get_parameter('root_system_medium_turnover_rate')
-        config['coarse_turnover_rate'] = self.get_parameter('root_system_coarse_turnover_rate')
-        config['fine_root_half_life_days'] = self.get_parameter('root_system_fine_half_life_days')
-        config['medium_root_half_life_days'] = self.get_parameter('root_system_medium_half_life_days')
-        config['coarse_root_half_life_days'] = self.get_parameter('root_system_coarse_half_life_days')
+        config['fine_turnover_rate'] = self.get_parameter('root_system_parameters_fine_turnover_rate')
+        config['medium_turnover_rate'] = self.get_parameter('root_system_parameters_medium_turnover_rate')
+        config['coarse_turnover_rate'] = self.get_parameter('root_system_parameters_coarse_turnover_rate')
+        config['fine_root_half_life_days'] = self.get_parameter('root_system_parameters_fine_half_life_days')
+        config['medium_root_half_life_days'] = self.get_parameter('root_system_parameters_medium_half_life_days')
+        config['coarse_root_half_life_days'] = self.get_parameter('root_system_parameters_coarse_half_life_days')
 
         # Root activity parameters
-        config['root_zone_efficiency_factor'] = self.get_parameter('root_system_zone_efficiency_factor')
-        config['fine_min_activity'] = self.get_parameter('root_system_fine_min_activity')
-        config['medium_min_activity'] = self.get_parameter('root_system_medium_min_activity')
-        config['coarse_min_activity'] = self.get_parameter('root_system_coarse_min_activity')
-        config['establishment_plateau_days'] = self.get_parameter('root_system_establishment_plateau_days')
-        config['initial_root_activity'] = self.get_parameter('root_system_initial_activity')
+        config['root_zone_efficiency_factor'] = self.get_parameter('root_system_parameters_zone_efficiency_factor')
+        config['fine_min_activity'] = self.get_parameter('root_system_parameters_fine_min_activity')
+        config['medium_min_activity'] = self.get_parameter('root_system_parameters_medium_min_activity')
+        config['coarse_min_activity'] = self.get_parameter('root_system_parameters_coarse_min_activity')
+        config['establishment_plateau_days'] = self.get_parameter('root_system_parameters_establishment_plateau_days')
+        config['initial_root_activity'] = self.get_parameter('root_system_parameters_initial_activity')
 
         # Root effectiveness parameters
-        config['fine_root_effectiveness'] = self.get_parameter('root_system_fine_effectiveness')
-        config['medium_root_effectiveness'] = self.get_parameter('root_system_medium_effectiveness')
-        config['coarse_root_effectiveness'] = self.get_parameter('root_system_coarse_effectiveness')
+        config['fine_root_effectiveness'] = self.get_parameter('root_system_parameters_fine_effectiveness')
+        config['medium_root_effectiveness'] = self.get_parameter('root_system_parameters_medium_effectiveness')
+        config['coarse_root_effectiveness'] = self.get_parameter('root_system_parameters_coarse_effectiveness')
 
         # Temperature parameters - use consolidated from phenology
         config['optimal_temperature_min'] = self.get_parameter('phenology_parameters_optimal_temperature_min')
         config['optimal_temperature_max'] = self.get_parameter('phenology_parameters_optimal_temperature_max')
-        config['q10_factor'] = self.get_parameter('root_system_q10_factor')
+        config['q10_factor'] = self.get_parameter('root_system_parameters_q10_factor')
 
         # Phenology parameters sub-dict (required by RootSystemParameters.from_config)
         config['phenology_parameters'] = {
@@ -1115,126 +1035,126 @@ class StrictParameterLoader:
         }
 
         # Flow and environmental parameters
-        config['optimal_flow_rate'] = self.get_parameter('root_system_optimal_flow_rate')
-        config['flow_stress_threshold'] = self.get_parameter('root_system_flow_stress_threshold')
-        config['root_growth_auxin_decay_rate'] = self.get_parameter('root_system_auxin_decay_rate')
-        config['root_optimal_density'] = self.get_parameter('root_system_optimal_density')
-        config['root_density_stress_factor'] = self.get_parameter('root_system_density_stress_factor')
+        config['optimal_flow_rate'] = self.get_parameter('root_system_parameters_optimal_flow_rate')
+        config['flow_stress_threshold'] = self.get_parameter('root_system_parameters_flow_stress_threshold')
+        config['root_growth_auxin_decay_rate'] = self.get_parameter('root_system_parameters_auxin_decay_rate')
+        config['root_optimal_density'] = self.get_parameter('root_system_parameters_optimal_density')
+        config['root_density_stress_factor'] = self.get_parameter('root_system_parameters_density_stress_factor')
         config['root_temp_optimum'] = self.get_parameter('root_system_parameters_root_temperature_optimum')
         config['root_temp_max'] = self.get_parameter('root_system_parameters_root_temperature_maximum')
         config['root_temp_min_factor'] = self.get_parameter('root_system_parameters_root_temperature_minimum_factor')
-        config['root_oxygen_optimum'] = self.get_parameter('root_system_oxygen_optimum')
+        config['root_oxygen_optimum'] = self.get_parameter('root_system_parameters_oxygen_optimum')
         config['root_oxygen_min_factor'] = self.get_parameter('root_system_parameters_root_oxygen_minimum_factor')
 
         # pH and stress parameters
-        config['ph_stress_range_acidic'] = self.get_parameter('root_system_ph_stress_range_acidic')
-        config['ph_stress_range_basic'] = self.get_parameter('root_system_ph_stress_range_basic')
-        config['ph_stress_factor'] = self.get_parameter('root_system_ph_stress_factor')
-        config['young_root_activity'] = self.get_parameter('root_system_young_root_activity')
-        config['old_root_activity'] = self.get_parameter('root_system_old_root_activity')
+        config['ph_stress_range_acidic'] = self.get_parameter('root_system_parameters_ph_stress_range_acidic')
+        config['ph_stress_range_basic'] = self.get_parameter('root_system_parameters_ph_stress_range_basic')
+        config['ph_stress_factor'] = self.get_parameter('root_system_parameters_ph_stress_factor')
+        config['young_root_activity'] = self.get_parameter('root_system_parameters_young_root_activity')
+        config['old_root_activity'] = self.get_parameter('root_system_parameters_old_root_activity')
 
         # Additional hardcoded parameters extracted from code
-        config['temperature_range_factor'] = self.get_parameter('root_system_temperature_range_factor')
+        config['temperature_range_factor'] = self.get_parameter('root_system_parameters_temperature_range_factor')
         config['min_temperature_factor'] = self.get_parameter('root_system_parameters_minimum_temperature_factor')
-        config['max_temperature_factor'] = self.get_parameter('root_system_max_temperature_factor')
-        config['low_flow_factor'] = self.get_parameter('root_system_low_flow_factor')
-        config['high_flow_factor'] = self.get_parameter('root_system_high_flow_factor')
-        config['ph_zone_min'] = self.get_parameter('root_system_ph_zone_min')
-        config['ph_zone_max'] = self.get_parameter('root_system_ph_zone_max')
-        config['min_ph_factor'] = self.get_parameter('root_system_min_ph_factor')
-        config['ph_penalty_factor'] = self.get_parameter('root_system_ph_penalty_factor')
+        config['max_temperature_factor'] = self.get_parameter('root_system_parameters_max_temperature_factor')
+        config['low_flow_factor'] = self.get_parameter('root_system_parameters_low_flow_factor')
+        config['high_flow_factor'] = self.get_parameter('root_system_parameters_high_flow_factor')
+        config['ph_zone_min'] = self.get_parameter('root_system_parameters_ph_zone_min')
+        config['ph_zone_max'] = self.get_parameter('root_system_parameters_ph_zone_max')
+        config['min_ph_factor'] = self.get_parameter('root_system_parameters_min_ph_factor')
+        config['ph_penalty_factor'] = self.get_parameter('root_system_parameters_ph_penalty_factor')
 
         # Zone fraction parameters
-        config['nft_zone_1_fraction'] = self.get_parameter('root_system_nft_zone_1_fraction')
-        config['nft_zone_2_fraction'] = self.get_parameter('root_system_nft_zone_2_fraction')
-        config['nft_zone_3_fraction'] = self.get_parameter('root_system_nft_zone_3_fraction')
-        config['dwc_zone_1_fraction'] = self.get_parameter('root_system_dwc_zone_1_fraction')
-        config['dwc_zone_2_fraction'] = self.get_parameter('root_system_dwc_zone_2_fraction')
-        config['dwc_zone_3_fraction'] = self.get_parameter('root_system_dwc_zone_3_fraction')
-        config['general_zone_1_fraction'] = self.get_parameter('root_system_general_zone_1_fraction')
-        config['general_zone_2_fraction'] = self.get_parameter('root_system_general_zone_2_fraction')
-        config['general_zone_3_fraction'] = self.get_parameter('root_system_general_zone_3_fraction')
-        config['general_zone_4_fraction'] = self.get_parameter('root_system_general_zone_4_fraction')
+        config['nft_zone_1_fraction'] = self.get_parameter('root_system_parameters_nft_zone_1_fraction')
+        config['nft_zone_2_fraction'] = self.get_parameter('root_system_parameters_nft_zone_2_fraction')
+        config['nft_zone_3_fraction'] = self.get_parameter('root_system_parameters_nft_zone_3_fraction')
+        config['dwc_zone_1_fraction'] = self.get_parameter('root_system_parameters_dwc_zone_1_fraction')
+        config['dwc_zone_2_fraction'] = self.get_parameter('root_system_parameters_dwc_zone_2_fraction')
+        config['dwc_zone_3_fraction'] = self.get_parameter('root_system_parameters_dwc_zone_3_fraction')
+        config['general_zone_1_fraction'] = self.get_parameter('root_system_parameters_general_zone_1_fraction')
+        config['general_zone_2_fraction'] = self.get_parameter('root_system_parameters_general_zone_2_fraction')
+        config['general_zone_3_fraction'] = self.get_parameter('root_system_parameters_general_zone_3_fraction')
+        config['general_zone_4_fraction'] = self.get_parameter('root_system_parameters_general_zone_4_fraction')
 
         # Root biomass and threshold parameters
-        config['root_biomass_density'] = self.get_parameter('root_system_biomass_density')
-        config['coarse_root_min_threshold'] = self.get_parameter('root_system_coarse_min_threshold')
-        config['fine_root_min_threshold'] = self.get_parameter('root_system_fine_min_threshold')
-        config['diameter_minimum_limit'] = self.get_parameter('root_system_diameter_minimum_limit')
+        config['root_biomass_density'] = self.get_parameter('root_system_parameters_biomass_density')
+        config['coarse_root_min_threshold'] = self.get_parameter('root_system_parameters_coarse_min_threshold')
+        config['fine_root_min_threshold'] = self.get_parameter('root_system_parameters_fine_min_threshold')
+        config['diameter_minimum_limit'] = self.get_parameter('root_system_parameters_diameter_minimum_limit')
 
         # Growth potential weights
-        config['auxin_gradient_weight'] = self.get_parameter('root_system_auxin_gradient_weight')
-        config['nutrient_signal_weight'] = self.get_parameter('root_system_nutrient_signal_weight')
-        config['oxygen_effect_weight'] = self.get_parameter('root_system_oxygen_effect_weight')
-        config['competition_effect_weight'] = self.get_parameter('root_system_competition_effect_weight')
-        config['temperature_effect_weight'] = self.get_parameter('root_system_temperature_effect_weight')
-        config['min_growth_potential'] = self.get_parameter('root_system_min_growth_potential')
-        config['max_growth_potential'] = self.get_parameter('root_system_max_growth_potential')
+        config['auxin_gradient_weight'] = self.get_parameter('root_system_parameters_auxin_gradient_weight')
+        config['nutrient_signal_weight'] = self.get_parameter('root_system_parameters_nutrient_signal_weight')
+        config['oxygen_effect_weight'] = self.get_parameter('root_system_parameters_oxygen_effect_weight')
+        config['competition_effect_weight'] = self.get_parameter('root_system_parameters_competition_effect_weight')
+        config['temperature_effect_weight'] = self.get_parameter('root_system_parameters_temperature_effect_weight')
+        config['min_growth_potential'] = self.get_parameter('root_system_parameters_min_growth_potential')
+        config['max_growth_potential'] = self.get_parameter('root_system_parameters_max_growth_potential')
         config['max_temp_threshold'] = self.get_parameter('root_system_parameters_maximum_temperature_threshold')
         config['temp_decay_factor'] = self.get_parameter('root_system_parameters_temperature_decay_factor')
 
         # Flow and transport parameters
-        config['flow_rate_offset'] = self.get_parameter('root_system_flow_rate_offset')
-        config['flow_rate_multiplier'] = self.get_parameter('root_system_flow_rate_multiplier')
+        config['flow_rate_offset'] = self.get_parameter('root_system_parameters_flow_rate_offset')
+        config['flow_rate_multiplier'] = self.get_parameter('root_system_parameters_flow_rate_multiplier')
         config['transport_temp_exponent'] = self.get_parameter('root_system_parameters_transport_temperature_exponent')
 
         # Minimum value parameters
-        config['minimum_surface_area'] = self.get_parameter('root_system_minimum_surface_area')
-        config['minimum_biomass'] = self.get_parameter('root_system_minimum_biomass')
-        config['minimum_volume'] = self.get_parameter('root_system_minimum_volume')
-        config['effective_area_minimum'] = self.get_parameter('root_system_effective_area_minimum')
+        config['minimum_surface_area'] = self.get_parameter('root_system_parameters_minimum_surface_area')
+        config['minimum_biomass'] = self.get_parameter('root_system_parameters_minimum_biomass')
+        config['minimum_volume'] = self.get_parameter('root_system_parameters_minimum_volume')
+        config['effective_area_minimum'] = self.get_parameter('root_system_parameters_effective_area_minimum')
 
         # Nutrient uptake parameters (required by model)
         nutrients = ['NO3', 'NH4', 'PO4', 'K', 'Ca', 'Mg', 'SO4']
         for nutrient in nutrients:
-            config[f'{nutrient.lower()}_uptake_vmax'] = self.get_parameter(f'root_system_{nutrient.lower()}_uptake_vmax')
-            config[f'{nutrient.lower()}_uptake_km'] = self.get_parameter(f'root_system_{nutrient.lower()}_uptake_km')
+            config[f'{nutrient.lower()}_uptake_vmax'] = self.get_parameter(f'root_system_parameters_{nutrient.lower()}_uptake_vmax')
+            config[f'{nutrient.lower()}_uptake_km'] = self.get_parameter(f'root_system_parameters_{nutrient.lower()}_uptake_km')
 
         # System multipliers for each hydroponic system type
         system_types = ['nutrient_film_technique', 'deep_water_culture', 'aeroponics', 'drip', 'wick_system', 'ebb_flow']
         for sys_type in system_types:
-            config[f'system_multipliers_{sys_type}_root_length_multiplier'] = self.get_parameter(f'root_system_multipliers_{sys_type}_root_length_multiplier')
-            config[f'system_multipliers_{sys_type}_surface_area_multiplier'] = self.get_parameter(f'root_system_multipliers_{sys_type}_surface_area_multiplier')
-            config[f'system_multipliers_{sys_type}_branching_multiplier'] = self.get_parameter(f'root_system_multipliers_{sys_type}_branching_multiplier')
+            config[f'system_multipliers_{sys_type}_root_length_multiplier'] = self.get_parameter(f'root_system_parameters_multipliers_{sys_type}_root_length_multiplier')
+            config[f'system_multipliers_{sys_type}_surface_area_multiplier'] = self.get_parameter(f'root_system_parameters_multipliers_{sys_type}_surface_area_multiplier')
+            config[f'system_multipliers_{sys_type}_branching_multiplier'] = self.get_parameter(f'root_system_parameters_multipliers_{sys_type}_branching_multiplier')
 
         # Nutrient demand weights
-        config['nutrient_demand_weight_no3'] = self.get_parameter('root_system_nutrient_demand_weight_no3')
-        config['nutrient_demand_weight_po4'] = self.get_parameter('root_system_nutrient_demand_weight_po4')
-        config['nutrient_demand_weight_k'] = self.get_parameter('root_system_nutrient_demand_weight_k')
-        config['nutrient_demand_weight_ca'] = self.get_parameter('root_system_nutrient_demand_weight_ca')
-        config['nutrient_demand_weight_mg'] = self.get_parameter('root_system_nutrient_demand_weight_mg')
+        config['nutrient_demand_weight_no3'] = self.get_parameter('root_system_parameters_nutrient_demand_weight_no3')
+        config['nutrient_demand_weight_po4'] = self.get_parameter('root_system_parameters_nutrient_demand_weight_po4')
+        config['nutrient_demand_weight_k'] = self.get_parameter('root_system_parameters_nutrient_demand_weight_k')
+        config['nutrient_demand_weight_ca'] = self.get_parameter('root_system_parameters_nutrient_demand_weight_ca')
+        config['nutrient_demand_weight_mg'] = self.get_parameter('root_system_parameters_nutrient_demand_weight_mg')
 
         # Nutrient reference concentrations
-        config['nutrient_ref_concentration_no3'] = self.get_parameter('root_system_nutrient_ref_concentration_no3')
-        config['nutrient_ref_concentration_po4'] = self.get_parameter('root_system_nutrient_ref_concentration_po4')
-        config['nutrient_ref_concentration_k'] = self.get_parameter('root_system_nutrient_ref_concentration_k')
-        config['nutrient_ref_concentration_ca'] = self.get_parameter('root_system_nutrient_ref_concentration_ca')
-        config['nutrient_ref_concentration_mg'] = self.get_parameter('root_system_nutrient_ref_concentration_mg')
+        config['nutrient_ref_concentration_no3'] = self.get_parameter('root_system_parameters_nutrient_ref_concentration_no3')
+        config['nutrient_ref_concentration_po4'] = self.get_parameter('root_system_parameters_nutrient_ref_concentration_po4')
+        config['nutrient_ref_concentration_k'] = self.get_parameter('root_system_parameters_nutrient_ref_concentration_k')
+        config['nutrient_ref_concentration_ca'] = self.get_parameter('root_system_parameters_nutrient_ref_concentration_ca')
+        config['nutrient_ref_concentration_mg'] = self.get_parameter('root_system_parameters_nutrient_ref_concentration_mg')
 
         # Nutrient competition groups (comma-separated strings)
-        config['nutrient_competition_no3'] = self.get_parameter('root_system_nutrient_competition_no3')
-        config['nutrient_competition_nh4'] = self.get_parameter('root_system_nutrient_competition_nh4')
-        config['nutrient_competition_po4'] = self.get_parameter('root_system_nutrient_competition_po4')
-        config['nutrient_competition_k'] = self.get_parameter('root_system_nutrient_competition_k')
-        config['nutrient_competition_ca'] = self.get_parameter('root_system_nutrient_competition_ca')
-        config['nutrient_competition_mg'] = self.get_parameter('root_system_nutrient_competition_mg')
+        config['nutrient_competition_no3'] = self.get_parameter('root_system_parameters_nutrient_competition_no3')
+        config['nutrient_competition_nh4'] = self.get_parameter('root_system_parameters_nutrient_competition_nh4')
+        config['nutrient_competition_po4'] = self.get_parameter('root_system_parameters_nutrient_competition_po4')
+        config['nutrient_competition_k'] = self.get_parameter('root_system_parameters_nutrient_competition_k')
+        config['nutrient_competition_ca'] = self.get_parameter('root_system_parameters_nutrient_competition_ca')
+        config['nutrient_competition_mg'] = self.get_parameter('root_system_parameters_nutrient_competition_mg')
 
         # pH optima for nutrients
-        config['ph_optimum_no3_min'] = self.get_parameter('root_system_ph_optimum_no3_min')
-        config['ph_optimum_no3_max'] = self.get_parameter('root_system_ph_optimum_no3_max')
-        config['ph_optimum_nh4_min'] = self.get_parameter('root_system_ph_optimum_nh4_min')
-        config['ph_optimum_nh4_max'] = self.get_parameter('root_system_ph_optimum_nh4_max')
-        config['ph_optimum_po4_min'] = self.get_parameter('root_system_ph_optimum_po4_min')
-        config['ph_optimum_po4_max'] = self.get_parameter('root_system_ph_optimum_po4_max')
-        config['ph_optimum_k_min'] = self.get_parameter('root_system_ph_optimum_k_min')
-        config['ph_optimum_k_max'] = self.get_parameter('root_system_ph_optimum_k_max')
-        config['ph_optimum_ca_min'] = self.get_parameter('root_system_ph_optimum_ca_min')
-        config['ph_optimum_ca_max'] = self.get_parameter('root_system_ph_optimum_ca_max')
-        config['ph_optimum_mg_min'] = self.get_parameter('root_system_ph_optimum_mg_min')
-        config['ph_optimum_mg_max'] = self.get_parameter('root_system_ph_optimum_mg_max')
+        config['ph_optimum_no3_min'] = self.get_parameter('root_system_parameters_ph_optimum_no3_min')
+        config['ph_optimum_no3_max'] = self.get_parameter('root_system_parameters_ph_optimum_no3_max')
+        config['ph_optimum_nh4_min'] = self.get_parameter('root_system_parameters_ph_optimum_nh4_min')
+        config['ph_optimum_nh4_max'] = self.get_parameter('root_system_parameters_ph_optimum_nh4_max')
+        config['ph_optimum_po4_min'] = self.get_parameter('root_system_parameters_ph_optimum_po4_min')
+        config['ph_optimum_po4_max'] = self.get_parameter('root_system_parameters_ph_optimum_po4_max')
+        config['ph_optimum_k_min'] = self.get_parameter('root_system_parameters_ph_optimum_k_min')
+        config['ph_optimum_k_max'] = self.get_parameter('root_system_parameters_ph_optimum_k_max')
+        config['ph_optimum_ca_min'] = self.get_parameter('root_system_parameters_ph_optimum_ca_min')
+        config['ph_optimum_ca_max'] = self.get_parameter('root_system_parameters_ph_optimum_ca_max')
+        config['ph_optimum_mg_min'] = self.get_parameter('root_system_parameters_ph_optimum_mg_min')
+        config['ph_optimum_mg_max'] = self.get_parameter('root_system_parameters_ph_optimum_mg_max')
 
         # Cache timeout
-        config['cache_timeout'] = self.get_parameter('root_system_cache_timeout')
+        config['cache_timeout'] = self.get_parameter('root_system_parameters_cache_timeout')
 
         # Hardcoded value replacements
         config['min_flow_rate_multiplier'] = self.get_parameter('root_system_parameters_min_flow_rate_multiplier')
@@ -1252,85 +1172,6 @@ class StrictParameterLoader:
 
         return RootSystemParameters.from_config(config)
 
-    def create_environmental_control_parameters(self):
-        """Create environmental control parameters from CSV"""
-        from models.environmental_control import EnvironmentalSetpoints, ControlEquipment
-
-        # Prepare parameter dictionary for EnvironmentalSetpoints
-        params_dict = {}
-
-        # Environmental setpoints - using correct CSV parameter names
-        params_dict['target_vpd'] = self.get_parameter('environment_target_vpd')
-        params_dict['vpd_tolerance'] = self.get_parameter('environment_vpd_tolerance')
-        params_dict['min_humidity'] = self.get_parameter('environment_min_humidity')
-        params_dict['max_humidity'] = self.get_parameter('environment_max_humidity')
-        params_dict['day_temp'] = self.get_parameter('environment_day_temp')
-        params_dict['night_temp'] = self.get_parameter('environment_night_temp')
-        params_dict['temp_tolerance'] = self.get_parameter('environment_temperature_tolerance')
-        params_dict['target_co2'] = self.get_parameter('environment_target_co2')
-        params_dict['ambient_co2'] = self.get_parameter('environment_ambient_co2')
-        params_dict['co2_tolerance'] = self.get_parameter('environment_co2_tolerance')
-        params_dict['light_hours'] = self.get_parameter('environment_light_hours')
-        params_dict['light_intensity_control'] = self.get_parameter('environment_light_intensity_control')
-        params_dict['co2_enrichment_start_hour'] = self.get_parameter('environment_co2_enrichment_start_hour')
-        params_dict['co2_enrichment_duration'] = self.get_parameter('environment_co2_enrichment_duration')
-        params_dict['co2_enrichment_strategy'] = self.get_parameter('environment_co2_enrichment_strategy')
-        params_dict['co2_morning_target'] = self.get_parameter('environment_co2_morning_target')
-        params_dict['co2_afternoon_target'] = self.get_parameter('environment_co2_afternoon_target')
-        params_dict['humidity_deadband'] = self.get_parameter('environment_humidity_deadband')
-        params_dict['max_temperature_change_per_hour'] = self.get_parameter('environment_max_temperature_change_per_hour')
-        params_dict['ambient_temperature'] = self.get_parameter('environment_ambient_temperature')
-        params_dict['thermal_mass_factor'] = self.get_parameter('environment_thermal_mass_factor')
-        params_dict['base_co2_loss_rate'] = self.get_parameter('environment_base_co2_loss_rate')
-        params_dict['min_co2_concentration'] = self.get_parameter('environment_min_co2_concentration')
-        params_dict['max_co2_concentration'] = self.get_parameter('environment_max_co2_concentration')
-        params_dict['light_saturation_threshold'] = self.get_parameter('environment_light_saturation_threshold')
-        params_dict['co2_response_vmax'] = self.get_parameter('environment_co2_response_vmax')
-        params_dict['co2_response_km'] = self.get_parameter('environment_co2_response_km')
-        params_dict['max_co2_enhancement_factor'] = self.get_parameter('environment_max_co2_enhancement_factor')
-
-        # PID parameters for humidity
-        params_dict['pid_humidity_kp'] = self.get_parameter('environment_pid_humidity_kp')
-        params_dict['pid_humidity_ki'] = self.get_parameter('environment_pid_humidity_ki')
-        params_dict['pid_humidity_kd'] = self.get_parameter('environment_pid_humidity_kd')
-
-        # PID parameters for CO2
-        params_dict['pid_co2_kp'] = self.get_parameter('environment_pid_co2_kp')
-        params_dict['pid_co2_ki'] = self.get_parameter('environment_pid_co2_ki')
-        params_dict['pid_co2_kd'] = self.get_parameter('environment_pid_co2_kd')
-
-        # PID parameters for temperature
-        params_dict['pid_temperature_kp'] = self.get_parameter('environment_pid_temperature_kp')
-        params_dict['pid_temperature_ki'] = self.get_parameter('environment_pid_temperature_ki')
-        params_dict['pid_temperature_kd'] = self.get_parameter('environment_pid_temperature_kd')
-
-        # Simulator default parameters - calculated from CSV parameters
-        min_hum = params_dict['min_humidity']
-        max_hum = params_dict['max_humidity']
-        params_dict['default_air_temperature'] = params_dict['day_temp']  # Use day_temp as default
-        params_dict['default_humidity'] = (min_hum + max_hum) / 2.0  # Middle of min/max range from CSV
-        params_dict['default_light_intensity'] = params_dict['light_intensity_control']
-        params_dict['cache_timeout'] = self.get_parameter('simulator_defaults_cache_timeout_global')
-
-        # Create setpoints
-        setpoints = EnvironmentalSetpoints.from_config(params_dict)
-
-        # Equipment parameters
-        equipment_dict = {}
-        equipment_dict['humidifier_capacity'] = self.get_parameter('control_equipment_parameters_humidifier_capacity')
-        equipment_dict['dehumidifier_capacity'] = self.get_parameter('control_equipment_parameters_dehumidifier_capacity')
-        equipment_dict['humidifier_efficiency'] = self.get_parameter('control_equipment_parameters_humidifier_efficiency')
-        equipment_dict['dehumidifier_efficiency'] = self.get_parameter('control_equipment_parameters_dehumidifier_efficiency')
-        equipment_dict['co2_injection_rate'] = self.get_parameter('control_equipment_parameters_co2_injection_rate')
-        equipment_dict['co2_sensor_accuracy'] = self.get_parameter('control_equipment_parameters_co2_sensor_accuracy')
-        equipment_dict['co2_mixing_time'] = self.get_parameter('control_equipment_parameters_co2_mixing_time')
-        equipment_dict['air_exchange_rate'] = self.get_parameter('control_equipment_parameters_air_exchange_rate')
-        equipment_dict['circulation_fan_power'] = self.get_parameter('control_equipment_parameters_circulation_fan_power')
-
-        # Create equipment
-        equipment = ControlEquipment.from_config(equipment_dict)
-
-        return setpoints, equipment
 
     def create_genetic_parameters(self):
         """Create genetic parameters from CSV - follows Rules.md strictly"""
@@ -1544,63 +1385,6 @@ class StrictParameterLoader:
 
         return NitrogenBalanceParameters.from_config(config)
 
-    def create_root_zone_temperature_parameters(self):
-        """Create root zone temperature parameters from CSV - follows Rules.md strictly"""
-        from models.root_zone_temperature import RZTParameters
-
-        config = {}
-
-        # Basic RZT parameters
-        config['optimal_rzt_offset'] = self.get_parameter('root_zone_temperature_parameters_optimal_rzt_offset')
-        config['min_effective_rzt'] = self.get_parameter('root_zone_temperature_parameters_min_effective_rzt')
-        config['max_effective_rzt'] = self.get_parameter('root_zone_temperature_parameters_max_effective_rzt')
-        config['linear_growth_slope'] = self.get_parameter('root_zone_temperature_parameters_linear_growth_slope')
-        config['rapid_decline_slope'] = self.get_parameter('root_zone_temperature_parameters_rapid_decline_slope')
-        config['base_growth_factor'] = self.get_parameter('root_zone_temperature_parameters_base_growth_factor')
-
-        # Sensitivity parameters
-        config['nutrient_uptake_sensitivity_low'] = self.get_parameter('root_zone_temperature_parameters_nutrient_uptake_sensitivity_low')
-        config['nutrient_uptake_sensitivity_high'] = self.get_parameter('root_zone_temperature_parameters_nutrient_uptake_sensitivity_high')
-        config['photosynthesis_sensitivity_low'] = self.get_parameter('root_zone_temperature_parameters_photosynthesis_sensitivity_low')
-        config['photosynthesis_sensitivity_high'] = self.get_parameter('root_zone_temperature_parameters_photosynthesis_sensitivity_high')
-        config['root_metabolism_sensitivity_low'] = self.get_parameter('root_zone_temperature_parameters_root_metabolism_sensitivity_low')
-        config['root_metabolism_sensitivity_high'] = self.get_parameter('root_zone_temperature_parameters_root_metabolism_sensitivity_high')
-
-        # Water uptake sensitivity from water parameters (as referenced in model)
-        config['water_uptake_sensitivity_low'] = self.get_parameter('water_uptake_sensitivity_low')
-        config['water_uptake_sensitivity_high'] = self.get_parameter('water_uptake_sensitivity_high')
-
-        # Factor limits - minimum values
-        config['min_growth_factor'] = self.get_parameter('root_zone_temperature_parameters_rzt_min_growth_factor')
-        config['min_nutrient_uptake_factor'] = self.get_parameter('root_zone_temperature_parameters_min_nutrient_uptake_factor')
-        config['min_water_uptake_factor'] = self.get_parameter('root_zone_temperature_parameters_min_water_uptake_factor')
-        config['min_photosynthesis_factor'] = self.get_parameter('root_zone_temperature_parameters_min_photosynthesis_factor')
-        config['min_root_metabolism_factor'] = self.get_parameter('root_zone_temperature_parameters_min_root_metabolism_factor')
-
-        # Factor limits - maximum values
-        config['max_growth_factor'] = self.get_parameter('root_zone_temperature_parameters_max_growth_factor')
-        config['max_nutrient_uptake_factor'] = self.get_parameter('root_zone_temperature_parameters_max_nutrient_uptake_factor')
-        config['max_water_uptake_factor'] = self.get_parameter('root_zone_temperature_parameters_max_water_uptake_factor')
-        config['max_photosynthesis_factor'] = self.get_parameter('root_zone_temperature_parameters_max_photosynthesis_factor')
-        config['max_root_metabolism_factor'] = self.get_parameter('root_zone_temperature_parameters_max_root_metabolism_factor')
-
-        # Thermal dynamics parameters
-        config['thermal_mass_factor'] = self.get_parameter('root_zone_temperature_parameters_rzt_thermal_mass_factor')
-        config['ambient_temp_amplitude'] = self.get_parameter('root_zone_temperature_parameters_rzt_ambient_temperature_amplitude')
-        config['root_respiration_heat'] = self.get_parameter('root_zone_temperature_parameters_rzt_root_respiration_heat')
-        config['pump_heat_generation'] = self.get_parameter('root_zone_temperature_parameters_rzt_pump_heat_generation')
-        config['ambient_exchange_factor'] = self.get_parameter('root_zone_temperature_parameters_rzt_ambient_exchange_factor')
-        config['thermal_response_time'] = self.get_parameter('root_zone_temperature_parameters_rzt_thermal_response_time')
-        config['heat_transfer_coefficient'] = self.get_parameter('root_zone_temperature_parameters_rzt_heat_transfer_coefficient')
-
-        # Calculation parameters
-        config['base_factor_constant'] = self.get_parameter('root_zone_temperature_parameters_base_factor_constant')
-        config['thermal_stress_normalizer'] = self.get_parameter('root_zone_temperature_parameters_thermal_stress_normalizer')
-        config['diurnal_cycle_shift'] = self.get_parameter('root_zone_temperature_parameters_diurnal_cycle_shift')
-        config['diurnal_cycle_period'] = self.get_parameter('root_zone_temperature_parameters_diurnal_cycle_period')
-        config['daily_representative_hour'] = self.get_parameter('root_zone_temperature_parameters_daily_representative_hour')
-
-        return RZTParameters.from_config(config)
 
     def create_senescence_parameters(self):
         """Create senescence parameters from CSV - follows Rules.md strictly"""

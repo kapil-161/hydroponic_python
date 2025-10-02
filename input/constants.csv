@@ -32,3 +32,16 @@ umol_to_mol_factor,1000000.0,μmol_mol,Conversion factor from moles to micromole
 # Physical Constants for Calculations
 ppfd_to_photosynthesis_factor,0.045,μmol_CO2_per_μmol_PPFD,Conversion factor from PPFD to photosynthesis rate,Evans (1987)
 lai_to_light_interception_factor,2.0,dimensionless,LAI to light interception conversion factor (Beer's law coefficient),Allen et al. (1998)
+
+# Temperature and Thermodynamic Constants
+kelvin_conversion,273.15,K,Temperature conversion from Celsius to Kelvin (K = °C + 273.15),NIST
+reference_temp_kelvin,298.15,K,Reference temperature in Kelvin (25°C),NIST
+saturation_vapor_pressure_constant,0.611,kPa,Saturation vapor pressure constant at 0°C,Magnus equation
+vapor_pressure_temp_coefficient,17.27,dimensionless,Temperature coefficient for vapor pressure calculation,Magnus equation
+vapor_pressure_base_temp,237.3,K,Base temperature for vapor pressure calculation,Magnus equation
+saturation_curve_slope_constant,4098,kPa_K,Slope of saturation vapor pressure curve at 20°C,Allen et al. (1998)
+
+# Water and Energy Constants
+penman_monteith_conversion,0.408,kPa_°C,Conversion factor for Penman-Monteith equation,Allen et al. (1998)
+aerodynamic_resistance_coefficient,0.34,s_m,Aerodynamic resistance coefficient for reference crop,Allen et al. (1998)
+wind_speed_coefficient,0.5,dimensionless,Wind speed coefficient for aerodynamic resistance,Allen et al. (1998)

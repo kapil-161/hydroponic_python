@@ -120,7 +120,6 @@ class SenescenceSimulator(BaseSimulator):
             'leaf_development_simulator': ['leaf_age_distribution', 'leaf_senescence_rate'],
             'biomass_allocation_simulator': ['leaf_biomass', 'total_biomass'],
             'nitrogen_balance_simulator': ['nitrogen_remobilization_rate', 'nitrogen_stress_index'],
-            'environmental_control': ['temperature', 'humidity', 'light_intensity']
         }
         
         # Data cache for dependencies
@@ -282,14 +281,13 @@ class SenescenceSimulator(BaseSimulator):
             nitrogen_remobilization_rate = nitrogen_data.get('nitrogen_remobilization_rate', 0.0)
             nitrogen_stress_index = nitrogen_data.get('nitrogen_stress_index', 0.0)
             
-            # Get environmental data from environmental control simulator
-            env_data = self.dependency_cache.get('environmental_control', {})
-            temperature = env_data.get('temperature')
-            humidity = env_data.get('humidity')
-            light_intensity = env_data.get('light_intensity')
+            # Use weather data directly (no environmental control)
+            temperature = weather_data.get('temperature')
+            humidity = weather_data.get('humidity')
+            light_intensity = weather_data.get('light_intensity')
             
             if any(x is None for x in [temperature, humidity, light_intensity]):
-                raise ValueError("Environmental data missing from environmental_control - no defaults allowed")
+                raise ValueError("Weather data missing - no defaults allowed")
             
             # Create current senescence state
             current_senescence_state = SenescenceState(

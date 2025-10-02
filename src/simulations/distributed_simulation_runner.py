@@ -30,13 +30,10 @@ from simulations.stress_models_simulator import StressModelsSimulator
 from simulations.water_uptake_simulator import WaterUptakeSimulator
 from simulations.nutrient_models_simulator import NutrientModelsSimulator
 from simulations.canopy_architecture_simulator import CanopyArchitectureSimulator
-from simulations.ph_model_simulator import PHModelSimulator
 from simulations.root_system_simulator import RootSystemSimulator
-from simulations.environmental_control_simulator import EnvironmentalControlSimulator
 from simulations.genetic_parameters_simulator import GeneticParametersSimulator
 from simulations.leaf_development_simulator import LeafDevelopmentSimulator
 from simulations.nitrogen_balance_simulator import NitrogenBalanceSimulator
-from simulations.root_zone_temperature_simulator import RootZoneTemperatureSimulator
 from simulations.senescence_simulator import SenescenceSimulator
 
 # Import parameter loaders
@@ -58,6 +55,7 @@ class DistributedSimulationRunner:
                  respiration_csv_path: str = "input/respiration.csv",
                  allocation_csv_path: str = "input/allocation.csv",
                  phenology_csv_path: str = "input/phenology.csv",
+                 nitrogen_balance_csv_path: str = "input/nitrogen_balance.csv",
                  weather_csv_path: str = "input/LET_EXP001_2024_weather.csv"):
         """
         Initialize distributed simulation runner.
@@ -73,13 +71,14 @@ class DistributedSimulationRunner:
             respiration_csv_path: Path to respiration parameters CSV file
             allocation_csv_path: Path to biomass allocation parameters CSV file
             phenology_csv_path: Path to phenology parameters CSV file
+            nitrogen_balance_csv_path: Path to nitrogen balance parameters CSV file
             weather_csv_path: Path to daily weather CSV file
         """
         print("Initializing Distributed Hydroponic Simulation System")
 
         # Load parameters and weather data - all from CSV, no defaults per Rules.md
         print("Loading parameters from CSV files...")
-        self.parameter_loader = StrictParameterLoader(master_csv_path, constants_csv_path, stress_csv_path, roots_csv_path, genetics_csv_path, senescence_csv_path, photo_csv_path, respiration_csv_path, allocation_csv_path, phenology_csv_path)
+        self.parameter_loader = StrictParameterLoader(master_csv_path, constants_csv_path, stress_csv_path, roots_csv_path, genetics_csv_path, senescence_csv_path, photo_csv_path, respiration_csv_path, allocation_csv_path, phenology_csv_path, nitrogen_balance_csv_path)
         self.weather_loader = WeatherDataLoader(weather_csv_path)
 
         # Load initial state from initials.csv - all from CSV per Rules.md
@@ -158,20 +157,12 @@ class DistributedSimulationRunner:
             self.simulators['canopy_architecture'] = CanopyArchitectureSimulator(canopy_params)
             self.orchestrator.register_simulator(self.simulators['canopy_architecture'])
             
-            # 9. pH Model Simulator
-            ph_params = self.parameter_loader.create_ph_parameters()
-            self.simulators['ph_model'] = PHModelSimulator(ph_params)
-            self.orchestrator.register_simulator(self.simulators['ph_model'])
             
             # 10. Root System Simulator
             root_params = self.parameter_loader.create_root_system_parameters()
             self.simulators['root_system'] = RootSystemSimulator(root_params)
             self.orchestrator.register_simulator(self.simulators['root_system'])
             
-            # 11. Environmental Control Simulator
-            env_setpoints, env_equipment = self.parameter_loader.create_environmental_control_parameters()
-            self.simulators['environmental_control'] = EnvironmentalControlSimulator(env_setpoints, env_equipment)
-            self.orchestrator.register_simulator(self.simulators['environmental_control'])
             
             # 12. Genetic Parameters Simulator
             genetic_db, cultivar_profile = self.parameter_loader.create_genetic_parameters()
@@ -188,10 +179,6 @@ class DistributedSimulationRunner:
             self.simulators['nitrogen_balance'] = NitrogenBalanceSimulator(nitrogen_params)
             self.orchestrator.register_simulator(self.simulators['nitrogen_balance'])
             
-            # 15. Root Zone Temperature Simulator
-            rzt_params = self.parameter_loader.create_root_zone_temperature_parameters()
-            self.simulators['root_zone_temperature'] = RootZoneTemperatureSimulator(rzt_params)
-            self.orchestrator.register_simulator(self.simulators['root_zone_temperature'])
             
             # 16. Senescence Simulator
             senescence_params = self.parameter_loader.create_senescence_parameters()
@@ -228,7 +215,7 @@ class DistributedSimulationRunner:
             
             # Update config based on weather data length
             self.config.total_days = len(weather_data)
-            print(f"Running simulation for {self.config.total_days} days")
+            print(f"Running simulation for {self.config.total_days} days (up to harvest maturity)")
             
             # Start simulation with initial state from CSV
             start_time = time.time()

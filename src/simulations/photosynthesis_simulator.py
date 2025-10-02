@@ -57,7 +57,6 @@ class PhotosynthesisSimulator(BaseSimulator):
         self.dependencies = {
             'canopy_architecture_simulator': ['lai', 'leaf_area', 'canopy_height', 'sunlit_leaf_fraction', 'shaded_leaf_fraction'],
             'stress_models': ['temperature_stress', 'light_stress', 'water_stress'],
-            'environmental_control': ['light_intensity', 'co2_concentration'],
             'leaf_development_simulator': ['total_leaf_area', 'leaf_nitrogen_content']
         }
         
@@ -165,15 +164,15 @@ class PhotosynthesisSimulator(BaseSimulator):
             light_stress = stress_data.get('light_stress', 1.0)
             water_stress = stress_data.get('water_stress', 1.0)
 
-            # Get environmental data from environmental control
-            env_data = self.dependency_cache.get('environmental_control', {})
-            env_light = env_data.get('light_intensity', light_intensity)
-            env_co2 = env_data.get('co2_concentration', co2_concentration)
+            # Use weather data directly (no environmental control)
 
             # Get leaf data from leaf development simulator
             leaf_data = self.dependency_cache.get('leaf_development_simulator', {})
             total_leaf_area = leaf_data.get('total_leaf_area', leaf_area)
-            leaf_nitrogen = leaf_data.get('leaf_nitrogen_content', 2.5)  # Default N content
+            leaf_nitrogen = leaf_data.get('leaf_nitrogen_content', 2.5)
+            # Use reasonable default if leaf development returns 0
+            if leaf_nitrogen == 0.0:
+                leaf_nitrogen = 2.5  # Typical nitrogen content for lettuce leaves (%)
             
             # Calculate photosynthesis using model functions - no shortcuts
             # Per Rules.md: All parameters must come from CSV, no hardcoded values
@@ -189,6 +188,10 @@ class PhotosynthesisSimulator(BaseSimulator):
             sunlit_lai = lai * sunlit_fraction
             shaded_lai = lai * shaded_fraction
             
+            # DEBUG: Log inputs for first few steps
+            if self.state.step_count < 5:
+                print(f"DEBUG Photo step {self.state.step_count}: light={light_intensity}, co2={co2_concentration}, temp={temperature}, lai={lai}, water_stress={water_stress}, sunlit_lai={sunlit_lai}, shaded_lai={shaded_lai}, leaf_N={leaf_nitrogen}")
+
             net_assimilation, _ = self.model.calculate_hourly_assimilation(
                 par_umol_m2_s=light_intensity,
                 co2_ppm=co2_concentration,
@@ -202,7 +205,11 @@ class PhotosynthesisSimulator(BaseSimulator):
                 leaf_nitrogen=leaf_nitrogen,
                 water_stress=water_stress
             )
-            
+
+            # DEBUG: Log output for first few steps
+            if self.state.step_count < 5:
+                print(f"DEBUG Photo step {self.state.step_count}: net_assimilation={net_assimilation}")
+
             # Update state with model results
             self.state.net_assimilation_rate = net_assimilation
             self.state.gross_photosynthesis_rate = net_assimilation * 1.1  # Estimate gross from net

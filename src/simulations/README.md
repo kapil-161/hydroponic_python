@@ -29,15 +29,12 @@ This directory contains a distributed simulation architecture where each of the 
 | 2 | `respiration_simulator.py` | `respiration_model.py` | Metabolic respiration |
 | 3 | `biomass_allocation_simulator.py` | `biomass_allocation_model.py` | Biomass distribution |
 | 4 | `canopy_architecture_simulator.py` | `canopy_architecture.py` | Canopy structure & light |
-| 5 | `environmental_control_simulator.py` | `environmental_control.py` | Environmental management |
 | 6 | `genetic_parameters_simulator.py` | `genetic_parameters.py` | Genetic trait expression |
 | 7 | `leaf_development_simulator.py` | `leaf_development.py` | Leaf growth processes |
 | 8 | `nitrogen_balance_simulator.py` | `nitrogen_balance.py` | Nitrogen uptake & allocation |
 | 9 | `nutrient_models_simulator.py` | `nutrient_models.py` | Nutrient transport |
-| 10 | `ph_model_simulator.py` | `ph_model.py` | pH dynamics |
 | 11 | `phenology_simulator.py` | `phenology_model.py` | Growth stage progression |
 | 12 | `root_system_simulator.py` | `root_system_model.py` | Root growth & architecture |
-| 13 | `root_zone_temperature_simulator.py` | `root_zone_temperature.py` | Root zone thermal dynamics |
 | 14 | `senescence_simulator.py` | `senescence_model.py` | Aging processes |
 | 15 | `stress_models_simulator.py` | `stress_models.py` | Stress factor calculations |
 | 16 | `water_uptake_simulator.py` | `water_uptake_model.py` | Water uptake & transpiration |
@@ -237,15 +234,12 @@ src/simulations/
 ├── respiration_simulator.py             # Respiration processes
 ├── biomass_allocation_simulator.py      # Biomass distribution
 ├── canopy_architecture_simulator.py     # Canopy structure
-├── environmental_control_simulator.py   # Environmental management
 ├── genetic_parameters_simulator.py      # Genetic traits
 ├── leaf_development_simulator.py        # Leaf growth
 ├── nitrogen_balance_simulator.py        # Nitrogen dynamics
 ├── nutrient_models_simulator.py         # Nutrient transport
-├── ph_model_simulator.py                # pH dynamics
 ├── phenology_simulator.py               # Growth stages
 ├── root_system_simulator.py             # Root architecture
-├── root_zone_temperature_simulator.py   # Root zone thermal
 ├── senescence_simulator.py              # Aging processes
 ├── stress_models_simulator.py           # Stress factors
 └── water_uptake_simulator.py            # Water dynamics

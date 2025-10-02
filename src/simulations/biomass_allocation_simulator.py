@@ -264,8 +264,33 @@ class BiomassAllocationSimulator(BaseSimulator):
             self.state.root_allocation_fraction = result.get('roots', 0.0)
             self.state.allocation_efficiency = 1.0  # Efficient allocation
 
-            # Calculate new biomass distribution based on net growth and allocation fractions
-            hourly_biomass_gain = (net_assimilation_rate - total_respiration_rate) * 3600  # Convert to hourly
+            # Convert net assimilation from μmol CO2/m²/s to g biomass/hour
+            # 1 μmol CO2 = 0.000044 g CO2
+            # Photosynthesis: CO2 + H2O → CH2O + O2, so 44g CO2 → 30g CH2O
+            # Conversion factor: 0.000044 g CO2/μmol × (30/44) g CH2O/g CO2 = 0.00003 g CH2O/μmol CO2
+            co2_to_biomass = 0.00003  # g CH2O per μmol CO2
+
+            # Get canopy data - photosynthesis model returns rate per m² GROUND area (not leaf area)
+            canopy_data = self.dependency_cache.get('canopy_architecture_simulator', {})
+            lai = canopy_data.get('lai', 0.1)
+            leaf_area = canopy_data.get('leaf_area', 0.01)  # m²
+
+            # Calculate ground area per plant from LAI and leaf area
+            # LAI = leaf_area / ground_area, so ground_area = leaf_area / LAI
+            if lai > 0.01:
+                ground_area_per_plant = leaf_area / lai  # m²
+            else:
+                ground_area_per_plant = 0.1  # Fallback for very small LAI
+
+            # Calculate hourly biomass gain: μmol/m²_ground/s × m²_ground × s/hour × g/μmol = g/hour
+            # Photosynthesis model returns rate per m² of GROUND (accounts for LAI internally)
+            net_carbon_gain = (net_assimilation_rate - total_respiration_rate)  # μmol CO2/m²_ground/s
+            hourly_biomass_gain = net_carbon_gain * ground_area_per_plant * 3600 * co2_to_biomass  # g/hour
+
+            # DEBUG: Log biomass gain for first few steps
+            if self.state.step_count < 5:
+                print(f"DEBUG Biomass step {self.state.step_count}: net_carbon={net_carbon_gain:.3f} μmol/m²/s, leaf_area={leaf_area:.4f} m², hourly_gain={hourly_biomass_gain:.6f} g/hr")
+
             if hourly_biomass_gain > 0:
                 # Distribute new biomass according to allocation fractions
                 new_leaf_biomass = hourly_biomass_gain * self.state.leaf_allocation_fraction
