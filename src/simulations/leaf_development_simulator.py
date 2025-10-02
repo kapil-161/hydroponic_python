@@ -212,8 +212,12 @@ class LeafDevelopmentSimulator(BaseSimulator):
             temperature = env_data.get('temperature')
             humidity = env_data.get('humidity')
             light_intensity = env_data.get('light_intensity')
-            
+
+            # Skip on first step if environmental data not available yet (circular dependency)
             if any(x is None for x in [temperature, humidity, light_intensity]):
+                if self.state.step_count == 0:
+                    print(f"Leaf Dev: Skipping calculation on step 0 due to missing environmental_control data")
+                    return
                 raise ValueError("Environmental data missing from environmental_control - no defaults allowed")
             
             # Get phenology data from phenology simulator

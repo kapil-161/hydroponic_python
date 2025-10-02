@@ -236,8 +236,12 @@ class NitrogenBalanceSimulator(BaseSimulator):
             nitrogen_availability = nutrient_data.get('nitrogen_availability')
             nitrogen_uptake = nutrient_data.get('nitrogen_uptake')
             root_activity = nutrient_data.get('root_activity')
-            
+
+            # Skip on first step if nutrient data not available yet (circular dependency)
             if any(x is None for x in [nitrogen_availability, nitrogen_uptake, root_activity]):
+                if self.state.step_count == 0:
+                    print(f"N-Balance: Skipping calculation on step 0 due to missing nutrient_models data")
+                    return
                 raise ValueError("Nutrient data missing from nutrient_models_simulator - no defaults allowed")
             
             # Get root data from root system simulator

@@ -18,35 +18,201 @@ class ParameterError(Exception):
 class StrictParameterLoader:
     """Loads parameters strictly from CSV with no defaults or fallbacks"""
 
-    def __init__(self, master_csv_path: str):
+    def __init__(self,
+                 master_csv_path: str,
+                 constants_csv_path: Optional[str] = None,
+                 stress_csv_path: Optional[str] = None,
+                 roots_csv_path: Optional[str] = None,
+                 genetics_csv_path: Optional[str] = None,
+                 senescence_csv_path: Optional[str] = None,
+                 photo_csv_path: Optional[str] = None,
+                 respiration_csv_path: Optional[str] = None,
+                 allocation_csv_path: Optional[str] = None,
+                 phenology_csv_path: Optional[str] = None):
         self.master_csv_path = master_csv_path
+        self.constants_csv_path = constants_csv_path
+        self.stress_csv_path = stress_csv_path
+        self.roots_csv_path = roots_csv_path
+        self.genetics_csv_path = genetics_csv_path
+        self.senescence_csv_path = senescence_csv_path
+        self.photo_csv_path = photo_csv_path
+        self.respiration_csv_path = respiration_csv_path
+        self.allocation_csv_path = allocation_csv_path
+        self.phenology_csv_path = phenology_csv_path
         self.parameters = {}
+        self.constants = {}
+
+        # Load constants first if path provided
+        if self.constants_csv_path:
+            self._load_constants()
+
+        # Load stress parameters if path provided
+        if self.stress_csv_path:
+            self._load_specialized_file(self.stress_csv_path, 'stress_parameters')
+
+        # Load root system parameters if path provided
+        if self.roots_csv_path:
+            self._load_specialized_file(self.roots_csv_path, 'root_system_parameters')
+
+        # Load genetic parameters if path provided
+        if self.genetics_csv_path:
+            self._load_specialized_file(self.genetics_csv_path, 'genetic_parameters')
+
+        # Load senescence parameters if path provided
+        if self.senescence_csv_path:
+            self._load_specialized_file(self.senescence_csv_path, 'senescence_parameters')
+
+        # Load photosynthesis parameters if path provided
+        if self.photo_csv_path:
+            self._load_specialized_file(self.photo_csv_path, 'photosynthesis_parameters')
+
+        # Load respiration parameters if path provided
+        if self.respiration_csv_path:
+            self._load_specialized_file(self.respiration_csv_path, 'respiration_parameters')
+
+        # Load allocation parameters if path provided
+        if self.allocation_csv_path:
+            self._load_specialized_file(self.allocation_csv_path, 'allocation_parameters')
+
+        # Load phenology parameters if path provided
+        if self.phenology_csv_path:
+            self._load_specialized_file(self.phenology_csv_path, 'phenology_parameters')
+
+        # Load parameters from master file
         self._load_parameters()
+
+    def _load_constants(self):
+        """Load universal constants from constants.csv"""
+        if not os.path.exists(self.constants_csv_path):
+            raise ParameterError(f"Constants file not found: {self.constants_csv_path}")
+
+        try:
+            df = pd.read_csv(self.constants_csv_path, comment='#')
+
+            for _, row in df.iterrows():
+                if pd.isna(row['constant_name']):
+                    continue
+
+                constant_name = str(row['constant_name']).strip()
+                value = row['value']
+                unit = str(row['unit']).strip() if not pd.isna(row['unit']) else ''
+                description = str(row['description']).strip() if not pd.isna(row['description']) else ''
+                reference = str(row['reference']).strip() if not pd.isna(row['reference']) else ''
+
+                # Convert value to appropriate type
+                converted_value = self._convert_value_type(value)
+
+                # Store constant
+                self.constants[constant_name] = {
+                    'value': converted_value,
+                    'unit': unit,
+                    'description': description,
+                    'reference': reference
+                }
+
+                # Also store in parameters dict for backward compatibility
+                # Use 'constants' as category
+                key = f"constants_{constant_name}"
+                self.parameters[key] = {
+                    'value': converted_value,
+                    'unit': unit,
+                    'description': description,
+                    'category': 'constants',
+                    'parameter': constant_name
+                }
+
+                # Add backward compatibility mappings for old parameter names
+                backward_compat_mappings = {
+                    'gas_constant': ['photosynthesis_parameters_r', 'respiration_parameters_r'],
+                    'atmospheric_o2': ['photosynthesis_parameters_o2_mmol_mol'],
+                    'seconds_per_hour': ['photosynthesis_parameters_seconds_per_hour'],
+                    'hours_per_day': ['photosynthesis_parameters_hours_per_day'],
+                    'glucose_to_carbon_ratio': ['respiration_parameters_glucose_to_carbon_ratio'],
+                    'carbon_to_co2_ratio': ['respiration_parameters_carbon_to_co2_ratio'],
+                    'lai_to_light_interception_factor': ['water_parameters_lai_to_light_interception_factor'],
+                    'ppfd_to_photosynthesis_factor': ['canopy_parameters_ppfd_to_photosynthesis_factor'],
+                    'co2_molecular_weight': ['ph_parameters_co2_molecular_weight'],
+                    'no3_molecular_weight': ['ph_parameters_no3_molecular_weight'],
+                    'nh4_molecular_weight': ['ph_parameters_nh4_molecular_weight'],
+                    'po4_molecular_weight': ['ph_parameters_po4_molecular_weight'],
+                    'mg_to_g_factor': ['ph_parameters_unit_conversion_factor'],
+                    'umol_to_g_carbon_ratio': ['photosynthesis_parameters_umol_to_g_carbon_ratio']
+                }
+
+                if constant_name in backward_compat_mappings:
+                    for old_key in backward_compat_mappings[constant_name]:
+                        self.parameters[old_key] = {
+                            'value': converted_value,
+                            'unit': unit,
+                            'description': f"{description} (from constants.csv)",
+                            'category': old_key.rsplit('_', 1)[0],
+                            'parameter': old_key.split('_', 1)[1] if '_' in old_key else old_key
+                        }
+
+            print(f"Loaded {len(self.constants)} universal constants from {self.constants_csv_path}")
+        except Exception as e:
+            raise ParameterError(f"Failed to load constants from {self.constants_csv_path}: {e}")
+
+    def _load_specialized_file(self, file_path: str, category_name: str):
+        """Load parameters from specialized parameter file (e.g., stress.csv)"""
+        if not os.path.exists(file_path):
+            raise ParameterError(f"Specialized parameter file not found: {file_path}")
+
+        try:
+            df = pd.read_csv(file_path, comment='#')
+            param_count = 0
+
+            for _, row in df.iterrows():
+                if pd.isna(row['parameter_name']):
+                    continue
+
+                parameter = str(row['parameter_name']).strip()
+                value = row['value']
+                unit = str(row['unit']).strip() if not pd.isna(row['unit']) else ''
+                description = str(row['description']).strip() if not pd.isna(row['description']) else ''
+
+                # Convert value to appropriate type
+                converted_value = self._convert_value_type(value)
+
+                # Store parameter with category prefix
+                key = f"{category_name}_{parameter}"
+                self.parameters[key] = {
+                    'value': converted_value,
+                    'unit': unit,
+                    'description': description,
+                    'category': category_name,
+                    'parameter': parameter
+                }
+                param_count += 1
+
+            print(f"Loaded {param_count} parameters from {file_path} (category: {category_name})")
+        except Exception as e:
+            raise ParameterError(f"Failed to load specialized parameters from {file_path}: {e}")
 
     def _load_parameters(self):
         """Load all parameters from CSV file"""
         if not os.path.exists(self.master_csv_path):
             raise ParameterError(f"Master parameters file not found: {self.master_csv_path}")
-        
+
         try:
             # Read CSV with more robust parsing
             df = pd.read_csv(self.master_csv_path, comment='#', on_bad_lines='skip')
-            
+
             # Handle the actual column names from the CSV
             for _, row in df.iterrows():
                 # Skip rows that don't have proper structure (comments, empty lines, etc.)
                 if pd.isna(row['category']) or pd.isna(row['parameter_name']):
                     continue
-                    
+
                 category = str(row['category']).strip()
                 parameter = str(row['parameter_name']).strip()  # Note: column is 'parameter_name' not 'parameter'
                 value = row['value']
                 unit = str(row['unit']).strip() if not pd.isna(row['unit']) else ''
                 description = str(row['description']).strip() if not pd.isna(row['description']) else ''
-                
+
                 # Convert value to appropriate type
                 converted_value = self._convert_value_type(value)
-                
+
                 # Store parameter with full path
                 key = f"{category}_{parameter}"
                 self.parameters[key] = {
@@ -104,6 +270,22 @@ class StrictParameterLoader:
         if key not in self.parameters:
             raise ParameterError(f"Parameter '{key}' not found in CSV - no defaults allowed")
         return self.parameters[key]
+
+    def get_constant(self, constant_name: str) -> Any:
+        """Get universal constant value by name"""
+        if constant_name in self.constants:
+            return self.constants[constant_name]['value']
+        # Try with constants_ prefix for backward compatibility
+        key = f"constants_{constant_name}"
+        if key in self.parameters:
+            return self.parameters[key]['value']
+        raise ParameterError(f"Constant '{constant_name}' not found - no defaults allowed")
+
+    def get_constant_with_info(self, constant_name: str) -> Dict[str, Any]:
+        """Get constant with unit, description, and reference"""
+        if constant_name not in self.constants:
+            raise ParameterError(f"Constant '{constant_name}' not found - no defaults allowed")
+        return self.constants[constant_name]
 
     def get_category(self, category: str) -> Dict[str, Any]:
         """Get all parameters for a category"""

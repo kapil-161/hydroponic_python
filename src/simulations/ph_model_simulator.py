@@ -153,32 +153,45 @@ class PHModelSimulator(BaseSimulator):
             nutrient_data = self.dependency_cache.get('nutrient_models_simulator', {})
             nutrient_concentrations = nutrient_data.get('nutrient_concentrations')
             solution_ec = nutrient_data.get('solution_ec')
-            
+
+            # Skip on first step if nutrient data not available yet (circular dependency)
             if any(x is None for x in [nutrient_concentrations, solution_ec]):
+                if self.state.step_count == 0:
+                    print(f"pH: Skipping calculation on step 0 due to missing nutrient_models data")
+                    return
                 raise ValueError("Nutrient data missing from nutrient_models_simulator - no defaults allowed")
             
             # Get water data from water uptake simulator
             water_data = self.dependency_cache.get('water_uptake_simulator', {})
             water_uptake_rate = water_data.get('water_uptake_rate')
             transpiration_rate = water_data.get('transpiration_rate')
-            
+
             if any(x is None for x in [water_uptake_rate, transpiration_rate]):
+                if self.state.step_count == 0:
+                    print(f"pH: Skipping calculation on step 0 due to missing water_uptake data")
+                    return
                 raise ValueError("Water data missing from water_uptake_simulator - no defaults allowed")
-            
+
             # Get environmental conditions from dependency cache and weather data
             env_data = self.dependency_cache.get('environmental_control', {})
             temperature = env_data.get('temperature') or weather_data.get('temperature')
             humidity = env_data.get('humidity') or weather_data.get('humidity')
 
             if any(x is None for x in [temperature, humidity]):
+                if self.state.step_count == 0:
+                    print(f"pH: Skipping calculation on step 0 due to missing environmental data")
+                    return
                 # Per Rules.md: raise errors, no defaults allowed
                 raise ValueError("Environmental data missing from environmental_control and weather data - no defaults allowed")
-            
+
             # Get stress factors from stress models simulator
             stress_data = self.dependency_cache.get('stress_models', {})
             ph_stress = stress_data.get('ph_stress')
-            
+
             if ph_stress is None:
+                if self.state.step_count == 0:
+                    print(f"pH: Skipping calculation on step 0 due to missing stress_models data")
+                    return
                 raise ValueError("pH stress data missing from stress_models - no defaults allowed")
             
             # Create current pH state

@@ -1,0 +1,37 @@
+parameter_name,value,unit,description
+# Photosynthesis Parameters
+# All photosynthesis-related parameters for carbon assimilation and light response
+# Includes Farquhar-von Caemmerer-Berry model parameters, stomatal conductance, and environmental responses
+phi_psii,0.85,dimensionless,Maximum quantum efficiency of PSII
+g_max,0.6,mol_m2_s,Maximum stomatal conductance
+min_par_threshold,30.0,μmol_m2_s,Minimum PAR threshold for photosynthesis
+enzyme_saturation_lai,3.0,m2_m2,LAI threshold for enzyme saturation
+light_penetration_lai,2.5,m2_m2,LAI threshold for light penetration effects
+enzyme_saturation_rate,0.1,dimensionless,Rate of enzyme saturation decline per LAI unit
+min_enzyme_factor,0.3,dimensionless,Minimum enzyme efficiency factor
+excess_lai_efficiency,0.8,dimensionless,Efficiency factor for excess LAI
+kc,270.0,μbar,Michaelis constant for CO2
+ko,165000.0,μbar,Michaelis constant for O2
+gamma_star,42.75,μbar,CO2 compensation point
+jmax_25,120.0,μmol_m2_s,Maximum electron transport rate at 25°C
+vcmax_25,60.0,μmol_m2_s,Maximum carboxylation rate at 25°C
+theta,0.7,dimensionless,Curvature factor of light response
+alpha,0.24,mol_mol,Quantum efficiency of CO2 fixation
+rd_25,1.5,μmol_m2_s,Dark respiration rate at 25°C
+eaj,37000.0,J_mol,Activation energy for Jmax
+eav,65000.0,J_mol,Activation energy for Vcmax
+ear,46000.0,J_mol,Activation energy for dark respiration
+shaded_light_fraction,0.15,dimensionless,Fraction of PAR available to shaded leaves
+photosynthesis_cold_limit,5.0,°C,Cold temperature limit for photosynthesis stress
+photosynthesis_heat_limit,40.0,°C,Heat temperature limit for photosynthesis stress
+min_stress_factor,0.1,dimensionless,Minimum temperature stress factor for photosynthesis
+initial_ci_fraction,0.7,dimensionless,Initial internal CO2 concentration as fraction of external
+ci_convergence_max_iterations,20,iterations,Maximum iterations for CO2 convergence
+ci_convergence_tolerance_ppm,0.01,ppm,CO2 concentration convergence tolerance
+stomatal_conductance_co2_diffusion_ratio,1.6,dimensionless,Stomatal conductance CO2 diffusion ratio
+minimum_stomatal_conductance_threshold,1e-9,mol/m²/s,Minimum stomatal conductance threshold
+minimum_vpd_threshold,0.1,kPa,Minimum VPD threshold for photosynthesis
+reference_leaf_nitrogen,2.5,g_N_m2,Reference leaf nitrogen content
+nitrogen_sensitivity,0.6,dimensionless,Sensitivity of photosynthesis to nitrogen content
+water_stress_sensitivity,0.8,dimensionless,Sensitivity of photosynthesis to water stress
+photosynthesis_temperature_factor,0.8,dimensionless,Temperature factor for photosynthesis efficiency

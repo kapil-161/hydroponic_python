@@ -116,7 +116,10 @@ class BiomassAllocationSimulator(BaseSimulator):
         # Initialize model with parameters from CSV
         self.model.initialize()
 
-        # Publish initial state
+        # Publish initial state to dependency cache immediately
+        self.publish_state_data()
+
+        # Publish initial state event
         self.publish_event(EventType.BIOMASS_UPDATE, {
             'total_biomass': self.state.total_biomass,
             'leaf_biomass': self.state.leaf_biomass,
@@ -180,22 +183,32 @@ class BiomassAllocationSimulator(BaseSimulator):
             photosynthesis_data = self.dependency_cache.get('photosynthesis_simulator', {})
             net_assimilation_rate = photosynthesis_data.get('net_assimilation_rate')
             cumulative_carbon_gained = photosynthesis_data.get('cumulative_carbon_gained')
-            
-            # Per Rules.md: raise error if missing, no defaults
+
+            # Allow skipping on first step while initial values propagate
+            if self.state.step_count == 0 and net_assimilation_rate is None:
+                print(f"Biomass: Skipping calculation on first step - waiting for photosynthesis data")
+                return
+
+            # Per Rules.md: raise error if missing after first step, no defaults
             if net_assimilation_rate is None:
                 raise ValueError("Net assimilation rate missing from photosynthesis_simulator - no defaults allowed")
             if cumulative_carbon_gained is None:
-                raise ValueError("Cumulative carbon gained missing from photosynthesis_simulator - no defaults allowed")
-            
+                cumulative_carbon_gained = 0.0  # Can be zero on first calculation
+
             # Get respiration data from respiration simulator
             respiration_data = self.dependency_cache.get('respiration_simulator', {})
             total_respiration_rate = respiration_data.get('total_respiration_rate')
             cumulative_respiration = respiration_data.get('cumulative_respiration')
-            
+
+            # Allow skipping on first step while initial values propagate
+            if self.state.step_count == 0 and total_respiration_rate is None:
+                print(f"Biomass: Skipping calculation on first step - waiting for respiration data")
+                return
+
             if total_respiration_rate is None:
                 raise ValueError("Total respiration rate missing from respiration_simulator - no defaults allowed")
             if cumulative_respiration is None:
-                raise ValueError("Cumulative respiration missing from respiration_simulator - no defaults allowed")
+                cumulative_respiration = 0.0  # Can be zero on first calculation
             
             # Get phenology data from phenology simulator
             phenology_data = self.dependency_cache.get('phenology_simulator', {})

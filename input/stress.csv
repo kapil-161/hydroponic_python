@@ -1,0 +1,174 @@
+parameter_name,value,unit,description
+# Stress Model Parameters
+# All stress-related parameters for water, temperature, nutrient, light, salinity, oxygen, and pH stress
+# Includes stress thresholds, sensitivities, interactions, and recovery rates
+max_osmotic_adjustment,0.5,MPa,Maximum osmotic adjustment under stress
+salt_stress_osmotic_factor,0.8,dimensionless,Salinity stress effect on osmotic adjustment
+heat_threshold_mild,28.0,°C,Mild heat stress threshold
+heat_threshold_severe,32.0,°C,Severe heat stress threshold
+heat_lethal_temperature,40.0,°C,Lethal temperature for heat stress
+cold_threshold_mild,15.0,°C,Mild cold stress threshold
+cold_threshold_severe,10.0,°C,Severe cold stress threshold
+frost_threshold,2.0,°C,Frost damage threshold
+photosynthesis_heat_sensitivity,0.8,dimensionless,Photosynthesis sensitivity to heat stress
+photosynthesis_cold_sensitivity,0.9,dimensionless,Photosynthesis sensitivity to cold stress
+respiration_heat_sensitivity,0.6,dimensionless,Respiration sensitivity to heat stress
+respiration_cold_sensitivity,0.7,dimensionless,Respiration sensitivity to cold stress
+growth_heat_sensitivity,0.9,dimensionless,Growth sensitivity to heat stress
+growth_cold_sensitivity,1.0,dimensionless,Growth sensitivity to cold stress
+development_heat_sensitivity,0.7,dimensionless,Development sensitivity to heat stress
+development_cold_sensitivity,0.8,dimensionless,Development sensitivity to cold stress
+acclimation_rate,0.1,per_day,Rate of temperature acclimation
+max_acclimation_days,14,days,Maximum days for temperature acclimation history
+acclimation_decay_rate,0.05,per_day,Rate of acclimation decay
+heat_damage_threshold,0.7,dimensionless,Threshold for heat damage accumulation
+cold_damage_threshold,0.6,dimensionless,Threshold for cold damage accumulation
+frost_damage_rate,0.1,per_day,Rate of frost damage accumulation
+recovery_rate_heat,0.02,per_day,Recovery rate from heat damage
+recovery_rate_cold,0.015,per_day,Recovery rate from cold damage
+stress_memory_duration,7,days,Duration of stress memory effect
+memory_effect_strength,0.2,dimensionless,Strength of stress memory effect
+stress_weight_water,0.25,dimensionless,Weight of water stress in overall stress calculation
+stress_weight_temperature,0.3,dimensionless,Weight of temperature stress in overall stress calculation
+stress_weight_nutrient,0.2,dimensionless,Weight of nutrient stress in overall stress calculation
+stress_weight_light,0.1,dimensionless,Weight of light stress in overall stress calculation
+stress_weight_salinity,0.1,dimensionless,Weight of salinity stress in overall stress calculation
+stress_weight_oxygen,0.03,dimensionless,Weight of oxygen stress in overall stress calculation
+stress_weight_ph,0.02,dimensionless,Weight of pH stress in overall stress calculation
+water_temperature_interaction_factor,1.3,dimensionless,Water-temperature stress interaction factor
+water_salinity_interaction_factor,1.4,dimensionless,Water-salinity stress interaction factor
+water_nutrient_interaction_factor,1.2,dimensionless,Water-nutrient stress interaction factor
+temperature_light_interaction_factor,1.1,dimensionless,Temperature-light stress interaction factor
+nutrient_ph_interaction_factor,1.5,dimensionless,Nutrient-pH stress interaction factor
+nutrient_salinity_interaction_factor,1.1,dimensionless,Nutrient-salinity stress interaction factor
+stress_onset_threshold_water,0.2,dimensionless,Onset threshold for water stress
+stress_onset_threshold_temperature,0.15,dimensionless,Onset threshold for temperature stress
+stress_onset_threshold_nutrient,0.25,dimensionless,Onset threshold for nutrient stress
+stress_onset_threshold_light,0.3,dimensionless,Onset threshold for light stress
+stress_onset_threshold_salinity,0.2,dimensionless,Onset threshold for salinity stress
+stress_onset_threshold_oxygen,0.1,dimensionless,Onset threshold for oxygen stress
+stress_onset_threshold_ph,0.15,dimensionless,Onset threshold for pH stress
+damage_threshold_water,0.6,dimensionless,Damage threshold for water stress
+damage_threshold_temperature,0.5,dimensionless,Damage threshold for temperature stress
+damage_threshold_nutrient,0.7,dimensionless,Damage threshold for nutrient stress
+damage_threshold_light,0.8,dimensionless,Damage threshold for light stress
+damage_threshold_salinity,0.6,dimensionless,Damage threshold for salinity stress
+damage_threshold_oxygen,0.4,dimensionless,Damage threshold for oxygen stress
+damage_threshold_ph,0.5,dimensionless,Damage threshold for pH stress
+root_temperature_tolerance,5.0,°C,Root temperature tolerance range
+root_temperature_stress_factor,0.1,per_°C,Root temperature stress factor
+vpd_stress_low_factor,0.15,per_kPa,VPD stress factor for low VPD
+vpd_stress_high_factor,0.25,per_kPa,VPD stress factor for high VPD
+optimal_vpd_min,0.5,kPa,Minimum optimal VPD
+optimal_vpd_max,1.2,kPa,Maximum optimal VPD
+optimal_ec_min,1.2,dS_m,Minimum optimal EC
+optimal_ec_max,2.0,dS_m,Maximum optimal EC
+ec_stress_high_factor,0.1,per_dS_m,EC stress factor for high EC
+ec_stress_low_factor,0.15,per_dS_m,EC stress factor for low EC
+nitrogen_stress_factor,0.3,dimensionless,Nitrogen stress factor
+optimal_n_min,150.0,mg_L,Minimum optimal nitrogen concentration
+optimal_n_max,250.0,mg_L,Maximum optimal nitrogen concentration
+severe_deficiency_threshold,50.0,mg_L,Severe nitrogen deficiency threshold
+process_sensitivity_photosynthesis,0.8,dimensionless,Default photosynthesis sensitivity to stress
+process_sensitivity_respiration,0.8,dimensionless,Default respiration sensitivity to stress
+process_sensitivity_transpiration,0.8,dimensionless,Default transpiration sensitivity to stress
+process_sensitivity_growth,0.7,dimensionless,Default growth sensitivity to stress
+mild_stress_level,0.3,dimensionless,Stress level for mild temperature deviation
+moderate_stress_level,0.4,dimensionless,Additional stress level for moderate temperature deviation
+mild_cold_stress_level,0.2,dimensionless,Stress level for mild cold deviation
+moderate_cold_stress_level,0.3,dimensionless,Additional stress level for moderate cold deviation
+severe_cold_stress_level,0.3,dimensionless,Additional stress level for severe cold deviation
+frost_base_stress_level,0.8,dimensionless,Base stress level for frost conditions
+frost_additional_stress,0.2,dimensionless,Additional stress for extreme frost
+heat_acclimation_reduction,0.4,dimensionless,Heat acclimation stress reduction factor
+cold_acclimation_reduction,0.5,dimensionless,Cold acclimation stress reduction factor
+photosynthesis_weight,0.35,dimensionless,Weight of photosynthesis in overall stress
+growth_weight,0.35,dimensionless,Weight of growth in overall stress
+development_weight,0.20,dimensionless,Weight of development in overall stress
+respiration_weight,0.10,dimensionless,Weight of respiration in overall stress
+heat_damage_rate,0.01,per_day,Heat damage accumulation rate per day
+cold_damage_rate,0.008,per_day,Cold damage accumulation rate per day
+frost_recovery_multiplier,0.5,dimensionless,Frost damage recovery rate multiplier
+damage_factor_multiplier,0.5,dimensionless,Damage effect multiplier on process factors
+cumulative_threshold_default,0.8,dimensionless,Default cumulative stress threshold
+damage_accumulation_default,0.01,per_day,Default damage accumulation rate
+recovery_threshold_default,0.8,dimensionless,Default recovery threshold
+full_recovery_time_default,7.0,days,Default full recovery time
+acclimation_capacity_default,0.3,dimensionless,Default acclimation capacity
+acclimation_memory_default,7.0,days,Default acclimation memory duration
+chronic_stress_weight,0.8,dimensionless,Weight of chronic stress in combined calculation
+acute_stress_weight,0.2,dimensionless,Weight of acute stress in combined calculation
+acclimation_benefit_factor,0.3,dimensionless,Acclimation benefit factor
+interaction_penalty_factor,0.1,dimensionless,Stress interaction penalty factor
+recovery_bonus_factor,0.05,dimensionless,Recovery bonus factor
+damage_penalty_factor,0.2,dimensionless,Damage penalty factor
+memory_divisor,3.0,dimensionless,Memory effect time divisor for exponential weighting
+chronic_factor_multiplier,1.5,dimensionless,Chronic stress factor multiplier
+stress_memory_duration_water,24.0,hours,Memory duration for water stress effects
+stress_memory_duration_temperature,24.0,hours,Memory duration for temperature stress effects
+stress_memory_duration_nutrient,48.0,hours,Memory duration for nutrient stress effects
+stress_memory_duration_light,12.0,hours,Memory duration for light stress effects
+cumulative_threshold_water,0.7,dimensionless,Cumulative water stress threshold
+cumulative_threshold_temperature,0.8,dimensionless,Cumulative temperature stress threshold
+cumulative_threshold_nutrient,0.6,dimensionless,Cumulative nutrient stress threshold
+cumulative_threshold_light,0.5,dimensionless,Cumulative light stress threshold
+damage_accumulation_rate_water,0.1,per_day,Water stress damage accumulation rate
+damage_accumulation_rate_temperature,0.15,per_day,Temperature stress damage accumulation rate
+recovery_rate_water,0.2,per_day,Water stress recovery rate
+recovery_rate_temperature,0.1,per_day,Temperature stress recovery rate
+recovery_threshold_water,0.3,dimensionless,Water stress recovery threshold
+recovery_threshold_temperature,0.4,dimensionless,Temperature stress recovery threshold
+full_recovery_time_water,72.0,hours,Full recovery time from water stress
+full_recovery_time_temperature,96.0,hours,Full recovery time from temperature stress
+acclimation_rate_water,0.05,per_day,Water stress acclimation rate
+acclimation_rate_temperature,0.03,per_day,Temperature stress acclimation rate
+acclimation_capacity_water,0.8,dimensionless,Water stress acclimation capacity
+acclimation_capacity_temperature,0.7,dimensionless,Temperature stress acclimation capacity
+acclimation_memory_water,168.0,hours,Water stress acclimation memory duration
+acclimation_memory_temperature,240.0,hours,Temperature stress acclimation memory duration
+process_sensitivity_photosynthesis_water,0.9,dimensionless,Photosynthesis sensitivity to water stress
+process_sensitivity_photosynthesis_temperature,0.8,dimensionless,Photosynthesis sensitivity to temperature stress
+process_sensitivity_growth_water,0.95,dimensionless,Growth sensitivity to water stress
+process_sensitivity_growth_temperature,0.85,dimensionless,Growth sensitivity to temperature stress
+process_sensitivity_development_water,0.7,dimensionless,Development sensitivity to water stress
+process_sensitivity_development_temperature,0.75,dimensionless,Development sensitivity to temperature stress
+minimum_temperature_stress,0.0,dimensionless,Minimum baseline temperature stress
+minimum_light_stress,0.0,dimensionless,Minimum baseline light stress
+minimum_nutrient_stress,0.0,dimensionless,Minimum baseline nutrient stress
+ph_stress_sensitivity,0.3,dimensionless,pH stress sensitivity factor
+nutrient_stress_sensitivity,0.3,dimensionless,Nutrient stress sensitivity factor
+salinity_stress_sensitivity,0.3,dimensionless,Salinity stress sensitivity factor
+oxygen_stress_sensitivity,0.3,dimensionless,Oxygen stress sensitivity factor
+water_recovery_base_rate,0.3,dimensionless,Base water stress recovery rate
+temperature_recovery_base_rate,0.5,dimensionless,Base temperature stress recovery rate
+light_recovery_base_rate,0.3,dimensionless,Base light stress recovery rate
+acute_stress_base_weight,0.3,dimensionless,Base weight for acute stress calculation
+temperature_lethal_min,2.0,°C,Minimum survival temperature for lettuce
+temperature_recovery_rate,0.2,per_day,Recovery rate from temperature stress
+water_critical_threshold,0.15,fraction,Critical water stress threshold
+water_recovery_rate,0.3,per_day,Recovery rate from water stress
+nutrient_critical_threshold,0.1,fraction,Critical nutrient deficiency threshold
+nutrient_toxicity_threshold,3.0,dimensionless,Threshold for nutrient toxicity stress
+nutrient_recovery_rate,0.25,per_day,Recovery rate from nutrient stress
+light_max_ppfd,2000.0,μmol_m2_s,Maximum PPFD before stress (2x saturation)
+light_photoinhibition_threshold,1800.0,μmol_m2_s,PPFD threshold for photoinhibition onset
+light_recovery_rate,0.4,per_day,Recovery rate from light stress
+ph_recovery_rate,0.5,per_day,Recovery rate from pH stress
+salinity_threshold_ec,2.5,dS_m,EC threshold for salinity stress onset
+salinity_critical_ec,4.0,dS_m,EC threshold for severe salinity stress
+salinity_recovery_rate,0.2,per_day,Recovery rate from salinity stress
+oxygen_critical_min,3.0,mg_L,Critical minimum dissolved oxygen
+oxygen_optimal_min,5.0,mg_L,Optimal minimum dissolved oxygen
+oxygen_recovery_rate,0.6,per_day,Recovery rate from oxygen stress
+integration_water_weight,0.3,dimensionless,Weight for water stress in integration
+integration_nutrient_weight,0.15,dimensionless,Weight for nutrient stress in integration
+integration_light_weight,0.05,dimensionless,Weight for light stress in integration
+integration_interaction_factor,1.2,dimensionless,Multiplicative interaction strength between stresses
+integration_threshold_severe,0.3,fraction,Threshold for severe combined stress
+integration_threshold_critical,0.15,fraction,Threshold for critical combined stress
+acclimation_max_adjustment,0.5,dimensionless,Maximum stress acclimation adjustment
+sensitivity_photosynthesis,0.8,dimensionless,Photosynthesis sensitivity to stress (high)
+sensitivity_respiration,0.4,dimensionless,Respiration sensitivity to stress (moderate)
+sensitivity_transpiration,0.6,dimensionless,Transpiration sensitivity to stress (moderate-high)
+sensitivity_growth,0.9,dimensionless,Growth sensitivity to stress (very high)
+sensitivity_development,0.5,dimensionless,Development sensitivity to stress (moderate)

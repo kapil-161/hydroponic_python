@@ -1,0 +1,60 @@
+parameter_name,value,unit,description
+# Respiration Parameters
+# All respiration-related parameters for maintenance and growth respiration
+# Includes Q10 temperature response, tissue-specific rates, thermal acclimation, and diurnal variation
+maintenance_base_rate,0.005,g_C_g_biomass_day,Base maintenance respiration rate at 25°C
+reference_temperature,25.0,°C,Reference temperature for Q10 response
+q10_factor,2.0,dimensionless,Temperature response coefficient for respiration
+growth_efficiency,0.75,dimensionless,Conversion efficiency for biomass synthesis
+biosynthetic_cost,1.35,g_glucose_g_biomass,General biosynthetic cost for growth
+age_effect_coefficient,0.005,day_inverse,Daily increase in respiration per day of age
+max_age_effect,3.0,dimensionless,Maximum age multiplier for respiration
+acclimation_rate,0.1,dimensionless,Rate of thermal acclimation per day
+acclimation_memory,14.0,days,Days of temperature memory for acclimation
+n_effect_slope,1.2,dimensionless,Respiration response to leaf N content
+reference_leaf_n,0.035,g_N_g_biomass,Reference leaf nitrogen content
+max_temperature_threshold,40.0,°C,Maximum temperature before protein denaturation
+temperature_decay_factor,0.1,°C_inverse,Decay factor for high temperature respiration
+size_penalty_threshold,50.0,g_biomass,Biomass threshold for size penalty
+size_penalty_rate,0.002,g_inverse,Rate of size penalty increase per g biomass
+min_history_threshold,3,days,Minimum temperature history days for acclimation
+day_start_hour,6,h,Start hour of day period
+day_end_hour,18,h,End hour of day period
+day_respiration_factor,1.0,dimensionless,Day period respiration factor
+night_respiration_factor,0.8,dimensionless,Night period respiration factor
+circadian_amplitude_1,0.15,dimensionless,Amplitude of first circadian peak
+circadian_peak_1,14,h,Hour of first circadian peak
+circadian_amplitude_2,0.05,dimensionless,Amplitude of second circadian peak
+circadian_peak_2,2,h,Hour of second circadian peak
+diurnal_base_factor,1.0,dimensionless,Base factor for diurnal variation
+moderate_stress_threshold,30.0,°C,Temperature threshold for moderate stress
+severe_stress_threshold,35.0,°C,Temperature threshold for severe stress
+moderate_stress_factor,1.5,dimensionless,Multiplication factor for moderate stress
+severe_stress_base,0.5,dimensionless,Base factor for severe stress
+severe_stress_factor,2.0,dimensionless,Multiplication factor for severe stress
+daytime_respiratory_quotient,0.9,dimensionless,CO2 release to O2 uptake ratio during day
+nighttime_respiratory_quotient,1.0,dimensionless,CO2 release to O2 uptake ratio during night
+min_acclimation_temperature,10.0,°C,Minimum temperature for acclimation
+max_acclimation_temperature,35.0,°C,Maximum temperature for acclimation
+min_diurnal_factor,0.3,dimensionless,Minimum diurnal respiration factor
+max_diurnal_factor,1.8,dimensionless,Maximum diurnal respiration factor
+tissue_factor_leaves,1.0,dimensionless,Respiration factor for leaf tissues
+tissue_factor_stems,0.8,dimensionless,Respiration factor for stem tissues
+tissue_factor_roots,1.2,dimensionless,Respiration factor for root tissues
+tissue_factor_reproductive,1.5,dimensionless,Respiration factor for reproductive tissues
+protein_respiration_cost,2.2,g_glucose_g_protein,Biosynthetic cost for protein synthesis
+carbohydrate_respiration_cost,1.1,g_glucose_g_carb,Biosynthetic cost for carbohydrate synthesis
+lipid_respiration_cost,3.2,g_glucose_g_lipid,Biosynthetic cost for lipid synthesis
+organic_acid_respiration_cost,1.4,g_glucose_g_acid,Biosynthetic cost for organic acid synthesis
+lignin_respiration_cost,2.8,g_glucose_g_lignin,Biosynthetic cost for lignin synthesis
+mineral_respiration_cost,0.1,g_glucose_g_mineral,Biosynthetic cost for mineral uptake
+protein_fraction,0.15,dimensionless,Fraction of growth allocated to proteins
+carbohydrate_fraction,0.50,dimensionless,Fraction of growth allocated to carbohydrates
+lipid_fraction,0.08,dimensionless,Fraction of growth allocated to lipids
+organic_acid_fraction,0.12,dimensionless,Fraction of growth allocated to organic acids
+lignin_fraction,0.15,dimensionless,Fraction of growth allocated to lignin
+mineral_fraction,0.10,dimensionless,Fraction of growth allocated to minerals
+max_temperature_factor,4.0,dimensionless,Maximum temperature factor for respiration
+minimum_temperature_factor,0.1,dimensionless,Minimum temperature factor for respiration
+minimum_respiration_rate_fraction,0.001,dimensionless,Minimum respiration as fraction of biomass per day
+default_total_biomass_g,0.02,g,Default total biomass when pools are empty

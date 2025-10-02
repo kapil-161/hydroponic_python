@@ -97,13 +97,25 @@ class EnvironmentalControlSimulator(BaseSimulator):
         """Handle simulation start"""
         print("Environmental control simulator: Simulation started")
         self.state = EnvironmentalState()
+
+        # Initialize with setpoint values from CSV to break circular dependencies
+        self.state.air_temperature = self.setpoints.default_air_temperature
+        self.state.humidity = self.setpoints.default_humidity
+        self.state.light_intensity = self.setpoints.default_light_intensity
+        self.state.co2_concentration = 400.0  # Typical ambient CO2
+        self.state.wind_speed = 2.0  # Typical indoor air movement
+        self.state.photoperiod = 12.0  # Default photoperiod
+
         self.history.clear()
         self.dependency_cache.clear()
-        
+
         # Initialize model with parameters from CSV
         self.model.initialize()
-        
-        # Publish initial state
+
+        # Publish initial state to dependency cache immediately
+        self.publish_state_data()
+
+        # Publish initial state event
         self.publish_event(EventType.ENVIRONMENT_UPDATE, {
             'air_temperature': self.state.air_temperature,
             'temperature': self.state.air_temperature,  # Add alias for temperature

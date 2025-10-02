@@ -74,11 +74,14 @@ class PhotosynthesisSimulator(BaseSimulator):
         self.state = PhotosynthesisState()
         self.history.clear()
         self.dependency_cache.clear()
-        
+
         # Initialize model
         self.model.initialize()
-        
-        # Publish initial state
+
+        # Publish initial state to dependency cache immediately
+        self.publish_state_data()
+
+        # Publish initial state event
         self.publish_event(EventType.PHOTOSYNTHESIS_UPDATE, {
             'net_assimilation_rate': self.state.net_assimilation_rate,
             'gross_photosynthesis_rate': self.state.gross_photosynthesis_rate,

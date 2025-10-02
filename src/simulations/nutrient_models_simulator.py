@@ -205,8 +205,12 @@ class NutrientModelsSimulator(BaseSimulator):
             water_data = self.dependency_cache.get('water_uptake_simulator', {})
             water_uptake_rate = water_data.get('water_uptake_rate')
             transpiration_rate = water_data.get('transpiration_rate')
-            
+
+            # Skip on first step if water data not available yet (circular dependency)
             if any(x is None for x in [water_uptake_rate, transpiration_rate]):
+                if self.state.step_count == 0:
+                    print(f"Nutrient: Skipping calculation on step 0 due to missing water_uptake data")
+                    return
                 raise ValueError("Water data missing from water_uptake_simulator - no defaults allowed")
             
             # Get root data from root system simulator
@@ -216,32 +220,44 @@ class NutrientModelsSimulator(BaseSimulator):
             root_biomass = root_data.get('root_biomass')
             
             root_surface_area = root_data.get('root_surface_area')
-            
+
             if any(x is None for x in [root_depth, root_distribution, root_biomass, root_surface_area]):
+                if self.state.step_count == 0:
+                    print(f"Nutrient: Skipping calculation on step 0 due to missing root_system data")
+                    return
                 raise ValueError("Root data missing from root_system_simulator - no defaults allowed")
-            
+
             # Get pH data from pH model simulator
             ph_data = self.dependency_cache.get('ph_model_simulator', {})
             ph = ph_data.get('ph')
             ph_stability = ph_data.get('ph_stability')
-            
+
             if any(x is None for x in [ph, ph_stability]):
+                if self.state.step_count == 0:
+                    print(f"Nutrient: Skipping calculation on step 0 due to missing ph_model data")
+                    return
                 raise ValueError("pH data missing from ph_model_simulator - no defaults allowed")
-            
+
             # Get phenology data from phenology simulator
             phenology_data = self.dependency_cache.get('phenology_simulator', {})
             growth_stage = phenology_data.get('growth_stage')
             development_index = phenology_data.get('development_index')
-            
+
             if any(x is None for x in [growth_stage, development_index]):
+                if self.state.step_count == 0:
+                    print(f"Nutrient: Skipping calculation on step 0 due to missing phenology data")
+                    return
                 raise ValueError("Phenology data missing from phenology_simulator - no defaults allowed")
-            
+
             # Get stress factors from stress models simulator
             stress_data = self.dependency_cache.get('stress_models', {})
             nutrient_stress = stress_data.get('nutrient_stress')
             temperature_stress = stress_data.get('temperature_stress')
-            
+
             if any(x is None for x in [nutrient_stress, temperature_stress]):
+                if self.state.step_count == 0:
+                    print(f"Nutrient: Skipping calculation on step 0 due to missing stress_models data")
+                    return
                 raise ValueError("Stress data missing from stress_models - no defaults allowed")
             
             # Get environmental conditions from daily weather file

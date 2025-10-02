@@ -18,6 +18,8 @@
 3. **Model Integration** - All 17 specialized models must work together
 4. **Error Handling** - Raise errors when parameters are missing
 5. **Naming Consistency** - Follow standardized naming conventions
+6. **Always use efficient way to improve code** - Generate short reports 
+7. **Always use consistent name** The naming isn't consistent (initial_ vs default_)
 
 ## Parameter Management Rules
 

@@ -97,11 +97,14 @@ class CanopyArchitectureSimulator(BaseSimulator):
         self.state = CanopyState()
         self.history.clear()
         self.dependency_cache.clear()
-        
+
         # Initialize model with parameters from CSV
         self.model.initialize()
-        
-        # Publish initial state
+
+        # Publish initial state to dependency cache immediately
+        self.publish_state_data()
+
+        # Publish initial state event
         self.publish_event(EventType.CANOPY_UPDATE, {
             'lai': self.state.lai,
             'leaf_area': self.state.leaf_area,
@@ -166,8 +169,12 @@ class CanopyArchitectureSimulator(BaseSimulator):
             biomass_data = self.dependency_cache.get('biomass_allocation_simulator', {})
             leaf_biomass = biomass_data.get('leaf_biomass')
             total_biomass = biomass_data.get('total_biomass')
-            
+
+            # Skip on first step if biomass data not available yet (circular dependency)
             if any(x is None for x in [leaf_biomass, total_biomass]):
+                if self.state.step_count == 0:
+                    print(f"Canopy: Skipping calculation on step 0 due to missing biomass_allocation data")
+                    return
                 raise ValueError("Biomass data missing from biomass_allocation_simulator - no defaults allowed")
             
             # Get leaf development data from leaf development simulator

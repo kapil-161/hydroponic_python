@@ -231,8 +231,11 @@ class RootSystemSimulator(BaseSimulator):
             # Get root zone temperature from root zone temperature simulator
             rzt_data = self.dependency_cache.get('root_zone_temperature_simulator', {})
             root_zone_temperature = rzt_data.get('root_zone_temperature')
-            
+
             if root_zone_temperature is None:
+                if self.state.step_count == 0:
+                    print(f"Root: Skipping calculation on step 0 due to missing root_zone_temperature data")
+                    return
                 raise ValueError("Root zone temperature missing from root_zone_temperature_simulator - no defaults allowed")
             
             # Get environmental conditions from daily weather file

@@ -1,0 +1,34 @@
+constant_name,value,unit,description,reference
+# Universal Physical Constants
+gas_constant,8.314,J_mol_K,Universal gas constant (R) for Arrhenius calculations,NIST
+atmospheric_o2,210.0,mmol_mol,Atmospheric O2 concentration at sea level,NIST
+
+# Time Conversion Constants
+seconds_per_hour,3600,s,Seconds per hour,Universal
+hours_per_day,24,h,Hours per day,Universal
+minutes_per_hour,60,min,Minutes per hour,Universal
+days_per_year,365,days,Days per year (non-leap),Universal
+
+# Molecular Weights (g/mol)
+co2_molecular_weight,44.0,g_mol,Molecular weight of CO2,Chemical standard
+no3_molecular_weight,62.0,g_mol,Molecular weight of NO3-,Chemical standard
+nh4_molecular_weight,18.0,g_mol,Molecular weight of NH4+,Chemical standard
+po4_molecular_weight,95.0,g_mol,Molecular weight of PO4---,Chemical standard
+glucose_molecular_weight,180.0,g_mol,Molecular weight of glucose,Chemical standard
+water_molecular_weight,18.0,g_mol,Molecular weight of water,Chemical standard
+
+# Stoichiometric Conversion Ratios
+glucose_to_carbon_ratio,0.4,g_C_g_glucose,Glucose to carbon conversion ratio (stoichiometric),Chemical standard
+carbon_to_co2_ratio,3.67,g_CO2_g_C,Carbon to CO2 molecular weight ratio (44/12),Chemical standard
+umol_to_g_carbon_ratio,1.2e-4,g_μmol,Conversion ratio from μmol CO2 to g C,Chemical standard
+
+# Unit Conversion Factors
+mg_to_g_factor,1000.0,mg_g,Conversion factor from grams to milligrams,Universal
+g_to_kg_factor,1000.0,g_kg,Conversion factor from kilograms to grams,Universal
+cm_to_m_factor,100.0,cm_m,Conversion factor from meters to centimeters,Universal
+mm_to_m_factor,1000.0,mm_m,Conversion factor from meters to millimeters,Universal
+umol_to_mol_factor,1000000.0,μmol_mol,Conversion factor from moles to micromoles,Universal
+
+# Physical Constants for Calculations
+ppfd_to_photosynthesis_factor,0.045,μmol_CO2_per_μmol_PPFD,Conversion factor from PPFD to photosynthesis rate,Evans (1987)
+lai_to_light_interception_factor,2.0,dimensionless,LAI to light interception conversion factor (Beer's law coefficient),Allen et al. (1998)

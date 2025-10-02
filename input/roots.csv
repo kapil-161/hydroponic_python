@@ -1,0 +1,165 @@
+parameter_name,value,unit,description
+# Root System Parameters
+# All root-related parameters for root growth, architecture, hydraulic properties, and zone distribution
+# Includes root conductance, water uptake, nutrient absorption, and root zone characteristics
+base_root_conductance,0.5,L_day_MPa_m2,Base root hydraulic conductance
+root_conductance_scaling_factor,2.0,dimensionless,Root conductance scaling factor
+base_xylem_conductance,1.2,L_day_MPa,Base xylem hydraulic conductance
+xylem_conductance_scaling_factor,10.0,g_biomass,Xylem conductance scaling factor
+base_leaf_potential,-0.3,MPa,Baseline leaf water potential
+transpiration_potential_factor,0.05,MPa_mm_day,Leaf potential change per transpiration rate
+solution_potential_factor,-0.036,MPa_dS_m,Solution potential change per EC unit
+cavitation_threshold,-2.0,MPa,Water potential threshold for cavitation
+temperature_range_factor,10.0,°C,Temperature range factor for root zone layers
+minimum_temperature_factor,0.1,dimensionless,Minimum temperature factor for root uptake
+max_temperature_factor,4.0,dimensionless,Maximum temperature factor for root uptake
+low_flow_factor,0.4,dimensionless,Flow factor when below minimum flow rate
+high_flow_factor,0.6,dimensionless,Flow factor when above maximum flow rate
+ph_zone_min,5.5,pH,Minimum optimal pH for root zones
+ph_zone_max,6.5,pH,Maximum optimal pH for root zones
+min_ph_factor,0.2,dimensionless,Minimum pH factor for root uptake
+ph_penalty_factor,0.5,dimensionless,pH penalty factor outside optimal range
+nft_zone_1_fraction,0.4,dimensionless,Volume fraction for NFT zone 1 (0-2cm)
+nft_zone_2_fraction,0.4,dimensionless,Volume fraction for NFT zone 2 (2-4cm)
+nft_zone_3_fraction,0.2,dimensionless,Volume fraction for NFT zone 3 (4-6cm)
+dwc_zone_1_fraction,0.2,dimensionless,Volume fraction for DWC zone 1 (0-5cm)
+dwc_zone_2_fraction,0.5,dimensionless,Volume fraction for DWC zone 2 (5-15cm)
+dwc_zone_3_fraction,0.3,dimensionless,Volume fraction for DWC zone 3 (15-25cm)
+general_zone_1_fraction,0.25,dimensionless,Volume fraction for other systems zone 1 (0-3cm)
+general_zone_2_fraction,0.35,dimensionless,Volume fraction for other systems zone 2 (3-8cm)
+general_zone_3_fraction,0.25,dimensionless,Volume fraction for other systems zone 3 (8-15cm)
+general_zone_4_fraction,0.15,dimensionless,Volume fraction for other systems zone 4 (15-20cm)
+root_biomass_density,0.3,g_cm3,Density factor for root biomass calculation
+coarse_root_min_threshold,0.05,cm,Minimum length threshold for coarse root cohorts
+fine_root_min_threshold,0.1,cm,Minimum length threshold for fine root cohorts
+diameter_minimum_limit,0.05,mm,Absolute minimum root diameter
+auxin_gradient_weight,0.15,dimensionless,Weight of auxin gradient in growth potential
+nutrient_signal_weight,0.1,dimensionless,Weight of nutrient signal in growth potential
+oxygen_effect_weight,0.1,dimensionless,Weight of oxygen effect in growth potential
+competition_effect_weight,0.05,dimensionless,Weight of competition effect in growth potential
+temperature_effect_weight,0.03,dimensionless,Weight of temperature effect in growth potential
+min_growth_potential,0.02,dimensionless,Minimum zone growth potential
+max_growth_potential,0.2,dimensionless,Maximum zone growth potential
+maximum_temperature_threshold,35.0,°C,Maximum temperature threshold for root activity
+temperature_decay_factor,0.1,dimensionless,Temperature decay factor above optimal
+flow_rate_offset,0.5,dimensionless,Offset for flow rate calculation
+flow_rate_multiplier,0.5,dimensionless,Multiplier for flow rate calculation
+transport_temperature_exponent,1.25,dimensionless,Exponent for temperature effect on nutrient transport
+minimum_surface_area,1.0,cm2,Minimum surface area for calculations
+minimum_biomass,0.001,g,Minimum biomass for specific root length calculations
+minimum_volume,1.0,cm3,Minimum volume for density calculations
+effective_area_minimum,1e-1,cm2,Minimum effective surface area threshold
+container_volume,5000.0,cm3,Container/reservoir volume
+channel_length,100.0,cm,Channel length for NFT systems
+system_type,deep_water_culture,string,Hydroponic system type
+channel_width,10.0,cm,Channel width for NFT systems
+channel_depth,5.0,cm,Channel depth for NFT systems
+n_channels,4,count,Number of parallel channels
+root_zone_independent,true,boolean,Whether root zone size is independent of tank volume
+primary_root_growth_rate,15.0,cm_day,Primary root growth rate
+lateral_root_density,8.0,count_per_cm,Lateral roots per cm of primary root
+branching_angle_mean,45.0,degrees,Mean branching angle
+branching_angle_std,15.0,degrees,Standard deviation of branching angle
+fine_root_fraction,0.6,dimensionless,Fraction of fine roots
+medium_root_fraction,0.3,dimensionless,Fraction of medium roots
+coarse_root_fraction,0.1,dimensionless,Fraction of coarse roots
+fine_diameter_mean,0.2,mm,Mean diameter of fine roots
+fine_diameter_std,0.05,mm,Standard deviation of fine root diameter
+medium_diameter_mean,0.8,mm,Mean diameter of medium roots
+medium_diameter_std,0.2,mm,Standard deviation of medium root diameter
+coarse_diameter_mean,2.0,mm,Mean diameter of coarse roots
+coarse_diameter_std,0.5,mm,Standard deviation of coarse root diameter
+fine_turnover_rate,0.05,fraction_per_day,Fine root turnover rate
+medium_turnover_rate,0.02,fraction_per_day,Medium root turnover rate
+coarse_turnover_rate,0.01,fraction_per_day,Coarse root turnover rate
+fine_root_half_life_days,20.0,days,Fine root activity half-life
+medium_root_half_life_days,40.0,days,Medium root activity half-life
+coarse_root_half_life_days,80.0,days,Coarse root activity half-life
+fine_min_activity,0.2,dimensionless,Minimum activity factor for fine roots
+medium_min_activity,0.15,dimensionless,Minimum activity factor for medium roots
+coarse_min_activity,0.1,dimensionless,Minimum activity factor for coarse roots
+establishment_plateau_days,7.0,days,Days of establishment plateau for root activity
+initial_root_activity,1.0,dimensionless,Initial activity factor for new roots
+fine_root_effectiveness,1.0,dimensionless,Fine root effectiveness factor
+medium_root_effectiveness,0.7,dimensionless,Medium root effectiveness factor
+coarse_root_effectiveness,0.3,dimensionless,Coarse root effectiveness factor
+q10_factor,2.0,dimensionless,Q10 factor for temperature response
+optimal_flow_rate,1.5,L_min,Optimal flow rate
+flow_stress_threshold,4.0,L_min,Flow rate stress threshold
+root_growth_auxin_decay_rate,0.1,per_zone,Auxin decay rate for growth potential
+root_optimal_density,50.0,cm_per_cm3,Optimal root length density
+root_density_stress_factor,0.3,dimensionless,Root density stress factor
+root_temperature_optimum,20.0,°C,Optimal root temperature
+root_temperature_maximum,35.0,°C,Maximum root temperature
+root_temperature_minimum_factor,0.1,dimensionless,Minimum temperature factor for roots
+root_oxygen_optimum,8.0,mg_L,Optimal dissolved oxygen level
+root_oxygen_minimum_factor,0.2,dimensionless,Minimum oxygen factor
+ph_stress_range_acidic,1.0,pH_units,pH stress range on acidic side
+ph_stress_range_basic,1.5,pH_units,pH stress range on basic side
+ph_stress_factor,0.5,dimensionless,pH stress factor
+young_root_activity,0.9,dimensionless,Activity factor for young roots
+old_root_activity,0.4,dimensionless,Activity factor for old roots
+no3_uptake_vmax,0.03,mg_cm2_day,Maximum nitrate uptake rate
+no3_uptake_km,50.0,mg_L,Michaelis constant for nitrate uptake
+nh4_uptake_vmax,0.02,mg_cm2_day,Maximum ammonium uptake rate
+nh4_uptake_km,20.0,mg_L,Michaelis constant for ammonium uptake
+po4_uptake_vmax,0.08,mg_cm2_day,Maximum phosphate uptake rate
+po4_uptake_km,15.0,mg_L,Michaelis constant for phosphate uptake
+k_uptake_vmax,0.10,mg_cm2_day,Maximum potassium uptake rate
+k_uptake_km,30.0,mg_L,Michaelis constant for potassium uptake
+ca_uptake_vmax,0.06,mg_cm2_day,Maximum calcium uptake rate
+ca_uptake_km,40.0,mg_L,Michaelis constant for calcium uptake
+mg_uptake_vmax,0.05,mg_cm2_day,Maximum magnesium uptake rate
+mg_uptake_km,25.0,mg_L,Michaelis constant for magnesium uptake
+so4_uptake_vmax,0.04,mg_cm2_day,Maximum sulfate uptake rate
+so4_uptake_km,35.0,mg_L,Michaelis constant for sulfate uptake
+system_multipliers_nutrient_film_technique_root_length_multiplier,1.2,dimensionless,NFT root length multiplier
+system_multipliers_nutrient_film_technique_surface_area_multiplier,1.3,dimensionless,NFT surface area multiplier
+system_multipliers_nutrient_film_technique_branching_multiplier,1.1,dimensionless,NFT branching multiplier
+system_multipliers_deep_water_culture_root_length_multiplier,1.0,dimensionless,DWC root length multiplier
+system_multipliers_deep_water_culture_surface_area_multiplier,1.0,dimensionless,DWC surface area multiplier
+system_multipliers_deep_water_culture_branching_multiplier,1.0,dimensionless,DWC branching multiplier
+system_multipliers_aeroponics_root_length_multiplier,1.5,dimensionless,Aeroponics root length multiplier
+system_multipliers_aeroponics_surface_area_multiplier,1.4,dimensionless,Aeroponics surface area multiplier
+system_multipliers_aeroponics_branching_multiplier,1.3,dimensionless,Aeroponics branching multiplier
+nutrient_demand_weight_no3,0.4,dimensionless,Nitrogen demand weight
+nutrient_demand_weight_po4,0.2,dimensionless,Phosphate demand weight
+nutrient_demand_weight_k,0.2,dimensionless,Potassium demand weight
+nutrient_demand_weight_ca,0.1,dimensionless,Calcium demand weight
+nutrient_demand_weight_mg,0.1,dimensionless,Magnesium demand weight
+nutrient_ref_concentration_no3,200.0,mg_L,Nitrogen reference concentration
+nutrient_ref_concentration_po4,50.0,mg_L,Phosphate reference concentration
+nutrient_ref_concentration_k,300.0,mg_L,Potassium reference concentration
+nutrient_ref_concentration_ca,200.0,mg_L,Calcium reference concentration
+nutrient_ref_concentration_mg,50.0,mg_L,Magnesium reference concentration
+nutrient_competition_no3,NH4,string,NO3 competition group
+nutrient_competition_nh4,NO3,string,NH4 competition group
+nutrient_competition_po4,K-Ca,string,PO4 competition group
+nutrient_competition_k,Ca-Mg,string,K competition group
+nutrient_competition_ca,K-Mg,string,Ca competition group
+nutrient_competition_mg,K-Ca,string,Mg competition group
+ph_optimum_no3_min,5.5,pH,NO3 optimal pH minimum
+ph_optimum_no3_max,6.5,pH,NO3 optimal pH maximum
+ph_optimum_nh4_min,6.0,pH,NH4 optimal pH minimum
+ph_optimum_nh4_max,7.0,pH,NH4 optimal pH maximum
+ph_optimum_po4_min,6.0,pH,PO4 optimal pH minimum
+ph_optimum_po4_max,7.0,pH,PO4 optimal pH maximum
+ph_optimum_k_min,5.5,pH,K optimal pH minimum
+ph_optimum_k_max,7.5,pH,K optimal pH maximum
+ph_optimum_ca_min,6.0,pH,Ca optimal pH minimum
+ph_optimum_ca_max,8.0,pH,Ca optimal pH maximum
+ph_optimum_mg_min,6.0,pH,Mg optimal pH minimum
+ph_optimum_mg_max,8.0,pH,Mg optimal pH maximum
+root_zone_efficiency_factor,0.8,dimensionless,Root zone efficiency factor
+min_flow_rate_multiplier,0.5,dimensionless,Minimum flow rate multiplier for optimal flow
+default_michaelis_constant,50.0,µM,Default Michaelis constant for unknown nutrients
+default_reference_nutrient_concentration,200.0,µM,Default reference nutrient concentration
+nutrient_inhibition_minimum_factor,0.1,dimensionless,Minimum nutrient competitive inhibition factor
+competition_effect_minimum_factor,0.2,dimensionless,Minimum competition effect factor
+heat_stress_minimum_factor,0.1,dimensionless,Minimum heat stress factor
+optimization_temp_min,16,°C,Minimum temperature for optimization
+optimization_temp_max,27,°C,Maximum temperature for optimization
+optimization_temp_step,2,°C,Temperature step for optimization
+optimization_flow_min,0.5,L/min,Minimum flow rate for optimization
+optimization_flow_max,3.0,L/min,Maximum flow rate for optimization
+optimization_flow_step,0.5,L/min,Flow rate step for optimization

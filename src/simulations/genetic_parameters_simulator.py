@@ -229,14 +229,19 @@ class GeneticParametersSimulator(BaseSimulator):
             temperature_stress = stress_data.get('temperature_stress')
             water_stress = stress_data.get('water_stress')
             nutrient_stress = stress_data.get('nutrient_stress')
-            
-            # Per Rules.md: no fallback values, data must come from stress models
-            if temperature_stress is None:
-                raise ValueError("Temperature stress data required from stress models simulator")
-            if water_stress is None:
-                raise ValueError("Water stress data required from stress models simulator")
-            if nutrient_stress is None:
-                raise ValueError("Nutrient stress data required from stress models simulator")
+
+            # Skip on first step if stress data not available yet (circular dependency)
+            if any(x is None for x in [temperature_stress, water_stress, nutrient_stress]):
+                if self.state.step_count == 0:
+                    print(f"Genetic: Skipping calculation on step 0 due to missing stress_models data")
+                    return
+                # Per Rules.md: no fallback values, data must come from stress models
+                if temperature_stress is None:
+                    raise ValueError("Temperature stress data required from stress models simulator")
+                if water_stress is None:
+                    raise ValueError("Water stress data required from stress models simulator")
+                if nutrient_stress is None:
+                    raise ValueError("Nutrient stress data required from stress models simulator")
             
             # Get phenology data from phenology simulator
             phenology_data = self.dependency_cache.get('phenology_simulator', {})

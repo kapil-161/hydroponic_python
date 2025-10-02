@@ -1,0 +1,79 @@
+parameter_name,value,unit,description
+# Genetic Parameters
+# All cultivar-specific and genetic trait parameters
+# Includes developmental traits, yield components, stress tolerance, and cultivar characteristics
+EM_FL,1340.0,GDD,Days from emergence to first flower - calculated from phenology transitions sum
+FL_SH,150.0,GDD,Days from first flower to first seed - mapped from AN_to_SD + SD_to_PM
+FL_SD,200.0,GDD,Days from first flower to first pod - mapped from FL_to_AN + AN_to_SD
+SD_PM,150.0,GDD,Days from first seed to physiological maturity - mapped from SD_to_PM
+FL_LF,200.0,GDD,Days from first flower to end of leaf expansion - genetic trait
+LFMAX,45.0,mg_CO2_m2_s,Maximum leaf photosynthesis rate
+SLAVR,250.0,cm2_g,Specific leaf area under standard conditions
+SIZLF,120.0,cm2,Maximum size of full leaf
+XFRT,0.8,dimensionless,Maximum fraction of growth to reproductive growth
+SFDUR,450.0,GDD,Seed filling duration in growing degree days
+SDPDV,25.0,dimensionless,Average seed per pod under standard conditions
+PODUR,200.0,GDD,Time to reach final pod load in growing degree days
+WTPSD,0.05,g,Maximum weight per seed
+THRSH,0.85,dimensionless,Maximum ratio of seed/(seed+shell) at maturity
+SDPRO,0.25,dimensionless,Fraction protein in seeds
+SDLIP,0.05,dimensionless,Fraction oil in seeds
+EC_TOLERANCE,3.5,dS_m,Maximum EC tolerance
+ROOT_ACTIVITY,0.8,dimensionless,Root activity coefficient
+PHOTOSYNTHETIC_CAPACITY,0.9,dimensionless,Relative photosynthetic capacity
+NITRATE_EFFICIENCY,0.7,dimensionless,Nitrogen use efficiency factor
+cultivar_id,BOSTON_BIBB_001,text,Cultivar identifier
+cultivar_name,Boston Bibb,text,Cultivar name
+lettuce_type,butterhead,text,Type of lettuce
+breeder,Generic,text,Breeding company or program
+year_released,2020,year,Year cultivar was released
+yield_potential,0.85,dimensionless,Relative yield potential (0-1)
+adaptation_score,0.75,dimensionless,Environmental adaptation score (0-1)
+pedigree,Unknown,text,Genetic pedigree information
+breeding_notes,Standard butterhead cultivar,text,Breeding notes and characteristics
+adaptation_index_min,0.1,dimensionless,Minimum adaptation index value
+adaptation_index_max,1.0,dimensionless,Maximum adaptation index value
+expression_min,0.0,dimensionless,Minimum trait expression value
+expression_max,1.0,dimensionless,Maximum trait expression value
+default_trait_value,0.5,dimensionless,Default trait value when not specified
+default_adaptation_weight,0.6,dimensionless,Default weight for adaptation scoring
+default_yield_weight,0.25,dimensionless,Default weight for yield scoring
+default_temperature_stress_weight,0.5,dimensionless,Default weight for temperature stress
+default_nitrogen_excess_weight,0.3,dimensionless,Default weight for nitrogen excess effects
+default_stress_response_weight,0.2,dimensionless,Default weight for stress response
+default_heterosis_factor,1.05,dimensionless,Default heterosis factor for hybrids
+breeding_complementary_threshold,0.8,dimensionless,Minimum trait threshold for breeding complementarity
+hybrid_vigor_factor,1.1,dimensionless,Hybrid vigor enhancement factor for yield
+harvest_time_base,90.0,days,Base harvest time in days
+harvest_time_range,30.0,days,Range for harvest time variation
+default_performance_index,0.5,dimensionless,Default performance index value
+yield_weight_leaf_size,0.3,dimensionless,Weight of leaf size in yield index
+yield_weight_chlorophyll,0.2,dimensionless,Weight of chlorophyll content in yield index
+yield_weight_nitrate_avoidance,0.2,dimensionless,Weight of nitrate avoidance in yield index
+yield_weight_root_development,0.15,dimensionless,Weight of root development in yield index
+yield_weight_yield_potential,0.15,dimensionless,Weight of yield potential in yield index
+quality_weight_vitamin_c,0.3,dimensionless,Weight of vitamin C content in quality index
+quality_weight_carotenoid,0.25,dimensionless,Weight of carotenoid content in quality index
+quality_weight_nitrate_avoidance,0.25,dimensionless,Weight of nitrate avoidance in quality index
+quality_weight_chlorophyll,0.2,dimensionless,Weight of chlorophyll content in quality index
+stress_weight_heat,0.3,dimensionless,Weight of heat tolerance in stress tolerance index
+stress_weight_cold,0.25,dimensionless,Weight of cold tolerance in stress tolerance index
+stress_weight_salinity,0.25,dimensionless,Weight of salinity tolerance in stress tolerance index
+stress_weight_disease,0.2,dimensionless,Weight of disease resistance in stress tolerance index
+trait_days_to_emergence,0.6,dimensionless,Days to emergence trait value
+trait_days_to_harvest,0.7,dimensionless,Days to harvest trait value
+trait_bolting_tolerance,0.8,dimensionless,Bolting tolerance trait value
+trait_leaf_size,0.75,dimensionless,Leaf size trait value
+trait_plant_architecture,0.7,dimensionless,Plant architecture trait value
+trait_root_development,0.65,dimensionless,Root development trait value
+trait_yield_potential,0.85,dimensionless,Yield potential trait value
+trait_chlorophyll_content,0.8,dimensionless,Chlorophyll content trait value
+trait_carotenoid_content,0.6,dimensionless,Carotenoid content trait value
+trait_vitamin_c_content,0.7,dimensionless,Vitamin C content trait value
+trait_nitrate_accumulation,0.3,dimensionless,Nitrate accumulation trait value (lower is better)
+trait_heat_tolerance,0.6,dimensionless,Heat tolerance trait value
+trait_cold_tolerance,0.8,dimensionless,Cold tolerance trait value
+trait_salinity_tolerance,0.5,dimensionless,Salinity tolerance trait value
+trait_disease_resistance,0.7,dimensionless,Disease resistance trait value
+trait_growth_rate,0.7,dimensionless,Growth rate trait value
+maturity_days,60,days,Days to maturity for standard lettuce cultivar

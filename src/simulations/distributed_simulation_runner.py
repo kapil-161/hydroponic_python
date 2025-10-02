@@ -47,21 +47,39 @@ from utils.weather_loader import WeatherDataLoader
 class DistributedSimulationRunner:
     """Main runner for distributed hydroponic simulation"""
     
-    def __init__(self, 
+    def __init__(self,
                  master_csv_path: str = "input/master_parameters.csv",
+                 constants_csv_path: str = "input/constants.csv",
+                 stress_csv_path: str = "input/stress.csv",
+                 roots_csv_path: str = "input/roots.csv",
+                 genetics_csv_path: str = "input/genetics.csv",
+                 senescence_csv_path: str = "input/senescence.csv",
+                 photo_csv_path: str = "input/photo.csv",
+                 respiration_csv_path: str = "input/respiration.csv",
+                 allocation_csv_path: str = "input/allocation.csv",
+                 phenology_csv_path: str = "input/phenology.csv",
                  weather_csv_path: str = "input/LET_EXP001_2024_weather.csv"):
         """
         Initialize distributed simulation runner.
-        
+
         Args:
             master_csv_path: Path to master parameters CSV file
+            constants_csv_path: Path to universal constants CSV file
+            stress_csv_path: Path to stress parameters CSV file
+            roots_csv_path: Path to root system parameters CSV file
+            genetics_csv_path: Path to genetic parameters CSV file
+            senescence_csv_path: Path to senescence parameters CSV file
+            photo_csv_path: Path to photosynthesis parameters CSV file
+            respiration_csv_path: Path to respiration parameters CSV file
+            allocation_csv_path: Path to biomass allocation parameters CSV file
+            phenology_csv_path: Path to phenology parameters CSV file
             weather_csv_path: Path to daily weather CSV file
         """
         print("Initializing Distributed Hydroponic Simulation System")
-        
+
         # Load parameters and weather data - all from CSV, no defaults per Rules.md
         print("Loading parameters from CSV files...")
-        self.parameter_loader = StrictParameterLoader(master_csv_path)
+        self.parameter_loader = StrictParameterLoader(master_csv_path, constants_csv_path, stress_csv_path, roots_csv_path, genetics_csv_path, senescence_csv_path, photo_csv_path, respiration_csv_path, allocation_csv_path, phenology_csv_path)
         self.weather_loader = WeatherDataLoader(weather_csv_path)
 
         # Load initial state from initials.csv - all from CSV per Rules.md

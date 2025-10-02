@@ -198,8 +198,12 @@ class RootZoneTemperatureSimulator(BaseSimulator):
             env_data = self.dependency_cache.get('environmental_control', {})
             air_temperature = env_data.get('temperature')
             humidity = env_data.get('humidity')
-            
+
+            # Skip on first step if environmental data not available yet (circular dependency)
             if any(x is None for x in [air_temperature, humidity]):
+                if self.state.step_count == 0:
+                    print(f"RZT: Skipping calculation on step 0 due to missing environmental_control data")
+                    return
                 raise ValueError("Environmental data missing from environmental_control - no defaults allowed")
             
             # Get root data from root system simulator
