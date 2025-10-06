@@ -24,7 +24,6 @@ class StrictParameterLoader:
                  stress_csv_path: Optional[str] = None,
                  roots_csv_path: Optional[str] = None,
                  genetics_csv_path: Optional[str] = None,
-                 senescence_csv_path: Optional[str] = None,
                  photo_csv_path: Optional[str] = None,
                  respiration_csv_path: Optional[str] = None,
                  allocation_csv_path: Optional[str] = None,
@@ -35,7 +34,6 @@ class StrictParameterLoader:
         self.stress_csv_path = stress_csv_path
         self.roots_csv_path = roots_csv_path
         self.genetics_csv_path = genetics_csv_path
-        self.senescence_csv_path = senescence_csv_path
         self.photo_csv_path = photo_csv_path
         self.respiration_csv_path = respiration_csv_path
         self.allocation_csv_path = allocation_csv_path
@@ -60,9 +58,7 @@ class StrictParameterLoader:
         if self.genetics_csv_path:
             self._load_specialized_file(self.genetics_csv_path, 'genetic_parameters')
 
-        # Load senescence parameters if path provided
-        if self.senescence_csv_path:
-            self._load_specialized_file(self.senescence_csv_path, 'senescence_parameters')
+        # Senescence parameters removed
 
         # Load photosynthesis parameters if path provided
         if self.photo_csv_path:
@@ -492,7 +488,7 @@ class StrictParameterLoader:
     def create_biomass_allocation_parameters(self):
         """Create biomass allocation parameters from CSV"""
         from models.biomass_allocation_model import BiomassAllocationParameters
-        
+
         params_dict = {}
         # Add biomass allocation-specific parameters using actual CSV parameter names
         params_dict['vegetative_leaf_allocation'] = self.get_parameter('allocation_parameters_vegetative_leaf_allocation')
@@ -505,7 +501,8 @@ class StrictParameterLoader:
         params_dict['nitrogen_response_factor'] = self.get_parameter('allocation_parameters_nitrogen_response_factor')
         params_dict['water_response_factor'] = self.get_parameter('allocation_parameters_water_response_factor')
         params_dict['minimum_organ_fraction'] = self.get_parameter('allocation_parameters_minimum_organ_fraction')
-        
+        params_dict['carbon_content_fraction'] = self.get_parameter('allocation_parameters_carbon_content_fraction')
+
         return BiomassAllocationParameters(**params_dict)
 
     def create_phenology_parameters(self):
@@ -803,48 +800,35 @@ class StrictParameterLoader:
         config['kinetics_mg_min_conc'] = self.get_parameter('nutrient_parameters_kinetics_mg_min_conc')
 
         # Load mobility parameters for nutrients that have them in CSV
-        # Map nutrients to their actual CSV parameter names
+        # Map specific nutrient forms to their general element names (consolidated parameters)
         nutrient_csv_mapping = {
-            "N-NO3": "n_no3",
-            "N-NH4": "n_nh4",
-            "P-PO4": "p_po4",
-            "K": "k",
-            "Ca": "ca",
-            "Mg": "mg",
-            "S-SO4": "s_so4",
-            "Fe": "fe",
-            "Mn": "mn",
-            "Zn": "zn",
-            "Cu": "cu",
-            "B": "b",
-            "Mo": "mo"
+            "N-NO3": "nitrogen",      # NO3 and NH4 both use nitrogen parameters
+            "N-NH4": "nitrogen",
+            "P-PO4": "phosphorus",    # PO4 uses phosphorus parameters
+            "K": "potassium",
+            "Ca": "calcium",
+            "Mg": "magnesium",
+            "S-SO4": "sulfur",        # SO4 uses sulfur parameters
+            "Fe": "iron",
+            "Mn": "manganese",
+            "Zn": "zinc",
+            "Cu": "copper",
+            "B": "boron",
+            "Mo": "molybdenum"
         }
 
         nutrients = ["N-NO3", "N-NH4", "P-PO4", "K", "Ca", "Mg", "S-SO4", "Fe", "Mn", "Zn", "Cu", "B", "Mo"]
         for nutrient in nutrients:
             csv_key = nutrient_csv_mapping[nutrient]
 
-            # Load the parameters that actually exist in the CSV - using the exact patterns found
+            # Load the consolidated parameters from CSV (one set per element, not per form)
             config[f'mobility_classifications_{nutrient}_mobility'] = self.get_parameter(f'nutrient_mobility_mobility_classifications_{csv_key}_mobility')
             config[f'mobility_classifications_{nutrient}_transport'] = self.get_parameter(f'nutrient_mobility_mobility_classifications_{csv_key}_transport')
-
-            # Some nutrients use different patterns for these parameters - handle both cases
-            try:
-                config[f'mobility_classifications_{nutrient}_remobilization_efficiency'] = self.get_parameter(f'nutrient_mobility_mobility_classifications_{csv_key}_remobilization_efficiency')
-            except:
-                config[f'mobility_classifications_{nutrient}_remobilization_efficiency'] = self.get_parameter(f'nutrient_mobility_remobilization_efficiency_{csv_key}')
-
-            try:
-                config[f'mobility_classifications_{nutrient}_deficiency_mobility'] = self.get_parameter(f'nutrient_mobility_mobility_classifications_{csv_key}_deficiency_mobility')
-            except:
-                config[f'mobility_classifications_{nutrient}_deficiency_mobility'] = self.get_parameter(f'nutrient_mobility_deficiency_mobility_{csv_key}')
-
-            try:
-                config[f'mobility_classifications_{nutrient}_retranslocation_rate'] = self.get_parameter(f'nutrient_mobility_mobility_classifications_{csv_key}_retranslocation_rate')
-            except:
-                config[f'mobility_classifications_{nutrient}_retranslocation_rate'] = self.get_parameter(f'nutrient_mobility_retranslocation_rate_{csv_key}')
-
+            config[f'mobility_classifications_{nutrient}_remobilization_efficiency'] = self.get_parameter(f'nutrient_mobility_remobilization_efficiency_{csv_key}')
+            config[f'mobility_classifications_{nutrient}_deficiency_mobility'] = self.get_parameter(f'nutrient_mobility_deficiency_mobility_{csv_key}')
+            config[f'mobility_classifications_{nutrient}_retranslocation_rate'] = self.get_parameter(f'nutrient_mobility_retranslocation_rate_{csv_key}')
             config[f'xylem_transport_rates_{nutrient}'] = self.get_parameter(f'nutrient_mobility_xylem_transport_rates_{csv_key}')
+
             # Calculate phloem rates as fraction of xylem rates from CSV parameter
             phloem_factor = self.get_parameter('nutrient_parameters_phloem_transport_factor')
             config[f'phloem_transport_rates_{nutrient}'] = config[f'xylem_transport_rates_{nutrient}'] * phloem_factor
@@ -1386,78 +1370,3 @@ class StrictParameterLoader:
         return NitrogenBalanceParameters.from_config(config)
 
 
-    def create_senescence_parameters(self):
-        """Create senescence parameters from CSV - follows Rules.md strictly"""
-        from models.senescence_model import SenescenceParameters
-
-        config = {}
-
-        # Basic senescence parameters
-        config['natural_lifespan_gdd'] = self.get_parameter('senescence_parameters_natural_lifespan_gdd')
-        config['age_senescence_rate'] = self.get_parameter('senescence_parameters_age_senescence_rate')
-
-        # Stress thresholds
-        config['water_stress_threshold'] = self.get_parameter('senescence_parameters_water_stress_threshold')
-        config['nitrogen_stress_threshold'] = self.get_parameter('senescence_parameters_nitrogen_stress_threshold')
-        config['temperature_stress_threshold'] = self.get_parameter('senescence_parameters_temperature_stress_threshold')
-        config['light_stress_threshold'] = self.get_parameter('senescence_parameters_light_stress_threshold')
-
-        # Stress rates
-        config['water_stress_rate'] = self.get_parameter('senescence_parameters_water_stress_rate')
-        config['nitrogen_stress_rate'] = self.get_parameter('senescence_parameters_nitrogen_stress_rate')
-        config['temperature_stress_rate'] = self.get_parameter('senescence_parameters_temperature_stress_rate')
-        config['light_stress_rate'] = self.get_parameter('senescence_parameters_light_stress_rate')
-
-        # Senescence stage thresholds
-        config['early_senescence_threshold'] = self.get_parameter('senescence_parameters_early_senescence_threshold')
-        config['active_senescence_threshold'] = self.get_parameter('senescence_parameters_active_senescence_threshold')
-        config['late_senescence_threshold'] = self.get_parameter('senescence_parameters_late_senescence_threshold')
-        config['death_threshold'] = self.get_parameter('senescence_parameters_death_threshold')
-
-        # Recovery parameters
-        config['recovery_rate'] = self.get_parameter('senescence_parameters_recovery_rate')
-        config['max_recovery'] = self.get_parameter('senescence_parameters_max_recovery')
-        config['stress_recovery_threshold'] = self.get_parameter('senescence_parameters_stress_recovery_threshold')
-        config['recovery_stress_threshold'] = self.get_parameter('senescence_parameters_recovery_stress_threshold')
-
-        # Developmental parameters
-        config['reproductive_priority_factor'] = self.get_parameter('senescence_parameters_reproductive_priority_factor')
-        config['lower_canopy_factor'] = self.get_parameter('senescence_parameters_lower_canopy_factor')
-        config['canopy_shading_threshold'] = self.get_parameter('senescence_parameters_canopy_shading_threshold')
-        config['shading_factor_multiplier'] = self.get_parameter('senescence_parameters_shading_factor_multiplier')
-        config['lower_canopy_adjustment'] = self.get_parameter('senescence_parameters_lower_canopy_adjustment')
-        config['reproductive_factor_adjustment'] = self.get_parameter('senescence_parameters_reproductive_factor_adjustment')
-
-        # Remobilization parameters
-        config['active_senescence_multiplier'] = self.get_parameter('senescence_parameters_active_senescence_multiplier')
-        config['normal_senescence_multiplier'] = self.get_parameter('senescence_parameters_normal_senescence_multiplier')
-
-        # Area and biomass loss parameters
-        config['daily_area_loss_factor'] = self.get_parameter('senescence_parameters_daily_area_loss_factor')
-        config['daily_biomass_loss_factor'] = self.get_parameter('senescence_parameters_daily_biomass_loss_factor')
-
-        # Calculation parameters
-        config['age_factor_base'] = self.get_parameter('senescence_parameters_age_factor_base')
-        config['stress_intensity_denominator'] = self.get_parameter('senescence_parameters_stress_intensity_denominator')
-        config['recovery_rate_fraction'] = self.get_parameter('senescence_parameters_recovery_rate_fraction')
-        config['senescence_damage_minimum'] = self.get_parameter('senescence_parameters_senescence_damage_minimum')
-        config['senescence_damage_maximum'] = self.get_parameter('senescence_parameters_senescence_damage_maximum')
-
-        # Stress history
-        config['stress_history_days'] = self.get_parameter('senescence_parameters_stress_history_days')
-
-        # Nutrient remobilization efficiencies
-        config['nitrogen_recovery'] = self.get_parameter('senescence_parameters_nitrogen_recovery')
-        config['phosphorus_recovery'] = self.get_parameter('senescence_parameters_phosphorus_recovery')
-        config['potassium_recovery'] = self.get_parameter('senescence_parameters_potassium_recovery')
-        config['magnesium_recovery'] = self.get_parameter('senescence_parameters_magnesium_recovery')
-        config['sulfur_recovery'] = self.get_parameter('senescence_parameters_sulfur_recovery')
-        config['calcium_recovery'] = self.get_parameter('senescence_parameters_calcium_recovery')
-        config['iron_recovery'] = self.get_parameter('senescence_parameters_iron_recovery')
-        config['manganese_recovery'] = self.get_parameter('senescence_parameters_manganese_recovery')
-        config['zinc_recovery'] = self.get_parameter('senescence_parameters_zinc_recovery')
-        config['copper_recovery'] = self.get_parameter('senescence_parameters_copper_recovery')
-        config['boron_recovery'] = self.get_parameter('senescence_parameters_boron_recovery')
-        config['molybdenum_recovery'] = self.get_parameter('senescence_parameters_molybdenum_recovery')
-
-        return SenescenceParameters.from_config(config)

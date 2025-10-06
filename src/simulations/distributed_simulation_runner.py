@@ -34,7 +34,6 @@ from simulations.root_system_simulator import RootSystemSimulator
 from simulations.genetic_parameters_simulator import GeneticParametersSimulator
 from simulations.leaf_development_simulator import LeafDevelopmentSimulator
 from simulations.nitrogen_balance_simulator import NitrogenBalanceSimulator
-from simulations.senescence_simulator import SenescenceSimulator
 
 # Import parameter loaders
 from utils.parameter_loader import StrictParameterLoader
@@ -50,7 +49,6 @@ class DistributedSimulationRunner:
                  stress_csv_path: str = "input/stress.csv",
                  roots_csv_path: str = "input/roots.csv",
                  genetics_csv_path: str = "input/genetics.csv",
-                 senescence_csv_path: str = "input/senescence.csv",
                  photo_csv_path: str = "input/photo.csv",
                  respiration_csv_path: str = "input/respiration.csv",
                  allocation_csv_path: str = "input/allocation.csv",
@@ -66,7 +64,6 @@ class DistributedSimulationRunner:
             stress_csv_path: Path to stress parameters CSV file
             roots_csv_path: Path to root system parameters CSV file
             genetics_csv_path: Path to genetic parameters CSV file
-            senescence_csv_path: Path to senescence parameters CSV file
             photo_csv_path: Path to photosynthesis parameters CSV file
             respiration_csv_path: Path to respiration parameters CSV file
             allocation_csv_path: Path to biomass allocation parameters CSV file
@@ -78,7 +75,7 @@ class DistributedSimulationRunner:
 
         # Load parameters and weather data - all from CSV, no defaults per Rules.md
         print("Loading parameters from CSV files...")
-        self.parameter_loader = StrictParameterLoader(master_csv_path, constants_csv_path, stress_csv_path, roots_csv_path, genetics_csv_path, senescence_csv_path, photo_csv_path, respiration_csv_path, allocation_csv_path, phenology_csv_path, nitrogen_balance_csv_path)
+        self.parameter_loader = StrictParameterLoader(master_csv_path, constants_csv_path, stress_csv_path, roots_csv_path, genetics_csv_path, photo_csv_path, respiration_csv_path, allocation_csv_path, phenology_csv_path, nitrogen_balance_csv_path)
         self.weather_loader = WeatherDataLoader(weather_csv_path)
 
         # Load initial state from initials.csv - all from CSV per Rules.md
@@ -158,34 +155,29 @@ class DistributedSimulationRunner:
             self.orchestrator.register_simulator(self.simulators['canopy_architecture'])
             
             
-            # 10. Root System Simulator
+            # 9. Root System Simulator
             root_params = self.parameter_loader.create_root_system_parameters()
             self.simulators['root_system'] = RootSystemSimulator(root_params)
             self.orchestrator.register_simulator(self.simulators['root_system'])
             
             
-            # 12. Genetic Parameters Simulator
+            # 10. Genetic Parameters Simulator
             genetic_db, cultivar_profile = self.parameter_loader.create_genetic_parameters()
             self.simulators['genetic_parameters'] = GeneticParametersSimulator(genetic_db, cultivar_profile)
             self.orchestrator.register_simulator(self.simulators['genetic_parameters'])
             
-            # 13. Leaf Development Simulator
+            # 11. Leaf Development Simulator
             leaf_params = self.parameter_loader.create_leaf_development_parameters()
             self.simulators['leaf_development'] = LeafDevelopmentSimulator(leaf_params)
             self.orchestrator.register_simulator(self.simulators['leaf_development'])
             
-            # 14. Nitrogen Balance Simulator
+            # 12. Nitrogen Balance Simulator
             nitrogen_params = self.parameter_loader.create_nitrogen_balance_parameters()
             self.simulators['nitrogen_balance'] = NitrogenBalanceSimulator(nitrogen_params)
             self.orchestrator.register_simulator(self.simulators['nitrogen_balance'])
             
-            
-            # 16. Senescence Simulator
-            senescence_params = self.parameter_loader.create_senescence_parameters()
-            self.simulators['senescence'] = SenescenceSimulator(senescence_params)
-            self.orchestrator.register_simulator(self.simulators['senescence'])
-            
-            # All 17 simulators now initialized!
+
+            # All simulators now initialized!
             
             print(f"Initialized {len(self.simulators)} simulators successfully")
             

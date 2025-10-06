@@ -341,9 +341,8 @@ class SimulationOrchestrator(BaseSimulator):
             # Level 6: Biomass allocation (needs photosynthesis and respiration)
             'biomass_allocation_simulator',
 
-            # Level 7: Senescence (needs stress and phenology)
-            'nitrogen_balance_simulator',
-            'senescence_simulator'
+            # Level 7: Nitrogen balance
+            'nitrogen_balance_simulator'
         ]
         
         # Execute simulators in dependency order
@@ -416,10 +415,8 @@ class SimulationOrchestrator(BaseSimulator):
                 # Calculate VPD if not provided in weather data
                 vpd = weather_data.get('vpd')
                 if vpd is None and temperature is not None and humidity is not None:
-                    # Calculate VPD from temperature and humidity
-                    saturation_vapor_pressure = 0.6108 * math.exp((17.27 * temperature) / (temperature + 237.3))
-                    actual_vapor_pressure = saturation_vapor_pressure * (humidity / 100.0)
-                    vpd = saturation_vapor_pressure - actual_vapor_pressure
+                    from src.utils.core_utils import calculate_vpd
+                    vpd = calculate_vpd(temperature, humidity)
 
                 daily_input = DailyUpdateInput(
                     day=self.current_day,
@@ -505,10 +502,8 @@ class SimulationOrchestrator(BaseSimulator):
             # Calculate VPD if not provided in weather data
             vpd = weather_data.get('vpd')
             if vpd is None and temperature is not None and humidity is not None:
-                # Calculate VPD from temperature and humidity
-                saturation_vapor_pressure = 0.6108 * math.exp((17.27 * temperature) / (temperature + 237.3))
-                actual_vapor_pressure = saturation_vapor_pressure * (humidity / 100.0)
-                vpd = saturation_vapor_pressure - actual_vapor_pressure
+                from src.utils.core_utils import calculate_vpd
+                vpd = calculate_vpd(temperature, humidity)
 
             daily_input = DailyUpdateInput(
                 day=self.current_day,

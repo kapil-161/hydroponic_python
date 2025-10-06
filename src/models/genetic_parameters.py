@@ -102,7 +102,7 @@ class CultivarProfile:
     yield_potential: float
     adaptation_score: float
     trait_values: Dict[GeneticTrait, float]
-    maturity_days: int = 60  # Days to harvest maturity
+    maturity_days: int = 40  # Days to harvest maturity
     
     def calculate_adaptation_index(self, environment_factors: Dict[str, float]) -> float:
         base_adaptation = self.adaptation_score

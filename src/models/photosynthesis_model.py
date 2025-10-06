@@ -219,7 +219,10 @@ class PhotosynthesisModel:
             f_vpd = max(self.params.minimum_vpd_threshold, vpd / optimal_vpd)
         else:
             vpd_decline_range = optimal_vpd_max - optimal_vpd_min
-            f_vpd = max(self.params.minimum_vpd_threshold, 1.0 - (vpd - optimal_vpd) / vpd_decline_range)
+            if vpd_decline_range > 0:
+                f_vpd = max(self.params.minimum_vpd_threshold, 1.0 - (vpd - optimal_vpd) / vpd_decline_range)
+            else:
+                f_vpd = self.params.minimum_vpd_threshold
 
         gs = self.params.g_max * f_light * f_temp * f_vpd
 

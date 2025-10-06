@@ -29,6 +29,7 @@ class BiomassState:
     stem_allocation_fraction: float = 0.0
     root_allocation_fraction: float = 0.0
     allocation_efficiency: float = 1.0
+    hourly_biomass_gain: float = 0.0  # Current hourly biomass gain rate
     cumulative_biomass_gain: float = 0.0
     daily_biomass_gain: float = 0.0
     step_count: int = 0
@@ -181,19 +182,17 @@ class BiomassAllocationSimulator(BaseSimulator):
         try:
             # Get photosynthesis data from photosynthesis simulator
             photosynthesis_data = self.dependency_cache.get('photosynthesis_simulator', {})
-            net_assimilation_rate = photosynthesis_data.get('net_assimilation_rate')
-            cumulative_carbon_gained = photosynthesis_data.get('cumulative_carbon_gained')
+            hourly_carbon_gain = photosynthesis_data.get('hourly_carbon_gain')  # g C/hour (already converted)
+            net_assimilation_rate = photosynthesis_data.get('net_assimilation_rate')  # μmol/m²/s (for logging)
 
             # Allow skipping on first step while initial values propagate
-            if self.state.step_count == 0 and net_assimilation_rate is None:
+            if self.state.step_count == 0 and hourly_carbon_gain is None:
                 print(f"Biomass: Skipping calculation on first step - waiting for photosynthesis data")
                 return
 
             # Per Rules.md: raise error if missing after first step, no defaults
-            if net_assimilation_rate is None:
-                raise ValueError("Net assimilation rate missing from photosynthesis_simulator - no defaults allowed")
-            if cumulative_carbon_gained is None:
-                cumulative_carbon_gained = 0.0  # Can be zero on first calculation
+            if hourly_carbon_gain is None:
+                raise ValueError("Hourly carbon gain missing from photosynthesis_simulator - no defaults allowed")
 
             # Get respiration data from respiration simulator
             respiration_data = self.dependency_cache.get('respiration_simulator', {})
@@ -264,27 +263,23 @@ class BiomassAllocationSimulator(BaseSimulator):
             self.state.root_allocation_fraction = result.get('roots', 0.0)
             self.state.allocation_efficiency = 1.0  # Efficient allocation
 
-            # Convert net assimilation from μmol CO2/m²/s to g biomass/hour
-            # 1 μmol CO2 = 0.000044 g CO2
-            # Photosynthesis: CO2 + H2O → CH2O + O2, so 44g CO2 → 30g CH2O
-            # Photosynthesis returns g C/hour (total for whole canopy), respiration also in g C/hour
-            # Net carbon gain is already in g C/hour
-            net_carbon_gain = (net_assimilation_rate - total_respiration_rate)  # g C/hour
+            # Calculate net carbon gain
+            # hourly_carbon_gain is already in g C/hour from photosynthesis simulator
+            # total_respiration_rate is already in g C/hour from respiration simulator
+            net_carbon_gain = (hourly_carbon_gain - total_respiration_rate)  # g C/hour
 
-            # Convert g C to g dry biomass (carbon is ~40-45% of dry biomass)
-            carbon_fraction = 0.40  # g C per g dry biomass (should be from CSV but using realistic value)
+            # Convert net carbon gain to biomass
+            # Carbon fraction of dry biomass: typically 40-45% for plants
+            # This converts g C/hour to g dry biomass/hour
+            carbon_fraction = self.parameters.carbon_content_fraction  # From CSV
             hourly_biomass_gain = net_carbon_gain / carbon_fraction  # g dry biomass/hour
-
-            # Apply maximum hourly growth rate constraint to prevent runaway growth
-            # For hydroponic lettuce: target final biomass 10-15g over 27 days
-            # Required: ~10g growth / (27 days × 24 hours) = 0.015 g/hour
-            max_hourly_biomass_gain = 0.01  # g/hour - calibrated for 10-15g final biomass
-            if hourly_biomass_gain > max_hourly_biomass_gain:
-                hourly_biomass_gain = max_hourly_biomass_gain
 
             # DEBUG: Log biomass gain for first few steps and key checkpoints
             if self.state.step_count < 5 or self.state.step_count == 24 or self.state.step_count == 100:
                 print(f"DEBUG Biomass step {self.state.step_count}: net_assim={net_assimilation_rate:.3f}, resp={total_respiration_rate:.3f}, net_carbon={net_carbon_gain:.3f} g C/hr, hourly_gain={hourly_biomass_gain:.6f} g/hr, total_biomass={self.state.total_biomass:.2f}")
+
+            # Store hourly gain in state for respiration simulator
+            self.state.hourly_biomass_gain = hourly_biomass_gain
 
             if hourly_biomass_gain > 0:
                 # Distribute new biomass according to allocation fractions
@@ -297,7 +292,7 @@ class BiomassAllocationSimulator(BaseSimulator):
                 self.state.stem_biomass += new_stem_biomass
                 self.state.root_biomass += new_root_biomass
                 self.state.total_biomass = self.state.leaf_biomass + self.state.stem_biomass + self.state.root_biomass
-            
+
                 # Update cumulative values
                 self.state.cumulative_biomass_gain += hourly_biomass_gain
                 self.state.daily_biomass_gain += hourly_biomass_gain
@@ -378,6 +373,7 @@ class BiomassAllocationSimulator(BaseSimulator):
             'stem_allocation_fraction': self.state.stem_allocation_fraction,
             'root_allocation_fraction': self.state.root_allocation_fraction,
             'allocation_efficiency': self.state.allocation_efficiency,
+            'hourly_biomass_gain': self.state.hourly_biomass_gain,  # For respiration calculator
             'cumulative_biomass_gain': self.state.cumulative_biomass_gain,
             'daily_biomass_gain': self.state.daily_biomass_gain
         }

@@ -240,8 +240,16 @@ class CanopyArchitectureSimulator(BaseSimulator):
             max_lai = self.parameters.max_lai  # From master_parameters.csv canopy_parameters
             total_lai = min(total_lai, max_lai)
 
-            # Calculate canopy height based on growth stage and biomass
-            canopy_height = min(self.parameters.plant_height, (total_biomass / 100.0) * self.parameters.plant_height)
+            # Calculate canopy height based on biomass accumulation
+            # Empirical relationship: height increases with biomass^0.33 (cube root)
+            # At harvest (10-15g), typical lettuce height is 15-25cm
+            # Formula: height = plant_height * (biomass / target_biomass)^0.33
+            target_biomass = 12.0  # Target harvest biomass (g DM) - typical for hydroponic lettuce
+            if total_biomass > 0:
+                biomass_factor = (total_biomass / target_biomass) ** 0.33
+                canopy_height = min(self.parameters.plant_height, self.parameters.plant_height * biomass_factor)
+            else:
+                canopy_height = self.parameters.plant_height * 0.1  # Initial 10% of final height
             
             # Create light environment from weather data and parameters - no hardcoded values
             from models.canopy_architecture import LightEnvironment
@@ -284,8 +292,12 @@ class CanopyArchitectureSimulator(BaseSimulator):
             self.state.humidity_gradient = 0.0  # Placeholder for future implementation
             self.state.wind_speed_reduction = min(0.8, total_lai * 0.2)  # Simple wind reduction model
             
-            # Update cumulative values
-            hourly_light_interception = self.state.light_interception_efficiency * light_intensity * 3600  # Convert to hourly
+            # Update cumulative values - convert PAR to energy
+            # light_intensity is in μmol photons/m²/s (PAR)
+            # Convert to MJ/m²/hour: μmol/m²/s × 3600 s/hr × 0.219 J/μmol × 10^-6 MJ/J
+            # = μmol/m²/s × 0.0007884 MJ/m²/hour
+            par_to_mj_factor = 0.0007884  # Conversion factor from μmol/m²/s to MJ/m²/hour
+            hourly_light_interception = self.state.light_interception_efficiency * light_intensity * par_to_mj_factor  # MJ/m²/hour
             self.state.cumulative_light_interception += hourly_light_interception
             self.state.daily_light_interception += hourly_light_interception
             

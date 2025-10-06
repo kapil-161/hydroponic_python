@@ -23,6 +23,7 @@ class BiomassAllocationParameters:
     nitrogen_response_factor: float
     water_response_factor: float
     minimum_organ_fraction: float
+    carbon_content_fraction: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'BiomassAllocationParameters':
@@ -31,7 +32,7 @@ class BiomassAllocationParameters:
             'vegetative_leaf_allocation', 'vegetative_stem_allocation', 'vegetative_root_allocation',
             'reproductive_leaf_allocation', 'reproductive_stem_allocation', 'reproductive_root_allocation',
             'light_response_factor', 'nitrogen_response_factor', 'water_response_factor',
-            'minimum_organ_fraction'
+            'minimum_organ_fraction', 'carbon_content_fraction'
         ]
         for param in required_params:
             if param not in config:
@@ -47,7 +48,8 @@ class BiomassAllocationParameters:
             light_response_factor=float(config['light_response_factor']),
             nitrogen_response_factor=float(config['nitrogen_response_factor']),
             water_response_factor=float(config['water_response_factor']),
-            minimum_organ_fraction=float(config['minimum_organ_fraction'])
+            minimum_organ_fraction=float(config['minimum_organ_fraction']),
+            carbon_content_fraction=float(config['carbon_content_fraction'])
         )
 
 

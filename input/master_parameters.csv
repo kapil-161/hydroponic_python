@@ -292,42 +292,21 @@ initial_nitrogen,initial_stem_nitrogen_content,0.020,g_N_g_dry_mass,Initial nitr
 initial_nitrogen,initial_root_nitrogen_content,0.025,g_N_g_dry_mass,Initial nitrogen content in roots
 
 
-# Nutrient Mobility Classifications - Nitrogen
+# Nutrient Mobility Classifications - Nitrogen (NO3 and NH4)
 nutrient_mobility,mobility_classifications_nitrogen_mobility,highly_mobile,string,Mobility classification for nitrogen
 nutrient_mobility,mobility_classifications_nitrogen_transport,bidirectional,string,Transport classification for nitrogen
 nutrient_mobility,remobilization_efficiency_nitrogen,0.8,dimensionless,Remobilization efficiency for nitrogen
 nutrient_mobility,deficiency_mobility_nitrogen,very_high,string,Deficiency mobility for nitrogen
 nutrient_mobility,retranslocation_rate_nitrogen,0.05,g_g_day,Retranslocation rate for nitrogen
 nutrient_mobility,xylem_transport_rates_nitrogen,0.15,g_g_day,Xylem transport rate for nitrogen
-# Nutrient Mobility Classifications - N-NO3 (specific form)
-nutrient_mobility,mobility_classifications_n_no3_mobility,highly_mobile,string,Mobility classification for N-NO3
-nutrient_mobility,mobility_classifications_n_no3_transport,bidirectional,string,Transport classification for N-NO3
-nutrient_mobility,mobility_classifications_n_no3_remobilization_efficiency,0.8,dimensionless,Remobilization efficiency for N-NO3
-nutrient_mobility,mobility_classifications_n_no3_deficiency_mobility,very_high,string,Deficiency mobility for N-NO3
-nutrient_mobility,mobility_classifications_n_no3_retranslocation_rate,0.05,g_g_day,Retranslocation rate for N-NO3
-nutrient_mobility,xylem_transport_rates_n_no3,0.15,g_g_day,Xylem transport rate for N-NO3
 
-# Nutrient Mobility Classifications - Phosphorus
+# Nutrient Mobility Classifications - Phosphorus (PO4)
 nutrient_mobility,mobility_classifications_phosphorus_mobility,immobile,string,Mobility classification for phosphorus
 nutrient_mobility,mobility_classifications_phosphorus_transport,phloem_only,string,Transport classification for phosphorus
 nutrient_mobility,remobilization_efficiency_phosphorus,0.6,dimensionless,Remobilization efficiency for phosphorus
 nutrient_mobility,deficiency_mobility_phosphorus,low,string,Deficiency mobility for phosphorus
 nutrient_mobility,retranslocation_rate_phosphorus,0.02,g_g_day,Retranslocation rate for phosphorus
 nutrient_mobility,xylem_transport_rates_phosphorus,0.08,g_g_day,Xylem transport rate for phosphorus
-# Nutrient Mobility Classifications - N-NH4 (specific form)
-nutrient_mobility,mobility_classifications_n_nh4_mobility,highly_mobile,string,Mobility classification for N-NH4
-nutrient_mobility,mobility_classifications_n_nh4_transport,bidirectional,string,Transport classification for N-NH4
-nutrient_mobility,mobility_classifications_n_nh4_remobilization_efficiency,0.8,dimensionless,Remobilization efficiency for N-NH4
-nutrient_mobility,mobility_classifications_n_nh4_deficiency_mobility,very_high,string,Deficiency mobility for N-NH4
-nutrient_mobility,mobility_classifications_n_nh4_retranslocation_rate,0.05,g_g_day,Retranslocation rate for N-NH4
-nutrient_mobility,xylem_transport_rates_n_nh4,0.15,g_g_day,Xylem transport rate for N-NH4
-# Nutrient Mobility Classifications - P-PO4 (specific form)
-nutrient_mobility,mobility_classifications_p_po4_mobility,immobile,string,Mobility classification for P-PO4
-nutrient_mobility,mobility_classifications_p_po4_transport,phloem_only,string,Transport classification for P-PO4
-nutrient_mobility,remobilization_efficiency_p_po4,0.6,dimensionless,Remobilization efficiency for P-PO4
-nutrient_mobility,deficiency_mobility_p_po4,low,string,Deficiency mobility for P-PO4
-nutrient_mobility,retranslocation_rate_p_po4,0.02,g_g_day,Retranslocation rate for P-PO4
-nutrient_mobility,xylem_transport_rates_p_po4,0.08,g_g_day,Xylem transport rate for P-PO4
 
 # Nutrient Mobility Classifications - Potassium
 nutrient_mobility,mobility_classifications_potassium_mobility,highly_mobile,string,Mobility classification for potassium
@@ -336,13 +315,6 @@ nutrient_mobility,remobilization_efficiency_potassium,0.7,dimensionless,Remobili
 nutrient_mobility,deficiency_mobility_potassium,very_high,string,Deficiency mobility for potassium
 nutrient_mobility,retranslocation_rate_potassium,0.04,g_g_day,Retranslocation rate for potassium
 nutrient_mobility,xylem_transport_rates_potassium,0.12,g_g_day,Xylem transport rate for potassium
-# Nutrient Mobility Classifications - K (specific form)
-nutrient_mobility,mobility_classifications_k_mobility,highly_mobile,string,Mobility classification for K
-nutrient_mobility,mobility_classifications_k_transport,bidirectional,string,Transport classification for K
-nutrient_mobility,remobilization_efficiency_k,0.7,dimensionless,Remobilization efficiency for K
-nutrient_mobility,deficiency_mobility_k,very_high,string,Deficiency mobility for K
-nutrient_mobility,retranslocation_rate_k,0.04,g_g_day,Retranslocation rate for K
-nutrient_mobility,xylem_transport_rates_k,0.12,g_g_day,Xylem transport rate for K
 
 # Nutrient Mobility Classifications - Calcium
 nutrient_mobility,mobility_classifications_calcium_mobility,immobile,string,Mobility classification for calcium
@@ -351,13 +323,6 @@ nutrient_mobility,remobilization_efficiency_calcium,0.1,dimensionless,Remobiliza
 nutrient_mobility,deficiency_mobility_calcium,very_low,string,Deficiency mobility for calcium
 nutrient_mobility,retranslocation_rate_calcium,0.001,g_g_day,Retranslocation rate for calcium
 nutrient_mobility,xylem_transport_rates_calcium,0.06,g_g_day,Xylem transport rate for calcium
-# Nutrient Mobility Classifications - Ca (specific form)
-nutrient_mobility,mobility_classifications_ca_mobility,immobile,string,Mobility classification for Ca
-nutrient_mobility,mobility_classifications_ca_transport,xylem_only,string,Transport classification for Ca
-nutrient_mobility,remobilization_efficiency_ca,0.1,dimensionless,Remobilization efficiency for Ca
-nutrient_mobility,deficiency_mobility_ca,very_low,string,Deficiency mobility for Ca
-nutrient_mobility,retranslocation_rate_ca,0.001,g_g_day,Retranslocation rate for Ca
-nutrient_mobility,xylem_transport_rates_ca,0.06,g_g_day,Xylem transport rate for Ca
 
 # Nutrient Mobility Classifications - Magnesium
 nutrient_mobility,mobility_classifications_magnesium_mobility,moderately_mobile,string,Mobility classification for magnesium
@@ -455,57 +420,8 @@ redistribution,stress_redistribution_rates_magnesium,0.15,g_g_day,Stress redistr
 redistribution,stress_redistribution_rates_sulfur,0.2,g_g_day,Stress redistribution rate for sulfur
 
 
-# Additional Nutrient Parameters
+# Additional Nutrient System Parameters
 nutrient_system,nutrient_mobility,highly_mobile,string,Nutrient mobility classification
-# Additional mobility parameters for specific nutrient forms
-nutrient_mobility,mobility_classifications_mg_mobility,moderately_mobile,string,Mobility classification for Mg
-nutrient_mobility,mobility_classifications_mg_transport,bidirectional,string,Transport classification for Mg
-nutrient_mobility,remobilization_efficiency_mg,0.5,dimensionless,Remobilization efficiency for Mg
-nutrient_mobility,deficiency_mobility_mg,high,string,Deficiency mobility for Mg
-nutrient_mobility,retranslocation_rate_mg,0.02,g_g_day,Retranslocation rate for Mg
-nutrient_mobility,xylem_transport_rates_mg,0.08,g_g_day,Xylem transport rate for Mg
-nutrient_mobility,mobility_classifications_s_so4_mobility,moderately_mobile,string,Mobility classification for S-SO4
-nutrient_mobility,mobility_classifications_s_so4_transport,bidirectional,string,Transport classification for S-SO4
-nutrient_mobility,remobilization_efficiency_s_so4,0.4,dimensionless,Remobilization efficiency for S-SO4
-nutrient_mobility,deficiency_mobility_s_so4,high,string,Deficiency mobility for S-SO4
-nutrient_mobility,retranslocation_rate_s_so4,0.015,g_g_day,Retranslocation rate for S-SO4
-nutrient_mobility,xylem_transport_rates_s_so4,0.07,g_g_day,Xylem transport rate for S-SO4
-nutrient_mobility,mobility_classifications_fe_mobility,immobile,string,Mobility classification for Fe
-nutrient_mobility,mobility_classifications_fe_transport,xylem_only,string,Transport classification for Fe
-nutrient_mobility,remobilization_efficiency_fe,0.2,dimensionless,Remobilization efficiency for Fe
-nutrient_mobility,deficiency_mobility_fe,very_low,string,Deficiency mobility for Fe
-nutrient_mobility,retranslocation_rate_fe,0.005,g_g_day,Retranslocation rate for Fe
-nutrient_mobility,xylem_transport_rates_fe,0.03,g_g_day,Xylem transport rate for Fe
-nutrient_mobility,mobility_classifications_mn_mobility,immobile,string,Mobility classification for Mn
-nutrient_mobility,mobility_classifications_mn_transport,xylem_only,string,Transport classification for Mn
-nutrient_mobility,remobilization_efficiency_mn,0.15,dimensionless,Remobilization efficiency for Mn
-nutrient_mobility,deficiency_mobility_mn,very_low,string,Deficiency mobility for Mn
-nutrient_mobility,retranslocation_rate_mn,0.003,g_g_day,Retranslocation rate for Mn
-nutrient_mobility,xylem_transport_rates_mn,0.025,g_g_day,Xylem transport rate for Mn
-nutrient_mobility,mobility_classifications_zn_mobility,immobile,string,Mobility classification for Zn
-nutrient_mobility,mobility_classifications_zn_transport,xylem_only,string,Transport classification for Zn
-nutrient_mobility,remobilization_efficiency_zn,0.3,dimensionless,Remobilization efficiency for Zn
-nutrient_mobility,deficiency_mobility_zn,very_low,string,Deficiency mobility for Zn
-nutrient_mobility,retranslocation_rate_zn,0.008,g_g_day,Retranslocation rate for Zn
-nutrient_mobility,xylem_transport_rates_zn,0.04,g_g_day,Xylem transport rate for Zn
-nutrient_mobility,mobility_classifications_cu_mobility,immobile,string,Mobility classification for Cu
-nutrient_mobility,mobility_classifications_cu_transport,xylem_only,string,Transport classification for Cu
-nutrient_mobility,remobilization_efficiency_cu,0.25,dimensionless,Remobilization efficiency for Cu
-nutrient_mobility,deficiency_mobility_cu,very_low,string,Deficiency mobility for Cu
-nutrient_mobility,retranslocation_rate_cu,0.006,g_g_day,Retranslocation rate for Cu
-nutrient_mobility,xylem_transport_rates_cu,0.035,g_g_day,Xylem transport rate for Cu
-nutrient_mobility,mobility_classifications_b_mobility,immobile,string,Mobility classification for B
-nutrient_mobility,mobility_classifications_b_transport,xylem_only,string,Transport classification for B
-nutrient_mobility,remobilization_efficiency_b,0.1,dimensionless,Remobilization efficiency for B
-nutrient_mobility,deficiency_mobility_b,very_low,string,Deficiency mobility for B
-nutrient_mobility,retranslocation_rate_b,0.002,g_g_day,Retranslocation rate for B
-nutrient_mobility,xylem_transport_rates_b,0.02,g_g_day,Xylem transport rate for B
-nutrient_mobility,mobility_classifications_mo_mobility,moderately_mobile,string,Mobility classification for Mo
-nutrient_mobility,mobility_classifications_mo_transport,bidirectional,string,Transport classification for Mo
-nutrient_mobility,remobilization_efficiency_mo,0.6,dimensionless,Remobilization efficiency for Mo
-nutrient_mobility,deficiency_mobility_mo,high,string,Deficiency mobility for Mo
-nutrient_mobility,retranslocation_rate_mo,0.01,g_g_day,Retranslocation rate for Mo
-nutrient_mobility,xylem_transport_rates_mo,0.05,g_g_day,Xylem transport rate for Mo
 nutrient_system,transport_mechanism,bidirectional,string,Transport mechanism type
 nutrient_system,initial_organ_name,leaves,string,Initial organ name for nutrient pools
 nutrient_system,initial_nutrient_name,nitrogen,string,Initial nutrient name for nutrient pools

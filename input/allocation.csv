@@ -14,3 +14,4 @@ water_response_factor,0.35,dimensionless,Response strength to water limitation
 minimum_organ_fraction,0.05,dimensionless,Minimum allocation fraction for any organ
 min_root_allocation_fraction,0.15,dimensionless,Minimum root allocation fraction to maintain biological realism
 allocation_efficiency,0.95,dimensionless,Efficiency of biomass allocation between organs
+carbon_content_fraction,0.42,g C per g DM,Carbon content as fraction of dry biomass (typical for lettuce)

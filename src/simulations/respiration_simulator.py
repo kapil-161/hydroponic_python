@@ -32,6 +32,7 @@ class RespirationState:
     biomass_factor: float = 1.0
     cumulative_respiration: float = 0.0
     daily_respiration: float = 0.0
+    daily_biomass_gain: float = 0.0  # Accumulator for daily biomass gain
     step_count: int = 0
     last_update: datetime = field(default_factory=datetime.now)
 
@@ -144,18 +145,21 @@ class RespirationSimulator(BaseSimulator):
             if humidity is None:
                 raise ValueError("Humidity missing from weather data - no defaults allowed")
             
-            # Use minimal values for early simulation stages to avoid circular dependencies
-            # Per Rules.md: all parameters from CSV, but these early values are not in CSV
-            # Use scientifically reasonable minimal biomass for lettuce seedlings
-            leaf_biomass = 0.01  # g dry weight - minimal seedling leaf
-            stem_biomass = 0.005  # g dry weight - minimal stem
-            root_biomass = 0.005  # g dry weight - minimal root
-            total_biomass = leaf_biomass + stem_biomass + root_biomass
+            # Get biomass data from biomass allocation simulator
+            biomass_data = self.dependency_cache.get('biomass_allocation_simulator', {})
+            leaf_biomass = biomass_data.get('leaf_biomass', 0.01)  # Fallback for first step only
+            stem_biomass = biomass_data.get('stem_biomass', 0.005)
+            root_biomass = biomass_data.get('root_biomass', 0.005)
+            total_biomass = biomass_data.get('total_biomass', 0.02)
 
-            growth_stage = "seedling"  # Early growth stage
-            development_index = 0.1  # Early development index
+            # Get phenology data
+            phenology_data = self.dependency_cache.get('phenology_simulator', {})
+            growth_stage = phenology_data.get('growth_stage', 'GERMINATION')
+            development_index = phenology_data.get('development_index', 0.0)
 
-            temperature_stress = 1.0  # No stress initially
+            # Get stress data
+            stress_data = self.dependency_cache.get('stress_models', {})
+            temperature_stress = stress_data.get('temperature_stress', 1.0)
             
             # Create biomass pools from simulator data
             biomass_pools = {
@@ -184,7 +188,22 @@ class RespirationSimulator(BaseSimulator):
             
             # Calculate respiration using model functions - no shortcuts
             # Per Rules.md: All parameters must come from CSV
-            total_new_growth = 0.01  # Small growth for early stages
+            # Get hourly biomass gain from biomass simulator
+            hourly_biomass_gain = biomass_data.get('hourly_biomass_gain', 0.0)
+
+            # Accumulate daily biomass gain (reset every 24 hours)
+            self.state.daily_biomass_gain += hourly_biomass_gain
+            current_hour = self.state.step_count % 24
+
+            # Use daily biomass gain for respiration calculation (model expects g/day)
+            # Reset accumulator at the start of each new day
+            if current_hour == 0 and self.state.step_count > 0:
+                total_new_growth = self.state.daily_biomass_gain  # g/day
+                self.state.daily_biomass_gain = 0.0  # Reset for next day
+            else:
+                # Use accumulated value so far (will be partial for current day)
+                total_new_growth = self.state.daily_biomass_gain  # g/day (partial)
+
             growth_composition = {
                 'protein': self.parameters.protein_fraction,
                 'carbohydrate': self.parameters.carbohydrate_fraction,
@@ -193,30 +212,32 @@ class RespirationSimulator(BaseSimulator):
                 'lignin': self.parameters.lignin_fraction,
                 'mineral': self.parameters.mineral_fraction
             }
-            
+
             result = self.model.calculate_total_respiration(
                 biomass_pools=list(biomass_pools.values()),
                 temperature=temperature,
                 total_new_growth=total_new_growth,
                 growth_composition=growth_composition
             )
-            
+
             # Update state with model results
-            self.state.total_respiration_rate = result.total_respiration
-            self.state.maintenance_respiration = result.maintenance_respiration
-            self.state.growth_respiration = result.growth_respiration
+            # NOTE: Model returns g C/day, but we need g C/hour for hourly simulation
+            # Convert by dividing by 24
+            self.state.total_respiration_rate = result.total_respiration / 24.0  # g C/hour
+            self.state.maintenance_respiration = result.maintenance_respiration / 24.0  # g C/hour
+            self.state.growth_respiration = result.growth_respiration / 24.0  # g C/hour
             self.state.temperature_factor = result.temperature_factor
-            
+
             # Extract tissue-specific respiration from tissue_breakdown
             tissue_breakdown = result.tissue_breakdown
-            self.state.leaf_respiration = tissue_breakdown.get('leaves', 0.0)
-            self.state.stem_respiration = tissue_breakdown.get('stems', 0.0)
-            self.state.root_respiration = tissue_breakdown.get('roots', 0.0)
-            
+            self.state.leaf_respiration = tissue_breakdown.get('leaves', 0.0) / 24.0  # g C/hour
+            self.state.stem_respiration = tissue_breakdown.get('stems', 0.0) / 24.0  # g C/hour
+            self.state.root_respiration = tissue_breakdown.get('roots', 0.0) / 24.0  # g C/hour
+
             # Set biomass factor to 1.0 for now
             self.state.biomass_factor = 1.0
-            
-            # Update cumulative values (rate is already per hour, accumulate for 1 hour step)
+
+            # Update cumulative values (rate is now in g C/hour)
             hourly_respiration = self.state.total_respiration_rate  # g C per hour
             self.state.cumulative_respiration += hourly_respiration
             self.state.daily_respiration += hourly_respiration

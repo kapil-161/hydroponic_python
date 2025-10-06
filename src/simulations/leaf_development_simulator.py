@@ -119,9 +119,10 @@ class LeafDevelopmentSimulator(BaseSimulator):
         # Initialize model with parameters from CSV
         self.model.initialize()
         
-        # Initialize leaf state
+        # Initialize leaf state with initial cohorts
+        initial_cohort_count = len(self.model.leaf_cohorts)
         initial_leaf_state = LeafDevelopmentState(
-            total_leaves=0,
+            total_leaves=initial_cohort_count,
             leaf_appearance_rate=0.0,
             leaf_expansion_rate=0.0,
             leaf_senescence_rate=0.0,
@@ -135,7 +136,12 @@ class LeafDevelopmentSimulator(BaseSimulator):
             leaf_nitrogen_distribution={}
         )
 
-        # Publish initial state
+        print(f"Leaf Dev: Initialized with {initial_cohort_count} initial leaf cohorts")
+
+        # Publish initial state including leaf cohorts
+        self.publish_state_data()
+
+        # Publish initial state event
         self.publish_event(EventType.LEAF_DEVELOPMENT_UPDATE, {
             'total_leaves': self.state.total_leaves,
             'total_leaf_area': self.state.total_leaf_area,
@@ -259,25 +265,17 @@ class LeafDevelopmentSimulator(BaseSimulator):
             if any(x is None for x in [canopy_height, lai]):
                 raise ValueError("Canopy data missing from canopy_architecture_simulator - no defaults allowed")
             
-            # Create current leaf state
-            current_leaf_state = LeafDevelopmentState(
-                total_leaves=self.state.total_leaves,
-                leaf_appearance_rate=self.state.leaf_appearance_rate,
-                leaf_expansion_rate=self.state.leaf_expansion_rate,
-                leaf_senescence_rate=self.state.leaf_senescence_rate,
-                total_leaf_area=self.state.total_leaf_area,
-                total_leaf_weight=self.state.total_leaf_weight,
-                leaf_weight_ratio=self.state.leaf_weight_ratio,
-                leaf_nitrogen_content=self.state.leaf_nitrogen_content,
-                leaf_nitrogen_ratio=self.state.leaf_nitrogen_ratio,
-                leaf_age_distribution=self.state.leaf_age_distribution,
-                leaf_size_distribution=self.state.leaf_size_distribution,
-                leaf_nitrogen_distribution=self.state.leaf_nitrogen_distribution
-            )
-            
+            # Calculate thermal time for this hour
+            # Use the model's thermal time calculation method
+            hourly_thermal_time_list = self.model.calculate_thermal_time([temperature])
+            hourly_thermal_time = hourly_thermal_time_list[0] if hourly_thermal_time_list else 0.0
+
+            # Update daily accumulation
+            self.state.daily_thermal_time += hourly_thermal_time
+
             # Calculate leaf development using model functions - no shortcuts
-            # Use update_leaf_areas method with simplified parameters
-            daily_thermal_time_list = [self.state.daily_thermal_time]
+            # Use daily thermal time list for model calculations
+            daily_thermal_time_list = [hourly_thermal_time]
 
             # Calculate stress factors using the model's method
             stress_factors = self.model.calculate_stress_factors(
@@ -325,11 +323,10 @@ class LeafDevelopmentSimulator(BaseSimulator):
                 if stage in leaf_nitrogen_dist:
                     self.state.leaf_nitrogen_distribution[stage] = leaf_nitrogen_dist[stage]
             
-            # Update thermal time and phyllochron
-            hourly_thermal_time = result.get('thermal_time_increment', 0.0) * 3600  # Convert to hourly
-            self.state.daily_thermal_time += hourly_thermal_time
+            # Update cumulative thermal time (daily_thermal_time already updated above)
             self.state.cumulative_thermal_time += hourly_thermal_time
-            self.state.phyllochron_adjusted = result.get('phyllochron_adjusted', self.state.phyllochron_adjusted)
+            # Phyllochron is tracked by the model, not returned in results
+            self.state.phyllochron_adjusted = self.leaf_params.base_phyllochron
             
             # Update stress factors
             self.state.leaf_growth_stress = result.get('leaf_growth_stress', self.state.leaf_growth_stress)

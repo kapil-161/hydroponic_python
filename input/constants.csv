@@ -20,7 +20,7 @@ water_molecular_weight,18.0,g_mol,Molecular weight of water,Chemical standard
 # Stoichiometric Conversion Ratios
 glucose_to_carbon_ratio,0.4,g_C_g_glucose,Glucose to carbon conversion ratio (stoichiometric),Chemical standard
 carbon_to_co2_ratio,3.67,g_CO2_g_C,Carbon to CO2 molecular weight ratio (44/12),Chemical standard
-umol_to_g_carbon_ratio,1.2e-4,g_μmol,Conversion ratio from μmol CO2 to g C,Chemical standard
+umol_to_g_carbon_ratio,1.2e-5,g_μmol,Conversion ratio from μmol CO2 to g C (1 μmol CO2 = 12 μg C),Chemical standard
 
 # Unit Conversion Factors
 mg_to_g_factor,1000.0,mg_g,Conversion factor from grams to milligrams,Universal

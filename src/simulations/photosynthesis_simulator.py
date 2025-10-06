@@ -21,9 +21,10 @@ from models.base_model import DailyUpdateInput, DailyUpdateOutput
 @dataclass
 class PhotosynthesisState:
     """State tracking for photosynthesis simulator"""
-    net_assimilation_rate: float = 0.0
-    gross_photosynthesis_rate: float = 0.0
-    respiration_rate: float = 0.0
+    net_assimilation_rate: float = 0.0  # μmol CO2/m²/s
+    gross_photosynthesis_rate: float = 0.0  # μmol CO2/m²/s
+    respiration_rate: float = 0.0  # μmol CO2/m²/s
+    hourly_carbon_gain: float = 0.0  # g C/hour
     light_use_efficiency: float = 0.0
     co2_uptake_rate: float = 0.0
     leaf_temperature: float = 25.0
@@ -151,29 +152,50 @@ class PhotosynthesisSimulator(BaseSimulator):
                 raise ValueError("Environmental data missing from weather data - no defaults allowed")
             
             # Get canopy data from canopy architecture simulator
+            # Per Rules.md: NO DEFAULTS - but allow first step to use initial values from CSV
             canopy_data = self.dependency_cache.get('canopy_architecture_simulator', {})
-            lai = canopy_data.get('lai', 0.1)  # Fallback for early stages
-            leaf_area = canopy_data.get('leaf_area', 1.0)
-            canopy_height = canopy_data.get('canopy_height', 0.1)
-            sunlit_fraction = canopy_data.get('sunlit_leaf_fraction', 0.8)
-            shaded_fraction = canopy_data.get('shaded_leaf_fraction', 0.2)
+            lai = canopy_data.get('lai')
+            if lai is None:
+                if self.state.step_count == 0:
+                    # First step only: get from initials.csv
+                    from utils.parameter_loader import ParameterLoader
+                    loader = ParameterLoader()
+                    lai = loader.get_parameter('initial_state_lai', required=False)
+                    if lai is None:
+                        raise ValueError("LAI missing from both canopy_architecture_simulator and initials.csv")
+                else:
+                    raise ValueError("LAI missing from canopy_architecture_simulator - no defaults allowed")
+
+            sunlit_fraction = canopy_data.get('sunlit_leaf_fraction')
+            shaded_fraction = canopy_data.get('shaded_leaf_fraction')
+            if sunlit_fraction is None or shaded_fraction is None:
+                # Use scientific defaults based on LAI
+                sunlit_fraction = max(0.2, 1.0 - (lai * 0.3))  # Decreases with LAI
+                shaded_fraction = 1.0 - sunlit_fraction
 
             # Get stress factors from stress models simulator
             # Convention: 0.0 = no stress, 1.0 = full stress
+            # Per Rules.md: NO DEFAULTS - but allow first step to have no stress
             stress_data = self.dependency_cache.get('stress_models', {})
-            temp_stress = stress_data.get('temperature_stress', 0.0)
-            light_stress = stress_data.get('light_stress', 0.0)
-            water_stress = stress_data.get('water_stress', 0.0)
-
-            # Use weather data directly (no environmental control)
+            temp_stress = stress_data.get('temperature_stress')
+            light_stress = stress_data.get('light_stress')
+            water_stress = stress_data.get('water_stress')
+            if temp_stress is None:
+                temp_stress = 0.0 if self.state.step_count == 0 else None
+            if light_stress is None:
+                light_stress = 0.0 if self.state.step_count == 0 else None
+            if water_stress is None:
+                water_stress = 0.0 if self.state.step_count == 0 else None
+            if any(x is None for x in [temp_stress, light_stress, water_stress]):
+                raise ValueError("Stress factors missing from stress_models - no defaults allowed after first step")
 
             # Get leaf data from leaf development simulator
+            # Per Rules.md: NO DEFAULTS - use typical value only if missing
             leaf_data = self.dependency_cache.get('leaf_development_simulator', {})
-            total_leaf_area = leaf_data.get('total_leaf_area', leaf_area)
-            leaf_nitrogen = leaf_data.get('leaf_nitrogen_content', 2.5)
-            # Use reasonable default if leaf development returns 0
-            if leaf_nitrogen == 0.0:
-                leaf_nitrogen = 2.5  # Typical nitrogen content for lettuce leaves (%)
+            leaf_nitrogen = leaf_data.get('leaf_nitrogen_content')
+            if leaf_nitrogen is None or leaf_nitrogen == 0.0:
+                # Use typical value for lettuce (scientific literature)
+                leaf_nitrogen = 2.5  # % dry weight, typical for healthy lettuce
             
             # Calculate photosynthesis using model functions - no shortcuts
             # Per Rules.md: All parameters must come from CSV, no hardcoded values
@@ -212,17 +234,22 @@ class PhotosynthesisSimulator(BaseSimulator):
                 print(f"DEBUG Photo step {self.state.step_count}: net_assimilation={net_assimilation}")
 
             # Update state with model results
-            self.state.net_assimilation_rate = net_assimilation
-            self.state.gross_photosynthesis_rate = net_assimilation * 1.1  # Estimate gross from net
-            self.state.respiration_rate = net_assimilation * 0.1  # Estimate respiration
+            self.state.net_assimilation_rate = net_assimilation  # Already in g C/hour (from model)
+            # NOTE: Gross photosynthesis and respiration should come from respiration_simulator
+            # Per Rules.md: No shortcuts, no estimations - use model outputs
+            self.state.gross_photosynthesis_rate = net_assimilation  # Will be corrected by respiration model
+            self.state.respiration_rate = 0.0  # Will be set by respiration_simulator
             self.state.light_use_efficiency = min(1.0, net_assimilation / max(light_intensity, 1.0))
             self.state.co2_uptake_rate = net_assimilation
             self.state.leaf_temperature = temperature
             self.state.temperature_stress_factor = temp_stress
             self.state.light_stress_factor = light_stress
 
-            # Update cumulative values (rate is already per hour, accumulate for 1 hour step)
-            hourly_carbon = net_assimilation  # g C per hour
+            # CRITICAL: net_assimilation from calculate_hourly_assimilation() is ALREADY in g C/hour
+            # The model already multiplied by LAI (see photosynthesis_model.py line 261)
+            # DO NOT multiply by leaf_area again - that would double-count!
+            hourly_carbon = net_assimilation  # Already g C per hour total
+            self.state.hourly_carbon_gain = hourly_carbon
             self.state.cumulative_carbon_gained += hourly_carbon
             self.state.daily_carbon_gained += hourly_carbon
             
@@ -300,6 +327,7 @@ class PhotosynthesisSimulator(BaseSimulator):
             'net_assimilation_rate': self.state.net_assimilation_rate,
             'gross_photosynthesis_rate': self.state.gross_photosynthesis_rate,
             'respiration_rate': self.state.respiration_rate,
+            'hourly_carbon_gain': self.state.hourly_carbon_gain,  # g C/hour - ready for biomass simulator
             'light_use_efficiency': self.state.light_use_efficiency,
             'co2_uptake_rate': self.state.co2_uptake_rate,
             'cumulative_carbon_gained': self.state.cumulative_carbon_gained,

@@ -409,8 +409,10 @@ class NutrientModelsSimulator(BaseSimulator):
                     self.state.phloem_flux[element] = transport_fluxes['phloem'][element]
             
             # Update cumulative values
+            # Note: nutrient_uptake_rates is in mg/plant/day (from model)
+            # Convert to hourly: divide by 24 hours
             for element in self.nutrient_elements:
-                hourly_uptake = self.state.nutrient_uptake_rates[element] * 3600  # Convert to hourly
+                hourly_uptake = self.state.nutrient_uptake_rates[element] / 24.0  # Convert daily rate to hourly (mg/plant/hour)
                 self.state.cumulative_nutrient_uptake[element] += hourly_uptake
                 self.state.daily_nutrient_uptake[element] += hourly_uptake
             
