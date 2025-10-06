@@ -682,7 +682,9 @@ class SimulationOrchestrator(BaseSimulator):
 
         # Create combined DataFrame and save
         df = pd.DataFrame(flattened_data)
-        df.to_csv(output_path, index=False)
+        # Round numeric columns to 4 decimal places
+        df = df.round(4)
+        df.to_csv(output_path, index=False, float_format='%.4f')
         print(f"Combined results exported to: {output_path}")
 
         # Export separate CSV files for each simulator
@@ -704,7 +706,9 @@ class SimulationOrchestrator(BaseSimulator):
                 # Create clean, short filename
                 short_name = simulator_id.replace("_simulator", "")
                 sim_output_path = os.path.join(output_dir, f'{short_name}.csv')
-                sim_df.to_csv(sim_output_path, index=False)
+                # Round numeric columns to 4 decimal places
+                sim_df = sim_df.round(4)
+                sim_df.to_csv(sim_output_path, index=False, float_format='%.4f')
                 exported_files.append(sim_output_path)
 
         print(f"\nExported {len(exported_files)} individual simulator files:")

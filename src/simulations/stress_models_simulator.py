@@ -23,14 +23,17 @@ from models.base_model import DailyUpdateInput, DailyUpdateOutput
 
 @dataclass
 class StressState:
-    """State tracking for stress models simulator"""
-    temperature_stress: float = 1.0
-    water_stress: float = 1.0
-    nutrient_stress: float = 1.0
-    light_stress: float = 1.0
-    ph_stress: float = 1.0
-    salinity_stress: float = 1.0
-    integrated_stress: float = 1.0
+    """
+    State tracking for stress models simulator
+    Convention: 0.0 = no stress, 1.0 = full stress
+    """
+    temperature_stress: float = 0.0
+    water_stress: float = 0.0
+    nutrient_stress: float = 0.0
+    light_stress: float = 0.0
+    ph_stress: float = 0.0
+    salinity_stress: float = 0.0
+    integrated_stress: float = 0.0
     stress_severity: str = "NONE"
     acclimation_level: float = 0.0
     damage_level: float = 0.0
@@ -220,65 +223,69 @@ class StressModelsSimulator(BaseSimulator):
                 else:
                     raise ValueError(f"Required dependency data missing: {missing_data} - no defaults allowed per Rules.md")
 
-            # Simplified stress calculation - direct from available data
-            # Water stress: 1.0 = no stress, 0.0 = complete stress
-            self.state.water_stress = min(1.0, max(0.0, water_availability))
+            # Stress calculation - Convention: 0.0 = no stress, 1.0 = full stress
+            # Water stress: 0.0 = no stress (high availability), 1.0 = full stress (no water)
+            self.state.water_stress = 1.0 - min(1.0, max(0.0, water_availability))
 
             # Temperature stress: optimal range for lettuce (18-24°C)
             temp_optimal_min = 18.0  # °C
             temp_optimal_max = 24.0  # °C
             if temp_optimal_min <= temperature <= temp_optimal_max:
-                self.state.temperature_stress = 1.0
+                self.state.temperature_stress = 0.0  # No stress
             elif temperature < temp_optimal_min:
-                self.state.temperature_stress = max(0.0, 1.0 - (temp_optimal_min - temperature) / 10.0)
+                self.state.temperature_stress = min(1.0, (temp_optimal_min - temperature) / 10.0)
             else:
-                self.state.temperature_stress = max(0.0, 1.0 - (temperature - temp_optimal_max) / 10.0)
+                self.state.temperature_stress = min(1.0, (temperature - temp_optimal_max) / 10.0)
 
             # Light stress: based on light intensity (1500 is optimal for lettuce)
             optimal_light = 1500.0
             if light_intensity >= optimal_light * 0.5:
-                self.state.light_stress = min(1.0, light_intensity / optimal_light)
+                light_ratio = light_intensity / optimal_light
+                if light_ratio <= 1.0:
+                    self.state.light_stress = 0.0  # Optimal light
+                else:
+                    self.state.light_stress = min(1.0, (light_ratio - 1.0))  # Too much light
             else:
-                self.state.light_stress = max(0.0, light_intensity / (optimal_light * 0.5))
+                self.state.light_stress = min(1.0, 1.0 - (light_intensity / (optimal_light * 0.5)))
 
-            # Nutrient stress: from nitrogen availability
-            self.state.nutrient_stress = min(1.0, max(0.0, nitrogen_availability))
+            # Nutrient stress: 0.0 = no stress (high availability), 1.0 = full stress
+            self.state.nutrient_stress = 1.0 - min(1.0, max(0.0, nitrogen_availability))
 
             # pH stress: optimal range 5.5-6.5 for lettuce
             if 5.5 <= ph <= 6.5:
-                self.state.ph_stress = 1.0
+                self.state.ph_stress = 0.0  # No stress
             elif ph < 5.5:
-                self.state.ph_stress = max(0.0, 1.0 - (5.5 - ph) / 2.0)
+                self.state.ph_stress = min(1.0, (5.5 - ph) / 2.0)
             else:
-                self.state.ph_stress = max(0.0, 1.0 - (ph - 6.5) / 2.0)
+                self.state.ph_stress = min(1.0, (ph - 6.5) / 2.0)
 
             # Salinity stress: assume minimal for hydroponic lettuce
-            self.state.salinity_stress = 1.0
+            self.state.salinity_stress = 0.0
 
-            # Integrated stress: geometric mean of all stresses (excluding pH)
+            # Integrated stress: average of all stresses (0.0 = no stress, 1.0 = full stress)
             self.state.integrated_stress = (
-                self.state.temperature_stress *
-                self.state.water_stress *
-                self.state.nutrient_stress *
-                self.state.light_stress *
+                self.state.temperature_stress +
+                self.state.water_stress +
+                self.state.nutrient_stress +
+                self.state.light_stress +
                 self.state.salinity_stress
-            ) ** (1.0 / 5.0)
+            ) / 5.0
 
-            # Stress severity categorization
-            if self.state.integrated_stress >= 0.8:
+            # Stress severity categorization (0.0 = no stress, 1.0 = full stress)
+            if self.state.integrated_stress <= 0.2:
                 self.state.stress_severity = "NONE"
-            elif self.state.integrated_stress >= 0.6:
+            elif self.state.integrated_stress <= 0.4:
                 self.state.stress_severity = "MILD"
-            elif self.state.integrated_stress >= 0.4:
+            elif self.state.integrated_stress <= 0.6:
                 self.state.stress_severity = "MODERATE"
             else:
                 self.state.stress_severity = "SEVERE"
 
             self.state.acclimation_level = 0.0
             self.state.damage_level = 0.0
-            
-            # Update cumulative values
-            hourly_stress = (1.0 - self.state.integrated_stress) * 3600  # Stress deficit
+
+            # Update cumulative values (accumulate actual stress, not deficit)
+            hourly_stress = self.state.integrated_stress * 3600
             self.state.cumulative_stress += hourly_stress
             self.state.daily_stress += hourly_stress
             

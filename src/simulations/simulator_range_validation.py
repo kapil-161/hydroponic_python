@@ -172,8 +172,7 @@ class SimulatorRangeValidator:
                                'Rate of leaf appearance'),
                 RangeValidation('total_leaf_area', 0.0, 2.0, 'm²',
                                'Total leaf area'),
-                RangeValidation('leaf_area_index', 0.0, 8.0, 'm²/m²',
-                               'Leaf area index'),
+                # NOTE: leaf_area_index removed - LAI now calculated by canopy architecture using actual plant spacing
                 RangeValidation('phyllochron_adjusted', 50.0, 200.0, '°C-day',
                                'Adjusted phyllochron'),
                 RangeValidation('cumulative_thermal_time', 0.0, 2000.0, '°C-day',

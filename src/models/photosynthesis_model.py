@@ -223,9 +223,10 @@ class PhotosynthesisModel:
 
         gs = self.params.g_max * f_light * f_temp * f_vpd
 
-        # Apply water stress effect
-        water_stress_factor = 1 - self.params.water_stress_sensitivity * water_stress
-        gs *= water_stress_factor
+        # Apply water stress effect (water_stress: 0.0 = no stress, 1.0 = full stress)
+        # Higher stress reduces stomatal conductance
+        water_stress_factor = 1.0 - (self.params.water_stress_sensitivity * water_stress)
+        gs *= max(0.0, water_stress_factor)
 
         ci = co2_ppm * self.params.initial_ci_fraction
         net_photosynthesis_rate = 0.0
@@ -254,7 +255,9 @@ class PhotosynthesisModel:
                 break
 
         hourly_g_c_per_m2 = net_photosynthesis_rate * self.params.seconds_per_hour * self.params.umol_to_g_carbon_ratio
-        return max(0.0, hourly_g_c_per_m2 * lai * ec_factor), gs
+        final_result = max(0.0, hourly_g_c_per_m2 * lai * ec_factor)
+
+        return final_result, gs
 
     def _calculate_temperature_stress_factor(self, temp_c: float, optimal_temp_min: float, optimal_temp_max: float) -> float:
         """Use consolidated temperature stress factor calculation from core_utils."""

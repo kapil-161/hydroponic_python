@@ -234,10 +234,10 @@ class WaterUptakeSimulator(BaseSimulator):
             self.state.hydraulic_conductance = result.total_hydraulic_conductance
             self.state.crop_coefficient = result.kc
             
-            # Update cumulative values
-            hourly_water_uptake = self.state.water_uptake_rate * 3600  # Convert to hourly
-            hourly_transpiration = self.state.transpiration_rate * 3600  # Convert to hourly
-            
+            # Update cumulative values (rates already per hour, accumulate for 1 hour step)
+            hourly_water_uptake = self.state.water_uptake_rate  # L per hour
+            hourly_transpiration = self.state.transpiration_rate  # L per hour
+
             self.state.cumulative_water_uptake += hourly_water_uptake
             self.state.daily_water_uptake += hourly_water_uptake
             self.state.cumulative_transpiration += hourly_transpiration

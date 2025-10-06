@@ -323,7 +323,7 @@ class NitrogenBalanceSimulator(BaseSimulator):
                 organ_growth_rates={'leaves': 0.1, 'stems': 0.05, 'roots': 0.05},
                 growth_stage=growth_stage,
                 environmental_factors={
-                    'temperature': weather_data.get('temperature', 20.0),
+                    'temperature': weather_data.get('temperature'),
                     'water': 1.0,
                     'pH': 6.0
                 }

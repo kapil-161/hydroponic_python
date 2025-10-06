@@ -216,8 +216,8 @@ class RespirationSimulator(BaseSimulator):
             # Set biomass factor to 1.0 for now
             self.state.biomass_factor = 1.0
             
-            # Update cumulative values
-            hourly_respiration = self.state.total_respiration_rate * 3600  # Convert to hourly
+            # Update cumulative values (rate is already per hour, accumulate for 1 hour step)
+            hourly_respiration = self.state.total_respiration_rate  # g C per hour
             self.state.cumulative_respiration += hourly_respiration
             self.state.daily_respiration += hourly_respiration
             

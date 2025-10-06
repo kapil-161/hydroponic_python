@@ -408,23 +408,18 @@ class LeafDevelopmentModel:
             for cohort_id in cohorts_to_remove:
                 if cohort_id in self.leaf_cohorts:
                     del self.leaf_cohorts[cohort_id]
-            
-            # Calculate proper LAI = leaf area / ground area
-            # LAI should simply equal total_area when ground area = 1 m²
-            lai = total_area  # m² / (1 m²) = dimensionless LAI
 
-            # Remove debug output
-            
+            # NOTE: LAI calculation removed - now handled by canopy architecture model
+            # Canopy architecture uses actual plant spacing from CSV for accurate LAI
+
             total_areas.append(total_area)
-            lai_values.append(lai)
             visible_leaf_counts.append(visible_leaves)
             active_leaf_counts.append(active_leaves)
             senesced_areas.append(senesced_area)
             average_leaf_areas.append(total_area / max(1, active_leaves))
-        
+
         return {
             'total_leaf_area_m2': total_areas,
-            'leaf_area_index': lai_values,
             'visible_leaf_count': visible_leaf_counts,
             'active_leaf_count': active_leaf_counts,
             'senesced_area_daily': senesced_areas,
@@ -534,5 +529,7 @@ OUTPUT VARIABLES:
 - stress_factors: dictionary with water_factor, nitrogen_factor, temperature_factor, combined_appearance_factor, combined_expansion_factor lists
 - new_leaves_appeared: list of boolean values indicating new leaf appearance each day
 - position_factors: list of leaf size factors based on position
-- leaf_areas: dictionary with total_leaf_area_m2, leaf_area_index, visible_leaf_count, active_leaf_count, senesced_area_daily, average_leaf_area lists
+- leaf_areas: dictionary with total_leaf_area_m2, visible_leaf_count, active_leaf_count, senesced_area_daily, average_leaf_area lists
+
+NOTE: LAI calculation removed from this model - LAI is now calculated by canopy architecture model using actual plant spacing from CSV
 """

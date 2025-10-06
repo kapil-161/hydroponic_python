@@ -100,6 +100,21 @@ class CanopyArchitectureSimulator(BaseSimulator):
         # Initialize model with parameters from CSV
         self.model.initialize()
 
+        # Initialize LAI from initials.csv - this is the ONLY LAI source
+        initial_config = data.get('initial_config', {})
+        initial_state = initial_config.get('initial_state', {})
+        initial_lai = initial_state.get('lai', 0.05)  # From initials.csv line 14
+        initial_leaf_area = initial_state.get('leaf_area', 0.001)  # From initials.csv line 15
+        initial_plant_height = initial_state.get('plant_height', 0.02)  # From initials.csv line 16
+
+        # Set initial state from CSV
+        self.state.lai = initial_lai
+        self.state.leaf_area = initial_leaf_area
+        self.state.canopy_height = initial_plant_height
+        self.state.ground_coverage = self._calculate_ground_coverage(initial_lai)
+
+        print(f"Canopy initialized with LAI={initial_lai:.3f} from initials.csv")
+
         # Publish initial state to dependency cache immediately
         self.publish_state_data()
 
@@ -177,8 +192,13 @@ class CanopyArchitectureSimulator(BaseSimulator):
                 raise ValueError("Biomass data missing from biomass_allocation_simulator - no defaults allowed")
             
             # Calculate leaf area from leaf biomass using SLA (Specific Leaf Area)
-            # For lettuce: SLA ≈ 250 cm²/g = 0.025 m²/g (from scientific literature)
-            specific_leaf_area = 0.025  # m²/g
+            # Get SLA from leaf_development parameters (must come from CSV per Rules.md)
+            leaf_dev_data = self.dependency_cache.get('leaf_development_simulator', {})
+            sla_cm2_g = leaf_dev_data.get('specific_leaf_area')
+            if sla_cm2_g is None:
+                raise ValueError("Specific leaf area (SLA) missing from leaf_development_simulator - no defaults allowed per Rules.md")
+
+            specific_leaf_area = sla_cm2_g / 10000.0  # Convert cm²/g to m²/g
             leaf_area = leaf_biomass * specific_leaf_area  # m²
 
             # Get leaf development data for additional metrics
@@ -216,6 +236,10 @@ class CanopyArchitectureSimulator(BaseSimulator):
             ground_area_per_plant = self.parameters.row_spacing * self.parameters.plant_spacing  # m²
             total_lai = leaf_area / ground_area_per_plant if ground_area_per_plant > 0 else 0.0
 
+            # Apply maximum LAI constraint from CSV to prevent runaway growth
+            max_lai = self.parameters.max_lai  # From master_parameters.csv canopy_parameters
+            total_lai = min(total_lai, max_lai)
+
             # Calculate canopy height based on growth stage and biomass
             canopy_height = min(self.parameters.plant_height, (total_biomass / 100.0) * self.parameters.plant_height)
             
@@ -234,8 +258,8 @@ class CanopyArchitectureSimulator(BaseSimulator):
                 solar_azimuth_angle=180.0  # South-facing assumption
             )
             
-            # Get CO2 from weather data or use atmospheric default
-            co2_concentration = weather_data.get('co2_ppm', 420.0)  # Current atmospheric CO2
+            # Get CO2 from weather data - no defaults allowed per Rules.md
+            co2_concentration = weather_data.get('co2_concentration') or weather_data.get('co2_ppm')
 
             result = self.model.daily_update(
                 total_lai=total_lai,

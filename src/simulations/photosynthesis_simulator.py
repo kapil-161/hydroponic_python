@@ -159,10 +159,11 @@ class PhotosynthesisSimulator(BaseSimulator):
             shaded_fraction = canopy_data.get('shaded_leaf_fraction', 0.2)
 
             # Get stress factors from stress models simulator
+            # Convention: 0.0 = no stress, 1.0 = full stress
             stress_data = self.dependency_cache.get('stress_models', {})
-            temp_stress = stress_data.get('temperature_stress', 1.0)
-            light_stress = stress_data.get('light_stress', 1.0)
-            water_stress = stress_data.get('water_stress', 1.0)
+            temp_stress = stress_data.get('temperature_stress', 0.0)
+            light_stress = stress_data.get('light_stress', 0.0)
+            water_stress = stress_data.get('water_stress', 0.0)
 
             # Use weather data directly (no environmental control)
 
@@ -219,9 +220,9 @@ class PhotosynthesisSimulator(BaseSimulator):
             self.state.leaf_temperature = temperature
             self.state.temperature_stress_factor = temp_stress
             self.state.light_stress_factor = light_stress
-            
-            # Update cumulative values
-            hourly_carbon = net_assimilation * 3600  # Convert to hourly
+
+            # Update cumulative values (rate is already per hour, accumulate for 1 hour step)
+            hourly_carbon = net_assimilation  # g C per hour
             self.state.cumulative_carbon_gained += hourly_carbon
             self.state.daily_carbon_gained += hourly_carbon
             

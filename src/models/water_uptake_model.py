@@ -353,7 +353,11 @@ class WaterUptakeModel:
         # Scale by canopy coverage
         coverage_factor = min(1.0, lai / self.params.max_lai_coverage_factor) if lai > 0 else self.params.minimum_coverage_factor
         transpiration_mm = etc_mm * coverage_factor
-        transpiration_L = transpiration_mm / 1000.0
+        # Convert mm depth to liters: need to multiply by leaf area (LAI × ground area)
+        # For 20 plants at 0.2m × 0.3m spacing = 1.2 m² ground area
+        # Use LAI to scale (LAI = leaf area / ground area)
+        leaf_area_m2 = lai * 1.2  # Approximate ground area for system
+        transpiration_L = (transpiration_mm / 1000.0) * leaf_area_m2
 
         # Metabolic water demand
         metabolic_water_L = total_biomass * self.params.metabolic_water_per_biomass

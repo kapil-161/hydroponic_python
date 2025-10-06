@@ -52,7 +52,6 @@ class LeafDevelopmentState:
     leaf_senescence_rate: float = 0.0
     total_leaf_area: float = 0.0
     total_leaf_weight: float = 0.0
-    leaf_area_index: float = 0.0
     leaf_weight_ratio: float = 0.0
     leaf_nitrogen_content: float = 0.0
     leaf_nitrogen_ratio: float = 0.0
@@ -66,6 +65,7 @@ class LeafDevelopmentState:
     leaf_senescence_stress: float = 1.0
     step_count: int = 0
     last_update: datetime = field(default_factory=datetime.now)
+    # NOTE: leaf_area_index removed - LAI now calculated by canopy architecture using actual plant spacing
 
 
 class LeafDevelopmentSimulator(BaseSimulator):
@@ -127,7 +127,6 @@ class LeafDevelopmentSimulator(BaseSimulator):
             leaf_senescence_rate=0.0,
             total_leaf_area=0.0,
             total_leaf_weight=0.0,
-            leaf_area_index=0.0,
             leaf_weight_ratio=0.0,
             leaf_nitrogen_content=0.0,
             leaf_nitrogen_ratio=0.0,
@@ -135,13 +134,12 @@ class LeafDevelopmentSimulator(BaseSimulator):
             leaf_size_distribution={},
             leaf_nitrogen_distribution={}
         )
-        
+
         # Publish initial state
         self.publish_event(EventType.LEAF_DEVELOPMENT_UPDATE, {
             'total_leaves': self.state.total_leaves,
             'total_leaf_area': self.state.total_leaf_area,
             'total_leaf_weight': self.state.total_leaf_weight,
-            'leaf_area_index': self.state.leaf_area_index,
             'leaf_appearance_rate': self.state.leaf_appearance_rate
         })
     
@@ -174,7 +172,6 @@ class LeafDevelopmentSimulator(BaseSimulator):
                 'leaf_senescence_rate': self.state.leaf_senescence_rate,
                 'total_leaf_area': self.state.total_leaf_area,
                 'total_leaf_weight': self.state.total_leaf_weight,
-                'leaf_area_index': self.state.leaf_area_index,
                 'leaf_weight_ratio': self.state.leaf_weight_ratio,
                 'leaf_nitrogen_content': self.state.leaf_nitrogen_content,
                 'leaf_nitrogen_ratio': self.state.leaf_nitrogen_ratio,
@@ -270,7 +267,6 @@ class LeafDevelopmentSimulator(BaseSimulator):
                 leaf_senescence_rate=self.state.leaf_senescence_rate,
                 total_leaf_area=self.state.total_leaf_area,
                 total_leaf_weight=self.state.total_leaf_weight,
-                leaf_area_index=self.state.leaf_area_index,
                 leaf_weight_ratio=self.state.leaf_weight_ratio,
                 leaf_nitrogen_content=self.state.leaf_nitrogen_content,
                 leaf_nitrogen_ratio=self.state.leaf_nitrogen_ratio,
@@ -309,7 +305,6 @@ class LeafDevelopmentSimulator(BaseSimulator):
             self.state.leaf_senescence_rate = result.get('leaf_senescence_rate', self.state.leaf_senescence_rate)
             self.state.total_leaf_area = result.get('total_leaf_area', self.state.total_leaf_area)
             self.state.total_leaf_weight = result.get('total_leaf_weight', self.state.total_leaf_weight)
-            self.state.leaf_area_index = result.get('leaf_area_index', self.state.leaf_area_index)
             self.state.leaf_weight_ratio = result.get('leaf_weight_ratio', self.state.leaf_weight_ratio)
             self.state.leaf_nitrogen_content = result.get('leaf_nitrogen_content', self.state.leaf_nitrogen_content)
             self.state.leaf_nitrogen_ratio = result.get('leaf_nitrogen_ratio', self.state.leaf_nitrogen_ratio)
@@ -367,7 +362,6 @@ class LeafDevelopmentSimulator(BaseSimulator):
                 'leaf_senescence_rate': self.state.leaf_senescence_rate,
                 'total_leaf_area': self.state.total_leaf_area,
                 'total_leaf_weight': self.state.total_leaf_weight,
-                'leaf_area_index': self.state.leaf_area_index,
                 'leaf_weight_ratio': self.state.leaf_weight_ratio,
                 'leaf_nitrogen_content': self.state.leaf_nitrogen_content,
                 'leaf_nitrogen_ratio': self.state.leaf_nitrogen_ratio,
@@ -413,7 +407,6 @@ class LeafDevelopmentSimulator(BaseSimulator):
             'leaf_senescence_rate': self.state.leaf_senescence_rate,
             'total_leaf_area': self.state.total_leaf_area,
             'total_leaf_weight': self.state.total_leaf_weight,
-            'leaf_area_index': self.state.leaf_area_index,
             'leaf_weight_ratio': self.state.leaf_weight_ratio,
             'leaf_nitrogen_content': self.state.leaf_nitrogen_content,
             'leaf_nitrogen_ratio': self.state.leaf_nitrogen_ratio,
@@ -437,7 +430,6 @@ class LeafDevelopmentSimulator(BaseSimulator):
             'leaf_senescence_rate': self.state.leaf_senescence_rate,
             'total_leaf_area': self.state.total_leaf_area,
             'total_leaf_weight': self.state.total_leaf_weight,
-            'leaf_area_index': self.state.leaf_area_index,
             'leaf_weight_ratio': self.state.leaf_weight_ratio,
             'leaf_nitrogen_content': self.state.leaf_nitrogen_content,
             'leaf_nitrogen_ratio': self.state.leaf_nitrogen_ratio,
@@ -449,7 +441,8 @@ class LeafDevelopmentSimulator(BaseSimulator):
             'phyllochron_adjusted': self.state.phyllochron_adjusted,
             'leaf_growth_stress': self.state.leaf_growth_stress,
             'leaf_senescence_stress': self.state.leaf_senescence_stress,
-            'leaf_cohorts': self.model.leaf_cohorts  # CRITICAL: Share real leaf cohorts for senescence
+            'leaf_cohorts': self.model.leaf_cohorts,  # CRITICAL: Share real leaf cohorts for senescence
+            'specific_leaf_area': self.leaf_params.specific_leaf_area  # For canopy architecture LAI calculation
         }
 
         # Add individual stage data
@@ -469,7 +462,6 @@ class LeafDevelopmentSimulator(BaseSimulator):
             'leaf_senescence_rate': self.state.leaf_senescence_rate,
             'total_leaf_area': self.state.total_leaf_area,
             'total_leaf_weight': self.state.total_leaf_weight,
-            'leaf_area_index': self.state.leaf_area_index,
             'leaf_weight_ratio': self.state.leaf_weight_ratio,
             'leaf_nitrogen_content': self.state.leaf_nitrogen_content,
             'leaf_nitrogen_ratio': self.state.leaf_nitrogen_ratio,
@@ -520,11 +512,11 @@ class LeafDevelopmentSimulator(BaseSimulator):
         """Handle simulation end"""
         print(f"Leaf development simulator: Simulation ended after {self.state.step_count} steps")
         print(f"Final total leaves: {self.state.total_leaves}")
-        print(f"Final leaf area: {self.state.total_leaf_area:.2f} cm²")
+        print(f"Final leaf area: {self.state.total_leaf_area:.2f} m²")
         print(f"Final leaf weight: {self.state.total_leaf_weight:.2f} g")
-        print(f"Final leaf area index: {self.state.leaf_area_index:.3f}")
         print(f"Final leaf nitrogen content: {self.state.leaf_nitrogen_content:.2f} g")
         print(f"Total thermal time: {self.state.cumulative_thermal_time:.1f} °C-day")
+        print(f"NOTE: LAI calculated by canopy architecture simulator using actual plant spacing")
         
         # Print leaf stage distribution
         print("Final leaf stage distribution:")
@@ -539,7 +531,6 @@ class LeafDevelopmentSimulator(BaseSimulator):
             'final_leaf_senescence_rate': self.state.leaf_senescence_rate,
             'final_total_leaf_area': self.state.total_leaf_area,
             'final_total_leaf_weight': self.state.total_leaf_weight,
-            'final_leaf_area_index': self.state.leaf_area_index,
             'final_leaf_weight_ratio': self.state.leaf_weight_ratio,
             'final_leaf_nitrogen_content': self.state.leaf_nitrogen_content,
             'final_leaf_nitrogen_ratio': self.state.leaf_nitrogen_ratio,
@@ -559,18 +550,17 @@ class LeafDevelopmentSimulator(BaseSimulator):
         """Get performance metrics for this simulator"""
         if not self.history:
             return {}
-        
+
         leaf_counts = [s.total_leaves for s in self.history]
         leaf_areas = [s.total_leaf_area for s in self.history]
         leaf_weights = [s.total_leaf_weight for s in self.history]
-        lai_values = [s.leaf_area_index for s in self.history]
-        
+
         # Calculate leaf development rates
         if len(leaf_counts) > 1:
             leaf_appearance_rate = (leaf_counts[-1] - leaf_counts[0]) / len(leaf_counts)
         else:
             leaf_appearance_rate = 0.0
-        
+
         return {
             'total_steps': len(self.history),
             'final_total_leaves': self.state.total_leaves,
@@ -579,8 +569,6 @@ class LeafDevelopmentSimulator(BaseSimulator):
             'avg_leaf_area': sum(leaf_areas) / len(leaf_areas),
             'final_leaf_weight': self.state.total_leaf_weight,
             'avg_leaf_weight': sum(leaf_weights) / len(leaf_weights),
-            'final_leaf_area_index': self.state.leaf_area_index,
-            'avg_leaf_area_index': sum(lai_values) / len(lai_values),
             'leaf_appearance_rate': leaf_appearance_rate,
             'total_thermal_time': self.state.cumulative_thermal_time,
             'dependency_cache_hits': len(self.dependency_cache),

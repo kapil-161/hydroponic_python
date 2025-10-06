@@ -89,7 +89,7 @@ class DistributedSimulationRunner:
         simulator_defaults = self.parameter_loader.get_category('simulator_defaults')
         self.config = SimulationConfig(
             total_days=int(self.parameter_loader.get_parameter('simulator_defaults_total_days_default')),
-            steps_per_day=int(self.parameter_loader.get_parameter('simulator_defaults_steps_per_day_default')),
+            steps_per_day=int(self.parameter_loader.get_parameter('simulator_defaults_steps_per_day')),
             step_duration_seconds=float(simulator_defaults['step_duration_seconds']),
             start_day=int(self.parameter_loader.get_parameter('simulator_defaults_start_day')),
             start_hour=int(self.parameter_loader.get_parameter('simulator_defaults_start_hour')),
