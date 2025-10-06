@@ -94,11 +94,11 @@ class RootSystemSimulator(BaseSimulator):
         initial_state = data.get('initial_state', {})
         if initial_state:
             self.state.root_biomass = initial_state.get('root_biomass', 0.1)
-            self.state.root_length = initial_state.get('root_length', 0.05)
-            self.state.root_surface_area = self.state.root_length * 0.001  # Estimate from length
+            self.state.root_length = initial_state.get('root_length', 5.0)  # cm
+            self.state.root_surface_area = initial_state.get('root_surface_area', 12.6)  # cm²
             self.state.root_depth = self.state.root_length  # Initially depth = length
             self.state.root_activity = 1.0  # Fully active at start
-            print(f"Root: Initialized root_biomass={self.state.root_biomass}g, root_length={self.state.root_length}m from CSV")
+            print(f"Root: Initialized root_biomass={self.state.root_biomass}g, root_length={self.state.root_length}cm, root_surface_area={self.state.root_surface_area}cm² from CSV")
 
         self.history.clear()
         self.dependency_cache.clear()
@@ -264,7 +264,24 @@ class RootSystemSimulator(BaseSimulator):
             self.state.root_depth = result.get('root_depth', self.state.root_depth)
             self.state.root_biomass = root_biomass  # From biomass allocation simulator
             self.state.root_length = result.get('total_root_length', self.state.root_length)
-            self.state.root_surface_area = result.get('total_root_surface_area', self.state.root_surface_area)
+
+            # Calculate root surface area from biomass if model returns 0
+            model_surface_area = result.get('total_root_surface_area', 0.0)
+            if model_surface_area > 0:
+                self.state.root_surface_area = model_surface_area
+            else:
+                # Empirical relationship: Surface area (cm²) ≈ biomass (g) × SRA (specific root area)
+                # For lettuce fine roots: ~200-400 cm²/g (from literature)
+                # Calibrated to ~150 cm²/g to match observed nutrient uptake rates
+                specific_root_area = 150.0  # cm²/g - calibrated value
+                self.state.root_surface_area = root_biomass * specific_root_area
+                # Estimate root length from biomass and average diameter
+                avg_diameter_mm = 0.8  # mm
+                avg_diameter_cm = avg_diameter_mm / 10.0
+                # Length = Surface_area / (π × diameter)
+                if avg_diameter_cm > 0:
+                    self.state.root_length = self.state.root_surface_area / (3.14159 * avg_diameter_cm)
+
             self.state.root_density = result.get('root_length_density', self.state.root_density)
             self.state.root_activity = result.get('average_root_activity', self.state.root_activity)
             self.state.root_zone_volume = result.get('total_root_volume', self.state.root_zone_volume)

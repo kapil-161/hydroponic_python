@@ -11,6 +11,9 @@ channel_depth_default,0.05,m,Default channel depth for NFT system
 n_channels_default,4,dimensionless,Default number of channels in NFT system
 
 # Root Growth Parameters
+initial_root_biomass,0.3,g,Initial root biomass at transplant
+initial_root_length,5.0,cm,Initial root length at transplant
+initial_root_diameter,0.8,mm,Initial root diameter at transplant
 primary_root_growth_rate_default,0.5,cm_day,Default primary root growth rate
 lateral_root_density_default,2.0,roots_cm,Default lateral root density
 branching_angle_mean_default,45.0,degrees,Default mean branching angle
@@ -121,7 +124,7 @@ optimization_flow_step,0.1,L_day,Flow rate step for optimization
 minimum_surface_area,0.1,m2,Minimum root surface area
 minimum_biomass,0.01,g,Minimum root biomass
 minimum_volume,0.001,L,Minimum root volume
-effective_area_minimum,0.1,m2,Minimum effective root area
+effective_area_minimum,0.001,cm2,Minimum effective root area
 
 # Nutrient Uptake Parameters
 no3_uptake_vmax,0.5,mg_g_root_day,Maximum NO3 uptake rate
@@ -243,7 +246,6 @@ transport_temperature_exponent,1.25,dimensionless,Exponent for temperature effec
 minimum_surface_area,1.0,cm2,Minimum surface area for calculations
 minimum_biomass,0.001,g,Minimum biomass for specific root length calculations
 minimum_volume,1.0,cm3,Minimum volume for density calculations
-effective_area_minimum,1e-1,cm2,Minimum effective surface area threshold
 container_volume,5000.0,cm3,Container/reservoir volume
 channel_length,100.0,cm,Channel length for NFT systems
 system_type,deep_water_culture,string,Hydroponic system type

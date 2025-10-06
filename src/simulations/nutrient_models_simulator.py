@@ -375,19 +375,38 @@ class NutrientModelsSimulator(BaseSimulator):
                 else:
                     raise
             
-            # Update state with model results
-            self.state.solution_ec = result.get('solution_ec', self.state.solution_ec)
+            # Update state with model results - using actual keys returned by model
+            self.state.solution_ec = result.get('calculated_ec', self.state.solution_ec)
             self.state.solution_ph = ph
-            
-            # Update nutrient concentrations
+
+            # Get dictionaries from model results
+            updated_concentrations = result.get('updated_concentrations', {})
+            uptake_rates = result.get('uptake_rates_mg_per_plant_per_day', {})
+            organ_pools = result.get('organ_pools', {})
+            transport_fluxes = result.get('transport_fluxes', {})
+
+            # Update nutrient concentrations and uptake rates
             for element in self.nutrient_elements:
-                self.state.nutrient_concentrations[element] = result.get(f'{element}_concentration', 0.0)
-                self.state.nutrient_uptake_rates[element] = result.get(f'{element}_uptake_rate', 0.0)
-                self.state.nutrient_availability[element] = result.get(f'{element}_availability', 0.0)
-                self.state.root_nutrient_pools[element] = result.get(f'{element}_root_pool', 0.0)
-                self.state.shoot_nutrient_pools[element] = result.get(f'{element}_shoot_pool', 0.0)
-                self.state.xylem_flux[element] = result.get(f'{element}_xylem_flux', 0.0)
-                self.state.phloem_flux[element] = result.get(f'{element}_phloem_flux', 0.0)
+                self.state.nutrient_concentrations[element] = updated_concentrations.get(element, 0.0)
+                self.state.nutrient_uptake_rates[element] = uptake_rates.get(element, 0.0)
+
+                # Calculate availability based on concentration and optimal range
+                if element in updated_concentrations:
+                    self.state.nutrient_availability[element] = min(1.0, updated_concentrations[element] / 100.0)
+
+                # Update pools from organ_pools
+                if 'roots' in organ_pools and element in organ_pools['roots']:
+                    self.state.root_nutrient_pools[element] = organ_pools['roots'][element]
+                if 'leaves' in organ_pools and element in organ_pools['leaves']:
+                    self.state.shoot_nutrient_pools[element] = organ_pools['leaves'][element]
+                elif 'stems' in organ_pools and element in organ_pools['stems']:
+                    self.state.shoot_nutrient_pools[element] += organ_pools['stems'][element]
+
+                # Update fluxes from transport_fluxes
+                if 'xylem' in transport_fluxes and element in transport_fluxes['xylem']:
+                    self.state.xylem_flux[element] = transport_fluxes['xylem'][element]
+                if 'phloem' in transport_fluxes and element in transport_fluxes['phloem']:
+                    self.state.phloem_flux[element] = transport_fluxes['phloem'][element]
             
             # Update cumulative values
             for element in self.nutrient_elements:

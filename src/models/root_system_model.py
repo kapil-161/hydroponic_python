@@ -518,8 +518,25 @@ class EnhancedRootSystemModel:
         self.initialize_root_zones()
     
     def initialize(self):
-        """Initialize the root system model"""
-        pass
+        """Initialize the root system model with initial root cohort"""
+        # Create initial root cohort from initial biomass (from CSV)
+        initial_biomass = self.params.initial_root_biomass  # g
+        initial_length = self.params.initial_root_length  # cm
+        initial_diameter = self.params.initial_root_diameter  # mm
+
+        # Create first root cohort in upper zone
+        if len(self.root_zones) > 0:
+            initial_cohort = RootCohort(
+                cohort_id=1,
+                age_days=0.0,
+                length=initial_length,
+                diameter=initial_diameter,
+                biomass=initial_biomass,
+                zone=0,  # Upper zone
+                initial_activity=1.0
+            )
+            self.root_zones[0].root_cohorts.append(initial_cohort)
+            self.next_cohort_id = 2
 
     def initialize_root_zones(self):
         effective_volume = self.params.container_volume * self.params.root_zone_efficiency_factor
@@ -712,7 +729,6 @@ class EnhancedRootSystemModel:
             coarse_area * self.params.coarse_root_effectiveness
         )
         if effective_area < self.params.effective_area_minimum:
-            print(f"Warning: Effective surface area {effective_area} is below minimum {self.params.effective_area_minimum}, using minimum")
             effective_area = self.params.effective_area_minimum
         return effective_area
 

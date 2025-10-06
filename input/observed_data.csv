@@ -1,0 +1,125 @@
+experiment_id,nutrient_varied,fertility_rate_mg_L,week,days,plant_dry_weight_g,tissue_concentration_percent,notes
+# Lactuca sativa 'Salanova Green' experimental data for model validation
+# Source: Hydroponic fertility study with varying macronutrient rates
+# All other nutrients held constant while one nutrient was varied
+# Weeks 3, 4, 5 = 21, 28, 35 days from planting
+
+# Nitrogen (N) experiments
+N_exp_1,N,0,3,21,0.02,1.11,
+N_exp_2,N,0,4,28,0.02,1.19,
+N_exp_3,N,0,5,35,0.05,1.31,
+N_exp_4,N,12,3,21,0.11,3.54,
+N_exp_5,N,12,4,28,0.89,1.63,
+N_exp_6,N,12,5,35,2.20,1.81,
+N_exp_7,N,24,3,21,0.14,3.96,
+N_exp_8,N,24,4,28,1.35,2.97,
+N_exp_9,N,24,5,35,3.28,3.39,
+N_exp_10,N,48,3,21,0.19,3.94,
+N_exp_11,N,48,4,28,3.35,3.90,
+N_exp_12,N,48,5,35,6.58,3.76,
+N_exp_13,N,96,3,21,0.18,4.77,
+N_exp_14,N,96,4,28,3.23,4.73,
+N_exp_15,N,96,5,35,5.15,5.48,
+N_exp_16,N,150,3,21,0.23,5.48,Linear increase in dry weight at week 5
+N_exp_17,N,150,4,28,4.03,5.48,
+N_exp_18,N,150,5,35,9.33,5.35,Highest dry mass at week 5
+
+# Phosphorus (P) experiments
+P_exp_1,P,0,3,21,0.08,0.34,
+P_exp_2,P,0,4,28,0.45,0.09,
+P_exp_3,P,0,5,35,0.43,0.12,
+P_exp_4,P,1.63,3,21,0.16,0.54,
+P_exp_5,P,1.63,4,28,1.99,0.17,
+P_exp_6,P,1.63,5,35,2.77,0.14,
+P_exp_7,P,3.25,3,21,0.25,0.74,
+P_exp_8,P,3.25,4,28,1.55,0.43,
+P_exp_9,P,3.25,5,35,2.93,0.44,
+P_exp_10,P,6.5,3,21,0.16,0.87,
+P_exp_11,P,6.5,4,28,3.58,0.43,
+P_exp_12,P,6.5,5,35,6.88,0.55,
+P_exp_13,P,13,3,21,0.16,0.86,
+P_exp_14,P,13,4,28,3.50,0.66,
+P_exp_15,P,13,5,35,9.28,0.73,
+P_exp_16,P,20,3,21,0.23,0.71,No relationship at week 3
+P_exp_17,P,20,4,28,4.03,0.70,Quadratic plateau at weeks 4 and 5
+P_exp_18,P,20,5,35,9.33,0.49,
+
+# Potassium (K) experiments
+K_exp_1,K,0,3,21,0.11,1.41,
+K_exp_2,K,0,4,28,1.10,0.39,
+K_exp_3,K,0,5,35,0.97,0.47,
+K_exp_4,K,12,3,21,0.13,3.02,
+K_exp_5,K,12,4,28,2.30,1.03,
+K_exp_6,K,12,5,35,5.40,0.98,
+K_exp_7,K,24,3,21,0.14,3.87,
+K_exp_8,K,24,4,28,2.45,4.88,
+K_exp_9,K,24,5,35,4.75,2.74,
+K_exp_10,K,48,3,21,0.21,6.45,
+K_exp_11,K,48,4,28,3.85,4.24,
+K_exp_12,K,48,5,35,7.25,2.66,
+K_exp_13,K,96,3,21,0.18,6.81,
+K_exp_14,K,96,4,28,3.80,7.11,
+K_exp_15,K,96,5,35,7.28,5.49,
+K_exp_16,K,150,3,21,0.23,7.21,Quadratic plateau at all weeks
+K_exp_17,K,150,4,28,4.03,8.28,
+K_exp_18,K,150,5,35,9.33,7.07,
+
+# Calcium (Ca) experiments
+Ca_exp_1,Ca,0,3,21,0.14,0.34,
+Ca_exp_2,Ca,0,4,28,1.65,0.20,
+Ca_exp_3,Ca,0,5,35,3.58,0.26,
+Ca_exp_4,Ca,4.69,3,21,0.14,0.38,
+Ca_exp_5,Ca,4.69,4,28,2.15,0.26,
+Ca_exp_6,Ca,4.69,5,35,5.68,0.26,
+Ca_exp_7,Ca,9.38,3,21,0.12,0.96,
+Ca_exp_8,Ca,9.38,4,28,1.98,0.61,
+Ca_exp_9,Ca,9.38,5,35,5.73,0.58,
+Ca_exp_10,Ca,18.75,3,21,0.13,1.07,
+Ca_exp_11,Ca,18.75,4,28,4.30,0.85,
+Ca_exp_12,Ca,18.75,5,35,9.25,0.67,
+Ca_exp_13,Ca,37.50,3,21,0.21,1.07,
+Ca_exp_14,Ca,37.50,4,28,4.70,1.04,
+Ca_exp_15,Ca,37.50,5,35,9.43,0.86,
+Ca_exp_16,Ca,75.0,3,21,0.23,1.17,Quadratic plateau at all weeks
+Ca_exp_17,Ca,75.0,4,28,4.03,1.24,Optimal at 68.91 mg/L Ca
+Ca_exp_18,Ca,75.0,5,35,9.33,1.33,
+
+# Sulfur (S) experiments
+S_exp_1,S,0,3,21,0.11,0.19,
+S_exp_2,S,0,4,28,1.65,0.19,
+S_exp_3,S,0,5,35,4.40,0.15,
+S_exp_4,S,2.0,3,21,0.16,0.25,
+S_exp_5,S,2.0,4,28,3.60,0.25,
+S_exp_6,S,2.0,5,35,8.75,0.26,
+S_exp_7,S,4.0,3,21,0.17,0.26,
+S_exp_8,S,4.0,4,28,2.73,0.25,
+S_exp_9,S,4.0,5,35,5.60,0.27,
+S_exp_10,S,8.0,3,21,0.19,0.28,
+S_exp_11,S,8.0,4,28,4.35,0.28,
+S_exp_12,S,8.0,5,35,8.18,0.28,
+S_exp_13,S,16.0,3,21,0.25,0.29,
+S_exp_14,S,16.0,4,28,4.43,0.28,
+S_exp_15,S,16.0,5,35,10.23,0.29,
+S_exp_16,S,25.0,3,21,0.30,0.28,Quadratic plateau at all weeks
+S_exp_17,S,25.0,4,28,4.55,0.29,Significant impact on dry weight
+S_exp_18,S,25.0,5,35,9.70,0.28,
+
+# Magnesium (Mg) experiments
+Mg_exp_1,Mg,0,3,21,0.14,0.26,
+Mg_exp_2,Mg,0,4,28,1.18,0.10,
+Mg_exp_3,Mg,0,5,35,2.27,0.10,
+Mg_exp_4,Mg,2.5,3,21,0.12,0.30,
+Mg_exp_5,Mg,2.5,4,28,2.65,0.15,
+Mg_exp_6,Mg,2.5,5,35,5.90,0.19,
+Mg_exp_7,Mg,5.0,3,21,0.17,0.38,
+Mg_exp_8,Mg,5.0,4,28,2.20,0.19,
+Mg_exp_9,Mg,5.0,5,35,5.20,0.29,
+Mg_exp_10,Mg,10.0,3,21,0.16,0.46,
+Mg_exp_11,Mg,10.0,4,28,3.90,0.35,
+Mg_exp_12,Mg,10.0,5,35,9.10,0.46,
+Mg_exp_13,Mg,20.0,3,21,0.19,0.43,
+Mg_exp_14,Mg,20.0,4,28,4.53,0.40,
+Mg_exp_15,Mg,20.0,5,35,7.88,0.55,
+Mg_exp_16,Mg,30.0,3,21,0.18,0.56,No impact at week 3
+Mg_exp_17,Mg,30.0,4,28,4.83,0.45,Quadratic plateau at weeks 4 and 5
+Mg_exp_18,Mg,30.0,5,35,8.30,0.71,Luxury uptake observed

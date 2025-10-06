@@ -4,6 +4,8 @@ system_config,tank_volume_L,100.0,L,Hydroponic tank volume
 system_config,plant_count,20,count,Number of plants in system
 system_config,solution_volume,100.0,L,Nutrient solution volume
 system_config,grow_area,2.0,m2,Growing area
+system_config,daily_growth_rate,1.0,g_per_day,Reference daily growth rate for nutrient calculations
+system_config,optimal_ec,1.6,dS_m,Optimal electrical conductivity for nutrient solution
 
 # Initial Plant State (at planting/germination)
 initial_state,root_biomass,0.3,g,Initial root biomass at transplant
@@ -14,7 +16,8 @@ initial_state,total_biomass,1.3,g,Initial total plant biomass
 initial_state,lai,0.05,m2_m2,Initial leaf area index
 initial_state,leaf_area,0.001,m2,Initial leaf area per plant
 initial_state,plant_height,0.02,m,Initial plant height (2 cm)
-initial_state,root_length,0.05,m,Initial root length
+initial_state,root_length,5.0,cm,Initial root length (changed from m to cm)
+initial_state,root_surface_area,12.6,cm2,Initial root surface area (π × 0.8mm × 5cm)
 
 # Initial Stress Levels (no stress at start)
 initial_state,water_stress,0.0,fraction,Initial water stress level

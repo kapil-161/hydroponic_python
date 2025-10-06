@@ -20,7 +20,7 @@ water_parameters,psychrometric_constant,0.665,kPa_°C,Psychrometric constant for
 water_parameters,wind_speed,2.0,m_s,Wind speed for evapotranspiration calculations
 water_parameters,net_radiation_factor,0.77,dimensionless,Fraction of solar radiation converted to net radiation
 water_parameters,radiation_offset,2.45,MJ_m2_day,Radiation offset for net radiation calculation
-water_parameters,base_crop_coefficient,2.0,dimensionless,Base crop coefficient for lettuce
+water_parameters,base_crop_coefficient,1.0,dimensionless,Base crop coefficient for lettuce
 water_parameters,lai_coefficient_factor,3.0,m2_m2,LAI scaling factor for crop coefficient
 water_parameters,vegetative_stage_factor,0.8,dimensionless,Crop coefficient multiplier for vegetative stage
 water_parameters,head_formation_stage_factor,1.2,dimensionless,Crop coefficient multiplier for head formation
@@ -30,7 +30,7 @@ water_parameters,temperature_sensitivity,0.15,°C_inverse,Temperature response s
 water_parameters,optimal_vpd_min,0.8,kPa,Minimum optimal vapor pressure deficit
 water_parameters,optimal_vpd_max,1.5,kPa,Maximum optimal vapor pressure deficit
 water_parameters,vpd_sensitivity,0.3,kPa_inverse,VPD response sensitivity factor
-water_parameters,metabolic_water_per_biomass,0.4,L_g_biomass,Metabolic water demand per unit biomass
+water_parameters,metabolic_water_per_biomass,0.001,L_g_biomass,Metabolic water demand per unit biomass
 water_parameters,metabolic_water_per_lai,0.1,L_LAI,Metabolic water demand per LAI unit
 water_parameters,temperature_tolerance,15.0,°C,Temperature tolerance range for water uptake
 water_parameters,minimum_temperature_factor,0.3,dimensionless,Minimum temperature response factor
@@ -45,7 +45,7 @@ water_parameters,max_root_surface_area_factor,2.0,dimensionless,Maximum root sur
 water_parameters,cavitation_gradient_denominator,1.0,MPa,Cavitation gradient denominator
 water_parameters,temperature_response_exponent_denominator,200,dimensionless,Temperature response exponent denominator
 water_parameters,vpd_effect_divisor,1.0,kPa,VPD effect divisor
-water_parameters,transpiration_base_rate_scale_factor,2.0,dimensionless,Base rate scaling factor for transpiration
+water_parameters,transpiration_base_rate_scale_factor,0.5,dimensionless,Base rate scaling factor for transpiration
 water_parameters,transpiration_scaling_multiplier,0.1,dimensionless,Transpiration scaling multiplier
 water_parameters,lai_coefficient_threshold,0.1,dimensionless,LAI threshold for coefficient calculation
 water_parameters,minimum_coverage_factor,0.01,dimensionless,Minimum coverage factor when LAI is zero
@@ -82,16 +82,16 @@ nutrient_parameters,ec_uptake_modifier_p_low,0.3,dimensionless,Phosphorus uptake
 nutrient_parameters,ec_uptake_modifier_fe_low,0.4,dimensionless,Iron uptake modifier under low EC
 
 # Michaelis-Menten Uptake Kinetics
-nutrient_parameters,kinetics_n_no3_vmax,0.08,mg_cm2_day,Maximum uptake rate for nitrate nitrogen
+nutrient_parameters,kinetics_n_no3_vmax,0.008,mg_cm2_day,Maximum uptake rate for nitrate nitrogen (calibrated to match observed data)
 nutrient_parameters,kinetics_n_no3_km,15.0,mg_L,Michaelis constant for nitrate nitrogen
 nutrient_parameters,kinetics_n_no3_min_conc,0.5,mg_L,Minimum concentration for nitrate nitrogen uptake
-nutrient_parameters,kinetics_n_nh4_vmax,0.05,mg_cm2_day,Maximum uptake rate for ammonium nitrogen
+nutrient_parameters,kinetics_n_nh4_vmax,0.005,mg_cm2_day,Maximum uptake rate for ammonium nitrogen (calibrated)
 nutrient_parameters,kinetics_n_nh4_km,5.0,mg_L,Michaelis constant for ammonium nitrogen
 nutrient_parameters,kinetics_n_nh4_min_conc,0.2,mg_L,Minimum concentration for ammonium nitrogen uptake
-nutrient_parameters,kinetics_p_po4_vmax,0.008,mg_cm2_day,Maximum uptake rate for phosphate phosphorus
+nutrient_parameters,kinetics_p_po4_vmax,0.0008,mg_cm2_day,Maximum uptake rate for phosphate phosphorus (calibrated)
 nutrient_parameters,kinetics_p_po4_km,3.0,mg_L,Michaelis constant for phosphate phosphorus
 nutrient_parameters,kinetics_p_po4_min_conc,0.1,mg_L,Minimum concentration for phosphate phosphorus uptake
-nutrient_parameters,kinetics_k_vmax,0.06,mg_cm2_day,Maximum uptake rate for potassium
+nutrient_parameters,kinetics_k_vmax,0.006,mg_cm2_day,Maximum uptake rate for potassium (calibrated)
 nutrient_parameters,kinetics_k_km,25.0,mg_L,Michaelis constant for potassium
 nutrient_parameters,kinetics_k_min_conc,1.0,mg_L,Minimum concentration for potassium uptake
 nutrient_parameters,kinetics_ca_vmax,0.04,mg_cm2_day,Maximum uptake rate for calcium
@@ -103,7 +103,7 @@ nutrient_parameters,kinetics_mg_min_conc,0.5,mg_L,Minimum concentration for magn
 
 # Canopy Architecture Model Parameters
 canopy_parameters,number_of_layers,5,dimensionless,Number of canopy layers for light calculations
-canopy_parameters,max_lai,8.0,m2_m2,Maximum possible leaf area index for the crop
+canopy_parameters,max_lai,12.0,m2_m2,Maximum LAI for hydroponic lettuce (can reach 10-12)
 canopy_parameters,extinction_coefficient,0.6,dimensionless,Base light extinction coefficient
 canopy_parameters,diffuse_extinction_coeff,0.8,dimensionless,Extinction coefficient multiplier for diffuse light
 canopy_parameters,beam_extinction_coeff,0.5,dimensionless,Extinction coefficient multiplier for direct beam light
@@ -146,7 +146,7 @@ leaf_development,base_phyllochron,80.0,°C_day,Thermal time interval between lea
 leaf_development,max_leaf_number,25.0,dimensionless,Maximum number of leaves for lettuce
 leaf_development,initial_leaf_number,2.0,dimensionless,Initial number of leaves (cotyledons + first true leaves)
 leaf_development,leaf_appearance_rate,1.0,leaves_per_phyllochron,Leaves per phyllochron unit
-leaf_development,max_individual_leaf_area,0.008,m2,Maximum area per individual leaf
+leaf_development,max_individual_leaf_area,0.004,m2,Maximum area per individual leaf (40 cm2 for 400-800 cm2 total with 10-20 leaves)
 leaf_development,leaf_area_expansion_rate,0.15,dimensionless,Natural cellular expansion rate per day
 leaf_development,drought_threshold,0.6,dimensionless,Water stress threshold for leaf development
 leaf_development,n_stress_threshold,0.7,dimensionless,Nitrogen stress threshold for leaf expansion
@@ -279,7 +279,7 @@ leaf_development,minimum_temperature,4.5,°C,Minimum temperature for leaf develo
 # leaf_development,opt_temp_min,18.0,°C,Lower optimal temperature for leaf development (consolidated to phenology_parameters)
 # leaf_development,opt_temp_max,24.0,°C,Upper optimal temperature for leaf development (consolidated to phenology_parameters)
 leaf_development,maximum_temperature,35.0,°C,Maximum temperature for leaf development
-leaf_development,specific_leaf_area,800.0,cm2_g,Specific leaf area (cm²/g dry weight)
+leaf_development,specific_leaf_area,150.0,cm2_g,Specific leaf area (cm²/g dry weight)
 
 
 # Logging and Validation Parameters

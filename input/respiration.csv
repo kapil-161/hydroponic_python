@@ -5,7 +5,7 @@ parameter_name,value,unit,description
 maintenance_base_rate,0.005,g_C_g_biomass_day,Base maintenance respiration rate at 25°C
 reference_temperature,25.0,°C,Reference temperature for Q10 response
 q10_factor,2.0,dimensionless,Temperature response coefficient for respiration
-growth_efficiency,0.75,dimensionless,Conversion efficiency for biomass synthesis
+growth_efficiency,0.30,dimensionless,Conversion efficiency for biomass synthesis (calibrated to match observed growth rate)
 biosynthetic_cost,1.35,g_glucose_g_biomass,General biosynthetic cost for growth
 age_effect_coefficient,0.005,day_inverse,Daily increase in respiration per day of age
 max_age_effect,3.0,dimensionless,Maximum age multiplier for respiration
