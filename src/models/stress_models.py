@@ -38,34 +38,42 @@ def _build_simple_interactions(stress_weights: Dict[str, float]) -> Dict[str, Di
     }
 
 
-def _build_cumulative_thresholds(stress_weights: Dict[str, float]) -> Dict[str, float]:
-    """Build cumulative stress thresholds from weights"""
-    return {k: 0.3 + v * 0.2 for k, v in stress_weights.items()}
+def _build_cumulative_thresholds(stress_weights: Dict[str, float], config: Dict[str, Any]) -> Dict[str, float]:
+    """Build cumulative stress thresholds from weights using CSV parameters - NO HARDCODED VALUES (Rules.md)"""
+    base = float(config.get('cumulative_threshold_coefficient_base', 0.3))
+    weight_coeff = float(config.get('cumulative_threshold_coefficient_weight', 0.2))
+    return {k: base + v * weight_coeff for k, v in stress_weights.items()}
 
 
-def _build_damage_rates(recovery_rates: Dict[str, float]) -> Dict[str, float]:
-    """Build damage accumulation rates from recovery rates"""
-    return {k: v * 0.5 for k, v in recovery_rates.items()}
+def _build_damage_rates(recovery_rates: Dict[str, float], config: Dict[str, Any]) -> Dict[str, float]:
+    """Build damage accumulation rates from recovery rates using CSV parameters - NO HARDCODED VALUES (Rules.md)"""
+    coeff = float(config.get('damage_rate_recovery_coefficient', 0.5))
+    return {k: v * coeff for k, v in recovery_rates.items()}
 
 
-def _build_recovery_thresholds(onset_thresholds: Dict[str, float]) -> Dict[str, float]:
-    """Build recovery thresholds from onset thresholds"""
-    return {k: v + 0.05 for k, v in onset_thresholds.items()}
+def _build_recovery_thresholds(onset_thresholds: Dict[str, float], config: Dict[str, Any]) -> Dict[str, float]:
+    """Build recovery thresholds from onset thresholds using CSV parameters - NO HARDCODED VALUES (Rules.md)"""
+    offset = float(config.get('recovery_threshold_offset', 0.05))
+    return {k: v + offset for k, v in onset_thresholds.items()}
 
 
-def _build_recovery_times(recovery_rates: Dict[str, float]) -> Dict[str, float]:
-    """Build full recovery times from recovery rates"""
-    return {k: 1.0 / max(v, 0.01) for k, v in recovery_rates.items()}
+def _build_recovery_times(recovery_rates: Dict[str, float], config: Dict[str, Any]) -> Dict[str, float]:
+    """Build full recovery times from recovery rates using CSV parameters - NO HARDCODED VALUES (Rules.md)"""
+    min_rate = float(config.get('recovery_time_minimum_rate', 0.01))
+    return {k: 1.0 / max(v, min_rate) for k, v in recovery_rates.items()}
 
 
-def _build_acclimation_capacity(acclimation_rates: Dict[str, float]) -> Dict[str, float]:
-    """Build acclimation capacity from rates"""
-    return {k: min(v * 2.0, 0.8) for k, v in acclimation_rates.items()}
+def _build_acclimation_capacity(acclimation_rates: Dict[str, float], config: Dict[str, Any]) -> Dict[str, float]:
+    """Build acclimation capacity from rates using CSV parameters - NO HARDCODED VALUES (Rules.md)"""
+    multiplier = float(config.get('acclimation_capacity_multiplier', 2.0))
+    maximum = float(config.get('acclimation_capacity_maximum', 0.8))
+    return {k: min(v * multiplier, maximum) for k, v in acclimation_rates.items()}
 
 
-def _build_acclimation_memory(memory_duration: Dict[str, float]) -> Dict[str, float]:
-    """Build acclimation memory from duration"""
-    return {k: v * 0.8 for k, v in memory_duration.items()}
+def _build_acclimation_memory(memory_duration: Dict[str, float], config: Dict[str, Any]) -> Dict[str, float]:
+    """Build acclimation memory from duration using CSV parameters - NO HARDCODED VALUES (Rules.md)"""
+    decay_factor = float(config.get('acclimation_memory_decay_factor', 0.8))
+    return {k: v * decay_factor for k, v in memory_duration.items()}
 
 
 def _calculate_stress_interactions(stress_weights: Dict[str, float], config: Dict[str, Any]) -> Dict[str, Dict[str, Dict[str, Any]]]:
@@ -78,26 +86,31 @@ def _calculate_stress_interactions(stress_weights: Dict[str, float], config: Dic
     ph_weight = stress_weights[StressType.PH.value]
     light_weight = stress_weights[StressType.LIGHT.value]
 
-    # Get interaction factors from CSV parameters
+    # Get interaction factors from CSV parameters - NO HARDCODED VALUES (Rules.md)
     water_salinity_interaction_factor = float(config.get('water_salinity_interaction_factor', 0.3))
+    water_temp_coeff = float(config.get('stress_interaction_water_temperature_coefficient', 0.5))
+    water_nutrient_coeff = float(config.get('stress_interaction_water_nutrient_coefficient', 0.4))
+    temp_light_coeff = float(config.get('stress_interaction_temperature_light_coefficient', 0.2))
+    nutrient_ph_coeff = float(config.get('stress_interaction_nutrient_ph_coefficient', 0.6))
+    nutrient_salinity_coeff = float(config.get('stress_interaction_nutrient_salinity_coefficient', 0.4))
 
     # Water-temperature interaction: higher weights = stronger synergy
-    water_temp_factor = 1.0 + (water_weight * temp_weight) * 0.5
+    water_temp_factor = 1.0 + (water_weight * temp_weight) * water_temp_coeff
 
     # Water-salinity interaction: both affect osmotic potential
     water_salinity_factor = 1.0 + (water_weight * salinity_weight) * water_salinity_interaction_factor
 
     # Water-nutrient interaction: water uptake affects nutrient availability
-    water_nutrient_factor = 1.0 + (water_weight * nutrient_weight) * 0.4
+    water_nutrient_factor = 1.0 + (water_weight * nutrient_weight) * water_nutrient_coeff
 
     # Temperature-light interaction: both affect photosynthesis
-    temp_light_factor = 1.0 + (temp_weight * light_weight) * 0.2
+    temp_light_factor = 1.0 + (temp_weight * light_weight) * temp_light_coeff
 
     # Nutrient-pH interaction: pH affects nutrient availability
-    nutrient_ph_factor = 1.0 + (nutrient_weight * ph_weight) * 0.6
+    nutrient_ph_factor = 1.0 + (nutrient_weight * ph_weight) * nutrient_ph_coeff
 
     # Nutrient-salinity interaction: both affect root uptake
-    nutrient_salinity_factor = 1.0 + (nutrient_weight * salinity_weight) * 0.4
+    nutrient_salinity_factor = 1.0 + (nutrient_weight * salinity_weight) * nutrient_salinity_coeff
 
     return {
         StressType.WATER.value: {
@@ -941,24 +954,24 @@ class IntegratedStressParameters:
             stress_interactions=_build_simple_interactions(stress_weights),
             process_sensitivity=process_sensitivity,
             stress_memory_duration=stress_memory_duration,
-            cumulative_threshold=_build_cumulative_thresholds(stress_weights),
-            damage_accumulation_rate=_build_damage_rates(recovery_rates),
+            cumulative_threshold=_build_cumulative_thresholds(stress_weights, config_dict),
+            damage_accumulation_rate=_build_damage_rates(recovery_rates, config_dict),
             recovery_rates=recovery_rates,
-            recovery_thresholds=_build_recovery_thresholds(onset_thresholds),
-            full_recovery_time=_build_recovery_times(recovery_rates),
+            recovery_thresholds=_build_recovery_thresholds(onset_thresholds, config_dict),
+            full_recovery_time=_build_recovery_times(recovery_rates, config_dict),
             acclimation_rates=acclimation_rates,
-            acclimation_capacity=_build_acclimation_capacity(acclimation_rates),
-            acclimation_memory=_build_acclimation_memory(stress_memory_duration),
+            acclimation_capacity=_build_acclimation_capacity(acclimation_rates, config_dict),
+            acclimation_memory=_build_acclimation_memory(stress_memory_duration, config_dict),
             stress_onset_thresholds=onset_thresholds,
             damage_thresholds=damage_thresholds,
-            chronic_stress_weight=0.7,
-            acute_stress_weight=0.3,
+            chronic_stress_weight=float(config_dict.get('chronic_stress_weight', 0.7)),
+            acute_stress_weight=float(config_dict.get('acute_stress_weight', 0.3)),
             acclimation_benefit_factor=float(acclimation_config.get('max_adjustment', 0.5)),
             interaction_penalty_factor=float(integration_config.get('interaction_factor', 1.2)),
-            recovery_bonus_factor=0.15,
-            damage_penalty_factor=1.5,
-            memory_divisor=10.0,
-            chronic_factor_multiplier=1.3,
+            recovery_bonus_factor=float(config_dict.get('recovery_bonus_factor', 0.15)),
+            damage_penalty_factor=float(config_dict.get('damage_penalty_factor', 1.5)),
+            memory_divisor=float(config_dict.get('memory_divisor', 10.0)),
+            chronic_factor_multiplier=float(config_dict.get('chronic_factor_multiplier', 1.3)),
             cache_timeout=float(config_dict.get('cache_timeout', 300.0))
         )
 

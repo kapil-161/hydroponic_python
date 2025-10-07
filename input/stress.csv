@@ -175,3 +175,22 @@ sensitivity_respiration,0.4,dimensionless,Respiration sensitivity to stress (mod
 sensitivity_transpiration,0.6,dimensionless,Transpiration sensitivity to stress (moderate-high)
 sensitivity_growth,0.9,dimensionless,Growth sensitivity to stress (very high)
 sensitivity_development,0.5,dimensionless,Development sensitivity to stress (moderate)
+stress_interaction_water_temperature_coefficient,0.5,dimensionless,Coefficient for water-temperature stress interaction
+stress_interaction_water_nutrient_coefficient,0.4,dimensionless,Coefficient for water-nutrient stress interaction
+stress_interaction_temperature_light_coefficient,0.2,dimensionless,Coefficient for temperature-light stress interaction
+stress_interaction_nutrient_ph_coefficient,0.6,dimensionless,Coefficient for nutrient-pH stress interaction
+stress_interaction_nutrient_salinity_coefficient,0.4,dimensionless,Coefficient for nutrient-salinity stress interaction
+chronic_stress_weight,0.7,dimensionless,Weight of chronic stress in combined stress calculation
+acute_stress_weight,0.3,dimensionless,Weight of acute stress in combined stress calculation
+recovery_bonus_factor,0.15,dimensionless,Recovery bonus factor for stress relief
+damage_penalty_factor,1.5,dimensionless,Damage penalty multiplier for stress accumulation
+memory_divisor,10.0,dimensionless,Memory effect time divisor for exponential weighting
+chronic_factor_multiplier,1.3,dimensionless,Chronic stress factor multiplier
+cumulative_threshold_coefficient_base,0.3,dimensionless,Base coefficient for cumulative threshold calculation
+cumulative_threshold_coefficient_weight,0.2,dimensionless,Weight coefficient for cumulative threshold calculation
+damage_rate_recovery_coefficient,0.5,dimensionless,Coefficient relating damage rates to recovery rates
+recovery_threshold_offset,0.05,dimensionless,Offset for calculating recovery thresholds from onset thresholds
+recovery_time_minimum_rate,0.01,per_day,Minimum recovery rate to prevent division by zero
+acclimation_capacity_multiplier,2.0,dimensionless,Multiplier for calculating acclimation capacity from rates
+acclimation_capacity_maximum,0.8,dimensionless,Maximum acclimation capacity cap
+acclimation_memory_decay_factor,0.8,dimensionless,Decay factor for acclimation memory duration

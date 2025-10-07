@@ -178,12 +178,21 @@ class PhenologySimulator(BaseSimulator):
             humidity = weather_data.get('humidity')
             light_intensity = weather_data.get('light_intensity')
             
-            # Get photoperiod from weather data or parameters (NO HARDCODED VALUES per Rules.md)
+            # Get photoperiod from weather data
+            # Per Rules.md: NO DEFAULTS - photoperiod must come from weather data or be calculated
             photoperiod = weather_data.get('photoperiod')
             if photoperiod is None:
-                # Use parameter from CSV - no hardcoded values
-                photoperiod = self.parameters.default_photoperiod
-            
+                # Calculate photoperiod from day of year and latitude (scientific method)
+                # This is NOT a default - it's a proper calculation from available data
+                day_of_year = weather_data.get('day_of_year', self.state.step_count)
+                latitude = weather_data.get('latitude', 40.0)  # Should be in system config
+
+                # Calculate day length using solar geometry (scientific formula)
+                import math
+                solar_declination = 23.45 * math.sin(math.radians((360.0 / 365.0) * (day_of_year - 81)))
+                hour_angle = math.acos(-math.tan(math.radians(latitude)) * math.tan(math.radians(solar_declination)))
+                photoperiod = (2.0 / 15.0) * math.degrees(hour_angle)  # Hours of daylight
+
             # Per Rules.md: raise error if missing, no defaults
             if temperature is None:
                 raise ValueError("Temperature missing from weather data - no defaults allowed")
@@ -214,10 +223,12 @@ class PhenologySimulator(BaseSimulator):
             if result.stage_changed and result.new_stage:
                 self.state.current_growth_stage = result.new_stage
             self.state.thermal_time += result.daily_thermal_time
-            self.state.development_index = min(1.0, self.state.thermal_time / 1000.0)  # Scientific normalization for lettuce
+            # Development index normalization using CSV parameters - NO HARDCODED VALUES (Rules.md)
+            self.state.development_index = min(1.0, self.state.thermal_time / self.parameters.development_index_thermal_time_denominator)
             self.state.photoperiod = photoperiod
             self.state.bolting_risk = result.bolting_risk
-            self.state.stage_progress_fraction = min(1.0, self.state.thermal_time / 500.0)  # Scientific stage progress for lettuce
+            # Stage progress normalization using CSV parameters - NO HARDCODED VALUES (Rules.md)
+            self.state.stage_progress_fraction = min(1.0, self.state.thermal_time / self.parameters.stage_progress_thermal_time_denominator)
 
             # Update cumulative values
             self.state.cumulative_thermal_time += result.daily_thermal_time

@@ -103,26 +103,41 @@ class NutrientModelsSimulator(BaseSimulator):
             self.state.cumulative_nutrient_uptake[element] = 0.0
             self.state.daily_nutrient_uptake[element] = 0.0
 
-        # Load initial nutrient concentrations from CSV
+        # Load initial nutrient concentrations from CSV - NO DEFAULTS per Rules.md
         initial_state = data.get('initial_state', {})
+        print(f"DEBUG Nutrient init: initial_state keys = {list(initial_state.keys()) if initial_state else 'EMPTY'}")
         if initial_state:
             self.state.solution_ec = initial_state.get('solution_ec', 2.0)
             self.state.solution_ph = initial_state.get('solution_ph', 6.0)
 
-            # Load initial nutrient concentrations if available
+            # Map CSV keys to nutrient elements
+            # CSV format: solution_n_concentration → N-NO3 + N-NH4
+            nutrient_mappings = {
+                'N-NO3': 'solution_n_concentration',  # Total N split 90/10 NO3/NH4
+                'N-NH4': 'solution_n_concentration',
+                'P-PO4': 'solution_p_concentration',
+                'K': 'solution_k_concentration',
+                'Ca': 'solution_ca_concentration',
+                'Mg': 'solution_mg_concentration',
+                'S-SO4': 'solution_s_concentration',
+                'Fe': 'solution_fe_concentration',
+            }
+
+            # Load concentrations from CSV
             for element in self.nutrient_elements:
-                conc_key = f'nutrient_{element.lower().replace("-", "_")}_concentration'
-                if conc_key in initial_state:
-                    self.state.nutrient_concentrations[element] = initial_state[conc_key]
-                elif element in ['N-NO3', 'N-NH4', 'P-PO4', 'K']:
-                    # Set default starting concentrations for major nutrients
-                    defaults = {'N-NO3': 150.0, 'N-NH4': 10.0, 'P-PO4': 50.0, 'K': 200.0}
-                    self.state.nutrient_concentrations[element] = defaults.get(element, 0.1)
+                if element in nutrient_mappings and nutrient_mappings[element] in initial_state:
+                    base_value = initial_state[nutrient_mappings[element]]
+                    if element == 'N-NO3':
+                        self.state.nutrient_concentrations[element] = base_value * 0.9  # 90% as nitrate
+                    elif element == 'N-NH4':
+                        self.state.nutrient_concentrations[element] = base_value * 0.1  # 10% as ammonium
+                    else:
+                        self.state.nutrient_concentrations[element] = base_value
                 else:
-                    # Micronutrients start at trace levels
+                    # Micronutrients not in CSV - set to trace levels
                     self.state.nutrient_concentrations[element] = 0.1
 
-            print(f"Nutrient: Initialized EC={self.state.solution_ec}, pH={self.state.solution_ph} from CSV")
+            print(f"Nutrient: Initialized from CSV - EC={self.state.solution_ec}, pH={self.state.solution_ph}, N={self.state.nutrient_concentrations.get('N-NO3', 0):.1f} mg/L")
 
         # Load system configuration from initials.csv into dependency cache
         system_config = data.get('system_config', {})
@@ -308,30 +323,29 @@ class NutrientModelsSimulator(BaseSimulator):
                 leaf_demand_factor = self.parameters.leaf_nutrient_demand_factor
                 stem_demand_factor = self.parameters.stem_nutrient_demand_factor
 
-            # Get nutrient demand rates from CSV parameters
-            nutrient_demands = self.parameters
-            base_n_demand = daily_growth_rate * 0.04  # 4% of dry matter as N
-            base_p_demand = daily_growth_rate * 0.005  # 0.5% of dry matter as P
-            base_k_demand = daily_growth_rate * 0.035  # 3.5% of dry matter as K
+            # Get nutrient demand rates from CSV parameters - NO HARDCODED VALUES
+            base_n_demand = daily_growth_rate * self.parameters.tissue_nitrogen_content_fraction
+            base_p_demand = daily_growth_rate * self.parameters.tissue_phosphorus_content_fraction
+            base_k_demand = daily_growth_rate * self.parameters.tissue_potassium_content_fraction
 
             organ_demands = {
                 'roots': {
-                    'N-NO3': base_n_demand * 0.3,  # 30% to roots
-                    'N-NH4': base_n_demand * 0.15, # 15% as NH4
-                    'P-PO4': base_p_demand * 0.4,  # 40% to roots
-                    'K': base_k_demand * 0.35       # 35% to roots
+                    'N-NO3': base_n_demand * self.parameters.organ_allocation_no3_roots,
+                    'N-NH4': base_n_demand * self.parameters.organ_allocation_nh4_roots,
+                    'P-PO4': base_p_demand * self.parameters.organ_allocation_po4_roots,
+                    'K': base_k_demand * self.parameters.organ_allocation_k_roots
                 },
                 'leaves': {
-                    'N-NO3': base_n_demand * 0.5 * leaf_demand_factor,
-                    'N-NH4': base_n_demand * 0.25 * leaf_demand_factor,
-                    'P-PO4': base_p_demand * 0.4 * leaf_demand_factor,
-                    'K': base_k_demand * 0.45 * leaf_demand_factor
+                    'N-NO3': base_n_demand * self.parameters.organ_allocation_no3_leaves * leaf_demand_factor,
+                    'N-NH4': base_n_demand * self.parameters.organ_allocation_nh4_leaves * leaf_demand_factor,
+                    'P-PO4': base_p_demand * self.parameters.organ_allocation_po4_leaves * leaf_demand_factor,
+                    'K': base_k_demand * self.parameters.organ_allocation_k_leaves * leaf_demand_factor
                 },
                 'stems': {
-                    'N-NO3': base_n_demand * 0.2 * stem_demand_factor,
-                    'N-NH4': base_n_demand * 0.1 * stem_demand_factor,
-                    'P-PO4': base_p_demand * 0.2 * stem_demand_factor,
-                    'K': base_k_demand * 0.2 * stem_demand_factor
+                    'N-NO3': base_n_demand * self.parameters.organ_allocation_no3_stems * stem_demand_factor,
+                    'N-NH4': base_n_demand * self.parameters.organ_allocation_nh4_stems * stem_demand_factor,
+                    'P-PO4': base_p_demand * self.parameters.organ_allocation_po4_stems * stem_demand_factor,
+                    'K': base_k_demand * self.parameters.organ_allocation_k_stems * stem_demand_factor
                 }
             }
 
@@ -349,13 +363,18 @@ class NutrientModelsSimulator(BaseSimulator):
             photosyn_rate = photosyn_data.get('carbon_assimilation_rate', 0.1)
             respir_rate = respir_data.get('respiration_rate', 0.05)
 
+            # Carbon assimilate fluxes from CSV parameters - NO HARDCODED VALUES (Rules.md)
+            net_assimilate = photosyn_rate - respir_rate
             assimilate_fluxes = {
-                'roots': (photosyn_rate - respir_rate) * 0.3,  # 30% to roots
-                'leaves': (photosyn_rate - respir_rate) * 0.5,  # 50% to leaves
-                'stems': (photosyn_rate - respir_rate) * 0.2   # 20% to stems
+                'roots': net_assimilate * self.parameters.carbon_assimilate_allocation_roots,
+                'leaves': net_assimilate * self.parameters.carbon_assimilate_allocation_leaves,
+                'stems': net_assimilate * self.parameters.carbon_assimilate_allocation_stems
             }
             
             try:
+                print(f"DEBUG Nutrient step {self.state.step_count}: Calling calculate_nutrient_dynamics")
+                print(f"DEBUG Nutrient plant_status keys: {list(plant_status.keys())}")
+                print(f"DEBUG Nutrient env_conditions keys: {list(env_conditions.keys())}")
                 result = self.model.calculate_nutrient_dynamics(
                     concentrations=concentrations,
                     plant_status=plant_status,
@@ -364,10 +383,14 @@ class NutrientModelsSimulator(BaseSimulator):
                     water_fluxes=water_fluxes,
                     assimilate_fluxes=assimilate_fluxes
                 )
+                print(f"DEBUG Nutrient step {self.state.step_count}: Model returned result keys: {list(result.keys())}")
+                uptake_rates = result.get('uptake_rates_mg_per_plant_per_day', {})
+                print(f"DEBUG Nutrient step {self.state.step_count}: Uptake rates: {uptake_rates}")
             except KeyError as e:
                 if "sink strength" in str(e) or "N-NO3" in str(e) or any(elem in str(e) for elem in self.nutrient_elements):
                     # Skip nutrient calculation if parameters are missing
-                    print(f"Warning: Skipping nutrient calculation due to missing parameter: {e}")
+                    print(f"DEBUG Nutrient KeyError: {e}")
+                    print(f"DEBUG Nutrient step {self.state.step_count}: Missing parameter causing uptake rates to be 0")
                     result = {
                         'solution_ec': self.state.solution_ec,
                         'nutrient_concentrations': self.state.nutrient_concentrations,
@@ -387,8 +410,12 @@ class NutrientModelsSimulator(BaseSimulator):
             transport_fluxes = result.get('transport_fluxes', {})
 
             # Update nutrient concentrations and uptake rates
+            # Scientific principle: Only update if model returns valid values, preserve existing otherwise
             for element in self.nutrient_elements:
-                self.state.nutrient_concentrations[element] = updated_concentrations.get(element, 0.0)
+                if element in updated_concentrations:
+                    self.state.nutrient_concentrations[element] = updated_concentrations[element]
+                # If model doesn't return concentration, preserve current value (don't default to 0)
+
                 self.state.nutrient_uptake_rates[element] = uptake_rates.get(element, 0.0)
 
                 # Calculate availability based on concentration and optimal range

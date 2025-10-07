@@ -403,6 +403,10 @@ class StrictParameterLoader:
         params_dict['optimal_vpd_min'] = self.get_parameter('stress_parameters_optimal_vpd_min')
         params_dict['optimal_vpd_max'] = self.get_parameter('stress_parameters_optimal_vpd_max')
 
+        # Sunlit fraction calculation parameters - NO HARDCODED VALUES (Rules.md)
+        params_dict['sunlit_fraction_lai_coefficient'] = self.get_parameter('canopy_parameters_sunlit_fraction_lai_coefficient')
+        params_dict['sunlit_fraction_minimum'] = self.get_parameter('canopy_parameters_sunlit_fraction_minimum')
+
         # Physical constants (shared across models)
         params_dict['kelvin_conversion'] = self.get_constant('kelvin_conversion')
         params_dict['reference_temp_kelvin'] = self.get_constant('reference_temp_kelvin')
@@ -527,6 +531,11 @@ class StrictParameterLoader:
         params_dict['minimum_organ_fraction'] = self.get_parameter('allocation_parameters_minimum_organ_fraction')
         params_dict['carbon_content_fraction'] = self.get_parameter('allocation_parameters_carbon_content_fraction')
 
+        # Carbon allocation fractions - NO HARDCODED VALUES (Rules.md)
+        params_dict['carbon_allocation_roots'] = self.get_parameter('allocation_parameters_carbon_allocation_roots')
+        params_dict['carbon_allocation_leaves'] = self.get_parameter('allocation_parameters_carbon_allocation_leaves')
+        params_dict['carbon_allocation_stems'] = self.get_parameter('allocation_parameters_carbon_allocation_stems')
+
         return BiomassAllocationParameters(**params_dict)
 
     def create_phenology_parameters(self):
@@ -584,7 +593,9 @@ class StrictParameterLoader:
         params_dict['drought_threshold'] = self.get_parameter('phenology_parameters_drought_threshold')
         params_dict['heat_threshold'] = self.get_parameter('phenology_parameters_heat_threshold')
 
-        # Remove non-existent parameters per Rules.md - not in CSV
+        # Development index normalization parameters - NO HARDCODED VALUES (Rules.md)
+        params_dict['development_index_thermal_time_denominator'] = self.get_parameter('phenology_parameters_development_index_thermal_time_denominator')
+        params_dict['stage_progress_thermal_time_denominator'] = self.get_parameter('phenology_parameters_stage_progress_thermal_time_denominator')
 
         return PhenologyParameters.from_config(params_dict)
 
@@ -677,6 +688,31 @@ class StrictParameterLoader:
 
         # Cache timeout
         config['cache_timeout'] = self.get_parameter('simulator_defaults_cache_timeout_global')
+
+        # Stress interaction coefficients - NO HARDCODED VALUES (Rules.md)
+        config['stress_interaction_water_temperature_coefficient'] = self.get_parameter('stress_parameters_stress_interaction_water_temperature_coefficient')
+        config['stress_interaction_water_nutrient_coefficient'] = self.get_parameter('stress_parameters_stress_interaction_water_nutrient_coefficient')
+        config['stress_interaction_temperature_light_coefficient'] = self.get_parameter('stress_parameters_stress_interaction_temperature_light_coefficient')
+        config['stress_interaction_nutrient_ph_coefficient'] = self.get_parameter('stress_parameters_stress_interaction_nutrient_ph_coefficient')
+        config['stress_interaction_nutrient_salinity_coefficient'] = self.get_parameter('stress_parameters_stress_interaction_nutrient_salinity_coefficient')
+
+        # Stress calculation parameters - NO HARDCODED VALUES (Rules.md)
+        config['chronic_stress_weight'] = self.get_parameter('stress_parameters_chronic_stress_weight')
+        config['acute_stress_weight'] = self.get_parameter('stress_parameters_acute_stress_weight')
+        config['recovery_bonus_factor'] = self.get_parameter('stress_parameters_recovery_bonus_factor')
+        config['damage_penalty_factor'] = self.get_parameter('stress_parameters_damage_penalty_factor')
+        config['memory_divisor'] = self.get_parameter('stress_parameters_memory_divisor')
+        config['chronic_factor_multiplier'] = self.get_parameter('stress_parameters_chronic_factor_multiplier')
+
+        # Threshold calculation coefficients - NO HARDCODED VALUES (Rules.md)
+        config['cumulative_threshold_coefficient_base'] = self.get_parameter('stress_parameters_cumulative_threshold_coefficient_base')
+        config['cumulative_threshold_coefficient_weight'] = self.get_parameter('stress_parameters_cumulative_threshold_coefficient_weight')
+        config['damage_rate_recovery_coefficient'] = self.get_parameter('stress_parameters_damage_rate_recovery_coefficient')
+        config['recovery_threshold_offset'] = self.get_parameter('stress_parameters_recovery_threshold_offset')
+        config['recovery_time_minimum_rate'] = self.get_parameter('stress_parameters_recovery_time_minimum_rate')
+        config['acclimation_capacity_multiplier'] = self.get_parameter('stress_parameters_acclimation_capacity_multiplier')
+        config['acclimation_capacity_maximum'] = self.get_parameter('stress_parameters_acclimation_capacity_maximum')
+        config['acclimation_memory_decay_factor'] = self.get_parameter('stress_parameters_acclimation_memory_decay_factor')
 
         return IntegratedStressParameters.from_config(config)
 
@@ -933,6 +969,30 @@ class StrictParameterLoader:
         config['phloem_only_transport_factor'] = self.get_parameter('nutrient_parameters_phloem_only_transport_factor')
         config['transport_limitation_threshold'] = self.get_parameter('nutrient_parameters_transport_limitation_threshold')
 
+        # Tissue composition parameters - NO HARDCODED VALUES
+        config['tissue_nitrogen_content_fraction'] = self.get_parameter('nutrient_parameters_tissue_nitrogen_content_fraction')
+        config['tissue_phosphorus_content_fraction'] = self.get_parameter('nutrient_parameters_tissue_phosphorus_content_fraction')
+        config['tissue_potassium_content_fraction'] = self.get_parameter('nutrient_parameters_tissue_potassium_content_fraction')
+
+        # Organ allocation fractions - NO HARDCODED VALUES
+        config['organ_allocation_no3_roots'] = self.get_parameter('nutrient_parameters_organ_allocation_no3_roots')
+        config['organ_allocation_nh4_roots'] = self.get_parameter('nutrient_parameters_organ_allocation_nh4_roots')
+        config['organ_allocation_po4_roots'] = self.get_parameter('nutrient_parameters_organ_allocation_po4_roots')
+        config['organ_allocation_k_roots'] = self.get_parameter('nutrient_parameters_organ_allocation_k_roots')
+        config['organ_allocation_no3_leaves'] = self.get_parameter('nutrient_parameters_organ_allocation_no3_leaves')
+        config['organ_allocation_nh4_leaves'] = self.get_parameter('nutrient_parameters_organ_allocation_nh4_leaves')
+        config['organ_allocation_po4_leaves'] = self.get_parameter('nutrient_parameters_organ_allocation_po4_leaves')
+        config['organ_allocation_k_leaves'] = self.get_parameter('nutrient_parameters_organ_allocation_k_leaves')
+        config['organ_allocation_no3_stems'] = self.get_parameter('nutrient_parameters_organ_allocation_no3_stems')
+        config['organ_allocation_nh4_stems'] = self.get_parameter('nutrient_parameters_organ_allocation_nh4_stems')
+        config['organ_allocation_po4_stems'] = self.get_parameter('nutrient_parameters_organ_allocation_po4_stems')
+        config['organ_allocation_k_stems'] = self.get_parameter('nutrient_parameters_organ_allocation_k_stems')
+
+        # Carbon assimilate allocation - NO HARDCODED VALUES (Rules.md)
+        config['carbon_assimilate_allocation_roots'] = self.get_parameter('nutrient_parameters_carbon_assimilate_allocation_roots')
+        config['carbon_assimilate_allocation_leaves'] = self.get_parameter('nutrient_parameters_carbon_assimilate_allocation_leaves')
+        config['carbon_assimilate_allocation_stems'] = self.get_parameter('nutrient_parameters_carbon_assimilate_allocation_stems')
+
         return NutrientParameters.from_config(config)
 
     def create_canopy_architecture_parameters(self):
@@ -998,6 +1058,11 @@ class StrictParameterLoader:
         config['channel_depth'] = self.get_parameter('root_system_parameters_channel_depth_default')
         config['n_channels'] = self.get_parameter('root_system_parameters_n_channels_default')
         config['root_zone_independent'] = bool(self.get_parameter('root_system_parameters_root_zone_independent'))
+
+        # Initial root state parameters - ALL from CSV per Rules.md
+        config['initial_root_biomass'] = self.get_parameter('root_system_parameters_initial_root_biomass')
+        config['initial_root_length'] = self.get_parameter('root_system_parameters_initial_root_length')
+        config['initial_root_diameter'] = self.get_parameter('root_system_parameters_initial_root_diameter')
 
         # Root growth parameters - ALL from CSV per Rules.md
         config['primary_root_growth_rate'] = self.get_parameter('root_system_parameters_primary_root_growth_rate_default')

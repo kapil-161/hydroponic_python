@@ -197,8 +197,12 @@ class LeafDevelopmentModel:
         self.next_cohort_id = int(self.params.initial_leaf_number) + 1
     
     def initialize(self):
-        """Initialize the leaf development model"""
-        pass
+        """Initialize the leaf development model with initial leaf cohorts"""
+        # Create initial cotyledon and first true leaves
+        # Scientific approach: Plants start with cotyledons (seed leaves) + initial true leaves
+        for i in range(int(self.params.initial_leaf_number)):
+            self._create_initial_leaf_cohort(i + 1)
+        self.next_cohort_id = int(self.params.initial_leaf_number) + 1
     
     def calculate_thermal_time(self, temperature_list: list) -> list:
         """Use consolidated thermal time calculation from core_utils."""
@@ -382,32 +386,20 @@ class LeafDevelopmentModel:
                         cohort.stage = LeafStage.MATURE
                 
                 elif cohort.stage == LeafStage.MATURE:
-                    age_factor = cohort.thermal_time_since_appearance / self.params.leaf_lifespan_thermal_time
-                    stress_senescence = (1.0 - expansion_factor) * self.params.senescence_rate_base
-                    
-                    if age_factor > self.params.senescence_threshold_age or stress_senescence > self.params.senescence_rate_base:
-                        cohort.stage = LeafStage.SENESCING
-                        cohort.senescence_rate = max(self.params.minimum_active_leaf_area, age_factor * self.params.senescence_rate_base + stress_senescence)
-                
-                elif cohort.stage == LeafStage.SENESCING:
-                    area_loss = cohort.current_area * cohort.senescence_rate
-                    cohort.current_area = max(0.0, cohort.current_area - area_loss)
-                    cohort.current_biomass = cohort.current_area / self.params.specific_leaf_area
-                    senesced_area += area_loss
-                    
-                    if cohort.current_area < self.params.minimum_visible_leaf_area:
-                        cohorts_to_remove.append(cohort_id)
-                        continue
+                    # Senescence disabled - leaves remain mature
+                    # TODO: Re-enable senescence after calibration
+                    pass
                 
                 total_area += cohort.current_area
                 
                 if cohort.current_area > self.params.minimum_active_leaf_area:
                     active_leaves += 1
             
-            # Remove completely dead leaves
-            for cohort_id in cohorts_to_remove:
-                if cohort_id in self.leaf_cohorts:
-                    del self.leaf_cohorts[cohort_id]
+            # Leaf deletion disabled - all leaves persist
+            # TODO: Re-enable after senescence calibration
+            # for cohort_id in cohorts_to_remove:
+            #     if cohort_id in self.leaf_cohorts:
+            #         del self.leaf_cohorts[cohort_id]
 
             # NOTE: LAI calculation removed - now handled by canopy architecture model
             # Canopy architecture uses actual plant spacing from CSV for accurate LAI
@@ -419,6 +411,19 @@ class LeafDevelopmentModel:
             average_leaf_areas.append(total_area / max(1, active_leaves))
 
         return {
+            'total_leaves': len(self.leaf_cohorts),  # Total number of leaf cohorts
+            'total_leaf_area': total_areas[-1] if total_areas else 0.0,  # m²
+            'total_leaf_weight': sum(cohort.current_biomass for cohort in self.leaf_cohorts.values()),  # g
+            'leaf_appearance_rate': len([c for c in self.leaf_cohorts.values() if c.stage == LeafStage.EXPANDING]) / max(1, len(daily_thermal_time_list)),
+            'leaf_expansion_rate': sum(total_areas) / len(total_areas) if total_areas else 0.0,
+            'leaf_senescence_rate': sum(senesced_areas) / len(senesced_areas) if senesced_areas else 0.0,
+            'leaf_weight_ratio': 1.0,  # Placeholder
+            'leaf_nitrogen_content': 0.0,  # Placeholder - should come from nitrogen balance
+            'leaf_nitrogen_ratio': 0.0,  # Placeholder
+            'leaf_age_distribution': {},  # Placeholder
+            'leaf_size_distribution': {},  # Placeholder
+            'leaf_nitrogen_distribution': {},  # Placeholder
+            # Legacy return values for compatibility
             'total_leaf_area_m2': total_areas,
             'visible_leaf_count': visible_leaf_counts,
             'active_leaf_count': active_leaf_counts,

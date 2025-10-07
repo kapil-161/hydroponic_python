@@ -262,3 +262,267 @@ phloem_only_transport_factor,1.0,dimensionless,Transport mechanism efficiency - 
 transport_limitation_threshold,0.8,dimensionless,Transport limitation threshold
 leaf_nutrient_demand_factor,0.5,dimensionless,Leaf nutrient demand factor
 stem_nutrient_demand_factor,0.3,dimensionless,Stem nutrient demand factor
+tissue_nitrogen_content_fraction,0.04,g_N_per_g_DM,Nitrogen content as fraction of dry matter (typical for lettuce)
+tissue_phosphorus_content_fraction,0.005,g_P_per_g_DM,Phosphorus content as fraction of dry matter
+tissue_potassium_content_fraction,0.035,g_K_per_g_DM,Potassium content as fraction of dry matter
+organ_allocation_no3_roots,0.3,dimensionless,Fraction of NO3 demand allocated to roots
+organ_allocation_nh4_roots,0.15,dimensionless,Fraction of NH4 demand allocated to roots
+organ_allocation_po4_roots,0.4,dimensionless,Fraction of PO4 demand allocated to roots
+organ_allocation_k_roots,0.35,dimensionless,Fraction of K demand allocated to roots
+organ_allocation_no3_leaves,0.5,dimensionless,Fraction of NO3 demand allocated to leaves
+organ_allocation_nh4_leaves,0.25,dimensionless,Fraction of NH4 demand allocated to leaves
+organ_allocation_po4_leaves,0.4,dimensionless,Fraction of PO4 demand allocated to leaves
+organ_allocation_k_leaves,0.45,dimensionless,Fraction of K demand allocated to leaves
+organ_allocation_no3_stems,0.2,dimensionless,Fraction of NO3 demand allocated to stems
+organ_allocation_nh4_stems,0.1,dimensionless,Fraction of NH4 demand allocated to stems
+organ_allocation_po4_stems,0.2,dimensionless,Fraction of PO4 demand allocated to stems
+organ_allocation_k_stems,0.2,dimensionless,Fraction of K demand allocated to stems
+carbon_assimilate_allocation_roots,0.3,dimensionless,Fraction of net carbon assimilates allocated to roots
+carbon_assimilate_allocation_leaves,0.5,dimensionless,Fraction of net carbon assimilates allocated to leaves
+carbon_assimilate_allocation_stems,0.2,dimensionless,Fraction of net carbon assimilates allocated to stems
+
+# Specific nutrient form parameters (N-NO3, N-NH4, P-PO4, etc.)
+# N-NO3 parameters
+mobility_classifications_N-NO3_mobility,highly_mobile,string,Mobility classification for nitrate nitrogen
+mobility_classifications_N-NO3_transport,bidirectional,string,Transport classification for nitrate nitrogen
+mobility_classifications_N-NO3_remobilization_efficiency,0.85,float,Remobilization efficiency for nitrate nitrogen
+mobility_classifications_N-NO3_deficiency_mobility,very_high,string,Deficiency mobility for nitrate nitrogen
+mobility_classifications_N-NO3_retranslocation_rate,0.8,float,Retranslocation rate for nitrate nitrogen
+xylem_transport_rates_N-NO3,0.15,g_g_day,Xylem transport rate for nitrate nitrogen
+phloem_transport_rates_N-NO3,0.12,g_g_day,Phloem transport rate for nitrate nitrogen
+
+# N-NH4 parameters
+mobility_classifications_N-NH4_mobility,highly_mobile,string,Mobility classification for ammonium nitrogen
+mobility_classifications_N-NH4_transport,bidirectional,string,Transport classification for ammonium nitrogen
+mobility_classifications_N-NH4_remobilization_efficiency,0.80,float,Remobilization efficiency for ammonium nitrogen
+mobility_classifications_N-NH4_deficiency_mobility,very_high,string,Deficiency mobility for ammonium nitrogen
+mobility_classifications_N-NH4_retranslocation_rate,0.75,float,Retranslocation rate for ammonium nitrogen
+xylem_transport_rates_N-NH4,0.12,g_g_day,Xylem transport rate for ammonium nitrogen
+phloem_transport_rates_N-NH4,0.10,g_g_day,Phloem transport rate for ammonium nitrogen
+
+# P-PO4 parameters
+mobility_classifications_P-PO4_mobility,immobile,string,Mobility classification for phosphate phosphorus
+mobility_classifications_P-PO4_transport,phloem_only,string,Transport classification for phosphate phosphorus
+mobility_classifications_P-PO4_remobilization_efficiency,0.70,float,Remobilization efficiency for phosphate phosphorus
+mobility_classifications_P-PO4_deficiency_mobility,very_high,string,Deficiency mobility for phosphate phosphorus
+mobility_classifications_P-PO4_retranslocation_rate,0.65,float,Retranslocation rate for phosphate phosphorus
+xylem_transport_rates_P-PO4,0.08,g_g_day,Xylem transport rate for phosphate phosphorus
+phloem_transport_rates_P-PO4,0.06,g_g_day,Phloem transport rate for phosphate phosphorus
+
+# K parameters
+mobility_classifications_K_mobility,highly_mobile,string,Mobility classification for potassium
+mobility_classifications_K_transport,bidirectional,string,Transport classification for potassium
+mobility_classifications_K_remobilization_efficiency,0.90,float,Remobilization efficiency for potassium
+mobility_classifications_K_deficiency_mobility,very_high,string,Deficiency mobility for potassium
+mobility_classifications_K_retranslocation_rate,0.85,float,Retranslocation rate for potassium
+xylem_transport_rates_K,0.12,g_g_day,Xylem transport rate for potassium
+phloem_transport_rates_K,0.10,g_g_day,Phloem transport rate for potassium
+
+# Ca parameters
+mobility_classifications_Ca_mobility,immobile,string,Mobility classification for calcium
+mobility_classifications_Ca_transport,xylem_only,string,Transport classification for calcium
+mobility_classifications_Ca_remobilization_efficiency,0.30,float,Remobilization efficiency for calcium
+mobility_classifications_Ca_deficiency_mobility,low,string,Deficiency mobility for calcium
+mobility_classifications_Ca_retranslocation_rate,0.25,float,Retranslocation rate for calcium
+xylem_transport_rates_Ca,0.06,g_g_day,Xylem transport rate for calcium
+phloem_transport_rates_Ca,0.02,g_g_day,Phloem transport rate for calcium
+
+# Mg parameters
+mobility_classifications_Mg_mobility,moderately_mobile,string,Mobility classification for magnesium
+mobility_classifications_Mg_transport,bidirectional,string,Transport classification for magnesium
+mobility_classifications_Mg_remobilization_efficiency,0.60,float,Remobilization efficiency for magnesium
+mobility_classifications_Mg_deficiency_mobility,high,string,Deficiency mobility for magnesium
+mobility_classifications_Mg_retranslocation_rate,0.55,float,Retranslocation rate for magnesium
+xylem_transport_rates_Mg,0.08,g_g_day,Xylem transport rate for magnesium
+phloem_transport_rates_Mg,0.06,g_g_day,Phloem transport rate for magnesium
+
+# S-SO4 parameters
+mobility_classifications_S-SO4_mobility,moderately_mobile,string,Mobility classification for sulfate sulfur
+mobility_classifications_S-SO4_transport,bidirectional,string,Transport classification for sulfate sulfur
+mobility_classifications_S-SO4_remobilization_efficiency,0.50,float,Remobilization efficiency for sulfate sulfur
+mobility_classifications_S-SO4_deficiency_mobility,high,string,Deficiency mobility for sulfate sulfur
+mobility_classifications_S-SO4_retranslocation_rate,0.45,float,Retranslocation rate for sulfate sulfur
+xylem_transport_rates_S-SO4,0.07,g_g_day,Xylem transport rate for sulfate sulfur
+phloem_transport_rates_S-SO4,0.05,g_g_day,Phloem transport rate for sulfate sulfur
+
+# Fe parameters
+mobility_classifications_Fe_mobility,immobile,string,Mobility classification for iron
+mobility_classifications_Fe_transport,xylem_only,string,Transport classification for iron
+mobility_classifications_Fe_remobilization_efficiency,0.40,float,Remobilization efficiency for iron
+mobility_classifications_Fe_deficiency_mobility,low,string,Deficiency mobility for iron
+mobility_classifications_Fe_retranslocation_rate,0.35,float,Retranslocation rate for iron
+xylem_transport_rates_Fe,0.03,g_g_day,Xylem transport rate for iron
+phloem_transport_rates_Fe,0.02,g_g_day,Phloem transport rate for iron
+
+# Mn parameters
+mobility_classifications_Mn_mobility,immobile,string,Mobility classification for manganese
+mobility_classifications_Mn_transport,xylem_only,string,Transport classification for manganese
+mobility_classifications_Mn_remobilization_efficiency,0.35,float,Remobilization efficiency for manganese
+mobility_classifications_Mn_deficiency_mobility,low,string,Deficiency mobility for manganese
+mobility_classifications_Mn_retranslocation_rate,0.30,float,Retranslocation rate for manganese
+xylem_transport_rates_Mn,0.025,g_g_day,Xylem transport rate for manganese
+phloem_transport_rates_Mn,0.015,g_g_day,Phloem transport rate for manganese
+
+# Zn parameters
+mobility_classifications_Zn_mobility,immobile,string,Mobility classification for zinc
+mobility_classifications_Zn_transport,xylem_only,string,Transport classification for zinc
+mobility_classifications_Zn_remobilization_efficiency,0.40,float,Remobilization efficiency for zinc
+mobility_classifications_Zn_deficiency_mobility,low,string,Deficiency mobility for zinc
+mobility_classifications_Zn_retranslocation_rate,0.35,float,Retranslocation rate for zinc
+xylem_transport_rates_Zn,0.04,g_g_day,Xylem transport rate for zinc
+phloem_transport_rates_Zn,0.03,g_g_day,Phloem transport rate for zinc
+
+# Cu parameters
+mobility_classifications_Cu_mobility,immobile,string,Mobility classification for copper
+mobility_classifications_Cu_transport,xylem_only,string,Transport classification for copper
+mobility_classifications_Cu_remobilization_efficiency,0.45,float,Remobilization efficiency for copper
+mobility_classifications_Cu_deficiency_mobility,low,string,Deficiency mobility for copper
+mobility_classifications_Cu_retranslocation_rate,0.40,float,Retranslocation rate for copper
+xylem_transport_rates_Cu,0.035,g_g_day,Xylem transport rate for copper
+phloem_transport_rates_Cu,0.025,g_g_day,Phloem transport rate for copper
+
+# B parameters
+mobility_classifications_B_mobility,immobile,string,Mobility classification for boron
+mobility_classifications_B_transport,xylem_only,string,Transport classification for boron
+mobility_classifications_B_remobilization_efficiency,0.20,float,Remobilization efficiency for boron
+mobility_classifications_B_deficiency_mobility,very_low,string,Deficiency mobility for boron
+mobility_classifications_B_retranslocation_rate,0.15,float,Retranslocation rate for boron
+xylem_transport_rates_B,0.02,g_g_day,Xylem transport rate for boron
+phloem_transport_rates_B,0.01,g_g_day,Phloem transport rate for boron
+
+# Mo parameters
+mobility_classifications_Mo_mobility,moderately_mobile,string,Mobility classification for molybdenum
+mobility_classifications_Mo_transport,bidirectional,string,Transport classification for molybdenum
+mobility_classifications_Mo_remobilization_efficiency,0.55,float,Remobilization efficiency for molybdenum
+mobility_classifications_Mo_deficiency_mobility,high,string,Deficiency mobility for molybdenum
+mobility_classifications_Mo_retranslocation_rate,0.50,float,Retranslocation rate for molybdenum
+xylem_transport_rates_Mo,0.05,g_g_day,Xylem transport rate for molybdenum
+phloem_transport_rates_Mo,0.04,g_g_day,Phloem transport rate for molybdenum
+
+# Additional missing parameters for complex nutrient model
+# Buffering capacities (leaves, stems, roots for each nutrient)
+buffering_capacities_leaves_N-NO3,0.05,g_g,Leaf buffering capacity for nitrate nitrogen
+buffering_capacities_leaves_N-NH4,0.04,g_g,Leaf buffering capacity for ammonium nitrogen
+buffering_capacities_leaves_P-PO4,0.02,g_g,Leaf buffering capacity for phosphate phosphorus
+buffering_capacities_leaves_K,0.08,g_g,Leaf buffering capacity for potassium
+buffering_capacities_leaves_Ca,0.10,g_g,Leaf buffering capacity for calcium
+buffering_capacities_leaves_Mg,0.06,g_g,Leaf buffering capacity for magnesium
+buffering_capacities_leaves_S-SO4,0.03,g_g,Leaf buffering capacity for sulfate sulfur
+buffering_capacities_leaves_Fe,0.01,g_g,Leaf buffering capacity for iron
+buffering_capacities_leaves_Mn,0.005,g_g,Leaf buffering capacity for manganese
+buffering_capacities_leaves_Zn,0.008,g_g,Leaf buffering capacity for zinc
+buffering_capacities_leaves_Cu,0.006,g_g,Leaf buffering capacity for copper
+buffering_capacities_leaves_B,0.004,g_g,Leaf buffering capacity for boron
+buffering_capacities_leaves_Mo,0.002,g_g,Leaf buffering capacity for molybdenum
+
+buffering_capacities_stems_N-NO3,0.03,g_g,Stem buffering capacity for nitrate nitrogen
+buffering_capacities_stems_N-NH4,0.025,g_g,Stem buffering capacity for ammonium nitrogen
+buffering_capacities_stems_P-PO4,0.015,g_g,Stem buffering capacity for phosphate phosphorus
+buffering_capacities_stems_K,0.05,g_g,Stem buffering capacity for potassium
+buffering_capacities_stems_Ca,0.08,g_g,Stem buffering capacity for calcium
+buffering_capacities_stems_Mg,0.04,g_g,Stem buffering capacity for magnesium
+buffering_capacities_stems_S-SO4,0.02,g_g,Stem buffering capacity for sulfate sulfur
+buffering_capacities_stems_Fe,0.008,g_g,Stem buffering capacity for iron
+buffering_capacities_stems_Mn,0.004,g_g,Stem buffering capacity for manganese
+buffering_capacities_stems_Zn,0.006,g_g,Stem buffering capacity for zinc
+buffering_capacities_stems_Cu,0.005,g_g,Stem buffering capacity for copper
+buffering_capacities_stems_B,0.003,g_g,Stem buffering capacity for boron
+buffering_capacities_stems_Mo,0.001,g_g,Stem buffering capacity for molybdenum
+
+buffering_capacities_roots_N-NO3,0.04,g_g,Root buffering capacity for nitrate nitrogen
+buffering_capacities_roots_N-NH4,0.035,g_g,Root buffering capacity for ammonium nitrogen
+buffering_capacities_roots_P-PO4,0.025,g_g,Root buffering capacity for phosphate phosphorus
+buffering_capacities_roots_K,0.06,g_g,Root buffering capacity for potassium
+buffering_capacities_roots_Ca,0.12,g_g,Root buffering capacity for calcium
+buffering_capacities_roots_Mg,0.05,g_g,Root buffering capacity for magnesium
+buffering_capacities_roots_S-SO4,0.025,g_g,Root buffering capacity for sulfate sulfur
+buffering_capacities_roots_Fe,0.015,g_g,Root buffering capacity for iron
+buffering_capacities_roots_Mn,0.008,g_g,Root buffering capacity for manganese
+buffering_capacities_roots_Zn,0.010,g_g,Root buffering capacity for zinc
+buffering_capacities_roots_Cu,0.008,g_g,Root buffering capacity for copper
+buffering_capacities_roots_B,0.005,g_g,Root buffering capacity for boron
+buffering_capacities_roots_Mo,0.003,g_g,Root buffering capacity for molybdenum
+
+# Storage pool sizes (leaves, stems, roots for each nutrient)
+storage_pool_sizes_leaves_N-NO3,0.08,g_g,Leaf storage pool size for nitrate nitrogen
+storage_pool_sizes_leaves_N-NH4,0.06,g_g,Leaf storage pool size for ammonium nitrogen
+storage_pool_sizes_leaves_P-PO4,0.03,g_g,Leaf storage pool size for phosphate phosphorus
+storage_pool_sizes_leaves_K,0.12,g_g,Leaf storage pool size for potassium
+storage_pool_sizes_leaves_Ca,0.15,g_g,Leaf storage pool size for calcium
+storage_pool_sizes_leaves_Mg,0.09,g_g,Leaf storage pool size for magnesium
+storage_pool_sizes_leaves_S-SO4,0.05,g_g,Leaf storage pool size for sulfate sulfur
+storage_pool_sizes_leaves_Fe,0.02,g_g,Leaf storage pool size for iron
+storage_pool_sizes_leaves_Mn,0.01,g_g,Leaf storage pool size for manganese
+storage_pool_sizes_leaves_Zn,0.015,g_g,Leaf storage pool size for zinc
+storage_pool_sizes_leaves_Cu,0.012,g_g,Leaf storage pool size for copper
+storage_pool_sizes_leaves_B,0.008,g_g,Leaf storage pool size for boron
+storage_pool_sizes_leaves_Mo,0.004,g_g,Leaf storage pool size for molybdenum
+
+storage_pool_sizes_stems_N-NO3,0.05,g_g,Stem storage pool size for nitrate nitrogen
+storage_pool_sizes_stems_N-NH4,0.04,g_g,Stem storage pool size for ammonium nitrogen
+storage_pool_sizes_stems_P-PO4,0.025,g_g,Stem storage pool size for phosphate phosphorus
+storage_pool_sizes_stems_K,0.08,g_g,Stem storage pool size for potassium
+storage_pool_sizes_stems_Ca,0.12,g_g,Stem storage pool size for calcium
+storage_pool_sizes_stems_Mg,0.06,g_g,Stem storage pool size for magnesium
+storage_pool_sizes_stems_S-SO4,0.035,g_g,Stem storage pool size for sulfate sulfur
+storage_pool_sizes_stems_Fe,0.015,g_g,Stem storage pool size for iron
+storage_pool_sizes_stems_Mn,0.008,g_g,Stem storage pool size for manganese
+storage_pool_sizes_stems_Zn,0.012,g_g,Stem storage pool size for zinc
+storage_pool_sizes_stems_Cu,0.010,g_g,Stem storage pool size for copper
+storage_pool_sizes_stems_B,0.006,g_g,Stem storage pool size for boron
+storage_pool_sizes_stems_Mo,0.003,g_g,Stem storage pool size for molybdenum
+
+storage_pool_sizes_roots_N-NO3,0.06,g_g,Root storage pool size for nitrate nitrogen
+storage_pool_sizes_roots_N-NH4,0.05,g_g,Root storage pool size for ammonium nitrogen
+storage_pool_sizes_roots_P-PO4,0.04,g_g,Root storage pool size for phosphate phosphorus
+storage_pool_sizes_roots_K,0.10,g_g,Root storage pool size for potassium
+storage_pool_sizes_roots_Ca,0.18,g_g,Root storage pool size for calcium
+storage_pool_sizes_roots_Mg,0.08,g_g,Root storage pool size for magnesium
+storage_pool_sizes_roots_S-SO4,0.04,g_g,Root storage pool size for sulfate sulfur
+storage_pool_sizes_roots_Fe,0.025,g_g,Root storage pool size for iron
+storage_pool_sizes_roots_Mn,0.015,g_g,Root storage pool size for manganese
+storage_pool_sizes_roots_Zn,0.020,g_g,Root storage pool size for zinc
+storage_pool_sizes_roots_Cu,0.015,g_g,Root storage pool size for copper
+storage_pool_sizes_roots_B,0.010,g_g,Root storage pool size for boron
+storage_pool_sizes_roots_Mo,0.005,g_g,Root storage pool size for molybdenum
+
+# Sink strength coefficients (vegetative, reproductive, senescence for each organ)
+sink_strength_coefficients_vegetative_leaves,0.8,dimensionless,Sink strength coefficient for leaves in vegetative stage
+sink_strength_coefficients_vegetative_stems,0.6,dimensionless,Sink strength coefficient for stems in vegetative stage
+sink_strength_coefficients_vegetative_roots,0.9,dimensionless,Sink strength coefficient for roots in vegetative stage
+sink_strength_coefficients_reproductive_leaves,0.6,dimensionless,Sink strength coefficient for leaves in reproductive stage
+sink_strength_coefficients_reproductive_stems,0.8,dimensionless,Sink strength coefficient for stems in reproductive stage
+sink_strength_coefficients_reproductive_roots,0.4,dimensionless,Sink strength coefficient for roots in reproductive stage
+sink_strength_coefficients_senescence_leaves,0.2,dimensionless,Sink strength coefficient for leaves in senescence stage
+sink_strength_coefficients_senescence_stems,0.3,dimensionless,Sink strength coefficient for stems in senescence stage
+sink_strength_coefficients_senescence_roots,0.1,dimensionless,Sink strength coefficient for roots in senescence stage
+sink_strength_coefficients_reproductive_reproductive,0.7,dimensionless,Sink strength coefficient for reproductive stage
+
+# Redistribution thresholds and stress redistribution rates for specific nutrient forms
+redistribution_thresholds_N-NO3,0.7,dimensionless,Redistribution threshold for nitrate nitrogen
+redistribution_thresholds_N-NH4,0.75,dimensionless,Redistribution threshold for ammonium nitrogen
+redistribution_thresholds_P-PO4,0.8,dimensionless,Redistribution threshold for phosphate phosphorus
+redistribution_thresholds_K,0.75,dimensionless,Redistribution threshold for potassium
+redistribution_thresholds_Ca,0.6,dimensionless,Redistribution threshold for calcium
+redistribution_thresholds_Mg,0.65,dimensionless,Redistribution threshold for magnesium
+redistribution_thresholds_S-SO4,0.7,dimensionless,Redistribution threshold for sulfate sulfur
+redistribution_thresholds_Fe,0.55,dimensionless,Redistribution threshold for iron
+redistribution_thresholds_Mn,0.5,dimensionless,Redistribution threshold for manganese
+redistribution_thresholds_Zn,0.6,dimensionless,Redistribution threshold for zinc
+redistribution_thresholds_Cu,0.65,dimensionless,Redistribution threshold for copper
+redistribution_thresholds_B,0.45,dimensionless,Redistribution threshold for boron
+redistribution_thresholds_Mo,0.7,dimensionless,Redistribution threshold for molybdenum
+
+stress_redistribution_rates_N-NO3,0.3,g_g_day,Stress redistribution rate for nitrate nitrogen
+stress_redistribution_rates_N-NH4,0.25,g_g_day,Stress redistribution rate for ammonium nitrogen
+stress_redistribution_rates_P-PO4,0.2,g_g_day,Stress redistribution rate for phosphate phosphorus
+stress_redistribution_rates_K,0.25,g_g_day,Stress redistribution rate for potassium
+stress_redistribution_rates_Ca,0.1,g_g_day,Stress redistribution rate for calcium
+stress_redistribution_rates_Mg,0.15,g_g_day,Stress redistribution rate for magnesium
+stress_redistribution_rates_S-SO4,0.2,g_g_day,Stress redistribution rate for sulfate sulfur
+stress_redistribution_rates_Fe,0.08,g_g_day,Stress redistribution rate for iron
+stress_redistribution_rates_Mn,0.06,g_g_day,Stress redistribution rate for manganese
+stress_redistribution_rates_Zn,0.08,g_g_day,Stress redistribution rate for zinc
+stress_redistribution_rates_Cu,0.07,g_g_day,Stress redistribution rate for copper
+stress_redistribution_rates_B,0.05,g_g_day,Stress redistribution rate for boron
+stress_redistribution_rates_Mo,0.2,g_g_day,Stress redistribution rate for molybdenum

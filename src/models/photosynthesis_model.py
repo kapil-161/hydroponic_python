@@ -53,6 +53,9 @@ class PhotosynthesisParameters:
     stomatal_conductance_co2_diffusion_ratio: float
     minimum_stomatal_conductance_threshold: float
     minimum_vpd_threshold: float
+    # Sunlit fraction calculation parameters - NO HARDCODED VALUES (Rules.md)
+    sunlit_fraction_lai_coefficient: float
+    sunlit_fraction_minimum: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'PhotosynthesisParameters':
@@ -72,7 +75,9 @@ class PhotosynthesisParameters:
             # Model-specific constants
             'initial_ci_fraction', 'ci_convergence_max_iterations', 'ci_convergence_tolerance_ppm',
             'stomatal_conductance_co2_diffusion_ratio', 'minimum_stomatal_conductance_threshold',
-            'minimum_vpd_threshold'
+            'minimum_vpd_threshold',
+            # Sunlit fraction calculation - NO HARDCODED VALUES (Rules.md)
+            'sunlit_fraction_lai_coefficient', 'sunlit_fraction_minimum'
         ]
         for param in required_params:
             if param not in config:

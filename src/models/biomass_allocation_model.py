@@ -24,6 +24,10 @@ class BiomassAllocationParameters:
     water_response_factor: float
     minimum_organ_fraction: float
     carbon_content_fraction: float
+    # Carbon allocation fractions - NO HARDCODED VALUES (Rules.md)
+    carbon_allocation_roots: float
+    carbon_allocation_leaves: float
+    carbon_allocation_stems: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'BiomassAllocationParameters':
@@ -32,7 +36,9 @@ class BiomassAllocationParameters:
             'vegetative_leaf_allocation', 'vegetative_stem_allocation', 'vegetative_root_allocation',
             'reproductive_leaf_allocation', 'reproductive_stem_allocation', 'reproductive_root_allocation',
             'light_response_factor', 'nitrogen_response_factor', 'water_response_factor',
-            'minimum_organ_fraction', 'carbon_content_fraction'
+            'minimum_organ_fraction', 'carbon_content_fraction',
+            # Carbon allocation fractions - NO HARDCODED VALUES (Rules.md)
+            'carbon_allocation_roots', 'carbon_allocation_leaves', 'carbon_allocation_stems'
         ]
         for param in required_params:
             if param not in config:
@@ -49,7 +55,11 @@ class BiomassAllocationParameters:
             nitrogen_response_factor=float(config['nitrogen_response_factor']),
             water_response_factor=float(config['water_response_factor']),
             minimum_organ_fraction=float(config['minimum_organ_fraction']),
-            carbon_content_fraction=float(config['carbon_content_fraction'])
+            carbon_content_fraction=float(config['carbon_content_fraction']),
+            # Carbon allocation fractions - NO HARDCODED VALUES (Rules.md)
+            carbon_allocation_roots=float(config['carbon_allocation_roots']),
+            carbon_allocation_leaves=float(config['carbon_allocation_leaves']),
+            carbon_allocation_stems=float(config['carbon_allocation_stems'])
         )
 
 

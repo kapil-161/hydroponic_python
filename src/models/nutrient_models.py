@@ -99,6 +99,30 @@ class NutrientParameters:
     phloem_only_transport_factor: float
     transport_limitation_threshold: float
 
+    # Tissue composition parameters - NO HARDCODED VALUES (Rules.md)
+    tissue_nitrogen_content_fraction: float
+    tissue_phosphorus_content_fraction: float
+    tissue_potassium_content_fraction: float
+
+    # Organ allocation fractions - NO HARDCODED VALUES (Rules.md)
+    organ_allocation_no3_roots: float
+    organ_allocation_nh4_roots: float
+    organ_allocation_po4_roots: float
+    organ_allocation_k_roots: float
+    organ_allocation_no3_leaves: float
+    organ_allocation_nh4_leaves: float
+    organ_allocation_po4_leaves: float
+    organ_allocation_k_leaves: float
+    organ_allocation_no3_stems: float
+    organ_allocation_nh4_stems: float
+    organ_allocation_po4_stems: float
+    organ_allocation_k_stems: float
+
+    # Carbon assimilate allocation fractions - NO HARDCODED VALUES (Rules.md)
+    carbon_assimilate_allocation_roots: float
+    carbon_assimilate_allocation_leaves: float
+    carbon_assimilate_allocation_stems: float
+
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'NutrientParameters':
         required_params = [
@@ -129,7 +153,14 @@ class NutrientParameters:
             'highly_mobile_base_efficiency', 'moderately_mobile_base_efficiency',
             'poorly_mobile_base_efficiency', 'immobile_base_efficiency',
             'bidirectional_transport_factor', 'complex_transport_factor',
-            'xylem_only_transport_factor', 'phloem_only_transport_factor', 'transport_limitation_threshold'
+            'xylem_only_transport_factor', 'phloem_only_transport_factor', 'transport_limitation_threshold',
+            # Tissue composition and organ allocation - NO HARDCODED VALUES (Rules.md)
+            'tissue_nitrogen_content_fraction', 'tissue_phosphorus_content_fraction', 'tissue_potassium_content_fraction',
+            'organ_allocation_no3_roots', 'organ_allocation_nh4_roots', 'organ_allocation_po4_roots', 'organ_allocation_k_roots',
+            'organ_allocation_no3_leaves', 'organ_allocation_nh4_leaves', 'organ_allocation_po4_leaves', 'organ_allocation_k_leaves',
+            'organ_allocation_no3_stems', 'organ_allocation_nh4_stems', 'organ_allocation_po4_stems', 'organ_allocation_k_stems',
+            # Carbon assimilate allocation - NO HARDCODED VALUES (Rules.md)
+            'carbon_assimilate_allocation_roots', 'carbon_assimilate_allocation_leaves', 'carbon_assimilate_allocation_stems'
         ]
         for param in required_params:
             if param not in config:
@@ -293,7 +324,27 @@ class NutrientParameters:
             complex_transport_factor=float(config['complex_transport_factor']),
             xylem_only_transport_factor=float(config['xylem_only_transport_factor']),
             phloem_only_transport_factor=float(config['phloem_only_transport_factor']),
-            transport_limitation_threshold=float(config['transport_limitation_threshold'])
+            transport_limitation_threshold=float(config['transport_limitation_threshold']),
+            # Tissue composition and organ allocation - NO HARDCODED VALUES (Rules.md)
+            tissue_nitrogen_content_fraction=float(config['tissue_nitrogen_content_fraction']),
+            tissue_phosphorus_content_fraction=float(config['tissue_phosphorus_content_fraction']),
+            tissue_potassium_content_fraction=float(config['tissue_potassium_content_fraction']),
+            organ_allocation_no3_roots=float(config['organ_allocation_no3_roots']),
+            organ_allocation_nh4_roots=float(config['organ_allocation_nh4_roots']),
+            organ_allocation_po4_roots=float(config['organ_allocation_po4_roots']),
+            organ_allocation_k_roots=float(config['organ_allocation_k_roots']),
+            organ_allocation_no3_leaves=float(config['organ_allocation_no3_leaves']),
+            organ_allocation_nh4_leaves=float(config['organ_allocation_nh4_leaves']),
+            organ_allocation_po4_leaves=float(config['organ_allocation_po4_leaves']),
+            organ_allocation_k_leaves=float(config['organ_allocation_k_leaves']),
+            organ_allocation_no3_stems=float(config['organ_allocation_no3_stems']),
+            organ_allocation_nh4_stems=float(config['organ_allocation_nh4_stems']),
+            organ_allocation_po4_stems=float(config['organ_allocation_po4_stems']),
+            organ_allocation_k_stems=float(config['organ_allocation_k_stems']),
+            # Carbon assimilate allocation - NO HARDCODED VALUES (Rules.md)
+            carbon_assimilate_allocation_roots=float(config['carbon_assimilate_allocation_roots']),
+            carbon_assimilate_allocation_leaves=float(config['carbon_assimilate_allocation_leaves']),
+            carbon_assimilate_allocation_stems=float(config['carbon_assimilate_allocation_stems'])
         )
 
 class NutrientMobility(Enum):

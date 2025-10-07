@@ -66,6 +66,9 @@ class PhotosynthesisSimulator(BaseSimulator):
         self.cache_timestamp: Dict[str, datetime] = {}
         self.cache_timeout = 1.0  # seconds
         
+        # Initial state data (set during simulation start)
+        self.initial_state: Dict[str, Any] = {}
+        
         print(f"Photosynthesis simulator initialized with parameters from CSV")
     
     def on_simulation_start(self, data: Dict[str, Any]):
@@ -74,6 +77,9 @@ class PhotosynthesisSimulator(BaseSimulator):
         self.state = PhotosynthesisState()
         self.history.clear()
         self.dependency_cache.clear()
+
+        # Store initial state data for later use
+        self.initial_state = data.get('initial_state', {})
 
         # Initialize model
         self.model.initialize()
@@ -157,20 +163,21 @@ class PhotosynthesisSimulator(BaseSimulator):
             lai = canopy_data.get('lai')
             if lai is None:
                 if self.state.step_count == 0:
-                    # First step only: get from initials.csv
-                    from utils.parameter_loader import ParameterLoader
-                    loader = ParameterLoader()
-                    lai = loader.get_parameter('initial_state_lai', required=False)
+                    # First step only: get from initial state data passed from orchestrator
+                    lai = self.initial_state.get('initial_state_lai')
                     if lai is None:
-                        raise ValueError("LAI missing from both canopy_architecture_simulator and initials.csv")
+                        raise ValueError("LAI missing from both canopy_architecture_simulator and initial_state")
                 else:
                     raise ValueError("LAI missing from canopy_architecture_simulator - no defaults allowed")
 
             sunlit_fraction = canopy_data.get('sunlit_leaf_fraction')
             shaded_fraction = canopy_data.get('shaded_leaf_fraction')
             if sunlit_fraction is None or shaded_fraction is None:
-                # Use scientific defaults based on LAI
-                sunlit_fraction = max(0.2, 1.0 - (lai * 0.3))  # Decreases with LAI
+                # Calculate from LAI using CSV parameters - NO HARDCODED VALUES (Rules.md)
+                sunlit_fraction = max(
+                    self.parameters.sunlit_fraction_minimum,
+                    1.0 - (lai * self.parameters.sunlit_fraction_lai_coefficient)
+                )
                 shaded_fraction = 1.0 - sunlit_fraction
 
             # Get stress factors from stress models simulator
@@ -208,8 +215,9 @@ class PhotosynthesisSimulator(BaseSimulator):
                 'optimal_vpd_max': self.parameters.optimal_vpd_max
             }
             ec_factor = 1.0  # Default EC factor
+            # Scientific fix: ensure sunlit + shaded = total LAI (avoid floating point errors)
             sunlit_lai = lai * sunlit_fraction
-            shaded_lai = lai * shaded_fraction
+            shaded_lai = lai - sunlit_lai  # Calculate shaded as difference to ensure sum equals lai
             
             # DEBUG: Log inputs for first few steps
             if self.state.step_count < 5:

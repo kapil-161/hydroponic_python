@@ -3,16 +3,16 @@ parameter_name,value,unit,description
 # All canopy-related parameters for light calculations, architecture, and distribution
 # Includes extinction coefficients, layer distribution, and environmental responses
 number_of_layers,5,dimensionless,Number of canopy layers for light calculations
-max_lai,3.0,m2_m2,Maximum LAI for single lettuce plant (realistic: 0.5-3.0 per plant)
+max_lai,2.5,m2_m2,Maximum LAI for single lettuce plant (realistic: 0.5-2.5 per plant)
 extinction_coefficient,0.6,dimensionless,Base light extinction coefficient
 diffuse_extinction_coeff,0.8,dimensionless,Extinction coefficient multiplier for diffuse light
 beam_extinction_coeff,0.5,dimensionless,Extinction coefficient multiplier for direct beam light
-row_spacing,0.3,m,Distance between crop rows
+row_spacing,0.4,m,Distance between crop rows
 mean_leaf_angle,45.0,degrees,Mean leaf angle from horizontal
 canopy_width,0.25,m,Width of individual plant canopy
 leaf_angle_distribution,spherical,text,Type of leaf angle distribution
 leaf_angle_variance,20.0,degrees,Variance in leaf angle distribution
-plant_spacing,0.2,m,Distance between plants within a row
+plant_spacing,0.3,m,Distance between plants within a row
 plant_height,0.3,m,Maximum plant height at maturity
 leaf_reflectance,0.08,dimensionless,Fraction of incident light reflected by leaves
 leaf_transmittance,0.05,dimensionless,Fraction of incident light transmitted through leaves
@@ -41,3 +41,5 @@ zenith_angle_precision_threshold,0.001,dimensionless,Numerical precision thresho
 direct_beam_fraction,0.7,dimensionless,Direct beam light fraction
 diffuse_fraction,0.3,dimensionless,Diffuse light fraction
 target_harvest_biomass,20.0,g_DM,Target harvest biomass for single lettuce plant (dry weight)
+sunlit_fraction_lai_coefficient,0.3,per_LAI,Coefficient for LAI effect on sunlit fraction reduction
+sunlit_fraction_minimum,0.2,dimensionless,Minimum sunlit fraction regardless of LAI

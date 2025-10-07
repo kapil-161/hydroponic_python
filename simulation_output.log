@@ -1,0 +1,285 @@
+Traceback (most recent call last):
+  File "/Users/kapilbhattarai/hydroponic_python/src/simulations/communication_bus.py", line 194, in _process_event
+    handler(event)
+    ~~~~~~~^^^^^^^
+  File "/Users/kapilbhattarai/hydroponic_python/src/simulations/communication_bus.py", line 307, in _handle_simulation_step
+    self.on_simulation_step(event.data)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/Users/kapilbhattarai/hydroponic_python/src/simulations/photosynthesis_simulator.py", line 107, in on_simulation_step
+    self._execute_photosynthesis_step(weather_data)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/kapilbhattarai/hydroponic_python/src/simulations/photosynthesis_simulator.py", line 169, in _execute_photosynthesis_step
+    raise ValueError("LAI missing from both canopy_architecture_simulator and initial_state")
+ValueError: LAI missing from both canopy_architecture_simulator and initial_state
+================================================================================
+Hydroponic Research Framework - Distributed Simulation
+================================================================================
+
+Initializing Distributed Hydroponic Simulation System
+Loading parameters from CSV files...
+Loaded 31 universal constants from input/constants.csv
+Loaded 192 parameters from input/stress.csv (category: stress_parameters)
+Loaded 320 parameters from input/roots.csv (category: root_system_parameters)
+Loaded 75 parameters from input/genetics.csv (category: genetic_parameters)
+Loaded 33 parameters from input/photo.csv (category: photosynthesis_parameters)
+Loaded 56 parameters from input/respiration.csv (category: respiration_parameters)
+Loaded 16 parameters from input/allocation.csv (category: allocation_parameters)
+Loaded 71 parameters from input/phenology.csv (category: phenology_parameters)
+Loaded 62 parameters from input/nitrogen_balance.csv (category: nitrogen_balance)
+Loaded 39 parameters from input/canopy.csv (category: canopy_parameters)
+Loaded 38 parameters from input/leaf.csv (category: leaf_development)
+Loaded 37 parameters from input/water.csv (category: water_parameters)
+Loaded 486 parameters from input/nutrient.csv (category: nutrient_parameters)
+Loading initial state from initials.csv...
+Registered simulator: orchestrator
+Initializing all simulators...
+Registered simulator: photosynthesis_simulator
+Photosynthesis simulator initialized with parameters from CSV
+Orchestrator: Registered photosynthesis_simulator
+Registered simulator: respiration_simulator
+Respiration simulator initialized with parameters from CSV
+Orchestrator: Registered respiration_simulator
+Registered simulator: biomass_allocation_simulator
+Biomass allocation simulator initialized with parameters from CSV
+Orchestrator: Registered biomass_allocation_simulator
+Registered simulator: phenology_simulator
+Phenology simulator initialized with parameters from CSV
+Orchestrator: Registered phenology_simulator
+Registered simulator: stress_models
+Stress models simulator initialized with parameters from CSV
+Orchestrator: Registered stress_models
+Registered simulator: water_uptake_simulator
+Water uptake simulator initialized with parameters from CSV
+Orchestrator: Registered water_uptake_simulator
+Registered simulator: nutrient_models_simulator
+Nutrient models simulator initialized with parameters from CSV
+Orchestrator: Registered nutrient_models_simulator
+Registered simulator: canopy_architecture_simulator
+Canopy architecture simulator initialized with parameters from CSV
+Orchestrator: Registered canopy_architecture_simulator
+Registered simulator: root_system_simulator
+Root system simulator initialized with parameters from CSV
+Orchestrator: Registered root_system_simulator
+Registered simulator: genetic_parameters_simulator
+Genetic parameters simulator initialized with parameters from CSV
+Orchestrator: Registered genetic_parameters_simulator
+Registered simulator: leaf_development_simulator
+Leaf development simulator initialized with parameters from CSV
+Orchestrator: Registered leaf_development_simulator
+Registered simulator: nitrogen_balance_simulator
+Nitrogen balance simulator initialized with parameters from CSV
+Orchestrator: Registered nitrogen_balance_simulator
+Initialized 12 simulators successfully
+Distributed simulation system initialized with 12 simulators
+Starting simulation...
+
+Starting distributed hydroponic simulation...
+Loading weather data...
+Running simulation for 92 days (up to harvest maturity)
+Starting distributed simulation with 12 simulators
+Simulation message bus started
+Waiting for simulators to publish initial state...
+Photosynthesis simulator: Simulation started
+Respiration simulator: Simulation started
+Biomass allocation simulator: Simulation started
+Biomass: Initialized leaf=0.8, stem=0.2, root=0.3
+Phenology simulator: Simulation started
+Stress models simulator: Simulation started
+Stress: Initialized all stress levels from CSV
+Water uptake simulator: Simulation started
+Nutrient models simulator: Simulation started
+DEBUG Nutrient init: initial_state keys = ['root_biomass', 'shoot_biomass', 'leaf_biomass', 'stem_biomass', 'total_biomass', 'lai', 'leaf_area', 'plant_height', 'root_length', 'root_surface_area', 'water_stress', 'nutrient_stress', 'temperature_stress', 'light_stress', 'salinity_stress', 'oxygen_stress', 'ph_stress', 'trait_growth_rate', 'trait_leaf_size', 'trait_yield_potential', 'trait_disease_resistance', 'trait_heat_tolerance', 'trait_cold_tolerance', 'trait_bolting_tolerance', 'trait_chlorophyll_content', 'trait_root_development', 'trait_plant_architecture', 'solution_n_concentration', 'solution_p_concentration', 'solution_k_concentration', 'solution_ca_concentration', 'solution_mg_concentration', 'solution_s_concentration', 'solution_fe_concentration', 'solution_ec', 'solution_ph', 'root_zone_temperature', 'canopy_temperature', 'water_uptake_rate', 'n_uptake_rate', 'p_uptake_rate', 'k_uptake_rate', 'relative_growth_rate', 'leaf_expansion_rate', 'root_growth_rate', 'thermal_time_accumulated', 'development_index', 'days_from_planting', 'growth_stage', 'detailed_growth_stage', 'gross_photosynthesis', 'net_photosynthesis', 'stomatal_conductance', 'maintenance_respiration', 'growth_respiration', 'total_respiration', 'ph', 'alkalinity', 'phosphate_total', 'cumulative_root_growth']
+Nutrient: Initialized from CSV - EC=2, pH=6, N=135.0 mg/L
+Nutrient: Loaded system_config from CSV - tank_volume=100L, plants=20
+Canopy architecture simulator: Simulation started
+Canopy initialized with LAI=0.050 from initials.csv
+Root system simulator: Simulation started
+Root: Initialized root_biomass=0.3g, root_length=5cm, root_surface_area=12.6cm² from CSV
+Genetic parameters simulator: Simulation started
+Genetic: Initialized growth_rate = 0.5 from CSV
+Genetic: Initialized leaf_size = 0.5 from CSV
+Genetic: Initialized yield_potential = 0.5 from CSV
+Genetic: Initialized disease_resistance = 0.5 from CSV
+Genetic: Initialized heat_tolerance = 0.5 from CSV
+Genetic: Initialized cold_tolerance = 0.5 from CSV
+Genetic: Initialized bolting_tolerance = 0.5 from CSV
+Genetic: Initialized chlorophyll_content = 0.5 from CSV
+Genetic: Initialized root_development = 0.5 from CSV
+Genetic: Initialized plant_architecture = 0.5 from CSV
+Leaf development simulator: Simulation started
+Leaf Dev: Initialized with 2 initial leaf cohorts
+Nitrogen balance simulator: Simulation started
+Shared cache: Collected 12 values from photosynthesis_simulator
+Shared cache: Collected 11 values from respiration_simulator
+Shared cache: Collected 11 values from biomass_allocation_simulator
+Shared cache: Collected 17 values from phenology_simulator
+Shared cache: Collected 12 values from stress_models
+Shared cache: Collected 12 values from water_uptake_simulator
+Shared cache: Collected 47 values from nutrient_models_simulator
+Shared cache: Collected 14 values from canopy_architecture_simulator
+Shared cache: Collected 14 values from root_system_simulator
+Shared cache: Collected 53 values from genetic_parameters_simulator
+Shared cache: Collected 34 values from leaf_development_simulator
+Shared cache: Collected 41 values from nitrogen_balance_simulator
+Initial state published by all simulators
+Error in photosynthesis calculation: LAI missing from both canopy_architecture_simulator and initial_state
+Photosynthesis simulator error in step 0: LAI missing from both canopy_architecture_simulator and initial_state
+Error in event handler: LAI missing from both canopy_architecture_simulator and initial_state
+Biomass: Skipping calculation on first step - waiting for photosynthesis data
+Stress: Skipping calculation on first step due to missing dependencies: ['water_uptake_rate', 'transpiration_rate', 'water_availability', 'nitrogen_availability', 'nitrogen_uptake', 'growth_stage', 'development_index']
+Water: Skipping calculation on first step due to missing canopy data
+Nutrient: Skipping calculation on step 0 due to missing water_uptake data
+Canopy: Skipping calculation on step 0 due to missing biomass_allocation data
+Warning: Using default total biomass value: 1.0
+Genetic: Skipping calculation on step 0 due to missing stress_models data
+Leaf Dev: Skipping calculation on step 0 due to missing phenology data
+N-Balance: Skipping calculation on step 0 due to missing nutrient_models data
+DEBUG Photo step 0: light=1500.69, co2=1200.0, temp=25.2, lai=0.1, water_stress=0.00013003540072609177, sunlit_lai=0.09897747672634673, shaded_lai=0.001022523273653278, leaf_N=2.5
+DEBUG Photo step 0: net_assimilation=0.005005905148462876
+DEBUG Biomass step 1: net_assim=0.005, resp=0.003, net_carbon=0.002 g C/hr, hourly_gain=0.005280 g/hr, total_biomass=1.30
+DEBUG Photo step 1: light=1500.69, co2=1200.0, temp=25.2, lai=0.1, water_stress=0.00013003540072609177, sunlit_lai=0.09897747672634673, shaded_lai=0.001022523273653278, leaf_N=2.5
+DEBUG Photo step 1: net_assimilation=0.005005905148462876
+DEBUG Biomass step 2: net_assim=0.005, resp=0.003, net_carbon=0.002 g C/hr, hourly_gain=0.005280 g/hr, total_biomass=1.31
+DEBUG Photo step 2: light=1500.69, co2=1200.0, temp=25.2, lai=0.10032117189744355, water_stress=0.00013066958304208676, sunlit_lai=0.09929533960887621, shaded_lai=0.001025832288567341, leaf_N=2.5
+DEBUG Photo step 2: net_assimilation=0.005021982039765758
+DEBUG Biomass step 3: net_assim=0.005, resp=0.003, net_carbon=0.002 g C/hr, hourly_gain=0.004999 g/hr, total_biomass=1.31
+DEBUG Photo step 3: light=1500.69, co2=1200.0, temp=25.2, lai=0.10032117189744355, water_stress=0.00013066958304208676, sunlit_lai=0.09929533960887621, shaded_lai=0.001025832288567341, leaf_N=2.5
+DEBUG Photo step 3: net_assimilation=0.005021982039765758
+DEBUG Biomass step 4: net_assim=0.005, resp=0.003, net_carbon=0.002 g C/hr, hourly_gain=0.004999 g/hr, total_biomass=1.32
+DEBUG Photo step 4: light=1500.69, co2=1200.0, temp=25.2, lai=0.10094641160867175, water_stress=0.0001316034800499244, sunlit_lai=0.09990780023630362, shaded_lai=0.0010386113723681312, leaf_N=2.5
+DEBUG Photo step 4: net_assimilation=0.005053110249400864
+DEBUG Biomass step 24: net_assim=0.005, resp=0.005, net_carbon=0.001 g C/hr, hourly_gain=0.001420 g/hr, total_biomass=1.37
+DEBUG Biomass step 100: net_assim=0.006, resp=0.003, net_carbon=0.003 g C/hr, hourly_gain=0.006188 g/hr, total_biomass=1.63
+Day 10: 10.9% complete
+Day 20: 21.7% complete
+Day 30: 32.6% complete
+Harvest maturity reached! Current stage: LettuceGrowthStage.HARVEST_MATURITY on day 34
+Harvest maturity reached on day 34, hour 0
+Simulation completed: 793 steps in 0:02:09.129009
+Photosynthesis simulator: Simulation ended after 1585 steps
+Final net assimilation rate: 0.026 μmol CO2/m²/s
+Final gross photosynthesis rate: 0.026 μmol CO2/m²/s
+Final light use efficiency: 0.000
+Final CO2 uptake rate: 0.026 μmol CO2/m²/s
+Total carbon gained: 22.92 g C
+Respiration simulator: Simulation ended after 1586 steps
+Total respiration: 19.59 g C
+Biomass allocation simulator: Simulation ended after 1586 steps
+Total biomass: 9.46 g DM
+Leaf biomass: 4.77 g DM
+Stem biomass: 1.04 g DM
+Root biomass: 3.65 g DM
+Phenology simulator: Simulation ended after 1586 steps
+Final growth stage: LettuceGrowthStage.HARVEST_MATURITY
+Total thermal time: 1263.62 °C days
+Development index: 1.000
+Final bolting risk: 0.020
+Stress models simulator: Simulation ended after 1586 steps
+Final integrated stress: 0.100
+Final stress severity: CRITICAL
+Total cumulative stress: 570600.00
+Final acclimation level: 0.000
+Final damage level: 0.000
+Water uptake simulator: Simulation ended after 1586 steps
+Total water uptake: 7.69 L
+Total transpiration: 0.03 L
+Final water availability: 0.999
+Final crop coefficient: 0.238
+Nutrient models simulator: Simulation ended after 1586 steps
+Final solution EC: 4.11 mS/cm
+Final solution pH: 6.00
+N-NO3: 0.39 mg/L, Total uptake: 0.00 mg
+N-NH4: 0.00 mg/L, Total uptake: 0.00 mg
+P-PO4: 0.08 mg/L, Total uptake: 0.00 mg
+K: 0.75 mg/L, Total uptake: 0.00 mg
+Ca: 1.34 mg/L, Total uptake: 0.00 mg
+Mg: 0.21 mg/L, Total uptake: 0.00 mg
+S-SO4: 60.00 mg/L, Total uptake: 0.00 mg
+Fe: 2.00 mg/L, Total uptake: 0.00 mg
+Mn: 0.10 mg/L, Total uptake: 0.00 mg
+Zn: 0.10 mg/L, Total uptake: 0.00 mg
+Cu: 0.10 mg/L, Total uptake: 0.00 mg
+B: 0.10 mg/L, Total uptake: 0.00 mg
+Mo: 0.10 mg/L, Total uptake: 0.00 mg
+Canopy architecture simulator: Simulation ended after 1586 steps
+Final LAI: 0.596
+Final canopy height: 0.10 cm
+Final ground coverage: 0.301
+Final light interception efficiency: 0.324
+Total light interception: 262.43 MJ/m²
+Root system simulator: Simulation ended after 1586 steps
+Final root depth: 5.00 cm
+Final root biomass: 1.89 g DM
+Final root length: 5.00 cm
+Final root surface area: 1.26 cm²
+Final root density: 0.625 g/cm³
+Total root growth: 0.00 cm
+Genetic parameters simulator: Simulation ended after 1586 steps
+Cultivar: Boston Bibb (butterhead)
+Final adaptation index: 0.000
+Final performance index: 0.000
+Total genetic response: 3994200.000
+Final trait expressions:
+  growth_rate: 0.500
+  leaf_size: 0.500
+  yield_potential: 0.500
+  disease_resistance: 0.500
+  heat_tolerance: 0.500
+  cold_tolerance: 0.500
+  bolting_tolerance: 0.500
+  chlorophyll_content: 0.500
+  root_development: 0.500
+  plant_architecture: 0.500
+  GeneticTrait.GROWTH_RATE: 0.700
+Leaf development simulator: Simulation ended after 1586 steps
+Final total leaves: 2
+Final leaf area: 0.00 m²
+Final leaf weight: 0.00 g
+Final leaf nitrogen content: 0.00 g
+Total thermal time: 29425.3 °C-day
+NOTE: LAI calculated by canopy architecture simulator using actual plant spacing
+Final leaf stage distribution:
+Nitrogen balance simulator: Simulation ended after 1586 steps
+Final total nitrogen uptake: 0.00 g
+Final nitrogen use efficiency: 1.000
+Final nitrogen stress index: 0.542
+Final luxury uptake factor: 1.000
+Total nitrogen uptake: 0.00 g
+Final nitrogen allocation:
+Final nitrogen pools:
+Combined results exported to: output/simulation_results.csv
+
+Exported 12 individual simulator files:
+  - biomass_allocation.csv
+  - canopy_architecture.csv
+  - genetic_parameters.csv
+  - leaf_development.csv
+  - nitrogen_balance.csv
+  - nutrient_models.csv
+  - phenology.csv
+  - photosynthesis.csv
+  - respiration.csv
+  - root_system.csv
+  - stress_models.csv
+  - water_uptake.csv
+
+============================================================
+SIMULATION PERFORMANCE METRICS
+============================================================
+Total simulation time: 129.13 seconds
+Steps per second: 6.14
+Total steps executed: 793
+Simulators registered: 12
+Data points collected: 792
+
+Per-Simulator Performance:
+
+Message Bus Status:
+  Queue size: 0
+  Event handlers: 53
+  Registered simulators: 13
+
+================================================================================
+Simulation completed successfully!
+Results saved to: output/simulation_results.csv
+================================================================================

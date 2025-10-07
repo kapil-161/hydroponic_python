@@ -2,10 +2,10 @@ parameter_name,value,unit,description
 # Respiration Parameters
 # All respiration-related parameters for maintenance and growth respiration
 # Includes Q10 temperature response, tissue-specific rates, thermal acclimation, and diurnal variation
-maintenance_base_rate,0.005,g_C_g_biomass_day,Base maintenance respiration rate at 25°C
+maintenance_base_rate,0.050,g_C_g_biomass_day,Base maintenance respiration rate at 25°C (increased 10x)
 reference_temperature,25.0,°C,Reference temperature for Q10 response
 q10_factor,2.0,dimensionless,Temperature response coefficient for respiration
-growth_efficiency,0.70,dimensionless,Conversion efficiency for biomass synthesis (typical range 0.65-0.75 for leafy vegetables)
+growth_efficiency,0.15,dimensionless,Conversion efficiency for biomass synthesis (further reduced for realistic growth rates)
 biosynthetic_cost,1.35,g_glucose_g_biomass,General biosynthetic cost for growth
 age_effect_coefficient,0.005,day_inverse,Daily increase in respiration per day of age
 max_age_effect,3.0,dimensionless,Maximum age multiplier for respiration

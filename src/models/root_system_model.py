@@ -156,6 +156,9 @@ class RootSystemParameters:
     channel_depth: float
     n_channels: int
     root_zone_independent: bool
+    initial_root_biomass: float
+    initial_root_length: float
+    initial_root_diameter: float
     primary_root_growth_rate: float
     lateral_root_density: float
     branching_angle_mean: float
@@ -274,7 +277,8 @@ class RootSystemParameters:
             raise KeyError("Missing required parameter section: phenology_parameters")
         required_params = [
             'container_volume', 'channel_length', 'system_type', 'channel_width', 'channel_depth',
-            'n_channels', 'root_zone_independent', 'primary_root_growth_rate', 'lateral_root_density',
+            'n_channels', 'root_zone_independent', 'initial_root_biomass', 'initial_root_length',
+            'initial_root_diameter', 'primary_root_growth_rate', 'lateral_root_density',
             'branching_angle_mean', 'branching_angle_std', 'fine_root_fraction', 'medium_root_fraction',
             'coarse_root_fraction', 'fine_diameter_mean', 'fine_diameter_std', 'medium_diameter_mean',
             'medium_diameter_std', 'coarse_diameter_mean', 'coarse_diameter_std', 'fine_turnover_rate',
@@ -372,6 +376,9 @@ class RootSystemParameters:
             channel_depth=float(config['channel_depth']),
             n_channels=int(config['n_channels']),
             root_zone_independent=config['root_zone_independent'],
+            initial_root_biomass=float(config['initial_root_biomass']),
+            initial_root_length=float(config['initial_root_length']),
+            initial_root_diameter=float(config['initial_root_diameter']),
             primary_root_growth_rate=float(config['primary_root_growth_rate']),
             lateral_root_density=float(config['lateral_root_density']),
             branching_angle_mean=float(config['branching_angle_mean']),
@@ -527,12 +534,16 @@ class EnhancedRootSystemModel:
         # Create first root cohort in upper zone
         if len(self.root_zones) > 0:
             initial_cohort = RootCohort(
-                cohort_id=1,
                 age_days=0.0,
                 length=initial_length,
                 diameter=initial_diameter,
+                root_type=RootType.FINE,  # Initial roots are fine roots
+                zone_depth=(self.root_zones[0].depth_range[0] + self.root_zones[0].depth_range[1]) / 2,  # Use average zone depth
                 biomass=initial_biomass,
-                zone=0,  # Upper zone
+                fine_min_activity=self.params.fine_min_activity,
+                medium_min_activity=self.params.medium_min_activity,
+                coarse_min_activity=self.params.coarse_min_activity,
+                establishment_plateau_days=self.params.establishment_plateau_days,
                 initial_activity=1.0
             )
             self.root_zones[0].root_cohorts.append(initial_cohort)

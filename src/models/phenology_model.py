@@ -57,7 +57,9 @@ class PhenologyParameters:
     drought_threshold: float
     heat_threshold: float
 
-    # Remove non-existent parameters per Rules.md
+    # Development index normalization parameters - NO HARDCODED VALUES (Rules.md)
+    development_index_thermal_time_denominator: float
+    stage_progress_thermal_time_denominator: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'PhenologyParameters':
@@ -69,7 +71,9 @@ class PhenologyParameters:
             'bolting_temperature_divisor', 'bolting_temperature_risk_max', 'environmental_history_days',
             'bolting_sustained_stress_risk', 'bolting_maturity_risk_factor', 'bolting_maturity_risk_max',
             'bolting_risk_threshold', 'thermal_time_scale', 'vernalization_required', 'vernalization_temperature',
-            'vernalization_days', 'stress_acceleration_factor', 'drought_threshold', 'heat_threshold'
+            'vernalization_days', 'stress_acceleration_factor', 'drought_threshold', 'heat_threshold',
+            # Development index normalization - NO HARDCODED VALUES (Rules.md)
+            'development_index_thermal_time_denominator', 'stage_progress_thermal_time_denominator'
         ]
         for param in required_params:
             if param not in config:
@@ -132,7 +136,10 @@ class PhenologyParameters:
             stress_acceleration_factor=float(config['stress_acceleration_factor']),
             optimal_water_stress=float(config['optimal_water_stress']),
             drought_threshold=float(config['drought_threshold']),
-            heat_threshold=float(config['heat_threshold'])
+            heat_threshold=float(config['heat_threshold']),
+            # Development index normalization - NO HARDCODED VALUES (Rules.md)
+            development_index_thermal_time_denominator=float(config['development_index_thermal_time_denominator']),
+            stage_progress_thermal_time_denominator=float(config['stage_progress_thermal_time_denominator'])
         )
 
 @dataclass

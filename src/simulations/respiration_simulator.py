@@ -196,13 +196,15 @@ class RespirationSimulator(BaseSimulator):
             current_hour = self.state.step_count % 24
 
             # Use daily biomass gain for respiration calculation (model expects g/day)
+            # Scientific principle: Growth respiration only applies to positive growth
+            # When respiration > photosynthesis, net growth is negative = no growth respiration
             # Reset accumulator at the start of each new day
             if current_hour == 0 and self.state.step_count > 0:
-                total_new_growth = self.state.daily_biomass_gain  # g/day
+                total_new_growth = max(0.0, self.state.daily_biomass_gain)  # g/day, clamped to zero
                 self.state.daily_biomass_gain = 0.0  # Reset for next day
             else:
                 # Use accumulated value so far (will be partial for current day)
-                total_new_growth = self.state.daily_biomass_gain  # g/day (partial)
+                total_new_growth = max(0.0, self.state.daily_biomass_gain)  # g/day (partial), clamped to zero
 
             growth_composition = {
                 'protein': self.parameters.protein_fraction,

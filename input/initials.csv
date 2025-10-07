@@ -3,8 +3,8 @@ category,parameter_name,value,unit,description
 system_config,tank_volume_L,100.0,L,Hydroponic tank volume
 system_config,plant_count,20,count,Number of plants in system
 system_config,solution_volume,100.0,L,Nutrient solution volume
-system_config,grow_area,2.0,m2,Growing area
-system_config,optimal_ec,1.6,dS_m,Optimal electrical conductivity for nutrient solution
+system_config,grow_area,2.4,m2,Growing area
+system_config,optimal_ec,1.2,dS_m,Optimal electrical conductivity for nutrient solution
 
 # Initial Plant State (at planting/germination)
 initial_state,root_biomass,0.3,g,Initial root biomass at transplant

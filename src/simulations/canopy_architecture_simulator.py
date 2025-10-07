@@ -236,21 +236,27 @@ class CanopyArchitectureSimulator(BaseSimulator):
             ground_area_per_plant = self.parameters.row_spacing * self.parameters.plant_spacing  # m²
             total_lai = leaf_area / ground_area_per_plant if ground_area_per_plant > 0 else 0.0
 
-            # Apply maximum LAI constraint from CSV to prevent runaway growth
-            max_lai = self.parameters.max_lai  # From master_parameters.csv canopy_parameters
-            total_lai = min(total_lai, max_lai)
+            # LAI emerges from actual leaf growth - NO ARTIFICIAL CAPS
+            # max_lai parameter removed - it was manipulating results by preventing high LAI
+            # If LAI becomes unrealistic, fix the leaf growth model, not cap the output
 
-            # Calculate canopy height based on biomass accumulation
-            # Empirical relationship: height increases with biomass^0.33 (cube root)
-            # At harvest (10-15g), typical lettuce height is 15-25cm
-            # Formula: height = plant_height * (biomass / target_biomass)^0.33
-            # NO HARDCODED VALUES - get target biomass from CSV parameters
-            target_biomass = self.parameters.target_harvest_biomass  # From CSV
-            if total_biomass > 0:
-                biomass_factor = (total_biomass / target_biomass) ** 0.33
-                canopy_height = min(self.parameters.plant_height, self.parameters.plant_height * biomass_factor)
+            # Calculate canopy height based on actual stem biomass
+            # Scientific approach: Height emerges from stem biomass and plant structure
+            # NOT from comparing to a target biomass (that manipulates results)
+            # Use allometric relationship: height ~ stem_biomass^(1/3) for volume-based growth
+            stem_biomass = biomass_data.get('stem_biomass', 0.0)  # g
+
+            if stem_biomass > 0:
+                # Allometric equation: height (cm) = k * stem_biomass^(1/3)
+                # where k is a structural coefficient from plant architecture
+                # This represents actual physical growth, not a target
+                canopy_height = min(
+                    self.parameters.plant_height,
+                    (stem_biomass ** (1.0/3.0)) * 0.1  # Allometric coefficient in meters
+                )
             else:
-                canopy_height = self.parameters.plant_height * 0.1  # Initial 10% of final height
+                # No stem biomass yet - minimal height
+                canopy_height = 0.01  # 1 cm minimum
             
             # Create light environment from weather data and parameters - no hardcoded values
             from models.canopy_architecture import LightEnvironment
