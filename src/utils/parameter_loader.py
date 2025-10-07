@@ -28,7 +28,11 @@ class StrictParameterLoader:
                  respiration_csv_path: Optional[str] = None,
                  allocation_csv_path: Optional[str] = None,
                  phenology_csv_path: Optional[str] = None,
-                 nitrogen_balance_csv_path: Optional[str] = None):
+                 nitrogen_balance_csv_path: Optional[str] = None,
+                 canopy_csv_path: Optional[str] = None,
+                 leaf_csv_path: Optional[str] = None,
+                 water_csv_path: Optional[str] = None,
+                 nutrient_csv_path: Optional[str] = None):
         self.master_csv_path = master_csv_path
         self.constants_csv_path = constants_csv_path
         self.stress_csv_path = stress_csv_path
@@ -39,6 +43,10 @@ class StrictParameterLoader:
         self.allocation_csv_path = allocation_csv_path
         self.phenology_csv_path = phenology_csv_path
         self.nitrogen_balance_csv_path = nitrogen_balance_csv_path
+        self.canopy_csv_path = canopy_csv_path
+        self.leaf_csv_path = leaf_csv_path
+        self.water_csv_path = water_csv_path
+        self.nutrient_csv_path = nutrient_csv_path
         self.parameters = {}
         self.constants = {}
 
@@ -79,6 +87,22 @@ class StrictParameterLoader:
         # Load nitrogen balance parameters if path provided
         if self.nitrogen_balance_csv_path:
             self._load_specialized_file(self.nitrogen_balance_csv_path, 'nitrogen_balance')
+
+        # Load canopy parameters if path provided
+        if self.canopy_csv_path:
+            self._load_specialized_file(self.canopy_csv_path, 'canopy_parameters')
+
+        # Load leaf development parameters if path provided
+        if self.leaf_csv_path:
+            self._load_specialized_file(self.leaf_csv_path, 'leaf_development')
+
+        # Load water uptake parameters if path provided
+        if self.water_csv_path:
+            self._load_specialized_file(self.water_csv_path, 'water_parameters')
+
+        # Load nutrient parameters if path provided
+        if self.nutrient_csv_path:
+            self._load_specialized_file(self.nutrient_csv_path, 'nutrient_parameters')
 
         # Load parameters from master file
         self._load_parameters()
@@ -619,6 +643,13 @@ class StrictParameterLoader:
         config['oxygen']['optimal_min'] = self.get_parameter('stress_parameters_oxygen_optimal_min')
         config['oxygen']['recovery_rate'] = self.get_parameter('stress_parameters_oxygen_recovery_rate')
 
+        # pH stress parameters
+        config['ph'] = {}
+        config['ph']['optimal_min'] = self.get_parameter('stress_parameters_ph_optimal_min')
+        config['ph']['optimal_max'] = self.get_parameter('stress_parameters_ph_optimal_max')
+        config['ph']['stress_range'] = self.get_parameter('stress_parameters_ph_stress_range')
+        config['ph']['recovery_rate'] = self.get_parameter('stress_parameters_ph_recovery_rate')
+
         # Integrated stress parameters
         config['integration'] = {}
         config['integration']['temperature_weight'] = self.get_parameter('genetic_parameters_default_temperature_stress_weight')
@@ -715,6 +746,7 @@ class StrictParameterLoader:
         # Hardcoded value replacements
         config['water_parameters']['minimum_vpd_threshold'] = self.get_parameter('water_parameters_minimum_vpd_threshold')
         config['water_parameters']['minimum_et0_threshold'] = self.get_parameter('water_parameters_minimum_et0_threshold')
+        config['water_parameters']['ground_area_per_plant'] = self.get_parameter('water_parameters_ground_area_per_plant')
         config['water_parameters']['max_lai_coverage_factor'] = self.get_parameter('water_parameters_max_lai_coverage_factor')
         config['water_parameters']['max_root_surface_area_factor'] = self.get_parameter('water_parameters_max_root_surface_area_factor')
         config['water_parameters']['cavitation_gradient_denominator'] = self.get_parameter('water_parameters_cavitation_gradient_denominator')
@@ -822,12 +854,12 @@ class StrictParameterLoader:
             csv_key = nutrient_csv_mapping[nutrient]
 
             # Load the consolidated parameters from CSV (one set per element, not per form)
-            config[f'mobility_classifications_{nutrient}_mobility'] = self.get_parameter(f'nutrient_mobility_mobility_classifications_{csv_key}_mobility')
-            config[f'mobility_classifications_{nutrient}_transport'] = self.get_parameter(f'nutrient_mobility_mobility_classifications_{csv_key}_transport')
-            config[f'mobility_classifications_{nutrient}_remobilization_efficiency'] = self.get_parameter(f'nutrient_mobility_remobilization_efficiency_{csv_key}')
-            config[f'mobility_classifications_{nutrient}_deficiency_mobility'] = self.get_parameter(f'nutrient_mobility_deficiency_mobility_{csv_key}')
-            config[f'mobility_classifications_{nutrient}_retranslocation_rate'] = self.get_parameter(f'nutrient_mobility_retranslocation_rate_{csv_key}')
-            config[f'xylem_transport_rates_{nutrient}'] = self.get_parameter(f'nutrient_mobility_xylem_transport_rates_{csv_key}')
+            config[f'mobility_classifications_{nutrient}_mobility'] = self.get_parameter(f'nutrient_parameters_mobility_classifications_{csv_key}_mobility')
+            config[f'mobility_classifications_{nutrient}_transport'] = self.get_parameter(f'nutrient_parameters_mobility_classifications_{csv_key}_transport')
+            config[f'mobility_classifications_{nutrient}_remobilization_efficiency'] = self.get_parameter(f'nutrient_parameters_remobilization_efficiency_{csv_key}')
+            config[f'mobility_classifications_{nutrient}_deficiency_mobility'] = self.get_parameter(f'nutrient_parameters_deficiency_mobility_{csv_key}')
+            config[f'mobility_classifications_{nutrient}_retranslocation_rate'] = self.get_parameter(f'nutrient_parameters_retranslocation_rate_{csv_key}')
+            config[f'xylem_transport_rates_{nutrient}'] = self.get_parameter(f'nutrient_parameters_xylem_transport_rates_{csv_key}')
 
             # Calculate phloem rates as fraction of xylem rates from CSV parameter
             phloem_factor = self.get_parameter('nutrient_parameters_phloem_transport_factor')
@@ -1330,14 +1362,14 @@ class StrictParameterLoader:
                 config['allocation_coefficients'][stage][organ] = self.get_parameter(
                     f'nitrogen_parameters_allocation_coefficients_{stage}_{organ}')
 
-        # Critical N concentrations for all organs
+        # Critical N concentrations for all organs (now in nutrient.csv)
         config['critical_n_concentrations'] = {}
         concentration_levels = ['minimum', 'critical', 'optimal', 'maximum']
         for organ in organs:
             config['critical_n_concentrations'][organ] = {}
             for level in concentration_levels:
                 config['critical_n_concentrations'][organ][level] = self.get_parameter(
-                    f'nitrogen_parameters_critical_n_concentrations_{organ}_{level}')
+                    f'nutrient_parameters_critical_n_concentrations_{organ}_{level}')
 
         # Remobilization rates for different pools
         config['remobilization_rates'] = {}

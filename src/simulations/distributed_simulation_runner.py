@@ -54,6 +54,10 @@ class DistributedSimulationRunner:
                  allocation_csv_path: str = "input/allocation.csv",
                  phenology_csv_path: str = "input/phenology.csv",
                  nitrogen_balance_csv_path: str = "input/nitrogen_balance.csv",
+                 canopy_csv_path: str = "input/canopy.csv",
+                 leaf_csv_path: str = "input/leaf.csv",
+                 water_csv_path: str = "input/water.csv",
+                 nutrient_csv_path: str = "input/nutrient.csv",
                  weather_csv_path: str = "input/LET_EXP001_2024_weather.csv"):
         """
         Initialize distributed simulation runner.
@@ -69,13 +73,17 @@ class DistributedSimulationRunner:
             allocation_csv_path: Path to biomass allocation parameters CSV file
             phenology_csv_path: Path to phenology parameters CSV file
             nitrogen_balance_csv_path: Path to nitrogen balance parameters CSV file
+            canopy_csv_path: Path to canopy architecture parameters CSV file
+            leaf_csv_path: Path to leaf development parameters CSV file
+            water_csv_path: Path to water uptake and transpiration parameters CSV file
+            nutrient_csv_path: Path to nutrient uptake and transport parameters CSV file
             weather_csv_path: Path to daily weather CSV file
         """
         print("Initializing Distributed Hydroponic Simulation System")
 
         # Load parameters and weather data - all from CSV, no defaults per Rules.md
         print("Loading parameters from CSV files...")
-        self.parameter_loader = StrictParameterLoader(master_csv_path, constants_csv_path, stress_csv_path, roots_csv_path, genetics_csv_path, photo_csv_path, respiration_csv_path, allocation_csv_path, phenology_csv_path, nitrogen_balance_csv_path)
+        self.parameter_loader = StrictParameterLoader(master_csv_path, constants_csv_path, stress_csv_path, roots_csv_path, genetics_csv_path, photo_csv_path, respiration_csv_path, allocation_csv_path, phenology_csv_path, nitrogen_balance_csv_path, canopy_csv_path, leaf_csv_path, water_csv_path, nutrient_csv_path)
         self.weather_loader = WeatherDataLoader(weather_csv_path)
 
         # Load initial state from initials.csv - all from CSV per Rules.md
@@ -136,7 +144,15 @@ class DistributedSimulationRunner:
             
             # 5. Stress Models Simulator
             stress_params = self.parameter_loader.create_stress_parameters()
-            self.simulators['stress_models'] = StressModelsSimulator(stress_params)
+            ph_optimal_min = self.parameter_loader.get_parameter('stress_parameters_ph_optimal_min')
+            ph_optimal_max = self.parameter_loader.get_parameter('stress_parameters_ph_optimal_max')
+            ph_stress_range = self.parameter_loader.get_parameter('stress_parameters_ph_stress_range')
+            self.simulators['stress_models'] = StressModelsSimulator(
+                stress_params,
+                ph_optimal_min=ph_optimal_min,
+                ph_optimal_max=ph_optimal_max,
+                ph_stress_range=ph_stress_range
+            )
             self.orchestrator.register_simulator(self.simulators['stress_models'])
             
             # 6. Water Uptake Simulator

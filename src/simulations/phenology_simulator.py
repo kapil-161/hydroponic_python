@@ -25,7 +25,7 @@ class PhenologyState:
     current_growth_stage: str = "GERMINATION"
     development_index: float = 0.0
     thermal_time: float = 0.0
-    photoperiod: float = 12.0
+    photoperiod: float = 0.0  # Will be set from CSV parameter
     bolting_risk: float = 0.0
     days_in_current_stage: int = 0
     total_days_from_planting: int = 0
@@ -178,9 +178,11 @@ class PhenologySimulator(BaseSimulator):
             humidity = weather_data.get('humidity')
             light_intensity = weather_data.get('light_intensity')
             
-            # Calculate photoperiod from date or use scientific default
-            # Per Rules.md: use lettuce-appropriate scientific value
-            photoperiod = 12.0  # Default 12-hour photoperiod for lettuce
+            # Get photoperiod from weather data or parameters (NO HARDCODED VALUES per Rules.md)
+            photoperiod = weather_data.get('photoperiod')
+            if photoperiod is None:
+                # Use parameter from CSV - no hardcoded values
+                photoperiod = self.parameters.default_photoperiod
             
             # Per Rules.md: raise error if missing, no defaults
             if temperature is None:
@@ -234,7 +236,7 @@ class PhenologySimulator(BaseSimulator):
                 'temperature': inputs.temperature,
                 'humidity': inputs.humidity,
                 'light_intensity': inputs.light_intensity,
-                'photoperiod': 12.0  # Default lettuce photoperiod
+                'photoperiod': self.parameters.default_photoperiod  # From CSV, no hardcoded values
             }
             
             # Execute phenology step using model functions

@@ -244,7 +244,8 @@ class CanopyArchitectureSimulator(BaseSimulator):
             # Empirical relationship: height increases with biomass^0.33 (cube root)
             # At harvest (10-15g), typical lettuce height is 15-25cm
             # Formula: height = plant_height * (biomass / target_biomass)^0.33
-            target_biomass = 12.0  # Target harvest biomass (g DM) - typical for hydroponic lettuce
+            # NO HARDCODED VALUES - get target biomass from CSV parameters
+            target_biomass = self.parameters.target_harvest_biomass  # From CSV
             if total_biomass > 0:
                 biomass_factor = (total_biomass / target_biomass) ** 0.33
                 canopy_height = min(self.parameters.plant_height, self.parameters.plant_height * biomass_factor)

@@ -136,6 +136,9 @@ minimum_temperature_stress,0.0,dimensionless,Minimum baseline temperature stress
 minimum_light_stress,0.0,dimensionless,Minimum baseline light stress
 minimum_nutrient_stress,0.0,dimensionless,Minimum baseline nutrient stress
 ph_stress_sensitivity,0.3,dimensionless,pH stress sensitivity factor
+ph_optimal_min,5.5,pH,Minimum optimal pH for lettuce (no stress)
+ph_optimal_max,6.5,pH,Maximum optimal pH for lettuce (no stress)
+ph_stress_range,2.0,pH_units,pH deviation from optimal range for full stress
 nutrient_stress_sensitivity,0.3,dimensionless,Nutrient stress sensitivity factor
 salinity_stress_sensitivity,0.3,dimensionless,Salinity stress sensitivity factor
 oxygen_stress_sensitivity,0.3,dimensionless,Oxygen stress sensitivity factor

@@ -304,8 +304,9 @@ class NutrientModelsSimulator(BaseSimulator):
                 leaf_demand_factor = leaf_biomass / shoot_biomass
                 stem_demand_factor = stem_biomass / shoot_biomass
             else:
-                leaf_demand_factor = 0.5
-                stem_demand_factor = 0.5
+                # NO HARDCODED VALUES - get from parameters (Rules.md)
+                leaf_demand_factor = self.parameters.leaf_nutrient_demand_factor
+                stem_demand_factor = self.parameters.stem_nutrient_demand_factor
 
             # Get nutrient demand rates from CSV parameters
             nutrient_demands = self.parameters

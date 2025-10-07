@@ -1,0 +1,50 @@
+parameter_name,value,unit,description
+# Leaf Development Model Parameters
+# All leaf-related parameters for leaf growth, expansion, senescence, and development
+# Includes phyllochron, thermal time requirements, and stress responses
+base_phyllochron,80.0,°C_day,Thermal time interval between leaf appearances
+max_leaf_number,25.0,dimensionless,Maximum number of leaves for lettuce
+initial_leaf_number,2.0,dimensionless,Initial number of leaves (cotyledons + first true leaves)
+leaf_appearance_rate,1.0,leaves_per_phyllochron,Leaves per phyllochron unit
+max_individual_leaf_area,0.004,m2,Maximum area per individual leaf (40 cm2 for 400-800 cm2 total with 10-20 leaves)
+leaf_area_expansion_rate,0.15,dimensionless,Natural cellular expansion rate per day
+drought_threshold,0.6,dimensionless,Water stress threshold for leaf development
+n_stress_threshold,0.7,dimensionless,Nitrogen stress threshold for leaf expansion
+temperature_stress_sensitivity,0.8,dimensionless,Response sensitivity to temperature stress
+
+# Leaf Development Constants and Factors
+initial_leaf_area_factor,0.3,dimensionless,Factor for initial leaf area relative to maximum
+initial_thermal_time_factor,0.5,dimensionless,Factor for initial thermal time accumulation
+emerging_to_expanding_factor,0.3,dimensionless,Factor for emerging to expanding transition timing
+late_leaf_phyllochron_factor,1.5,dimensionless,Factor for late leaf phyllochron (slower appearance)
+very_late_leaf_phyllochron_factor,2.0,dimensionless,Factor for very late leaf phyllochron
+early_leaf_size_factor,0.4,dimensionless,Size factor for early leaves (smaller than mature)
+late_leaf_size_factor,0.6,dimensionless,Size factor for late leaves (smaller due to resource limits)
+leaf_maturation_thermal_time,150.0,°C_day,Thermal time required for leaf maturation
+leaf_lifespan_thermal_time,800.0,°C_day,Thermal time for complete leaf lifespan
+senescence_threshold_age,0.8,dimensionless,Age threshold for senescence initiation (fraction of lifespan)
+senescence_rate_base,0.02,per_day,Base senescence rate per day
+minimum_active_leaf_area,0.0001,m2,Minimum area for active leaf counting
+minimum_visible_leaf_area,0.00005,m2,Minimum area for visible leaf counting
+
+# Leaf Development Hardcoded Constants
+late_leaf_vstage_threshold,15.0,dimensionless,V-stage threshold for late leaf classification
+very_late_leaf_vstage_threshold,20.0,dimensionless,V-stage threshold for very late leaf classification
+early_leaf_position_threshold,5.0,dimensionless,V-stage threshold for early leaf position classification
+middle_leaf_position_threshold,15.0,dimensionless,V-stage threshold for middle leaf position classification
+early_position_scaling_factor,4.0,dimensionless,Scaling factor for early leaf position calculation
+late_position_scaling_factor,10.0,dimensionless,Scaling factor for late leaf position calculation
+
+# Temperature Parameters
+minimum_temperature,4.5,°C,Minimum temperature for leaf development
+maximum_temperature,35.0,°C,Maximum temperature for leaf development
+specific_leaf_area,150.0,cm2_g,Specific leaf area (cm²/g dry weight)
+
+# Initial Leaf Development Parameters
+initial_leaf_stage,emerging,string,Initial leaf development stage
+initial_leaf_angle_distribution,planophile,string,Initial leaf angle distribution
+initial_ppfd_above_canopy,200.0,umol_m2_s,Initial PPFD above canopy
+initial_direct_beam_fraction,0.7,dimensionless,Initial direct beam fraction
+initial_diffuse_fraction,0.3,dimensionless,Initial diffuse fraction
+initial_solar_zenith_angle,30.0,degrees,Initial solar zenith angle
+initial_solar_azimuth_angle,180.0,degrees,Initial solar azimuth angle

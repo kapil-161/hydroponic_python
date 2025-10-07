@@ -45,16 +45,24 @@ class StressState:
 
 class StressModelsSimulator(BaseSimulator):
     """Simulator for stress models - follows Rules.md strictly"""
-    
-    def __init__(self, parameters: IntegratedStressParameters = None):
+
+    def __init__(self, parameters: IntegratedStressParameters = None, ph_optimal_min: float = None,
+                 ph_optimal_max: float = None, ph_stress_range: float = None):
         super().__init__("stress_models")
-        
+
         # Initialize model - parameters MUST come from CSV, no defaults
         if parameters is None:
             raise ValueError("IntegratedStressParameters must be provided from CSV - no defaults allowed per Rules.md")
-        
+
+        # pH parameters must come from CSV
+        if ph_optimal_min is None or ph_optimal_max is None or ph_stress_range is None:
+            raise ValueError("pH parameters (optimal_min, optimal_max, stress_range) must be provided from CSV - no defaults allowed per Rules.md")
+
         self.parameters = parameters
         self.model = IntegratedStressModel(self.parameters)
+        self.ph_optimal_min = ph_optimal_min
+        self.ph_optimal_max = ph_optimal_max
+        self.ph_stress_range = ph_stress_range
         
         # State tracking
         self.state = StressState()
@@ -223,64 +231,52 @@ class StressModelsSimulator(BaseSimulator):
                 else:
                     raise ValueError(f"Required dependency data missing: {missing_data} - no defaults allowed per Rules.md")
 
-            # Stress calculation - Convention: 0.0 = no stress, 1.0 = full stress
-            # Water stress: 0.0 = no stress (high availability), 1.0 = full stress (no water)
-            self.state.water_stress = 1.0 - min(1.0, max(0.0, water_availability))
+            # Use IntegratedStressModel for sophisticated stress calculations
+            # Water stress: convert availability (0-1) to stress (0-1)
+            water_stress = 1.0 - min(1.0, max(0.0, water_availability))
+            # Nutrient stress: convert availability (0-1) to stress (0-1)
+            nutrient_stress = 1.0 - min(1.0, max(0.0, nitrogen_availability))
 
-            # Temperature stress: optimal range for lettuce (18-24°C)
-            temp_optimal_min = 18.0  # °C
-            temp_optimal_max = 24.0  # °C
-            if temp_optimal_min <= temperature <= temp_optimal_max:
-                self.state.temperature_stress = 0.0  # No stress
-            elif temperature < temp_optimal_min:
-                self.state.temperature_stress = min(1.0, (temp_optimal_min - temperature) / 10.0)
+            # pH stress calculation using parameters from CSV
+            if self.ph_optimal_min <= ph <= self.ph_optimal_max:
+                ph_stress = 0.0
+            elif ph < self.ph_optimal_min:
+                ph_stress = min(1.0, (self.ph_optimal_min - ph) / self.ph_stress_range)
             else:
-                self.state.temperature_stress = min(1.0, (temperature - temp_optimal_max) / 10.0)
+                ph_stress = min(1.0, (ph - self.ph_optimal_max) / self.ph_stress_range)
 
-            # Light stress: based on light intensity (1500 is optimal for lettuce)
-            optimal_light = 1500.0
-            if light_intensity >= optimal_light * 0.5:
-                light_ratio = light_intensity / optimal_light
-                if light_ratio <= 1.0:
-                    self.state.light_stress = 0.0  # Optimal light
-                else:
-                    self.state.light_stress = min(1.0, (light_ratio - 1.0))  # Too much light
-            else:
-                self.state.light_stress = min(1.0, 1.0 - (light_intensity / (optimal_light * 0.5)))
+            # Call IntegratedStressModel to calculate all stress factors
+            stress_result = self.model.calculate_integrated_stress(
+                temperature=temperature,
+                humidity=humidity,
+                light_intensity=light_intensity,
+                co2_concentration=co2_concentration,
+                water_uptake_rate=water_uptake_rate,
+                transpiration_rate=transpiration_rate,
+                water_availability=water_availability,
+                nutrient_availability=nitrogen_availability,
+                nutrient_uptake_rate=nitrogen_uptake,
+                ph=ph,
+                growth_stage=growth_stage,
+                development_index=development_index,
+                water_stress=water_stress,
+                nutrient_stress=nutrient_stress,
+                ph_stress=ph_stress
+            )
 
-            # Nutrient stress: 0.0 = no stress (high availability), 1.0 = full stress
-            self.state.nutrient_stress = 1.0 - min(1.0, max(0.0, nitrogen_availability))
+            # Update state with model results
+            self.state.temperature_stress = stress_result['temperature_stress']
+            self.state.water_stress = stress_result['water_stress']
+            self.state.nutrient_stress = stress_result['nutrient_stress']
+            self.state.light_stress = stress_result['light_stress']
+            self.state.ph_stress = stress_result['ph_stress']
+            self.state.salinity_stress = 0.0  # Minimal for hydroponic
 
-            # pH stress: optimal range 5.5-6.5 for lettuce
-            if 5.5 <= ph <= 6.5:
-                self.state.ph_stress = 0.0  # No stress
-            elif ph < 5.5:
-                self.state.ph_stress = min(1.0, (5.5 - ph) / 2.0)
-            else:
-                self.state.ph_stress = min(1.0, (ph - 6.5) / 2.0)
+            # Use model's overall stress factor and severity
+            self.state.integrated_stress = stress_result['overall_stress_factor']
+            self.state.stress_severity = stress_result['stress_severity'].upper()
 
-            # Salinity stress: assume minimal for hydroponic lettuce
-            self.state.salinity_stress = 0.0
-
-            # Integrated stress: average of all stresses (0.0 = no stress, 1.0 = full stress)
-            self.state.integrated_stress = (
-                self.state.temperature_stress +
-                self.state.water_stress +
-                self.state.nutrient_stress +
-                self.state.light_stress +
-                self.state.salinity_stress
-            ) / 5.0
-
-            # Stress severity categorization (0.0 = no stress, 1.0 = full stress)
-            if self.state.integrated_stress <= 0.2:
-                self.state.stress_severity = "NONE"
-            elif self.state.integrated_stress <= 0.4:
-                self.state.stress_severity = "MILD"
-            elif self.state.integrated_stress <= 0.6:
-                self.state.stress_severity = "MODERATE"
-            else:
-                self.state.stress_severity = "SEVERE"
-
+            # Acclimation and damage (currently not calculated by model)
             self.state.acclimation_level = 0.0
             self.state.damage_level = 0.0
 

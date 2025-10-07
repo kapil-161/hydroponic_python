@@ -71,3 +71,4 @@ thermal_transition_BI_to_FL,150.0,°Cd,Bolting initiation to flowering
 thermal_transition_FL_to_AN,100.0,°Cd,Flowering to anthesis
 thermal_transition_AN_to_SD,200.0,°Cd,Anthesis to seed development
 thermal_transition_SD_to_PM,300.0,°Cd,Seed development to physiological maturity
+phenology_parameters,default_photoperiod,12.0,hours

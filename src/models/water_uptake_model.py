@@ -101,6 +101,7 @@ class WaterUptakeParameters:
     # Hardcoded value replacements (from CSV)
     minimum_vpd_threshold: float
     minimum_et0_threshold: float
+    ground_area_per_plant: float
     max_lai_coverage_factor: float
     max_root_surface_area_factor: float
     cavitation_gradient_denominator: float
@@ -181,7 +182,7 @@ class WaterUptakeParameters:
             'max_root_surface_area_factor', 'cavitation_gradient_denominator', 'lai_to_light_interception_factor',
             'temperature_response_exponent_denominator', 'vpd_effect_divisor', 'transpiration_base_rate_scale_factor',
             'transpiration_scaling_multiplier', 'lai_coefficient_threshold', 'minimum_coverage_factor',
-            'minimum_cavitation_factor', 'maximum_vpd_effect'
+            'minimum_cavitation_factor', 'maximum_vpd_effect', 'ground_area_per_plant'
         ]
         for param in required_params:
             if (param not in water_params and
@@ -245,7 +246,8 @@ class WaterUptakeParameters:
             lai_coefficient_threshold=float(water_params['lai_coefficient_threshold']),
             minimum_coverage_factor=float(water_params['minimum_coverage_factor']),
             minimum_cavitation_factor=float(water_params['minimum_cavitation_factor']),
-            maximum_vpd_effect=float(water_params['maximum_vpd_effect'])
+            maximum_vpd_effect=float(water_params['maximum_vpd_effect']),
+            ground_area_per_plant=float(water_params['ground_area_per_plant'])
         )
 
 @dataclass
@@ -353,10 +355,9 @@ class WaterUptakeModel:
         # Scale by canopy coverage
         coverage_factor = min(1.0, lai / self.params.max_lai_coverage_factor) if lai > 0 else self.params.minimum_coverage_factor
         transpiration_mm = etc_mm * coverage_factor
-        # Convert mm depth to liters: need to multiply by leaf area (LAI × ground area)
-        # For 20 plants at 0.2m × 0.3m spacing = 1.2 m² ground area
-        # Use LAI to scale (LAI = leaf area / ground area)
-        leaf_area_m2 = lai * 1.2  # Approximate ground area for system
+        # Convert mm depth to liters: multiply by ground area per plant
+        # LAI = leaf area / ground area, so leaf_area = LAI × ground_area
+        leaf_area_m2 = lai * self.params.ground_area_per_plant
         transpiration_L = (transpiration_mm / 1000.0) * leaf_area_m2
 
         # Metabolic water demand

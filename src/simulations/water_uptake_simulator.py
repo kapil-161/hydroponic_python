@@ -59,7 +59,8 @@ class WaterUptakeSimulator(BaseSimulator):
             'canopy_architecture_simulator': ['lai', 'leaf_area', 'canopy_height'],
             'root_system_simulator': ['root_depth', 'root_distribution', 'root_biomass'],
             'phenology_simulator': ['growth_stage', 'development_index'],
-            'stress_models': ['water_stress', 'temperature_stress']
+            'stress_models': ['water_stress', 'temperature_stress'],
+            'biomass_allocation_simulator': ['total_biomass']
         }
         
         # Data cache for dependencies
@@ -201,7 +202,17 @@ class WaterUptakeSimulator(BaseSimulator):
                     print(f"Water: Skipping calculation on first step due to missing stress data")
                     return
                 raise ValueError("Stress data missing from stress_models - no defaults allowed")
-            
+
+            # Get total_biomass from biomass_allocation_simulator
+            biomass_data = self.dependency_cache.get('biomass_allocation_simulator', {})
+            total_biomass = biomass_data.get('total_biomass')
+
+            if total_biomass is None:
+                if self.state.step_count == 0:
+                    print(f"Water: Skipping calculation on first step due to missing biomass data")
+                    return
+                raise ValueError("Total biomass missing from biomass_allocation_simulator - no defaults allowed")
+
             # Calculate water uptake using model functions - no shortcuts
             try:
                 result = self.model.calculate_realistic_water_uptake(
@@ -209,7 +220,7 @@ class WaterUptakeSimulator(BaseSimulator):
                     humidity=humidity,
                     solar_radiation=light_intensity,  # Use light_intensity as solar_radiation
                     lai=lai,
-                    total_biomass=root_biomass + leaf_area * self.parameters.leaf_area_to_biomass_ratio,  # Estimate total biomass
+                    total_biomass=total_biomass,  # Get from biomass_allocation_simulator
                     growth_stage=growth_stage,  # Use actual growth stage from phenology
                     stress_factors={
                         'water_stress_level': water_stress,
