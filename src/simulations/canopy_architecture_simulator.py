@@ -71,7 +71,6 @@ class CanopyArchitectureSimulator(BaseSimulator):
         self.cache_timestamp: Dict[str, datetime] = {}
         self.cache_timeout = 1.0  # seconds
         
-        print(f"Canopy architecture simulator initialized with parameters from CSV")
 
     def _calculate_ground_coverage(self, total_lai: float) -> float:
         """Calculate ground coverage fraction based on LAI"""
@@ -92,7 +91,6 @@ class CanopyArchitectureSimulator(BaseSimulator):
 
     def on_simulation_start(self, data: Dict[str, Any]):
         """Handle simulation start"""
-        print("Canopy architecture simulator: Simulation started")
         self.state = CanopyState()
         self.history.clear()
         self.dependency_cache.clear()
@@ -113,7 +111,6 @@ class CanopyArchitectureSimulator(BaseSimulator):
         self.state.canopy_height = initial_plant_height
         self.state.ground_coverage = self._calculate_ground_coverage(initial_lai)
 
-        print(f"Canopy initialized with LAI={initial_lai:.3f} from initials.csv")
 
         # Publish initial state to dependency cache immediately
         self.publish_state_data()
@@ -166,7 +163,6 @@ class CanopyArchitectureSimulator(BaseSimulator):
                 self.state.daily_light_interception = 0.0
                 
         except Exception as e:
-            print(f"Canopy architecture simulator error in step {self.state.step_count}: {e}")
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
@@ -309,7 +305,6 @@ class CanopyArchitectureSimulator(BaseSimulator):
             self.state.daily_light_interception += hourly_light_interception
             
         except Exception as e:
-            print(f"Error in canopy architecture calculation: {e}")
             # Per Rules.md: raise error, no fallbacks
             raise
     

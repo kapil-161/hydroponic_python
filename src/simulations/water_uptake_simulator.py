@@ -68,11 +68,9 @@ class WaterUptakeSimulator(BaseSimulator):
         self.cache_timestamp: Dict[str, datetime] = {}
         self.cache_timeout = 1.0  # seconds
         
-        print(f"Water uptake simulator initialized with parameters from CSV")
     
     def on_simulation_start(self, data: Dict[str, Any]):
         """Handle simulation start"""
-        print("Water uptake simulator: Simulation started")
         self.state = WaterUptakeState()
         self.history.clear()
         self.dependency_cache.clear()
@@ -128,7 +126,6 @@ class WaterUptakeSimulator(BaseSimulator):
                 self.state.daily_transpiration = 0.0
                 
         except Exception as e:
-            print(f"Water uptake simulator error in step {self.state.step_count}: {e}")
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
@@ -231,7 +228,6 @@ class WaterUptakeSimulator(BaseSimulator):
                 )
             except (TypeError, ValueError) as e:
                 if self.state.step_count == 0 and ("NoneType" in str(e) or "<=" in str(e)):
-                    print(f"Water: Skipping calculation on first step due to model error: {e}")
                     return
                 raise
             
@@ -255,7 +251,6 @@ class WaterUptakeSimulator(BaseSimulator):
             self.state.daily_transpiration += hourly_transpiration
             
         except Exception as e:
-            print(f"Error in water uptake calculation: {e}")
             # Raise error according to Rules.md - no error suppression
             raise
     

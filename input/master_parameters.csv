@@ -1,6 +1,4 @@
 category,parameter_name,value,unit,description
-# DSSAT-Style Master Parameters - Essential Only
-# Reduced from 53 to 15 parameters by eliminating redundancies but keeping required ones
 environment,light_saturation_threshold,800.0,μmol_m2_s,Light saturation threshold for photosynthesis
 core_growth,minimum_growth_rate,0.0,g_per_day,Minimum daily growth rate when conditions are limiting
 simulator_defaults,total_days_default,92,days,Default total simulation days
@@ -12,11 +10,11 @@ simulator_defaults,enable_real_time_default,false,boolean,Default real-time mode
 simulator_defaults,synchronization_mode_default,sequential,string,Default synchronization mode
 simulator_defaults,data_collection_interval,1,steps,Default data collection interval
 simulator_defaults,max_concurrent_simulators,4,simulators,Maximum concurrent simulators
-simulator_defaults,max_errors,10,errors,Maximum allowed errors
+simulator_defaults,max_errors,1,errors,Maximum allowed errors
 simulator_defaults,progress_report_interval,240,steps,Default progress report interval
-simulator_defaults,initialization_wait_time,0.5,seconds,Time to wait for simulator initialization
-simulator_defaults,event_processing_wait_time,0.1,seconds,Time between event processing cycles
-simulator_defaults,initialization_cycles,5,integer,Number of initialization event processing cycles
+simulator_defaults,initialization_wait_time,0.0,seconds,Time to wait for simulator initialization
+simulator_defaults,event_processing_wait_time,0.0,seconds,Time between event processing cycles
+simulator_defaults,initialization_cycles,1,integer,Number of initialization event processing cycles
 simulator_defaults,cache_timeout_global,300.0,seconds,Global dependency cache timeout
 simulator_defaults,default_air_temperature,20.0,°C,Default air temperature for initialization
 simulator_defaults,default_humidity,60.0,%,Default humidity for initialization

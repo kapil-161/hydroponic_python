@@ -69,11 +69,9 @@ class PhotosynthesisSimulator(BaseSimulator):
         # Initial state data (set during simulation start)
         self.initial_state: Dict[str, Any] = {}
         
-        print(f"Photosynthesis simulator initialized with parameters from CSV")
     
     def on_simulation_start(self, data: Dict[str, Any]):
         """Handle simulation start"""
-        print("Photosynthesis simulator: Simulation started")
         self.state = PhotosynthesisState()
         self.history.clear()
         self.dependency_cache.clear()
@@ -135,7 +133,6 @@ class PhotosynthesisSimulator(BaseSimulator):
                 self.state.daily_carbon_gained = 0.0
                 
         except Exception as e:
-            print(f"Photosynthesis simulator error in step {self.state.step_count}: {e}")
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
@@ -220,8 +217,6 @@ class PhotosynthesisSimulator(BaseSimulator):
             shaded_lai = lai - sunlit_lai  # Calculate shaded as difference to ensure sum equals lai
             
             # DEBUG: Log inputs for first few steps
-            if self.state.step_count < 5:
-                print(f"DEBUG Photo step {self.state.step_count}: light={light_intensity}, co2={co2_concentration}, temp={temperature}, lai={lai}, water_stress={water_stress}, sunlit_lai={sunlit_lai}, shaded_lai={shaded_lai}, leaf_N={leaf_nitrogen}")
 
             net_assimilation, _ = self.model.calculate_hourly_assimilation(
                 par_umol_m2_s=light_intensity,
@@ -238,8 +233,6 @@ class PhotosynthesisSimulator(BaseSimulator):
             )
 
             # DEBUG: Log output for first few steps
-            if self.state.step_count < 5:
-                print(f"DEBUG Photo step {self.state.step_count}: net_assimilation={net_assimilation}")
 
             # Update state with model results
             self.state.net_assimilation_rate = net_assimilation  # Already in g C/hour (from model)
@@ -262,7 +255,6 @@ class PhotosynthesisSimulator(BaseSimulator):
             self.state.daily_carbon_gained += hourly_carbon
             
         except Exception as e:
-            print(f"Error in photosynthesis calculation: {e}")
             # Per Rules.md: raise error, no fallbacks
             raise
     

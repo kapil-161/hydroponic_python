@@ -22,7 +22,7 @@ from models.base_model import DailyUpdateInput, DailyUpdateOutput
 @dataclass
 class NutrientState:
     """State tracking for nutrient models simulator"""
-    solution_ec: float = 1.5
+    solution_ec: float = 1.2
     solution_ph: float = 6.0
     nutrient_concentrations: Dict[str, float] = field(default_factory=dict)
     nutrient_uptake_rates: Dict[str, float] = field(default_factory=dict)
@@ -84,11 +84,9 @@ class NutrientModelsSimulator(BaseSimulator):
         self.cache_timestamp: Dict[str, datetime] = {}
         self.cache_timeout = 1.0  # seconds
         
-        print(f"Nutrient models simulator initialized with parameters from CSV")
     
     def on_simulation_start(self, data: Dict[str, Any]):
         """Handle simulation start - load system_config from initials.csv"""
-        print("Nutrient models simulator: Simulation started")
         self.state = NutrientState()
 
         # Re-initialize nutrient dictionaries after state reset
@@ -105,9 +103,7 @@ class NutrientModelsSimulator(BaseSimulator):
 
         # Load initial nutrient concentrations from CSV - NO DEFAULTS per Rules.md
         initial_state = data.get('initial_state', {})
-        print(f"DEBUG Nutrient init: initial_state keys = {list(initial_state.keys()) if initial_state else 'EMPTY'}")
         if initial_state:
-            self.state.solution_ec = initial_state.get('solution_ec', 2.0)
             self.state.solution_ph = initial_state.get('solution_ph', 6.0)
 
             # Map CSV keys to nutrient elements
@@ -137,7 +133,9 @@ class NutrientModelsSimulator(BaseSimulator):
                     # Micronutrients not in CSV - set to trace levels
                     self.state.nutrient_concentrations[element] = 0.1
 
-            print(f"Nutrient: Initialized from CSV - EC={self.state.solution_ec}, pH={self.state.solution_ph}, N={self.state.nutrient_concentrations.get('N-NO3', 0):.1f} mg/L")
+            # Calculate EC from concentrations instead of using hardcoded value
+            self.state.solution_ec = self.model._calculate_ec_from_concentrations(self.state.nutrient_concentrations)
+            
 
         # Load system configuration from initials.csv into dependency cache
         system_config = data.get('system_config', {})
@@ -202,7 +200,6 @@ class NutrientModelsSimulator(BaseSimulator):
                     self.state.daily_nutrient_uptake[element] = 0.0
                 
         except Exception as e:
-            print(f"Nutrient models simulator error in step {self.state.step_count}: {e}")
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
@@ -372,9 +369,6 @@ class NutrientModelsSimulator(BaseSimulator):
             }
             
             try:
-                print(f"DEBUG Nutrient step {self.state.step_count}: Calling calculate_nutrient_dynamics")
-                print(f"DEBUG Nutrient plant_status keys: {list(plant_status.keys())}")
-                print(f"DEBUG Nutrient env_conditions keys: {list(env_conditions.keys())}")
                 result = self.model.calculate_nutrient_dynamics(
                     concentrations=concentrations,
                     plant_status=plant_status,
@@ -383,14 +377,10 @@ class NutrientModelsSimulator(BaseSimulator):
                     water_fluxes=water_fluxes,
                     assimilate_fluxes=assimilate_fluxes
                 )
-                print(f"DEBUG Nutrient step {self.state.step_count}: Model returned result keys: {list(result.keys())}")
                 uptake_rates = result.get('uptake_rates_mg_per_plant_per_day', {})
-                print(f"DEBUG Nutrient step {self.state.step_count}: Uptake rates: {uptake_rates}")
             except KeyError as e:
                 if "sink strength" in str(e) or "N-NO3" in str(e) or any(elem in str(e) for elem in self.nutrient_elements):
                     # Skip nutrient calculation if parameters are missing
-                    print(f"DEBUG Nutrient KeyError: {e}")
-                    print(f"DEBUG Nutrient step {self.state.step_count}: Missing parameter causing uptake rates to be 0")
                     result = {
                         'solution_ec': self.state.solution_ec,
                         'nutrient_concentrations': self.state.nutrient_concentrations,
@@ -440,12 +430,12 @@ class NutrientModelsSimulator(BaseSimulator):
             # Note: nutrient_uptake_rates is in mg/plant/day (from model)
             # Convert to hourly: divide by 24 hours
             for element in self.nutrient_elements:
-                hourly_uptake = self.state.nutrient_uptake_rates[element] / 24.0  # Convert daily rate to hourly (mg/plant/hour)
+                uptake_rate = self.state.nutrient_uptake_rates[element]
+                hourly_uptake = uptake_rate / 24.0  # Convert daily rate to hourly (mg/plant/hour)
                 self.state.cumulative_nutrient_uptake[element] += hourly_uptake
                 self.state.daily_nutrient_uptake[element] += hourly_uptake
             
         except Exception as e:
-            print(f"Error in nutrient calculation: {e}")
             # Raise error according to Rules.md - no error suppression
             raise
     

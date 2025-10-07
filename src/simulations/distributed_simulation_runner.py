@@ -79,15 +79,11 @@ class DistributedSimulationRunner:
             nutrient_csv_path: Path to nutrient uptake and transport parameters CSV file
             weather_csv_path: Path to daily weather CSV file
         """
-        print("Initializing Distributed Hydroponic Simulation System")
-
         # Load parameters and weather data - all from CSV, no defaults per Rules.md
-        print("Loading parameters from CSV files...")
         self.parameter_loader = StrictParameterLoader(master_csv_path, constants_csv_path, stress_csv_path, roots_csv_path, genetics_csv_path, photo_csv_path, respiration_csv_path, allocation_csv_path, phenology_csv_path, nitrogen_balance_csv_path, canopy_csv_path, leaf_csv_path, water_csv_path, nutrient_csv_path)
         self.weather_loader = WeatherDataLoader(weather_csv_path)
 
         # Load initial state from initials.csv - all from CSV per Rules.md
-        print("Loading initial state from initials.csv...")
         self.initial_state_data = self.parameter_loader.load_initial_state("input/initials.csv")
         
         # Initialize simulation orchestrator - ALL values from CSV per Rules.md
@@ -119,7 +115,6 @@ class DistributedSimulationRunner:
     
     def _initialize_all_simulators(self):
         """Initialize all 16 simulators with parameters from CSV"""
-        print("Initializing all simulators...")
         
         try:
             # 1. Photosynthesis Simulator
@@ -195,7 +190,6 @@ class DistributedSimulationRunner:
 
             # All simulators now initialized!
             
-            print(f"Initialized {len(self.simulators)} simulators successfully")
             
         except Exception as e:
             print(f"Error initializing simulators: {e}")

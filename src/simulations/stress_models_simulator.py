@@ -85,11 +85,9 @@ class StressModelsSimulator(BaseSimulator):
         self.cache_timestamp: Dict[str, datetime] = {}
         self.cache_timeout = 1.0  # seconds
         
-        print(f"Stress models simulator initialized with parameters from CSV")
     
     def on_simulation_start(self, data: Dict[str, Any]):
         """Handle simulation start - initialize with values from initials.csv"""
-        print("Stress models simulator: Simulation started")
         self.state = StressState()
 
         # Load initial stress levels from CSV (via initial_state)
@@ -102,7 +100,6 @@ class StressModelsSimulator(BaseSimulator):
             self.state.ph_stress = initial_state.get('ph_stress', 0.0)
             self.state.salinity_stress = initial_state.get('salinity_stress', 0.0)
             self.state.integrated_stress = 0.0  # Will be calculated
-            print(f"Stress: Initialized all stress levels from CSV")
 
         self.history.clear()
         self.dependency_cache.clear()
@@ -164,7 +161,6 @@ class StressModelsSimulator(BaseSimulator):
                 self.state.daily_stress = 0.0
                 
         except Exception as e:
-            print(f"Stress models simulator error in step {self.state.step_count}: {e}")
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),

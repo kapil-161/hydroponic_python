@@ -121,7 +121,6 @@ class NitrogenBalanceSimulator(BaseSimulator):
         # Subscribe to root events
         self.message_bus.subscribe(EventType.ROOT_UPDATE, self._handle_root_update)
         
-        print(f"Nitrogen balance simulator initialized with parameters from CSV")
     
     def _handle_root_update(self, event: SimulationEvent):
         """Handle root data updates"""
@@ -130,7 +129,6 @@ class NitrogenBalanceSimulator(BaseSimulator):
     
     def on_simulation_start(self, data: Dict[str, Any]):
         """Handle simulation start"""
-        print("Nitrogen balance simulator: Simulation started")
         self.state = NitrogenBalanceState()
         self.history.clear()
         self.dependency_cache.clear()
@@ -218,7 +216,6 @@ class NitrogenBalanceSimulator(BaseSimulator):
                 self.state.daily_nitrogen_uptake = 0.0
                 
         except Exception as e:
-            print(f"Nitrogen balance simulator error in step {self.state.step_count}: {e}")
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
@@ -405,7 +402,6 @@ class NitrogenBalanceSimulator(BaseSimulator):
             self.state.daily_nitrogen_uptake += hourly_nitrogen_uptake
             
         except Exception as e:
-            print(f"Error in nitrogen balance calculation: {e}")
             # Raise error according to Rules.md - no error suppression
             raise
     

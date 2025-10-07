@@ -50,6 +50,27 @@ class NutrientParameters:
     kinetics_mg_vmax: float
     kinetics_mg_km: float
     kinetics_mg_min_conc: float
+    kinetics_s_so4_vmax: float
+    kinetics_s_so4_km: float
+    kinetics_s_so4_min_conc: float
+    kinetics_fe_vmax: float
+    kinetics_fe_km: float
+    kinetics_fe_min_conc: float
+    kinetics_mn_vmax: float
+    kinetics_mn_km: float
+    kinetics_mn_min_conc: float
+    kinetics_zn_vmax: float
+    kinetics_zn_km: float
+    kinetics_zn_min_conc: float
+    kinetics_cu_vmax: float
+    kinetics_cu_km: float
+    kinetics_cu_min_conc: float
+    kinetics_b_vmax: float
+    kinetics_b_km: float
+    kinetics_b_min_conc: float
+    kinetics_mo_vmax: float
+    kinetics_mo_km: float
+    kinetics_mo_min_conc: float
     mobility_classifications: Dict[str, Dict[str, Any]]
     xylem_transport_rates: Dict[str, float]
     phloem_transport_rates: Dict[str, float]
@@ -139,6 +160,10 @@ class NutrientParameters:
             'kinetics_p_po4_km', 'kinetics_p_po4_min_conc', 'kinetics_k_vmax',
             'kinetics_k_km', 'kinetics_k_min_conc', 'kinetics_ca_vmax', 'kinetics_ca_km',
             'kinetics_ca_min_conc', 'kinetics_mg_vmax', 'kinetics_mg_km', 'kinetics_mg_min_conc',
+            'kinetics_s_so4_vmax', 'kinetics_s_so4_km', 'kinetics_s_so4_min_conc', 'kinetics_fe_vmax', 'kinetics_fe_km', 'kinetics_fe_min_conc',
+            'kinetics_mn_vmax', 'kinetics_mn_km', 'kinetics_mn_min_conc', 'kinetics_zn_vmax', 'kinetics_zn_km', 'kinetics_zn_min_conc',
+            'kinetics_cu_vmax', 'kinetics_cu_km', 'kinetics_cu_min_conc', 'kinetics_b_vmax', 'kinetics_b_km', 'kinetics_b_min_conc',
+            'kinetics_mo_vmax', 'kinetics_mo_km', 'kinetics_mo_min_conc',
             # Hardcoded value replacements
             'ec_stress_min_threshold', 'ec_boost_max_n', 'ec_boost_max_p', 'ec_boost_max_k', 'ec_boost_max_fe',
             'temperature_factor_base', 'ph_factor_base', 'reference_daily_growth_rate',
@@ -278,6 +303,27 @@ class NutrientParameters:
             kinetics_mg_vmax=float(config['kinetics_mg_vmax']),
             kinetics_mg_km=float(config['kinetics_mg_km']),
             kinetics_mg_min_conc=float(config['kinetics_mg_min_conc']),
+            kinetics_s_so4_vmax=float(config['kinetics_s_so4_vmax']),
+            kinetics_s_so4_km=float(config['kinetics_s_so4_km']),
+            kinetics_s_so4_min_conc=float(config['kinetics_s_so4_min_conc']),
+            kinetics_fe_vmax=float(config['kinetics_fe_vmax']),
+            kinetics_fe_km=float(config['kinetics_fe_km']),
+            kinetics_fe_min_conc=float(config['kinetics_fe_min_conc']),
+            kinetics_mn_vmax=float(config['kinetics_mn_vmax']),
+            kinetics_mn_km=float(config['kinetics_mn_km']),
+            kinetics_mn_min_conc=float(config['kinetics_mn_min_conc']),
+            kinetics_zn_vmax=float(config['kinetics_zn_vmax']),
+            kinetics_zn_km=float(config['kinetics_zn_km']),
+            kinetics_zn_min_conc=float(config['kinetics_zn_min_conc']),
+            kinetics_cu_vmax=float(config['kinetics_cu_vmax']),
+            kinetics_cu_km=float(config['kinetics_cu_km']),
+            kinetics_cu_min_conc=float(config['kinetics_cu_min_conc']),
+            kinetics_b_vmax=float(config['kinetics_b_vmax']),
+            kinetics_b_km=float(config['kinetics_b_km']),
+            kinetics_b_min_conc=float(config['kinetics_b_min_conc']),
+            kinetics_mo_vmax=float(config['kinetics_mo_vmax']),
+            kinetics_mo_km=float(config['kinetics_mo_km']),
+            kinetics_mo_min_conc=float(config['kinetics_mo_min_conc']),
             mobility_classifications=mobility_class,
             xylem_transport_rates=xylem_rates,
             phloem_transport_rates=phloem_rates,
@@ -434,7 +480,14 @@ class NutrientModel:
             'P-PO4': {'vmax': self.params.kinetics_p_po4_vmax, 'km': self.params.kinetics_p_po4_km, 'min_conc': self.params.kinetics_p_po4_min_conc},
             'K': {'vmax': self.params.kinetics_k_vmax, 'km': self.params.kinetics_k_km, 'min_conc': self.params.kinetics_k_min_conc},
             'Ca': {'vmax': self.params.kinetics_ca_vmax, 'km': self.params.kinetics_ca_km, 'min_conc': self.params.kinetics_ca_min_conc},
-            'Mg': {'vmax': self.params.kinetics_mg_vmax, 'km': self.params.kinetics_mg_km, 'min_conc': self.params.kinetics_mg_min_conc}
+            'Mg': {'vmax': self.params.kinetics_mg_vmax, 'km': self.params.kinetics_mg_km, 'min_conc': self.params.kinetics_mg_min_conc},
+            'S-SO4': {'vmax': self.params.kinetics_s_so4_vmax, 'km': self.params.kinetics_s_so4_km, 'min_conc': self.params.kinetics_s_so4_min_conc},
+            'Fe': {'vmax': self.params.kinetics_fe_vmax, 'km': self.params.kinetics_fe_km, 'min_conc': self.params.kinetics_fe_min_conc},
+            'Mn': {'vmax': self.params.kinetics_mn_vmax, 'km': self.params.kinetics_mn_km, 'min_conc': self.params.kinetics_mn_min_conc},
+            'Zn': {'vmax': self.params.kinetics_zn_vmax, 'km': self.params.kinetics_zn_km, 'min_conc': self.params.kinetics_zn_min_conc},
+            'Cu': {'vmax': self.params.kinetics_cu_vmax, 'km': self.params.kinetics_cu_km, 'min_conc': self.params.kinetics_cu_min_conc},
+            'B': {'vmax': self.params.kinetics_b_vmax, 'km': self.params.kinetics_b_km, 'min_conc': self.params.kinetics_b_min_conc},
+            'Mo': {'vmax': self.params.kinetics_mo_vmax, 'km': self.params.kinetics_mo_km, 'min_conc': self.params.kinetics_mo_min_conc}
         }
 
     def calculate_nutrient_dynamics(self, concentrations: Dict[str, float], plant_status: Dict[str, Any],

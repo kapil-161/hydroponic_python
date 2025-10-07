@@ -138,7 +138,7 @@ class SimulationMessageBus:
             # Use negative priority for max-heap behavior (higher priority first)
             self.event_queue.put((-event.priority, time.time(), event), timeout=1.0)
         except queue.Full:
-            print(f"Warning: Event queue full, dropping event: {event.event_type}")
+            pass
     
     def publish_immediate(self, event: SimulationEvent):
         """Publish an event and process it immediately"""
@@ -170,7 +170,7 @@ class SimulationMessageBus:
             except queue.Empty:
                 continue
             except Exception as e:
-                print(f"Error processing event: {e}")
+                pass
     
     def _process_event(self, event: SimulationEvent):
         """Process a single event"""
@@ -185,7 +185,7 @@ class SimulationMessageBus:
                             if hasattr(simulator, 'handle_event'):
                                 simulator.handle_event(event)
                         except Exception as e:
-                            print(f"Error delivering event to {simulator_id}: {e}")
+                            pass
             else:
                 # Broadcast to all subscribers
                 if event.event_type in self.event_handlers:
@@ -198,11 +198,9 @@ class SimulationMessageBus:
                                 pass
                             else:
                                 import traceback
-                                print(f"Error in event handler: {e}")
                                 traceback.print_exc()
                         except Exception as e:
                             import traceback
-                            print(f"Error in event handler: {e}")
                             traceback.print_exc()
     
     def _process_pending_events(self):
@@ -220,7 +218,6 @@ class SimulationMessageBus:
             except queue.Empty:
                 break
             except Exception as e:
-                print(f"Error processing pending event: {e}")
                 break
     
     def get_simulator_data(self, simulator_id: str, data_key: str, max_retries: int = 3) -> Any:
@@ -250,7 +247,7 @@ class SimulationMessageBus:
                         if data is not None:
                             responses[simulator_id] = data
                     except Exception as e:
-                        print(f"Error getting data from {simulator_id}: {e}")
+                        pass
         return responses
     
     def get_system_status(self) -> Dict[str, Any]:

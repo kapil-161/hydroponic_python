@@ -66,11 +66,9 @@ class RespirationSimulator(BaseSimulator):
         self.cache_timestamp: Dict[str, datetime] = {}
         self.cache_timeout = 1.0  # seconds - default cache timeout per Rules.md
         
-        print(f"Respiration simulator initialized with parameters from CSV")
     
     def on_simulation_start(self, data: Dict[str, Any]):
         """Handle simulation start"""
-        print("Respiration simulator: Simulation started")
         self.state = RespirationState()
         self.history.clear()
         self.dependency_cache.clear()
@@ -122,7 +120,6 @@ class RespirationSimulator(BaseSimulator):
                 self.state.daily_respiration = 0.0
                 
         except Exception as e:
-            print(f"Respiration simulator error in step {self.state.step_count}: {e}")
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
@@ -245,7 +242,6 @@ class RespirationSimulator(BaseSimulator):
             self.state.daily_respiration += hourly_respiration
             
         except Exception as e:
-            print(f"Error in respiration calculation: {e}")
             # Per Rules.md: raise error, no fallbacks
             raise
     

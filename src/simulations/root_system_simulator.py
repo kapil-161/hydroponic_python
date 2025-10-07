@@ -83,11 +83,9 @@ class RootSystemSimulator(BaseSimulator):
         self.cache_timestamp: Dict[str, datetime] = {}
         self.cache_timeout = parameters.cache_timeout  # Get from CSV parameters
         
-        print(f"Root system simulator initialized with parameters from CSV")
     
     def on_simulation_start(self, data: Dict[str, Any]):
         """Handle simulation start - initialize with values from initials.csv"""
-        print("Root system simulator: Simulation started")
         self.state = RootSystemState()
 
         # Load initial root state from CSV (via initial_state)
@@ -98,7 +96,6 @@ class RootSystemSimulator(BaseSimulator):
             self.state.root_surface_area = initial_state.get('root_surface_area', 12.6)  # cm²
             self.state.root_depth = self.state.root_length  # Initially depth = length
             self.state.root_activity = 1.0  # Fully active at start
-            print(f"Root: Initialized root_biomass={self.state.root_biomass}g, root_length={self.state.root_length}cm, root_surface_area={self.state.root_surface_area}cm² from CSV")
 
         self.history.clear()
         self.dependency_cache.clear()
@@ -160,7 +157,6 @@ class RootSystemSimulator(BaseSimulator):
                 self.state.daily_root_growth = 0.0
                 
         except Exception as e:
-            print(f"Root system simulator error in step {self.state.step_count}: {e}")
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
@@ -180,7 +176,6 @@ class RootSystemSimulator(BaseSimulator):
             if total_biomass is None:
                 # Use default values for early simulation stages when biomass data is not available
                 total_biomass = 1.0  # Small but non-zero total biomass for early stages
-                print(f"Warning: Using default total biomass value: {total_biomass}")
             
             # Calculate root biomass from total biomass (assuming 20% allocation to roots)
             root_biomass = total_biomass * 0.2
@@ -238,7 +233,6 @@ class RootSystemSimulator(BaseSimulator):
             # Calculate root system growth using model functions - no shortcuts
             environmental_conditions = {
                 'temperature': temperature,
-                'root_zone_temperature': root_zone_temperature,
                 'water_uptake_rate': water_uptake_rate,
                 'nutrient_availability': nutrient_availability,
                 'solution_ec': solution_ec,
@@ -309,7 +303,6 @@ class RootSystemSimulator(BaseSimulator):
             self.state.daily_root_growth += hourly_root_growth
             
         except Exception as e:
-            print(f"Error in root system calculation: {e}")
             # Raise error according to Rules.md - no error suppression
             raise
     

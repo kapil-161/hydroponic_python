@@ -98,12 +98,10 @@ class GeneticParametersSimulator(BaseSimulator):
         self.cache_timeout = self.genetic_db.cache_timeout  # seconds
         
         
-        print(f"Genetic parameters simulator initialized with parameters from CSV")
     
     
     def on_simulation_start(self, data: Dict[str, Any]):
         """Handle simulation start - initialize with values from initials.csv"""
-        print("Genetic parameters simulator: Simulation started")
         self.state = GeneticState()
 
         # Load initial trait expressions from CSV (via initial_state)
@@ -115,7 +113,6 @@ class GeneticParametersSimulator(BaseSimulator):
                 if trait_key in initial_state:
                     self.state.trait_expressions[trait] = initial_state[trait_key]
                     self.state.phenotype_expression[trait] = initial_state[trait_key]
-                    print(f"Genetic: Initialized {trait} = {initial_state[trait_key]} from CSV")
 
         # Publish initial trait data immediately so other simulators can access it
         self.publish_state_data()
@@ -184,7 +181,6 @@ class GeneticParametersSimulator(BaseSimulator):
                 self.state.daily_genetic_response = 0.0
                 
         except Exception as e:
-            print(f"Genetic parameters simulator error in step {self.state.step_count}: {e}")
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
@@ -286,7 +282,6 @@ class GeneticParametersSimulator(BaseSimulator):
             self.state.daily_genetic_response += hourly_genetic_response
             
         except Exception as e:
-            print(f"Error in genetic parameters calculation: {e}")
             # Per Rules.md: raise errors, don't suppress them
             raise e
     

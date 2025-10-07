@@ -68,7 +68,6 @@ class PhenologySimulator(BaseSimulator):
         self.cache_timestamp: Dict[str, datetime] = {}
         self.cache_timeout = 1.0  # seconds
         
-        print(f"Phenology simulator initialized with parameters from CSV")
 
     def _map_growth_stage_to_simplified(self, detailed_stage) -> str:
         """Map detailed phenology stages to simplified water uptake stages"""
@@ -101,7 +100,6 @@ class PhenologySimulator(BaseSimulator):
 
     def on_simulation_start(self, data: Dict[str, Any]):
         """Handle simulation start"""
-        print("Phenology simulator: Simulation started")
         self.state = PhenologyState()
         self.history.clear()
         self.dependency_cache.clear()
@@ -160,7 +158,6 @@ class PhenologySimulator(BaseSimulator):
             })
                 
         except Exception as e:
-            print(f"Phenology simulator error in step {self.state.step_count}: {e}")
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
@@ -235,7 +232,6 @@ class PhenologySimulator(BaseSimulator):
             self.state.daily_thermal_time += result.daily_thermal_time
             
         except Exception as e:
-            print(f"Error in phenology calculation: {e}")
             # Per Rules.md: raise error, no fallbacks
             raise
     

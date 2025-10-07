@@ -1,11 +1,8 @@
 parameter_name,value,unit,description
-# Biomass Allocation Parameters
-# All biomass allocation and partitioning parameters
-# Includes organ allocation fractions, developmental stage effects, and environmental response factors
 vegetative_leaf_allocation,0.65,dimensionless,Base leaf allocation fraction during vegetative stage
-vegetative_stem_allocation,0.10,dimensionless,Base stem allocation fraction during vegetative stage
+vegetative_stem_allocation,0.1,dimensionless,Base stem allocation fraction during vegetative stage
 vegetative_root_allocation,0.25,dimensionless,Base root allocation fraction during vegetative stage
-reproductive_leaf_allocation,0.40,dimensionless,Base leaf allocation fraction during reproductive stage
+reproductive_leaf_allocation,0.4,dimensionless,Base leaf allocation fraction during reproductive stage
 reproductive_stem_allocation,0.35,dimensionless,Base stem allocation fraction during reproductive stage
 reproductive_root_allocation,0.25,dimensionless,Base root allocation fraction during reproductive stage
 light_response_factor,0.3,dimensionless,Response strength to light limitation
@@ -13,8 +10,8 @@ nitrogen_response_factor,0.4,dimensionless,Response strength to nitrogen limitat
 water_response_factor,0.35,dimensionless,Response strength to water limitation
 minimum_organ_fraction,0.05,dimensionless,Minimum allocation fraction for any organ
 min_root_allocation_fraction,0.15,dimensionless,Minimum root allocation fraction to maintain biological realism
-allocation_efficiency,0.40,dimensionless,Efficiency of biomass allocation between organs (reduced for realistic growth)
+allocation_efficiency,0.18781388598789225,dimensionless,Efficiency of biomass allocation between organs (calibrated for realistic growth)
 carbon_content_fraction,0.42,g C per g DM,Carbon content as fraction of dry biomass (typical for lettuce)
 carbon_allocation_roots,0.25,dimensionless,Fraction of net carbon allocated to roots
 carbon_allocation_leaves,0.65,dimensionless,Fraction of net carbon allocated to leaves
-carbon_allocation_stems,0.10,dimensionless,Fraction of net carbon allocated to stems
+carbon_allocation_stems,0.1,dimensionless,Fraction of net carbon allocated to stems

@@ -74,7 +74,6 @@ class BiomassAllocationSimulator(BaseSimulator):
         self.cache_timestamp: Dict[str, datetime] = {}
         self.cache_timeout = 1.0  # seconds
         
-        print(f"Biomass allocation simulator initialized with parameters from CSV")
 
     def _is_vegetative_stage(self, growth_stage: str) -> bool:
         """Determine if current growth stage is vegetative"""
@@ -100,7 +99,6 @@ class BiomassAllocationSimulator(BaseSimulator):
 
     def on_simulation_start(self, data: Dict[str, Any]):
         """Handle simulation start"""
-        print("Biomass allocation simulator: Simulation started")
         self.state = BiomassState()
         self.history.clear()
         self.dependency_cache.clear()
@@ -112,7 +110,6 @@ class BiomassAllocationSimulator(BaseSimulator):
             self.state.stem_biomass = initial_state.get('stem_biomass', 0.05)
             self.state.root_biomass = initial_state.get('root_biomass', 0.1)
             self.state.total_biomass = self.state.leaf_biomass + self.state.stem_biomass + self.state.root_biomass
-            print(f"Biomass: Initialized leaf={self.state.leaf_biomass}, stem={self.state.stem_biomass}, root={self.state.root_biomass}")
 
         # Initialize model with parameters from CSV
         self.model.initialize()
@@ -167,7 +164,6 @@ class BiomassAllocationSimulator(BaseSimulator):
                 self.state.daily_biomass_gain = 0.0
                 
         except Exception as e:
-            print(f"Biomass allocation simulator error in step {self.state.step_count}: {e}")
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
@@ -275,8 +271,6 @@ class BiomassAllocationSimulator(BaseSimulator):
             hourly_biomass_gain = net_carbon_gain / carbon_fraction  # g dry biomass/hour
 
             # DEBUG: Log biomass gain for first few steps and key checkpoints
-            if self.state.step_count < 5 or self.state.step_count == 24 or self.state.step_count == 100:
-                print(f"DEBUG Biomass step {self.state.step_count}: net_assim={net_assimilation_rate:.3f}, resp={total_respiration_rate:.3f}, net_carbon={net_carbon_gain:.3f} g C/hr, hourly_gain={hourly_biomass_gain:.6f} g/hr, total_biomass={self.state.total_biomass:.2f}")
 
             # Store hourly gain in state for respiration simulator
             self.state.hourly_biomass_gain = hourly_biomass_gain
@@ -298,7 +292,6 @@ class BiomassAllocationSimulator(BaseSimulator):
                 self.state.daily_biomass_gain += hourly_biomass_gain
             
         except Exception as e:
-            print(f"Error in biomass allocation calculation: {e}")
             # Per Rules.md: raise error, no fallbacks
             raise
     

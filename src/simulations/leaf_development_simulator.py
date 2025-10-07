@@ -107,11 +107,9 @@ class LeafDevelopmentSimulator(BaseSimulator):
         self.cache_timestamp: Dict[str, datetime] = {}
         self.cache_timeout = leaf_params.cache_timeout  # Get from CSV parameters
         
-        print(f"Leaf development simulator initialized with parameters from CSV")
     
     def on_simulation_start(self, data: Dict[str, Any]):
         """Handle simulation start"""
-        print("Leaf development simulator: Simulation started")
         self.state = LeafDevelopmentState()
         self.history.clear()
         self.dependency_cache.clear()
@@ -136,7 +134,6 @@ class LeafDevelopmentSimulator(BaseSimulator):
             leaf_nitrogen_distribution={}
         )
 
-        print(f"Leaf Dev: Initialized with {initial_cohort_count} initial leaf cohorts")
 
         # Publish initial state including leaf cohorts
         self.publish_state_data()
@@ -196,7 +193,6 @@ class LeafDevelopmentSimulator(BaseSimulator):
                 self.state.daily_thermal_time = 0.0
                 
         except Exception as e:
-            print(f"Leaf development simulator error in step {self.state.step_count}: {e}")
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
@@ -333,7 +329,6 @@ class LeafDevelopmentSimulator(BaseSimulator):
             self.state.leaf_senescence_stress = result.get('leaf_senescence_stress', self.state.leaf_senescence_stress)
             
         except Exception as e:
-            print(f"Error in leaf development calculation: {e}")
             # Raise error according to Rules.md - no error suppression
             raise
     

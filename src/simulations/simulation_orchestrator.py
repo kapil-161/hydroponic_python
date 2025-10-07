@@ -147,19 +147,12 @@ class SimulationOrchestrator(BaseSimulator):
             }
         )
 
-        # Allow time for all simulators to process SIMULATION_START and publish initial data
-        print("Waiting for simulators to publish initial state...")
-        time.sleep(self.config.initialization_wait_time)  # From CSV parameters
-
-        # Process all pending events multiple times to ensure all subscriptions are updated
-        for i in range(self.config.initialization_cycles):
-            self.message_bus._process_pending_events()
-            time.sleep(self.config.event_processing_wait_time)
+        # Process all pending events to ensure all subscriptions are updated
+        self.message_bus._process_pending_events()
 
         # Collect initial data from all simulators into shared cache
         self._collect_simulator_data_to_shared_cache()
 
-        print("Initial state published by all simulators")
 
         # Start simulation loop
         self._run_simulation_loop(weather_data)
@@ -225,15 +218,9 @@ class SimulationOrchestrator(BaseSimulator):
                     step_duration = time.time() - step_start_time
                     self.step_times.append(step_duration)
 
-                    # Real-time delay if enabled
-                    if self.config.enable_real_time:
-                        sleep_time = max(0, self.config.step_duration_seconds - step_duration)
-                        time.sleep(sleep_time)
+                    # Skip real-time delays for faster simulation
 
-                    # Progress reporting
-                    if self.current_step % self.config.progress_report_interval == 0:  # From CSV
-                        progress = (self.current_step / total_steps) * 100
-                        print(f"Day {self.current_day}: {progress:.1f}% complete")
+                    # Skip progress reporting for faster simulation
             
             # End simulation
             self.end_time = datetime.now()
@@ -278,26 +265,21 @@ class SimulationOrchestrator(BaseSimulator):
                     if hasattr(simulator, 'dependency_cache') and simulator.simulator_id in simulator.dependency_cache:
                         state_dict = simulator.dependency_cache[simulator.simulator_id]
                         self.shared_data_cache[simulator_id] = state_dict
-                        print(f"Shared cache: Collected {len(state_dict)} values from {simulator_id}")
                     else:
-                        print(f"Warning: {simulator_id} has no dependency_cache entry after publish_state_data()")
-                elif hasattr(simulator, 'state'):
-                    # Fallback: Convert state to dict directly
-                    state_dict = {}
-                    for attr in dir(simulator.state):
-                        if not attr.startswith('_'):
-                            try:
-                                value = getattr(simulator.state, attr, None)
-                                if value is not None and not callable(value):
-                                    state_dict[attr] = value
-                            except AttributeError:
-                                # Skip attributes that can't be accessed
-                                continue
-                    self.shared_data_cache[simulator_id] = state_dict
-                    print(f"Shared cache: Collected {len(state_dict)} values from {simulator_id} (fallback)")
+                        # Fallback: Convert state to dict directly
+                        state_dict = {}
+                        for attr in dir(simulator.state):
+                            if not attr.startswith('_'):
+                                try:
+                                    value = getattr(simulator.state, attr, None)
+                                    if value is not None and not callable(value):
+                                        state_dict[attr] = value
+                                except AttributeError:
+                                    # Skip attributes that can't be accessed
+                                    continue
+                        self.shared_data_cache[simulator_id] = state_dict
             except Exception as e:
                 # Make collection non-fatal - simulator will work with partial data
-                print(f"Warning: Could not collect data from {simulator_id}: {e}")
                 self.shared_data_cache[simulator_id] = {}
 
     def _execute_dependency_ordered_step(self, weather_data: Dict[str, Any]):
@@ -388,14 +370,10 @@ class SimulationOrchestrator(BaseSimulator):
                                     state_dict[attr] = value
                         self.shared_data_cache[simulator_id] = state_dict
                     
-                    # Give time for data to be published to message bus
-                    time.sleep(0.01)  # Increased delay to ensure data propagation
-                    
-                    # Force message bus to process any pending events
+                    # Process message bus events immediately
                     self.message_bus._process_pending_events()
                     
                 except Exception as e:
-                    print(f"Error in dependency-ordered execution of {simulator_id}: {e}")
                     self.error_count += 1
     
     def _execute_sequential_step(self, weather_data: Dict[str, Any] = None):
@@ -453,7 +431,6 @@ class SimulationOrchestrator(BaseSimulator):
                 self.simulator_performance[simulator_id].append(step_duration)
                 
             except Exception as e:
-                print(f"Error in simulator {simulator_id}: {e}")
                 self.error_count += 1
     
     def _execute_parallel_step(self, weather_data: Dict[str, Any] = None):
@@ -479,7 +456,6 @@ class SimulationOrchestrator(BaseSimulator):
                     if output:
                         self._process_simulator_output(simulator_id, output)
                 except Exception as e:
-                    print(f"Error in parallel execution of {simulator_id}: {e}")
                     self.error_count += 1
     
     def _execute_event_driven_step(self):
@@ -534,7 +510,6 @@ class SimulationOrchestrator(BaseSimulator):
                 return simulator.daily_update(daily_input)
             
         except Exception as e:
-            print(f"Error executing step for {simulator_id}: {e}")
             return None
     
     def _process_simulator_output(self, simulator_id: str, output: DailyUpdateOutput):
@@ -575,7 +550,7 @@ class SimulationOrchestrator(BaseSimulator):
                     state = simulator.get_current_state()
                     step_data['simulators'][simulator_id] = state
             except Exception as e:
-                print(f"Error collecting data from {simulator_id}: {e}")
+                pass
         
         self.simulation_data.append(step_data)
     

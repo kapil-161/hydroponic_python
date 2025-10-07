@@ -1,19 +1,19 @@
 category,parameter_name,value,unit,description
 # System Configuration
-system_config,tank_volume_L,100.0,L,Hydroponic tank volume
-system_config,plant_count,20,count,Number of plants in system
-system_config,solution_volume,100.0,L,Nutrient solution volume
-system_config,grow_area,2.4,m2,Growing area
+system_config,tank_volume_L,5.0,L,Hydroponic tank volume
+system_config,plant_count,1,count,Number of plants in system
+system_config,solution_volume,10.0,L,Nutrient solution volume
+system_config,grow_area,1,m2,Growing area
 system_config,optimal_ec,1.2,dS_m,Optimal electrical conductivity for nutrient solution
 
 # Initial Plant State (at planting/germination)
-initial_state,root_biomass,0.3,g,Initial root biomass at transplant
-initial_state,shoot_biomass,1.0,g,Initial shoot biomass at transplant
-initial_state,leaf_biomass,0.8,g,Initial leaf biomass at transplant
-initial_state,stem_biomass,0.2,g,Initial stem biomass at transplant
-initial_state,total_biomass,1.3,g,Initial total plant biomass
-initial_state,lai,0.05,m2_m2,Initial leaf area index
-initial_state,leaf_area,0.001,m2,Initial leaf area per plant
+initial_state,root_biomass,0.01,g,Initial root biomass at transplant
+initial_state,shoot_biomass,0.02,g,Initial shoot biomass at transplant
+initial_state,leaf_biomass,0.015,g,Initial leaf biomass at transplant
+initial_state,stem_biomass,0.005,g,Initial stem biomass at transplant
+initial_state,total_biomass,0.03,g,Initial total plant biomass
+initial_state,lai,0.001,m2_m2,Initial leaf area index
+initial_state,leaf_area,0.00001,m2,Initial leaf area per plant
 initial_state,plant_height,0.02,m,Initial plant height (2 cm)
 initial_state,root_length,5.0,cm,Initial root length (changed from m to cm)
 initial_state,root_surface_area,12.6,cm2,Initial root surface area (π × 0.8mm × 5cm)
@@ -40,14 +40,13 @@ initial_state,trait_root_development,0.5,dimensionless,Initial root development 
 initial_state,trait_plant_architecture,0.5,dimensionless,Initial plant architecture trait expression
 
 # Initial Nutrient Concentrations (typical hydroponic starting solution)
-initial_state,solution_n_concentration,150.0,mg_L,Initial nitrogen concentration in solution
-initial_state,solution_p_concentration,50.0,mg_L,Initial phosphorus concentration in solution
-initial_state,solution_k_concentration,200.0,mg_L,Initial potassium concentration in solution
-initial_state,solution_ca_concentration,150.0,mg_L,Initial calcium concentration in solution
-initial_state,solution_mg_concentration,50.0,mg_L,Initial magnesium concentration in solution
-initial_state,solution_s_concentration,60.0,mg_L,Initial sulfur concentration in solution
-initial_state,solution_fe_concentration,2.0,mg_L,Initial iron concentration in solution
-initial_state,solution_ec,2.0,dS_m,Initial electrical conductivity
+initial_state,solution_n_concentration,1.73,mg_L,Initial nitrogen concentration in solution
+initial_state,solution_p_concentration,1.73,mg_L,Initial phosphorus concentration in solution
+initial_state,solution_k_concentration,7.04,mg_L,Initial potassium concentration in solution
+initial_state,solution_ca_concentration,5.31,mg_L,Initial calcium concentration in solution
+initial_state,solution_mg_concentration,1.73,mg_L,Initial magnesium concentration in solution
+initial_state,solution_s_concentration,1.73,mg_L,Initial sulfur concentration in solution
+initial_state,solution_fe_concentration,0.20,mg_L,Initial iron concentration in solution
 initial_state,solution_ph,6.0,pH,Initial solution pH
 
 # Initial Environmental State
@@ -61,9 +60,9 @@ initial_state,p_uptake_rate,0.1,mg_day,Initial phosphorus uptake rate
 initial_state,k_uptake_rate,0.3,mg_day,Initial potassium uptake rate
 
 # Initial Growth Rates
-initial_state,relative_growth_rate,0.05,per_day,Initial relative growth rate
-initial_state,leaf_expansion_rate,0.001,m2_day,Initial leaf expansion rate
-initial_state,root_growth_rate,0.01,cm_day,Initial root growth rate
+initial_state,relative_growth_rate,0.10,per_day,Initial relative growth rate (calibrated for realistic growth)
+initial_state,leaf_expansion_rate,0.002,m2_day,Initial leaf expansion rate (calibrated for realistic growth)
+initial_state,root_growth_rate,0.2,cm_day,Initial root growth rate (calibrated for realistic growth)
 
 # Initial Development State
 initial_state,thermal_time_accumulated,0.0,degree_days,Initial accumulated thermal time

@@ -867,6 +867,41 @@ class StrictParameterLoader:
         config['kinetics_mg_km'] = self.get_parameter('nutrient_parameters_kinetics_mg_km')
         config['kinetics_mg_min_conc'] = self.get_parameter('nutrient_parameters_kinetics_mg_min_conc')
 
+        # Kinetic parameters - Sulfate
+        config['kinetics_s_so4_vmax'] = self.get_parameter('nutrient_parameters_kinetics_s_so4_vmax')
+        config['kinetics_s_so4_km'] = self.get_parameter('nutrient_parameters_kinetics_s_so4_km')
+        config['kinetics_s_so4_min_conc'] = self.get_parameter('nutrient_parameters_kinetics_s_so4_min_conc')
+
+        # Kinetic parameters - Iron
+        config['kinetics_fe_vmax'] = self.get_parameter('nutrient_parameters_kinetics_fe_vmax')
+        config['kinetics_fe_km'] = self.get_parameter('nutrient_parameters_kinetics_fe_km')
+        config['kinetics_fe_min_conc'] = self.get_parameter('nutrient_parameters_kinetics_fe_min_conc')
+
+        # Kinetic parameters - Manganese
+        config['kinetics_mn_vmax'] = self.get_parameter('nutrient_parameters_kinetics_mn_vmax')
+        config['kinetics_mn_km'] = self.get_parameter('nutrient_parameters_kinetics_mn_km')
+        config['kinetics_mn_min_conc'] = self.get_parameter('nutrient_parameters_kinetics_mn_min_conc')
+
+        # Kinetic parameters - Zinc
+        config['kinetics_zn_vmax'] = self.get_parameter('nutrient_parameters_kinetics_zn_vmax')
+        config['kinetics_zn_km'] = self.get_parameter('nutrient_parameters_kinetics_zn_km')
+        config['kinetics_zn_min_conc'] = self.get_parameter('nutrient_parameters_kinetics_zn_min_conc')
+
+        # Kinetic parameters - Copper
+        config['kinetics_cu_vmax'] = self.get_parameter('nutrient_parameters_kinetics_cu_vmax')
+        config['kinetics_cu_km'] = self.get_parameter('nutrient_parameters_kinetics_cu_km')
+        config['kinetics_cu_min_conc'] = self.get_parameter('nutrient_parameters_kinetics_cu_min_conc')
+
+        # Kinetic parameters - Boron
+        config['kinetics_b_vmax'] = self.get_parameter('nutrient_parameters_kinetics_b_vmax')
+        config['kinetics_b_km'] = self.get_parameter('nutrient_parameters_kinetics_b_km')
+        config['kinetics_b_min_conc'] = self.get_parameter('nutrient_parameters_kinetics_b_min_conc')
+
+        # Kinetic parameters - Molybdenum
+        config['kinetics_mo_vmax'] = self.get_parameter('nutrient_parameters_kinetics_mo_vmax')
+        config['kinetics_mo_km'] = self.get_parameter('nutrient_parameters_kinetics_mo_km')
+        config['kinetics_mo_min_conc'] = self.get_parameter('nutrient_parameters_kinetics_mo_min_conc')
+
         # Load mobility parameters for nutrients that have them in CSV
         # Map specific nutrient forms to their general element names (consolidated parameters)
         nutrient_csv_mapping = {
