@@ -42,45 +42,59 @@ class LeafStage(Enum):
 
 
 @dataclass
+class PhyllochronParameters:
+    """Parameters related to phyllochron and thermal time."""
+    base_phyllochron: float
+    min_temp: float
+    opt_temp_min: float
+    opt_temp_max: float
+    max_temp: float
+    late_leaf_phyllochron_factor: float
+    very_late_leaf_phyllochron_factor: float
+
+
+@dataclass
+class LeafAreaParameters:
+    """Parameters for leaf area, size, and expansion."""
+    max_leaf_number: float
+    initial_leaf_number: float
+    leaf_appearance_rate: float
+    specific_leaf_area: float
+    max_individual_leaf_area: float
+    leaf_area_expansion_rate: float
+    initial_leaf_area_factor: float
+    early_leaf_size_factor: float
+    late_leaf_size_factor: float
+    minimum_active_leaf_area: float
+    minimum_visible_leaf_area: float
+
+
+@dataclass
+class LeafTimingParameters:
+    """Parameters for leaf development timing and senescence."""
+    initial_thermal_time_factor: float
+    emerging_to_expanding_factor: float
+    leaf_maturation_thermal_time: float
+    leaf_lifespan_thermal_time: float
+    senescence_threshold_age: float
+    senescence_rate_base: float
+
+
+@dataclass
+class LeafStressParameters:
+    """Parameters for stress responses."""
+    water_stress_threshold: float
+    nitrogen_stress_threshold: float
+    temperature_stress_sensitivity: float
+
+
+@dataclass
 class LeafParameters:
     """Parameters for leaf development model."""
-    
-    # Phyllochron and thermal time parameters
-    base_phyllochron: float      # Base phyllochron (°C-day) for lettuce
-    min_temp: float               # Base temperature for development (°C)
-    opt_temp_min: float          # Lower optimum temperature (°C)  
-    opt_temp_max: float          # Upper optimum temperature (°C)
-    max_temp: float              # Maximum temperature for development (°C)
-    
-    # Leaf appearance and expansion
-    max_leaf_number: float       # Maximum leaves for lettuce
-    initial_leaf_number: float    # Cotyledons + first true leaves
-    leaf_appearance_rate: float   # Leaves per phyllochron unit
-    specific_leaf_area: float        # cm²/g dry weight
-    
-    # Individual leaf parameters
-    max_individual_leaf_area: float  # m² per mature leaf
-    leaf_area_expansion_rate: float   # Natural cellular expansion rate
-    
-    # Stress response parameters
-    water_stress_threshold: float      # Below this, leaf development slows
-    nitrogen_stress_threshold: float   # Below this, leaf expansion reduces
-    temperature_stress_sensitivity: float  # Response to temp stress
-    
-    # Additional parameters for calculations
-    initial_leaf_area_factor: float    # Factor for initial leaf area (from CSV)
-    initial_thermal_time_factor: float  # Factor for initial thermal time (from CSV)
-    emerging_to_expanding_factor: float  # Factor for emerging to expanding transition (from CSV)
-    late_leaf_phyllochron_factor: float  # Factor for late leaf phyllochron (from CSV)
-    very_late_leaf_phyllochron_factor: float  # Factor for very late leaf phyllochron (from CSV)
-    early_leaf_size_factor: float     # Size factor for early leaves (from CSV)
-    late_leaf_size_factor: float       # Size factor for late leaves (from CSV)
-    leaf_maturation_thermal_time: float  # Thermal time for leaf maturation (from CSV)
-    leaf_lifespan_thermal_time: float  # Thermal time for leaf lifespan (from CSV)
-    senescence_threshold_age: float    # Age threshold for senescence initiation (from CSV)
-    senescence_rate_base: float       # Base senescence rate (from CSV)
-    minimum_active_leaf_area: float   # Minimum area for active leaf counting (from CSV)
-    minimum_visible_leaf_area: float  # Minimum area for visible leaf counting (from CSV)
+    phyllochron: PhyllochronParameters
+    area: LeafAreaParameters
+    timing: LeafTimingParameters
+    stress: LeafStressParameters
 
     # V-stage and position thresholds (from CSV)
     late_leaf_vstage_threshold: float       # V-stage threshold for late leaf classification
@@ -118,33 +132,41 @@ class LeafParameters:
         merged_params['n_stress_threshold'] = leaf_params['n_stress_threshold']
         
         return cls(
-            base_phyllochron=merged_params['base_phyllochron'],
-            min_temp=merged_params['min_temp'],
-            opt_temp_min=merged_params['opt_temp_min'],
-            opt_temp_max=merged_params['opt_temp_max'],
-            max_temp=merged_params['max_temp'],
-            max_leaf_number=merged_params['max_leaf_number'],
-            initial_leaf_number=merged_params['initial_leaf_number'],
-            leaf_appearance_rate=merged_params['leaf_appearance_rate'],
-            max_individual_leaf_area=merged_params['max_individual_leaf_area'],
-            leaf_area_expansion_rate=merged_params['leaf_area_expansion_rate'],
-            specific_leaf_area=merged_params['specific_leaf_area'],
-            water_stress_threshold=merged_params['drought_threshold'],
-            nitrogen_stress_threshold=merged_params['n_stress_threshold'],
-            temperature_stress_sensitivity=merged_params['temperature_stress_sensitivity'],
-            initial_leaf_area_factor=merged_params['initial_leaf_area_factor'],
-            initial_thermal_time_factor=merged_params['initial_thermal_time_factor'],
-            emerging_to_expanding_factor=merged_params['emerging_to_expanding_factor'],
-            late_leaf_phyllochron_factor=merged_params['late_leaf_phyllochron_factor'],
-            very_late_leaf_phyllochron_factor=merged_params['very_late_leaf_phyllochron_factor'],
-            early_leaf_size_factor=merged_params['early_leaf_size_factor'],
-            late_leaf_size_factor=merged_params['late_leaf_size_factor'],
-            leaf_maturation_thermal_time=merged_params['leaf_maturation_thermal_time'],
-            leaf_lifespan_thermal_time=merged_params['leaf_lifespan_thermal_time'],
-            senescence_threshold_age=merged_params['senescence_threshold_age'],
-            senescence_rate_base=merged_params['senescence_rate_base'],
-            minimum_active_leaf_area=merged_params['minimum_active_leaf_area'],
-            minimum_visible_leaf_area=merged_params['minimum_visible_leaf_area'],
+            phyllochron=PhyllochronParameters(
+                base_phyllochron=merged_params['base_phyllochron'],
+                min_temp=merged_params['min_temp'],
+                opt_temp_min=merged_params['opt_temp_min'],
+                opt_temp_max=merged_params['opt_temp_max'],
+                max_temp=merged_params['max_temp'],
+                late_leaf_phyllochron_factor=merged_params['late_leaf_phyllochron_factor'],
+                very_late_leaf_phyllochron_factor=merged_params['very_late_leaf_phyllochron_factor'],
+            ),
+            area=LeafAreaParameters(
+                max_leaf_number=merged_params['max_leaf_number'],
+                initial_leaf_number=merged_params['initial_leaf_number'],
+                leaf_appearance_rate=merged_params['leaf_appearance_rate'],
+                specific_leaf_area=merged_params['specific_leaf_area'],
+                max_individual_leaf_area=merged_params['max_individual_leaf_area'],
+                leaf_area_expansion_rate=merged_params['leaf_area_expansion_rate'],
+                initial_leaf_area_factor=merged_params['initial_leaf_area_factor'],
+                early_leaf_size_factor=merged_params['early_leaf_size_factor'],
+                late_leaf_size_factor=merged_params['late_leaf_size_factor'],
+                minimum_active_leaf_area=merged_params['minimum_active_leaf_area'],
+                minimum_visible_leaf_area=merged_params['minimum_visible_leaf_area'],
+            ),
+            timing=LeafTimingParameters(
+                initial_thermal_time_factor=merged_params['initial_thermal_time_factor'],
+                emerging_to_expanding_factor=merged_params['emerging_to_expanding_factor'],
+                leaf_maturation_thermal_time=merged_params['leaf_maturation_thermal_time'],
+                leaf_lifespan_thermal_time=merged_params['leaf_lifespan_thermal_time'],
+                senescence_threshold_age=merged_params['senescence_threshold_age'],
+                senescence_rate_base=merged_params['senescence_rate_base'],
+            ),
+            stress=LeafStressParameters(
+                water_stress_threshold=merged_params['drought_threshold'],
+                nitrogen_stress_threshold=merged_params['n_stress_threshold'],
+                temperature_stress_sensitivity=merged_params['temperature_stress_sensitivity'],
+            ),
             late_leaf_vstage_threshold=merged_params['late_leaf_vstage_threshold'],
             very_late_leaf_vstage_threshold=merged_params['very_late_leaf_vstage_threshold'],
             early_leaf_position_threshold=merged_params['early_leaf_position_threshold'],
@@ -185,24 +207,24 @@ class LeafDevelopmentModel:
     def __init__(self, parameters: LeafParameters):
         self.params = parameters
         self.leaf_cohorts: Dict[int, LeafCohort] = {}
-        self.current_v_stage: float = self.params.initial_leaf_number
+        self.current_v_stage: float = self.params.area.initial_leaf_number
         self.cumulative_thermal_time: float = 0.0
         self.next_cohort_id: int = 1
         
         # Initialize with initial leaves
-        for i in range(int(self.params.initial_leaf_number)):
+        for i in range(int(self.params.area.initial_leaf_number)):
             self._create_initial_leaf_cohort(i + 1)
 
         # Set next cohort ID to be after all initial cohorts
-        self.next_cohort_id = int(self.params.initial_leaf_number) + 1
+        self.next_cohort_id = int(self.params.area.initial_leaf_number) + 1
     
     def initialize(self):
         """Initialize the leaf development model with initial leaf cohorts"""
         # Create initial cotyledon and first true leaves
         # Scientific approach: Plants start with cotyledons (seed leaves) + initial true leaves
-        for i in range(int(self.params.initial_leaf_number)):
+        for i in range(int(self.params.area.initial_leaf_number)):
             self._create_initial_leaf_cohort(i + 1)
-        self.next_cohort_id = int(self.params.initial_leaf_number) + 1
+        self.next_cohort_id = int(self.params.area.initial_leaf_number) + 1
     
     def calculate_thermal_time(self, temperature_list: list) -> list:
         """Use consolidated thermal time calculation from core_utils."""
@@ -211,10 +233,10 @@ class LeafDevelopmentModel:
         # Create config structure for consolidated function
         thermal_config = type('Config', (), {
             'thermal_time': {
-                'base_temp': self.params.min_temp,
-                'optimal_temp_min': self.params.opt_temp_min,
-                'optimal_temp_max': self.params.opt_temp_max,
-                'max_temp': self.params.max_temp
+                'base_temp': self.params.phyllochron.min_temp,
+                'optimal_temp_min': self.params.phyllochron.opt_temp_min,
+                'optimal_temp_max': self.params.phyllochron.opt_temp_max,
+                'max_temp': self.params.phyllochron.max_temp
             }
         })
 
@@ -238,17 +260,20 @@ class LeafDevelopmentModel:
         
         for i in range(len(water_stress_list)):
             # Water stress effect on leaf appearance
-            water_factor = 1.0
-            if water_stress_list[i] < self.params.water_stress_threshold:
-                water_factor = max(self.params.minimum_active_leaf_area, water_stress_list[i] / self.params.water_stress_threshold)
-            
+            # Note: stress = 0.0 means NO stress (good), stress = 1.0 means HIGH stress (bad)
+            # Factor should be: low stress → high factor (1.0), high stress → low factor (minimum)
+            water_factor = 1.0 - water_stress_list[i]  # Invert: 0.0 stress → 1.0 factor, 1.0 stress → 0.0 factor
+            water_factor = max(self.params.area.minimum_active_leaf_area, water_factor)
+
             # Nitrogen stress effect on leaf expansion
-            nitrogen_factor = 1.0 
-            if nitrogen_stress_list[i] < self.params.nitrogen_stress_threshold:
-                nitrogen_factor = max(self.params.minimum_visible_leaf_area, nitrogen_stress_list[i] / self.params.nitrogen_stress_threshold)
-            
+            # Note: nitrogen_stress from nutrient simulator is AVAILABILITY (1.0 = good, 0.0 = bad)
+            # So don't invert - use directly as factor
+            nitrogen_factor = nitrogen_stress_list[i]  # Use directly: 1.0 availability → 1.0 factor
+            nitrogen_factor = max(self.params.area.minimum_visible_leaf_area, nitrogen_factor)
+
             # Temperature stress effect
-            temp_factor = max(self.params.minimum_active_leaf_area, 1.0 - temperature_stress_list[i] * self.params.temperature_stress_sensitivity)
+            temp_factor = 1.0 - temperature_stress_list[i]  # Invert: 0.0 stress → 1.0 factor
+            temp_factor = max(self.params.area.minimum_active_leaf_area, temp_factor)
             
             water_factors.append(water_factor)
             nitrogen_factors.append(nitrogen_factor)
@@ -277,19 +302,19 @@ class LeafDevelopmentModel:
             self.cumulative_thermal_time += effective_thermal_time
             
             # Check if enough thermal time accumulated for new leaf
-            thermal_time_for_next_leaf = self.params.base_phyllochron
+            thermal_time_for_next_leaf = self.params.phyllochron.base_phyllochron
             
             # Adjust phyllochron based on current development stage using CSV parameters
             if self.current_v_stage > self.params.very_late_leaf_vstage_threshold:  # Very late leaves (20+)
-                thermal_time_for_next_leaf *= self.params.very_late_leaf_phyllochron_factor
+                thermal_time_for_next_leaf *= self.params.phyllochron.very_late_leaf_phyllochron_factor
             elif self.current_v_stage > self.params.late_leaf_vstage_threshold:  # Late leaves (15-20)
-                thermal_time_for_next_leaf *= self.params.late_leaf_phyllochron_factor
+                thermal_time_for_next_leaf *= self.params.phyllochron.late_leaf_phyllochron_factor
             
             new_leaf_appeared = False
             
             # Check if we can add a new leaf
             if (self.cumulative_thermal_time >= thermal_time_for_next_leaf and 
-                self.current_v_stage < self.params.max_leaf_number):
+                self.current_v_stage < self.params.area.max_leaf_number):
                 
                 # Create new leaf cohort
                 self._create_new_leaf_cohort()
@@ -313,11 +338,11 @@ class LeafDevelopmentModel:
             if v_stage <= self.params.early_leaf_position_threshold:
                 # Early leaves get progressively larger but stay below 1.0
                 normalized_position = (v_stage - 1) / self.params.early_position_scaling_factor
-                factor = self.params.early_leaf_size_factor + normalized_position * (0.95 - self.params.early_leaf_size_factor)
+                factor = self.params.area.early_leaf_size_factor + normalized_position * (0.95 - self.params.area.early_leaf_size_factor)
             elif v_stage <= self.params.middle_leaf_position_threshold:
                 factor = 1.0  # Full size middle leaves
             else:
-                factor = max(self.params.late_leaf_size_factor, 1.0 - (v_stage - self.params.middle_leaf_position_threshold) * (1.0 - self.params.late_leaf_size_factor) / self.params.late_position_scaling_factor)
+                factor = max(self.params.area.late_leaf_size_factor, 1.0 - (v_stage - self.params.middle_leaf_position_threshold) * (1.0 - self.params.area.late_leaf_size_factor) / self.params.late_position_scaling_factor)
             position_factors.append(factor)
         return position_factors
     
@@ -350,39 +375,43 @@ class LeafDevelopmentModel:
             for cohort_id, cohort in self.leaf_cohorts.items():
                 # Update thermal time for this cohort
                 cohort.thermal_time_since_appearance += daily_thermal_time
-                
+
                 # Count all leaves that have appeared
                 if cohort.stage != LeafStage.PRIMORDIAL:
                     visible_leaves += 1
-                
+
                 # Calculate area expansion for this cohort
                 if cohort.stage == LeafStage.EMERGING:
-                    if cohort.thermal_time_since_appearance > self.params.leaf_maturation_thermal_time * self.params.emerging_to_expanding_factor:
+                    if cohort.thermal_time_since_appearance > self.params.timing.leaf_maturation_thermal_time * self.params.timing.emerging_to_expanding_factor:
                         cohort.stage = LeafStage.EXPANDING
                 
                 elif cohort.stage == LeafStage.EXPANDING:
-                    base_expansion_rate = self.params.leaf_area_expansion_rate
-                    
+                    # Base expansion rate is per day, scale by thermal time ratio
+                    # Assumes ~17 °C-day per actual day (22°C - 5°C base)
+                    daily_thermal_time_equivalent = 17.0  # °C-day per actual day
+                    time_scale = daily_thermal_time / daily_thermal_time_equivalent if daily_thermal_time_equivalent > 0 else 0
+                    base_expansion_rate = self.params.area.leaf_area_expansion_rate * time_scale
+
                     temperature_factor = get_required_stress_factor(stress_factors, 'temperature_factor', [1.0] * len(daily_thermal_time_list))[day_idx]
                     nitrogen_factor = get_required_stress_factor(stress_factors, 'nitrogen_factor', [1.0] * len(daily_thermal_time_list))[day_idx]
                     water_factor = get_required_stress_factor(stress_factors, 'water_factor', [1.0] * len(daily_thermal_time_list))[day_idx]
-                    
+
                     cell_division_factor = temperature_factor
                     cell_expansion_factor = water_factor * nitrogen_factor
-                    
+
                     cell_division_factor_applied = base_expansion_rate * cell_division_factor
                     cell_expansion_factor_applied = base_expansion_rate * cell_expansion_factor
-                    
+
                     combined_growth_factor = min(cell_division_factor_applied, cell_expansion_factor_applied)
-                    
+
                     remaining_growth_potential = max(0.0, cohort.max_potential_area - cohort.current_area)
                     daily_increase = remaining_growth_potential * combined_growth_factor
-                    
+
                     proposed_area = cohort.current_area + max(0.0, daily_increase)
                     cohort.current_area = min(proposed_area, cohort.max_potential_area)
-                    cohort.current_biomass = cohort.current_area / self.params.specific_leaf_area
+                    cohort.current_biomass = cohort.current_area / self.params.area.specific_leaf_area if self.params.area.specific_leaf_area > 0 else 0
                     
-                    if cohort.thermal_time_since_appearance > self.params.leaf_maturation_thermal_time:
+                    if cohort.thermal_time_since_appearance > self.params.timing.leaf_maturation_thermal_time:
                         cohort.stage = LeafStage.MATURE
                 
                 elif cohort.stage == LeafStage.MATURE:
@@ -392,7 +421,7 @@ class LeafDevelopmentModel:
                 
                 total_area += cohort.current_area
                 
-                if cohort.current_area > self.params.minimum_active_leaf_area:
+                if cohort.current_area > self.params.area.minimum_active_leaf_area:
                     active_leaves += 1
             
             # Leaf deletion disabled - all leaves persist
@@ -433,16 +462,16 @@ class LeafDevelopmentModel:
     
     def _create_initial_leaf_cohort(self, cohort_id: int):
         """Create initial leaf cohorts (cotyledons + first leaves)."""
-        initial_area = self.params.max_individual_leaf_area * self.params.initial_leaf_area_factor
-        initial_biomass = initial_area / self.params.specific_leaf_area
+        initial_area = self.params.area.max_individual_leaf_area * self.params.area.initial_leaf_area_factor
+        initial_biomass = initial_area / self.params.area.specific_leaf_area if self.params.area.specific_leaf_area > 0 else 0
         cohort = LeafCohort(
             cohort_id=cohort_id,
             appearance_day=0.0,
             current_area=initial_area,
             current_biomass=initial_biomass,
-            max_potential_area=self.params.max_individual_leaf_area,
+            max_potential_area=self.params.area.max_individual_leaf_area,
             stage=LeafStage.EXPANDING,
-            thermal_time_since_appearance=self.params.leaf_maturation_thermal_time * self.params.initial_thermal_time_factor,
+            thermal_time_since_appearance=self.params.timing.leaf_maturation_thermal_time * self.params.timing.initial_thermal_time_factor,
             senescence_rate=0.0,
             nutrient_content={},
             position=0.5
@@ -452,13 +481,13 @@ class LeafDevelopmentModel:
     def _create_new_leaf_cohort(self):
         """Create a new leaf cohort."""
         position_factors = self.calculate_leaf_position_factors([self.current_v_stage])
-        max_area = self.params.max_individual_leaf_area * position_factors[0]
-        current_biomass = self.params.minimum_visible_leaf_area / self.params.specific_leaf_area
+        max_area = self.params.area.max_individual_leaf_area * position_factors[0]
+        current_biomass = self.params.area.minimum_visible_leaf_area / self.params.area.specific_leaf_area if self.params.area.specific_leaf_area > 0 else 0
 
         cohort = LeafCohort(
             cohort_id=self.next_cohort_id,
             appearance_day=self.current_v_stage,
-            current_area=self.params.minimum_visible_leaf_area,
+            current_area=self.params.area.minimum_visible_leaf_area,
             current_biomass=current_biomass,
             max_potential_area=max_area,
             stage=LeafStage.EMERGING,

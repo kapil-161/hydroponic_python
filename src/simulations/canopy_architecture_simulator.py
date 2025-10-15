@@ -138,6 +138,7 @@ class CanopyArchitectureSimulator(BaseSimulator):
             self.state.step_count += 1
             self.state.last_update = datetime.now()
             
+            
             # Store history
             self.history.append(CanopyState(**self.state.__dict__))
 
@@ -187,20 +188,18 @@ class CanopyArchitectureSimulator(BaseSimulator):
                     return
                 raise ValueError("Biomass data missing from biomass_allocation_simulator - no defaults allowed")
             
-            # Calculate leaf area from leaf biomass using SLA (Specific Leaf Area)
-            # Get SLA from leaf_development parameters (must come from CSV per Rules.md)
-            leaf_dev_data = self.dependency_cache.get('leaf_development_simulator', {})
-            sla_cm2_g = leaf_dev_data.get('specific_leaf_area')
-            if sla_cm2_g is None:
-                raise ValueError("Specific leaf area (SLA) missing from leaf_development_simulator - no defaults allowed per Rules.md")
-
-            specific_leaf_area = sla_cm2_g / 10000.0  # Convert cm²/g to m²/g
-            leaf_area = leaf_biomass * specific_leaf_area  # m²
-
-            # Get leaf development data for additional metrics
+            # Get leaf area directly from leaf_development simulator
+            # Leaf development tracks individual leaf cohorts and their areas - this is more accurate
+            # than recalculating from biomass using SLA
             leaf_data = self.dependency_cache.get('leaf_development_simulator', {})
-            leaf_number = leaf_data.get('leaf_number', 4)  # Initial leaves
-            leaf_size = leaf_data.get('leaf_size', 0.0025)  # m2 per leaf
+            leaf_area = leaf_data.get('leaf_area')  # Total leaf area in m²
+            leaf_number = leaf_data.get('leaf_number')
+            leaf_size = leaf_data.get('leaf_size')  # Average leaf size in m²
+
+            if leaf_area is None:
+                raise ValueError("Leaf area missing from leaf_development_simulator - no defaults allowed per Rules.md")
+            if leaf_number is None:
+                raise ValueError("Leaf number missing from leaf_development_simulator - no defaults allowed per Rules.md")
             
             # Get phenology data from phenology simulator
             phenology_data = self.dependency_cache.get('phenology_simulator', {})

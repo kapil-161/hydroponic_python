@@ -24,6 +24,7 @@ class BiomassAllocationParameters:
     water_response_factor: float
     minimum_organ_fraction: float
     carbon_content_fraction: float
+    allocation_efficiency: float  # Quantum use efficiency (g/J) - from CSV
     # Carbon allocation fractions - NO HARDCODED VALUES (Rules.md)
     carbon_allocation_roots: float
     carbon_allocation_leaves: float
@@ -36,7 +37,7 @@ class BiomassAllocationParameters:
             'vegetative_leaf_allocation', 'vegetative_stem_allocation', 'vegetative_root_allocation',
             'reproductive_leaf_allocation', 'reproductive_stem_allocation', 'reproductive_root_allocation',
             'light_response_factor', 'nitrogen_response_factor', 'water_response_factor',
-            'minimum_organ_fraction', 'carbon_content_fraction',
+            'minimum_organ_fraction', 'carbon_content_fraction', 'allocation_efficiency',
             # Carbon allocation fractions - NO HARDCODED VALUES (Rules.md)
             'carbon_allocation_roots', 'carbon_allocation_leaves', 'carbon_allocation_stems'
         ]
@@ -56,6 +57,7 @@ class BiomassAllocationParameters:
             water_response_factor=float(config['water_response_factor']),
             minimum_organ_fraction=float(config['minimum_organ_fraction']),
             carbon_content_fraction=float(config['carbon_content_fraction']),
+            allocation_efficiency=float(config['allocation_efficiency']),
             # Carbon allocation fractions - NO HARDCODED VALUES (Rules.md)
             carbon_allocation_roots=float(config['carbon_allocation_roots']),
             carbon_allocation_leaves=float(config['carbon_allocation_leaves']),

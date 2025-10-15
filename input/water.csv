@@ -15,7 +15,7 @@ temperature_sensitivity,0.15,°C_inverse,Temperature response sensitivity factor
 optimal_vpd_min,0.8,kPa,Minimum optimal vapor pressure deficit
 optimal_vpd_max,1.5,kPa,Maximum optimal vapor pressure deficit
 vpd_sensitivity,0.3,kPa_inverse,VPD response sensitivity factor
-metabolic_water_per_biomass,0.001,L_g_biomass,Metabolic water demand per unit biomass
+metabolic_water_per_biomass,0.00001,L_g_biomass,Metabolic water demand per unit biomass (cellular processes only; not transpiration)
 metabolic_water_per_lai,0.1,L_LAI,Metabolic water demand per LAI unit
 temperature_tolerance,15.0,°C,Temperature tolerance range for water uptake
 minimum_temperature_factor,0.3,dimensionless,Minimum temperature response factor
@@ -26,7 +26,8 @@ water_uptake_sensitivity_high,0.10,per_°C,Water uptake sensitivity per °C abov
 minimum_vpd_threshold,0.1,kPa,Minimum vapor pressure deficit threshold
 minimum_et0_threshold,0.1,mm/day,Minimum reference evapotranspiration threshold
 ground_area_per_plant,0.06,m2,Ground area allocated per plant (0.2m × 0.3m spacing)
-max_lai_coverage_factor,2.0,dimensionless,Maximum LAI for full coverage
+max_lai_coverage_factor,0.5,dimensionless,LAI at which canopy reaches full coverage (lower value = faster coverage)
+minimum_coverage_factor,0.01,dimensionless,Minimum canopy coverage factor (prevents zero transpiration at low LAI)
 max_root_surface_area_factor,2.0,dimensionless,Maximum root surface area factor
 cavitation_gradient_denominator,1.0,MPa,Cavitation gradient denominator
 temperature_response_exponent_denominator,200,dimensionless,Temperature response exponent denominator

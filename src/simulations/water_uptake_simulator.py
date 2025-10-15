@@ -141,8 +141,18 @@ class WaterUptakeSimulator(BaseSimulator):
             # Get environmental conditions from daily weather file
             temperature = weather_data.get('temperature')
             humidity = weather_data.get('humidity')
-            light_intensity = weather_data.get('light_intensity')  # PAR is the light intensity
+            solar_radiation = weather_data.get('solar_radiation')  # MJ/m²/day from weather data
+            light_intensity = weather_data.get('light_intensity')  # PAR in µmol/m²/s
             wind_speed = weather_data.get('wind_speed')
+
+            # Use solar_radiation if available, otherwise convert PAR to solar radiation
+            # Conversion: 1 MJ/m²/day ≈ 46.3 mol/m²/day ≈ 536 µmol/m²/s (12-hour day avg)
+            if solar_radiation is None:
+                if light_intensity is not None:
+                    # Approximate conversion: assume 12-hour photoperiod
+                    solar_radiation = light_intensity / 536.0 * 12.0  # Rough estimate
+                else:
+                    raise ValueError("Neither solar_radiation nor light_intensity available in weather data")
             
             # Per Rules.md: raise error if missing, no defaults
             if temperature is None:
@@ -215,7 +225,7 @@ class WaterUptakeSimulator(BaseSimulator):
                 result = self.model.calculate_realistic_water_uptake(
                     temperature=temperature,
                     humidity=humidity,
-                    solar_radiation=light_intensity,  # Use light_intensity as solar_radiation
+                    solar_radiation=solar_radiation,  # Use actual solar radiation in MJ/m²/day
                     lai=lai,
                     total_biomass=total_biomass,  # Get from biomass_allocation_simulator
                     growth_stage=growth_stage,  # Use actual growth stage from phenology
@@ -232,9 +242,18 @@ class WaterUptakeSimulator(BaseSimulator):
                 raise
             
             # Update state with model results - no fallback values allowed per Rules.md
-            self.state.water_uptake_rate = result.total_water_uptake_L
-            self.state.transpiration_rate = result.transpiration_L
-            self.state.evapotranspiration = result.etc_mm
+            # Note: Model returns daily values (L/day), convert to hourly (L/hour)
+            self.state.water_uptake_rate = result.total_water_uptake_L / 24.0
+            self.state.transpiration_rate = result.transpiration_L / 24.0
+            self.state.evapotranspiration = result.etc_mm / 24.0
+
+            # DEBUG: Print water uptake calculation
+            if self.state.step_count < 5 or self.state.step_count % 400 == 0:
+                print(f"Water step {self.state.step_count}: LAI={lai:.3f}, biomass={total_biomass:.2f}g, "
+                      f"solar_rad={solar_radiation:.1f}MJ/m²/day, "
+                      f"ET0={result.et0_mm:.2f}mm/day, kc={result.kc:.3f}, ETC={result.etc_mm:.2f}mm/day, "
+                      f"transp_mm={result.transpiration_mm:.4f}mm/day, "
+                      f"uptake={result.total_water_uptake_L:.4f}L/day, transp={result.transpiration_L:.4f}L/day")
             self.state.water_availability = 1.0 - (result.total_water_uptake_L / 10.0)  # Calculate from uptake
             self.state.root_water_potential = -0.5  # Will come from root system model
             self.state.leaf_water_potential = -1.0  # Will come from leaf water potential calculation

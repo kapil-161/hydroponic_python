@@ -1,8 +1,8 @@
 category,parameter_name,value,unit,description
 # System Configuration
-system_config,tank_volume_L,5.0,L,Hydroponic tank volume
-system_config,plant_count,1,count,Number of plants in system
-system_config,solution_volume,10.0,L,Nutrient solution volume
+system_config,tank_volume_L,500.0,L,Hydroponic tank volume
+system_config,plant_count,12,count,Number of plants in system
+system_config,solution_volume,100.0,L,Nutrient solution volume
 system_config,grow_area,1,m2,Growing area
 system_config,optimal_ec,1.2,dS_m,Optimal electrical conductivity for nutrient solution
 
@@ -40,13 +40,13 @@ initial_state,trait_root_development,0.5,dimensionless,Initial root development 
 initial_state,trait_plant_architecture,0.5,dimensionless,Initial plant architecture trait expression
 
 # Initial Nutrient Concentrations (typical hydroponic starting solution)
-initial_state,solution_n_concentration,1.73,mg_L,Initial nitrogen concentration in solution
-initial_state,solution_p_concentration,1.73,mg_L,Initial phosphorus concentration in solution
-initial_state,solution_k_concentration,7.04,mg_L,Initial potassium concentration in solution
-initial_state,solution_ca_concentration,5.31,mg_L,Initial calcium concentration in solution
-initial_state,solution_mg_concentration,1.73,mg_L,Initial magnesium concentration in solution
-initial_state,solution_s_concentration,1.73,mg_L,Initial sulfur concentration in solution
-initial_state,solution_fe_concentration,0.20,mg_L,Initial iron concentration in solution
+initial_state,solution_n_concentration,173,mg_L,Initial nitrogen concentration in solution
+initial_state,solution_p_concentration,173,mg_L,Initial phosphorus concentration in solution
+initial_state,solution_k_concentration,704,mg_L,Initial potassium concentration in solution
+initial_state,solution_ca_concentration,531,mg_L,Initial calcium concentration in solution
+initial_state,solution_mg_concentration,173,mg_L,Initial magnesium concentration in solution
+initial_state,solution_s_concentration,173,mg_L,Initial sulfur concentration in solution
+initial_state,solution_fe_concentration,020,mg_L,Initial iron concentration in solution
 initial_state,solution_ph,6.0,pH,Initial solution pH
 
 # Initial Environmental State

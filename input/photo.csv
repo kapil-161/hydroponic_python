@@ -10,10 +10,10 @@ excess_lai_efficiency,0.8,dimensionless,Efficiency factor for excess LAI
 kc,270.0,μbar,Michaelis constant for CO2
 ko,165000.0,μbar,Michaelis constant for O2
 gamma_star,42.75,μbar,CO2 compensation point
-jmax_25,4.617051079814118,μmol_m2_s,Maximum electron transport rate at 25°C for lettuce (calibrated for realistic growth)
-vcmax_25,69.83848304737975,μmol_m2_s,Maximum carboxylation rate at 25°C for lettuce (calibrated for realistic growth)
+jmax_25,5.03569425503658,μmol_m2_s,Maximum electron transport rate at 25°C for lettuce (calibrated for realistic growth)
+vcmax_25,12.64115090996518,μmol_m2_s,Maximum carboxylation rate at 25°C for lettuce (calibrated for realistic growth)
 theta,0.7,dimensionless,Curvature factor of light response
-alpha,0.0780207841501322,mol_mol,Quantum efficiency of CO2 fixation (calibrated for realistic growth)
+alpha,0.0513137689448785,mol_mol,Quantum efficiency of CO2 fixation (calibrated for realistic growth)
 rd_25,0.9,μmol_m2_s,Dark respiration rate at 25°C (calibrated respiration)
 eaj,37000.0,J_mol,Activation energy for Jmax
 eav,65000.0,J_mol,Activation energy for Vcmax

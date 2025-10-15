@@ -222,6 +222,14 @@ class SimulationOrchestrator(BaseSimulator):
 
                     # Skip progress reporting for faster simulation
             
+            # Ensure final state is captured even if we broke early for harvest maturity
+            # Refresh shared cache from simulators and collect a final step snapshot
+            try:
+                self._collect_simulator_data_to_shared_cache()
+                self._collect_step_data()
+            except Exception:
+                pass
+
             # End simulation
             self.end_time = datetime.now()
             self.is_running = False
@@ -375,6 +383,8 @@ class SimulationOrchestrator(BaseSimulator):
                     
                 except Exception as e:
                     self.error_count += 1
+            
+          
     
     def _execute_sequential_step(self, weather_data: Dict[str, Any] = None):
         """Execute simulation step sequentially"""

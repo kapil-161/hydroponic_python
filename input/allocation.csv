@@ -10,8 +10,8 @@ nitrogen_response_factor,0.4,dimensionless,Response strength to nitrogen limitat
 water_response_factor,0.35,dimensionless,Response strength to water limitation
 minimum_organ_fraction,0.05,dimensionless,Minimum allocation fraction for any organ
 min_root_allocation_fraction,0.15,dimensionless,Minimum root allocation fraction to maintain biological realism
-allocation_efficiency,0.18781388598789225,dimensionless,Efficiency of biomass allocation between organs (calibrated for realistic growth)
-carbon_content_fraction,0.42,g C per g DM,Carbon content as fraction of dry biomass (typical for lettuce)
+allocation_efficiency,1.0,dimensionless,Allocation efficiency (set to 1.0 as growth respiration is handled separately by respiration model)
+carbon_content_fraction,0.4,g C per g DM,Carbon to biomass conversion factor (calibrated for realistic butterhead lettuce: target ~10-15g DM at 34 days harvest)
 carbon_allocation_roots,0.25,dimensionless,Fraction of net carbon allocated to roots
 carbon_allocation_leaves,0.65,dimensionless,Fraction of net carbon allocated to leaves
 carbon_allocation_stems,0.1,dimensionless,Fraction of net carbon allocated to stems

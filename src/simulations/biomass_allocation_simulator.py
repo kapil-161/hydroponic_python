@@ -140,6 +140,7 @@ class BiomassAllocationSimulator(BaseSimulator):
             self.state.step_count += 1
             self.state.last_update = datetime.now()
             
+            
             # Store history
             self.history.append(BiomassState(**self.state.__dict__))
 
@@ -257,18 +258,21 @@ class BiomassAllocationSimulator(BaseSimulator):
             self.state.leaf_allocation_fraction = result.get('leaves', 0.0)
             self.state.stem_allocation_fraction = result.get('stems', 0.0)
             self.state.root_allocation_fraction = result.get('roots', 0.0)
-            self.state.allocation_efficiency = 1.0  # Efficient allocation
+
+            # Get allocation efficiency from CSV parameters
+            allocation_efficiency = self.parameters.allocation_efficiency  # From CSV (quantum use efficiency)
+            self.state.allocation_efficiency = allocation_efficiency
 
             # Calculate net carbon gain
             # hourly_carbon_gain is already in g C/hour from photosynthesis simulator
             # total_respiration_rate is already in g C/hour from respiration simulator
             net_carbon_gain = (hourly_carbon_gain - total_respiration_rate)  # g C/hour
 
-            # Convert net carbon gain to biomass
-            # Carbon fraction of dry biomass: typically 40-45% for plants
-            # This converts g C/hour to g dry biomass/hour
+            # Convert net carbon gain to biomass using quantum use efficiency
+            # allocation_efficiency is quantum use efficiency (17 × 10⁻⁶ g/J from literature)
+            # carbon_content_fraction converts C to dry biomass (typically 0.42 for lettuce)
             carbon_fraction = self.parameters.carbon_content_fraction  # From CSV
-            hourly_biomass_gain = net_carbon_gain / carbon_fraction  # g dry biomass/hour
+            hourly_biomass_gain = (net_carbon_gain / carbon_fraction) * allocation_efficiency  # g dry biomass/hour
 
             # DEBUG: Log biomass gain for first few steps and key checkpoints
 

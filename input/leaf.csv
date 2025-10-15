@@ -6,7 +6,7 @@ base_phyllochron,80.0,°C_day,Thermal time interval between leaf appearances
 max_leaf_number,25.0,dimensionless,Maximum number of leaves for lettuce
 initial_leaf_number,2.0,dimensionless,Initial number of leaves (cotyledons + first true leaves)
 leaf_appearance_rate,1.0,leaves_per_phyllochron,Leaves per phyllochron unit
-max_individual_leaf_area,0.004,m2,Maximum area per individual leaf (40 cm2 for 400-800 cm2 total with 10-20 leaves)
+max_individual_leaf_area,0.09,m2,Maximum area per individual mature leaf (30cm × 30cm = 900 cm²)
 leaf_area_expansion_rate,0.15,dimensionless,Natural cellular expansion rate per day
 drought_threshold,0.6,dimensionless,Water stress threshold for leaf development
 n_stress_threshold,0.7,dimensionless,Nitrogen stress threshold for leaf expansion

@@ -263,8 +263,9 @@ class LeafDevelopmentSimulator(BaseSimulator):
             
             # Calculate thermal time for this hour
             # Use the model's thermal time calculation method
-            hourly_thermal_time_list = self.model.calculate_thermal_time([temperature])
-            hourly_thermal_time = hourly_thermal_time_list[0] if hourly_thermal_time_list else 0.0
+            # Note: calculate_thermal_time returns daily values, so divide by 24 for hourly
+            daily_thermal_time_from_model = self.model.calculate_thermal_time([temperature])[0]
+            hourly_thermal_time = daily_thermal_time_from_model / 24.0  # Convert daily to hourly
 
             # Update daily accumulation
             self.state.daily_thermal_time += hourly_thermal_time
@@ -282,6 +283,8 @@ class LeafDevelopmentSimulator(BaseSimulator):
 
             # CRITICAL: Update V-stage to create new leaf cohorts based on thermal time
             # This must be called BEFORE update_leaf_areas to ensure new leaves are tracked
+
+
             new_leaves = self.model.update_v_stage(
                 daily_thermal_time_list=daily_thermal_time_list,
                 stress_factors=stress_factors
@@ -322,7 +325,7 @@ class LeafDevelopmentSimulator(BaseSimulator):
             # Update cumulative thermal time (daily_thermal_time already updated above)
             self.state.cumulative_thermal_time += hourly_thermal_time
             # Phyllochron is tracked by the model, not returned in results
-            self.state.phyllochron_adjusted = self.leaf_params.base_phyllochron
+            self.state.phyllochron_adjusted = self.leaf_params.phyllochron
             
             # Update stress factors
             self.state.leaf_growth_stress = result.get('leaf_growth_stress', self.state.leaf_growth_stress)
@@ -434,7 +437,11 @@ class LeafDevelopmentSimulator(BaseSimulator):
             'leaf_growth_stress': self.state.leaf_growth_stress,
             'leaf_senescence_stress': self.state.leaf_senescence_stress,
             'leaf_cohorts': self.model.leaf_cohorts,  # CRITICAL: Share real leaf cohorts for senescence
-            'specific_leaf_area': self.leaf_params.specific_leaf_area  # For canopy architecture LAI calculation
+                'specific_leaf_area': self.leaf_params.area.specific_leaf_area,  # For canopy architecture LAI calculation
+            # Add aliases for compatibility with canopy_architecture_simulator
+            'leaf_area': self.state.total_leaf_area,  # Alias for total_leaf_area
+            'leaf_number': self.state.total_leaves,  # Alias for total_leaves
+            'leaf_size': self.state.total_leaf_area / max(self.state.total_leaves, 1)  # Average leaf size
         }
 
         # Add individual stage data

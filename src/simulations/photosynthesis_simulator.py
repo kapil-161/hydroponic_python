@@ -108,6 +108,8 @@ class PhotosynthesisSimulator(BaseSimulator):
             self.state.step_count += 1
             self.state.last_update = datetime.now()
             
+          
+            
             # Store history
             self.history.append(PhotosynthesisState(**self.state.__dict__))
 
@@ -161,7 +163,7 @@ class PhotosynthesisSimulator(BaseSimulator):
             if lai is None:
                 if self.state.step_count == 0:
                     # First step only: get from initial state data passed from orchestrator
-                    lai = self.initial_state.get('initial_state_lai')
+                    lai = self.initial_state.get('lai')
                     if lai is None:
                         raise ValueError("LAI missing from both canopy_architecture_simulator and initial_state")
                 else:
@@ -240,7 +242,24 @@ class PhotosynthesisSimulator(BaseSimulator):
             # Per Rules.md: No shortcuts, no estimations - use model outputs
             self.state.gross_photosynthesis_rate = net_assimilation  # Will be corrected by respiration model
             self.state.respiration_rate = 0.0  # Will be set by respiration_simulator
-            self.state.light_use_efficiency = min(1.0, net_assimilation / max(light_intensity, 1.0))
+            
+            # FIXED: Calculate light use efficiency properly
+            # Convert net_assimilation from g C/hour to μmol CO2/m²/s for proper comparison with PAR
+            # net_assimilation is in g C/hour, convert to μmol CO2/m²/s
+            # 1 g C = 83.33 mmol C = 83333 μmol C (molar mass of C = 12 g/mol)
+            # net_assimilation is already per m² (from model calculation with LAI)
+            if light_intensity > 0 and lai > 0:
+                # Convert g C/hour to μmol CO2/m²/s
+                # net_assimilation is total for the canopy (g C/hour), divide by LAI to get per m²
+                assimilation_per_m2_gC_per_hour = net_assimilation / lai if lai > 0 else 0
+                # Convert to μmol CO2/m²/s: g C/hour -> μmol CO2/m²/s
+                # 1 g C = 83333 μmol C, 1 hour = 3600 s
+                assimilation_umol_per_m2_per_s = (assimilation_per_m2_gC_per_hour * 83333) / 3600
+                # Light use efficiency = actual photosynthesis / PAR input
+                self.state.light_use_efficiency = min(1.0, assimilation_umol_per_m2_per_s / light_intensity)
+            else:
+                self.state.light_use_efficiency = 0.0
+                
             self.state.co2_uptake_rate = net_assimilation
             self.state.leaf_temperature = temperature
             self.state.temperature_stress_factor = temp_stress

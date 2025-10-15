@@ -173,12 +173,18 @@ class RootSystemSimulator(BaseSimulator):
             biomass_data = self.dependency_cache.get('biomass_allocation_simulator', {})
             total_biomass = biomass_data.get('total_biomass')
             
-            if total_biomass is None:
-                # Use default values for early simulation stages when biomass data is not available
-                total_biomass = 1.0  # Small but non-zero total biomass for early stages
+            # Use the ACTUAL root_biomass computed by the biomass allocation simulator if available
+            root_biomass = biomass_data.get('root_biomass')
             
-            # Calculate root biomass from total biomass (assuming 20% allocation to roots)
-            root_biomass = total_biomass * 0.2
+            # Fallback: derive from allocation fraction when explicit root_biomass is not present
+            if root_biomass is None and total_biomass is not None:
+                allocation_fraction = biomass_data.get('root_allocation_fraction')
+                if allocation_fraction is not None:
+                    root_biomass = total_biomass * allocation_fraction
+            
+            # If still missing, keep previous state value (avoid introducing hardcoded defaults)
+            if root_biomass is None:
+                root_biomass = self.state.root_biomass
             
             # Get water data from water uptake simulator
             water_data = self.dependency_cache.get('water_uptake_simulator', {})

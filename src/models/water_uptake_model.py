@@ -355,15 +355,17 @@ class WaterUptakeModel:
         # Scale by canopy coverage
         coverage_factor = min(1.0, lai / self.params.max_lai_coverage_factor) if lai > 0 else self.params.minimum_coverage_factor
         transpiration_mm = etc_mm * coverage_factor
-        # Convert mm depth to liters: multiply by ground area per plant
-        # LAI = leaf area / ground area, so leaf_area = LAI × ground_area
-        leaf_area_m2 = lai * self.params.ground_area_per_plant
-        transpiration_L = (transpiration_mm / 1000.0) * leaf_area_m2
 
-        # Metabolic water demand
+        # Convert mm depth to liters: multiply by ground area per plant
+        # Note: Transpiration is depth (mm) over ground area, not leaf area
+        # LAI is already accounted for in kc calculation
+        # Returns DAILY values (mm/day, L/day) - caller must scale for hourly timesteps
+        transpiration_L = (transpiration_mm / 1000.0) * self.params.ground_area_per_plant
+
+        # Metabolic water demand (daily)
         metabolic_water_L = total_biomass * self.params.metabolic_water_per_biomass
 
-        # Total water uptake
+        # Total water uptake (per day)
         total_water_uptake_L = transpiration_L + metabolic_water_L
 
         # Water use efficiency
@@ -387,13 +389,13 @@ class WaterUptakeModel:
         )
 
         return WaterUptakeResponse(
-            et0_mm=et0_mm,
+            et0_mm=et0_mm,  # Daily value (mm/day)
             kc=kc,
-            etc_mm=etc_mm,
-            transpiration_mm=transpiration_mm,
-            transpiration_L=transpiration_L,
-            metabolic_water_L=metabolic_water_L,
-            total_water_uptake_L=total_water_uptake_L,
+            etc_mm=etc_mm,  # Daily value (mm/day)
+            transpiration_mm=transpiration_mm,  # Daily value (mm/day)
+            transpiration_L=transpiration_L,  # Daily value (L/day)
+            metabolic_water_L=metabolic_water_L,  # Daily value (L/day)
+            total_water_uptake_L=total_water_uptake_L,  # Daily value (L/day)
             water_use_efficiency_L_kg=wue_L_per_kg,
             vpd_kpa=vpd,
             environmental_factor=environmental_factor,

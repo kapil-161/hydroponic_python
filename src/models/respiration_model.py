@@ -9,55 +9,30 @@ class TissueType(Enum):
     ROOTS = "roots"
     REPRODUCTIVE = "reproductive"
 
+
 @dataclass
-class RespirationParameters:
-    maintenance_base_rate: float
+class MaintenanceRespirationParams:
+    """Parameters for maintenance respiration calculations."""
+    base_rate: float
     reference_temperature: float
     q10_factor: float
-    growth_efficiency: float
-    biosynthetic_cost: float
     tissue_factors: Dict[str, float]
     age_effect_coefficient: float
     max_age_effect: float
-    acclimation_rate: float
-    acclimation_memory: float
-    n_effect_slope: float
-    reference_leaf_n: float
-    max_temperature_threshold: float
-    temperature_decay_factor: float
     size_penalty_threshold: float
     size_penalty_rate: float
-    glucose_to_carbon_ratio: float
-    min_history_threshold: int
-    day_start_hour: int
-    day_end_hour: int
-    day_respiration_factor: float
-    night_respiration_factor: float
-    carbon_to_co2_ratio: float
-    circadian_amplitude_1: float
-    circadian_peak_1: int
-    circadian_amplitude_2: float
-    circadian_peak_2: int
-    diurnal_base_factor: float
-    # optimal_temperature: float  # Consolidated to phenology_parameters
-    phenology_optimal_temperature_min: float  # Minimum optimal temperature from phenology
-    phenology_optimal_temperature_max: float  # Maximum optimal temperature from phenology
-    moderate_stress_threshold: float
-    severe_stress_threshold: float
-    moderate_stress_factor: float
-    severe_stress_base: float
-    severe_stress_factor: float
-    daytime_respiratory_quotient: float
-    nighttime_respiratory_quotient: float
-    biosynthetic_costs: Dict[str, float]
-    min_acclimation_temperature: float
-    max_acclimation_temperature: float
-    min_diurnal_factor: float
-    max_diurnal_factor: float
-    
-    # Remove non-existent early parameters per Rules.md
+    n_effect_slope: float
+    reference_leaf_n: float
+    minimum_rate_fraction: float
 
-    # Growth composition parameters
+
+@dataclass
+class GrowthRespirationParams:
+    """Parameters for growth respiration calculations."""
+    growth_efficiency: float
+    biosynthetic_cost: float
+    biosynthetic_costs: Dict[str, float]
+    glucose_to_carbon_ratio: float
     protein_fraction: float
     carbohydrate_fraction: float
     lipid_fraction: float
@@ -65,11 +40,56 @@ class RespirationParameters:
     lignin_fraction: float
     mineral_fraction: float
 
-    # Hardcoded value replacements (from CSV)
+
+@dataclass
+class EnvironmentalResponseParams:
+    """Parameters for environmental response calculations."""
+    acclimation_rate: float
+    acclimation_memory: float
+    min_acclimation_temperature: float
+    max_acclimation_temperature: float
+    min_history_threshold: int
+    day_start_hour: int
+    day_end_hour: int
+    day_respiration_factor: float
+    night_respiration_factor: float
+    circadian_amplitude_1: float
+    circadian_peak_1: int
+    circadian_amplitude_2: float
+    circadian_peak_2: int
+    diurnal_base_factor: float
+    min_diurnal_factor: float
+    max_diurnal_factor: float
+
+
+@dataclass
+class StressResponseParams:
+    """Parameters for stress response calculations."""
+    max_temperature_threshold: float
+    temperature_decay_factor: float
+    phenology_optimal_temperature_min: float
+    phenology_optimal_temperature_max: float
+    moderate_stress_threshold: float
+    severe_stress_threshold: float
+    moderate_stress_factor: float
+    severe_stress_base: float
+    severe_stress_factor: float
     max_temperature_factor: float
     minimum_temperature_factor: float
     minimum_respiration_rate_fraction: float
     default_total_biomass_g: float
+
+
+@dataclass
+class RespirationParameters:
+    """Main container for all respiration parameters."""
+    maintenance: MaintenanceRespirationParams
+    growth: GrowthRespirationParams
+    environment: EnvironmentalResponseParams
+    stress: StressResponseParams
+    carbon_to_co2_ratio: float
+    daytime_respiratory_quotient: float
+    nighttime_respiratory_quotient: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'RespirationParameters':
@@ -135,60 +155,67 @@ class RespirationParameters:
             raise ValueError("moderate_stress_threshold must be less than severe_stress_threshold")
 
         return cls(
-            maintenance_base_rate=float(config['maintenance_base_rate']),
-            reference_temperature=float(config['reference_temperature']),
-            q10_factor=float(config['q10_factor']),
-            growth_efficiency=float(config['growth_efficiency']),
-            biosynthetic_cost=float(config['biosynthetic_cost']),
-            tissue_factors=tissue_factors,
-            age_effect_coefficient=float(config['age_effect_coefficient']),
-            max_age_effect=float(config['max_age_effect']),
-            acclimation_rate=float(config['acclimation_rate']),
-            acclimation_memory=float(config['acclimation_memory']),
-            n_effect_slope=float(config['n_effect_slope']),
-            reference_leaf_n=float(config['reference_leaf_n']),
-            max_temperature_threshold=float(config['max_temperature_threshold']),
-            temperature_decay_factor=float(config['temperature_decay_factor']),
-            size_penalty_threshold=float(config['size_penalty_threshold']),
-            size_penalty_rate=float(config['size_penalty_rate']),
-            glucose_to_carbon_ratio=float(config['glucose_to_carbon_ratio']),
-            min_history_threshold=int(config['min_history_threshold']),
-            day_start_hour=int(config['day_start_hour']),
-            day_end_hour=int(config['day_end_hour']),
-            day_respiration_factor=float(config['day_respiration_factor']),
-            night_respiration_factor=float(config['night_respiration_factor']),
+            maintenance=MaintenanceRespirationParams(
+                base_rate=float(config['maintenance_base_rate']),
+                reference_temperature=float(config['reference_temperature']),
+                q10_factor=float(config['q10_factor']),
+                tissue_factors=tissue_factors,
+                age_effect_coefficient=float(config['age_effect_coefficient']),
+                max_age_effect=float(config['max_age_effect']),
+                size_penalty_threshold=float(config['size_penalty_threshold']),
+                size_penalty_rate=float(config['size_penalty_rate']),
+                n_effect_slope=float(config['n_effect_slope']),
+                reference_leaf_n=float(config['reference_leaf_n']),
+                minimum_rate_fraction=float(config['minimum_respiration_rate_fraction']),
+            ),
+            growth=GrowthRespirationParams(
+                growth_efficiency=float(config['growth_efficiency']),
+                biosynthetic_cost=float(config['biosynthetic_cost']),
+                biosynthetic_costs=biosynthetic_costs,
+                glucose_to_carbon_ratio=float(config['glucose_to_carbon_ratio']),
+                protein_fraction=float(config['protein_fraction']),
+                carbohydrate_fraction=float(config['carbohydrate_fraction']),
+                lipid_fraction=float(config['lipid_fraction']),
+                organic_acid_fraction=float(config['organic_acid_fraction']),
+                lignin_fraction=float(config['lignin_fraction']),
+                mineral_fraction=float(config['mineral_fraction']),
+            ),
+            environment=EnvironmentalResponseParams(
+                acclimation_rate=float(config['acclimation_rate']),
+                acclimation_memory=float(config['acclimation_memory']),
+                min_acclimation_temperature=float(config['min_acclimation_temperature']),
+                max_acclimation_temperature=float(config['max_acclimation_temperature']),
+                min_history_threshold=int(config['min_history_threshold']),
+                day_start_hour=int(config['day_start_hour']),
+                day_end_hour=int(config['day_end_hour']),
+                day_respiration_factor=float(config['day_respiration_factor']),
+                night_respiration_factor=float(config['night_respiration_factor']),
+                circadian_amplitude_1=float(config['circadian_amplitude_1']),
+                circadian_peak_1=int(config['circadian_peak_1']),
+                circadian_amplitude_2=float(config['circadian_amplitude_2']),
+                circadian_peak_2=int(config['circadian_peak_2']),
+                diurnal_base_factor=float(config['diurnal_base_factor']),
+                min_diurnal_factor=float(config['min_diurnal_factor']),
+                max_diurnal_factor=float(config['max_diurnal_factor']),
+            ),
+            stress=StressResponseParams(
+                max_temperature_threshold=float(config['max_temperature_threshold']),
+                temperature_decay_factor=float(config['temperature_decay_factor']),
+                phenology_optimal_temperature_min=float(phenology_params.get('optimal_temperature_min', config.get('optimal_temperature_min', 18.0))),
+                phenology_optimal_temperature_max=float(phenology_params.get('optimal_temperature_max', config.get('optimal_temperature_max', 24.0))),
+                moderate_stress_threshold=float(config['moderate_stress_threshold']),
+                severe_stress_threshold=float(config['severe_stress_threshold']),
+                moderate_stress_factor=float(config['moderate_stress_factor']),
+                severe_stress_base=float(config['severe_stress_base']),
+                severe_stress_factor=float(config['severe_stress_factor']),
+                max_temperature_factor=float(config['max_temperature_factor']),
+                minimum_temperature_factor=float(config['minimum_temperature_factor']),
+                minimum_respiration_rate_fraction=float(config['minimum_respiration_rate_fraction']),
+                default_total_biomass_g=float(config['default_total_biomass_g'])
+            ),
             carbon_to_co2_ratio=float(config['carbon_to_co2_ratio']),
-            circadian_amplitude_1=float(config['circadian_amplitude_1']),
-            circadian_peak_1=int(config['circadian_peak_1']),
-            circadian_amplitude_2=float(config['circadian_amplitude_2']),
-            circadian_peak_2=int(config['circadian_peak_2']),
-            diurnal_base_factor=float(config['diurnal_base_factor']),
-            phenology_optimal_temperature_min=float(phenology_params.get('optimal_temperature_min', config.get('optimal_temperature_min', 18.0))),
-            phenology_optimal_temperature_max=float(phenology_params.get('optimal_temperature_max', config.get('optimal_temperature_max', 24.0))),
-            moderate_stress_threshold=float(config['moderate_stress_threshold']),
-            severe_stress_threshold=float(config['severe_stress_threshold']),
-            moderate_stress_factor=float(config['moderate_stress_factor']),
-            severe_stress_base=float(config['severe_stress_base']),
-            severe_stress_factor=float(config['severe_stress_factor']),
             daytime_respiratory_quotient=float(config['daytime_respiratory_quotient']),
-            nighttime_respiratory_quotient=float(config['nighttime_respiratory_quotient']),
-            biosynthetic_costs=biosynthetic_costs,
-            min_acclimation_temperature=float(config['min_acclimation_temperature']),
-            max_acclimation_temperature=float(config['max_acclimation_temperature']),
-            min_diurnal_factor=float(config['min_diurnal_factor']),
-            max_diurnal_factor=float(config['max_diurnal_factor']),
-            # Remove non-existent parameters per Rules.md
-            protein_fraction=float(config['protein_fraction']),
-            carbohydrate_fraction=float(config['carbohydrate_fraction']),
-            lipid_fraction=float(config['lipid_fraction']),
-            organic_acid_fraction=float(config['organic_acid_fraction']),
-            lignin_fraction=float(config['lignin_fraction']),
-            mineral_fraction=float(config['mineral_fraction']),
-            # Hardcoded value replacements
-            max_temperature_factor=float(config['max_temperature_factor']),
-            minimum_temperature_factor=float(config['minimum_temperature_factor']),
-            minimum_respiration_rate_fraction=float(config['minimum_respiration_rate_fraction']),
-            default_total_biomass_g=float(config['default_total_biomass_g'])
+            nighttime_respiratory_quotient=float(config['nighttime_respiratory_quotient'])
         )
 
     def get_required_growth_composition(self, config: Dict[str, Any]) -> Dict[str, float]:
@@ -224,13 +251,12 @@ class RespirationComponents:
     nitrogen_factor: float
 
 class EnhancedRespirationModel:
-    def __init__(self, parameters: RespirationParameters, config: Dict[str, Any]):
-        if not parameters or not config:
-            raise ValueError("RespirationParameters and configuration dictionary must be provided")
+    def __init__(self, parameters: RespirationParameters):
+        if not parameters:
+            raise ValueError("RespirationParameters must be provided")
         self.params = parameters
-        self.config = config
         self.temperature_history: List[float] = []
-        self.acclimated_reference_temp: float = self.params.reference_temperature
+        self.acclimated_reference_temp: float = self.params.maintenance.reference_temperature
     
     def initialize(self):
         """Initialize the respiration model"""
@@ -240,45 +266,45 @@ class EnhancedRespirationModel:
         if temperature is None:
             raise ValueError("Temperature must be provided")
         reference_temp = acclimated_temp or self.acclimated_reference_temp
-        temp_diff = temperature - reference_temp
-        factor = self.params.q10_factor ** (temp_diff / 10.0)
-        factor = max(self.params.minimum_temperature_factor, min(self.params.max_temperature_factor, factor))
-        if temperature > self.params.max_temperature_threshold:
-            excess_temp = temperature - self.params.max_temperature_threshold
-            factor *= math.exp(-self.params.temperature_decay_factor * excess_temp)
+        temp_diff = temperature - self.params.maintenance.reference_temperature
+        factor = self.params.maintenance.q10_factor ** (temp_diff / 10.0)
+        factor = max(self.params.stress.minimum_temperature_factor, min(self.params.stress.max_temperature_factor, factor))
+        if temperature > self.params.stress.max_temperature_threshold:
+            excess_temp = temperature - self.params.stress.max_temperature_threshold
+            factor *= math.exp(-self.params.stress.temperature_decay_factor * excess_temp)
         return factor
 
     def calculate_age_factor(self, age_days: float) -> float:
         if age_days is None or age_days < 0:
             raise ValueError("age_days must be non-negative")
-        age_effect = 1.0 + (self.params.age_effect_coefficient * age_days)
-        return min(self.params.max_age_effect, max(1.0, age_effect))
+        age_effect = 1.0 + (self.params.maintenance.age_effect_coefficient * age_days)
+        return min(self.params.maintenance.max_age_effect, max(1.0, age_effect))
 
     def calculate_nitrogen_factor(self, nitrogen_content: float, tissue_type: TissueType) -> float:
         if nitrogen_content is None or nitrogen_content < 0:
             raise ValueError("nitrogen_content must be non-negative")
         if tissue_type != TissueType.LEAVES:
             return 1.0
-        if self.params.reference_leaf_n <= 0:
+        if self.params.maintenance.reference_leaf_n <= 0:
             raise ValueError("reference_leaf_n must be positive")
-        n_ratio = nitrogen_content / self.params.reference_leaf_n
-        factor = 1.0 + self.params.n_effect_slope * (n_ratio - 1.0)
-        return max(self.params.minimum_temperature_factor, factor)
+        n_ratio = nitrogen_content / self.params.maintenance.reference_leaf_n
+        factor = 1.0 + self.params.maintenance.n_effect_slope * (n_ratio - 1.0)
+        return max(self.params.stress.minimum_temperature_factor, factor)
 
     def calculate_maintenance_respiration(self, biomass_pool: BiomassPool, temperature: float) -> Tuple[float, Dict[str, float]]:
         if not biomass_pool or temperature is None:
             raise ValueError("Biomass pool and temperature must be provided")
         if biomass_pool.dry_mass < 0:
             raise ValueError("dry_mass must be non-negative")
-        base_rate = self.params.maintenance_base_rate
+        base_rate = self.params.maintenance.base_rate
         temp_factor = self.calculate_temperature_factor(temperature)
         age_factor = self.calculate_age_factor(biomass_pool.age_days)
         n_factor = self.calculate_nitrogen_factor(biomass_pool.nitrogen_content, biomass_pool.tissue_type)
-        tissue_factor = self.params.tissue_factors.get(biomass_pool.tissue_type.value, 1.0)
+        tissue_factor = self.params.maintenance.tissue_factors.get(biomass_pool.tissue_type.value, 1.0)
         size_penalty_factor = 1.0
-        if biomass_pool.dry_mass > self.params.size_penalty_threshold:
-            excess_mass = biomass_pool.dry_mass - self.params.size_penalty_threshold
-            size_penalty_factor = 1.0 + self.params.size_penalty_rate * excess_mass
+        if biomass_pool.dry_mass > self.params.maintenance.size_penalty_threshold:
+            excess_mass = biomass_pool.dry_mass - self.params.maintenance.size_penalty_threshold
+            size_penalty_factor = 1.0 + self.params.maintenance.size_penalty_rate * excess_mass
         maintenance_respiration = base_rate * biomass_pool.dry_mass * temp_factor * age_factor * n_factor * tissue_factor * size_penalty_factor
         factor_breakdown = {
             'temperature_factor': temp_factor,
@@ -304,27 +330,27 @@ class EnhancedRespirationModel:
         }
         for component, fraction in growth_composition.items():
             cost_key = component_mapping.get(component, component)
-            cost = self.params.biosynthetic_costs.get(cost_key)
+            cost = self.params.growth.biosynthetic_costs.get(cost_key)
             if cost is None:
                 raise KeyError(f"Respiration cost for {component} (mapped to {cost_key}) not found")
             total_glucose_cost += cost * fraction * new_growth
-        glucose_respired = total_glucose_cost * (1.0 - self.params.growth_efficiency)
-        return glucose_respired * self.params.glucose_to_carbon_ratio
+        glucose_respired = total_glucose_cost * (1.0 - self.params.growth.growth_efficiency)
+        return glucose_respired * self.params.growth.glucose_to_carbon_ratio
 
     def update_temperature_acclimation(self, temperature: float) -> None:
         if temperature is None:
             raise ValueError("Temperature must be provided")
         self.temperature_history.append(temperature)
-        max_history_days = int(self.params.acclimation_memory)
+        max_history_days = int(self.params.environment.acclimation_memory)
         if len(self.temperature_history) > max_history_days:
             self.temperature_history = self.temperature_history[-max_history_days:]
-        if len(self.temperature_history) >= self.params.min_history_threshold:
+        if len(self.temperature_history) >= self.params.environment.min_history_threshold:
             recent_avg_temp = sum(self.temperature_history) / len(self.temperature_history)
             temp_diff = recent_avg_temp - self.acclimated_reference_temp
-            acclimation_change = temp_diff * self.params.acclimation_rate
+            acclimation_change = temp_diff * self.params.environment.acclimation_rate
             self.acclimated_reference_temp += acclimation_change
-            self.acclimated_reference_temp = max(self.params.min_acclimation_temperature, 
-                                                min(self.params.max_acclimation_temperature, self.acclimated_reference_temp))
+            self.acclimated_reference_temp = max(self.params.environment.min_acclimation_temperature, 
+                                                min(self.params.environment.max_acclimation_temperature, self.acclimated_reference_temp))
 
     def calculate_total_respiration(self, biomass_pools: List[BiomassPool], temperature: float, 
                                    total_new_growth: float, growth_composition: Dict[str, float]) -> RespirationComponents:
@@ -370,8 +396,8 @@ class EnhancedRespirationModel:
         hourly_growth = components.growth_respiration / 24.0 * dt_hours
         hourly_total = components.total_respiration / 24.0 * dt_hours
         diurnal_factor = self._calculate_diurnal_respiration_factor(hour)
-        is_day = self.params.day_start_hour <= hour <= self.params.day_end_hour
-        day_night_factor = self.params.day_respiration_factor if is_day else self.params.night_respiration_factor
+        is_day = self.params.environment.day_start_hour <= hour <= self.params.environment.day_end_hour
+        day_night_factor = self.params.environment.day_respiration_factor if is_day else self.params.environment.night_respiration_factor
         temp_stress_factor = self._calculate_temperature_stress_factor(temperature)
         hourly_adjustment = diurnal_factor * day_night_factor * temp_stress_factor
         adjusted_maintenance = hourly_maintenance * hourly_adjustment
@@ -380,9 +406,9 @@ class EnhancedRespirationModel:
 
         # Ensure minimum biological respiration rate proportional to actual biomass (following "model output" rule)
         # Use realistic minimum respiration proportional to biomass, not fixed minimum
-        total_biomass = sum(pool.dry_mass for pool in biomass_pools) if biomass_pools else self.params.default_total_biomass_g
+        total_biomass = sum(pool.dry_mass for pool in biomass_pools) if biomass_pools else self.params.stress.default_total_biomass_g
         # Minimum respiration = 0.1% of biomass per day (realistic for plant maintenance)
-        biomass_based_min = total_biomass * self.params.minimum_respiration_rate_fraction  # 0.1% of biomass per day
+        biomass_based_min = total_biomass * self.params.stress.minimum_respiration_rate_fraction  # 0.1% of biomass per day
         adjusted_total = max(biomass_based_min, adjusted_total)
         co2_release_rate = adjusted_total * self.params.carbon_to_co2_ratio
         respiratory_quotient = self._calculate_respiratory_quotient(hour)
@@ -404,10 +430,10 @@ class EnhancedRespirationModel:
     def _calculate_diurnal_respiration_factor(self, hour: int) -> float:
         if hour is None:
             raise ValueError("Hour must be provided")
-        circadian_component1 = self.params.circadian_amplitude_1 * math.sin(2 * math.pi * (hour - self.params.circadian_peak_1) / 24)
-        circadian_component2 = self.params.circadian_amplitude_2 * math.sin(2 * math.pi * (hour - self.params.circadian_peak_2) / 24)
-        diurnal_factor = self.params.diurnal_base_factor + circadian_component1 + circadian_component2
-        return max(self.params.min_diurnal_factor, min(self.params.max_diurnal_factor, diurnal_factor))
+        circadian_component1 = self.params.environment.circadian_amplitude_1 * math.sin(2 * math.pi * (hour - self.params.environment.circadian_peak_1) / 24)
+        circadian_component2 = self.params.environment.circadian_amplitude_2 * math.sin(2 * math.pi * (hour - self.params.environment.circadian_peak_2) / 24)
+        diurnal_factor = self.params.environment.diurnal_base_factor + circadian_component1 + circadian_component2
+        return max(self.params.environment.min_diurnal_factor, min(self.params.environment.max_diurnal_factor, diurnal_factor))
 
     def _calculate_temperature_stress_factor(self, temperature: float) -> float:
         """Use consolidated temperature stress factor calculation from core_utils."""
@@ -420,12 +446,12 @@ class EnhancedRespirationModel:
         # ALL parameters come from CSV configuration
         temp_config = type('Config', (), {
             'temperature_stress': {
-                'optimal_temperature': (self.params.phenology_optimal_temperature_min + self.params.phenology_optimal_temperature_max) / 2.0,
-                'moderate_stress_threshold': self.params.moderate_stress_threshold,
-                'severe_stress_threshold': self.params.severe_stress_threshold,
-                'moderate_stress_factor': self.params.moderate_stress_factor,
-                'severe_stress_base': self.params.severe_stress_base,
-                'severe_stress_factor': self.params.severe_stress_factor
+                'optimal_temperature': (self.params.stress.phenology_optimal_temperature_min + self.params.stress.phenology_optimal_temperature_max) / 2.0,
+                'moderate_stress_threshold': self.params.stress.moderate_stress_threshold,
+                'severe_stress_threshold': self.params.stress.severe_stress_threshold,
+                'moderate_stress_factor': self.params.stress.moderate_stress_factor,
+                'severe_stress_base': self.params.stress.severe_stress_base,
+                'severe_stress_factor': self.params.stress.severe_stress_factor
             }
         })
 
@@ -434,17 +460,16 @@ class EnhancedRespirationModel:
     def _calculate_respiratory_quotient(self, hour: int) -> float:
         if hour is None:
             raise ValueError("Hour must be provided")
-        is_day = self.params.day_start_hour <= hour <= self.params.day_end_hour
+        is_day = self.params.environment.day_start_hour <= hour <= self.params.environment.day_end_hour
         return self.params.daytime_respiratory_quotient if is_day else self.params.nighttime_respiratory_quotient
 
 def create_lettuce_respiration_model(system_config: Any) -> 'EnhancedRespirationModel':
-    if system_config is None:
-        raise ValueError("System configuration must be provided")
-    config = getattr(system_config, 'respiration_parameters', None)
-    if config is None:
-        raise ValueError("respiration_parameters section must be provided in configuration")
+    config = {
+        **getattr(system_config, 'respiration_parameters', {}),
+        'phenology_parameters': getattr(system_config, 'phenology_parameters', {})
+    }
     parameters = RespirationParameters.from_config(config)
-    return EnhancedRespirationModel(parameters, config)
+    return EnhancedRespirationModel(parameters)
 
 """
 INPUT PARAMETERS (from configuration):

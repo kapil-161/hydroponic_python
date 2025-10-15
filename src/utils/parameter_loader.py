@@ -530,6 +530,7 @@ class StrictParameterLoader:
         params_dict['water_response_factor'] = self.get_parameter('allocation_parameters_water_response_factor')
         params_dict['minimum_organ_fraction'] = self.get_parameter('allocation_parameters_minimum_organ_fraction')
         params_dict['carbon_content_fraction'] = self.get_parameter('allocation_parameters_carbon_content_fraction')
+        params_dict['allocation_efficiency'] = self.get_parameter('allocation_parameters_allocation_efficiency')
 
         # Carbon allocation fractions - NO HARDCODED VALUES (Rules.md)
         params_dict['carbon_allocation_roots'] = self.get_parameter('allocation_parameters_carbon_allocation_roots')

@@ -48,9 +48,7 @@ class RespirationSimulator(BaseSimulator):
             raise ValueError("RespirationParameters must be provided from CSV - no defaults allowed per Rules.md")
         
         self.parameters = parameters
-        # Create a basic config for the model (model expects both parameters and config)
-        self.config = {'model_type': 'enhanced_respiration'}
-        self.model = EnhancedRespirationModel(self.parameters, self.config)
+        self.model = EnhancedRespirationModel(self.parameters)
         
         # State tracking
         self.state = RespirationState()
@@ -162,21 +160,21 @@ class RespirationSimulator(BaseSimulator):
             biomass_pools = {
                 'leaf': BiomassPool(
                     dry_mass=leaf_biomass,
-                    nitrogen_content=self.parameters.reference_leaf_n,  # Use reference_leaf_n from parameters
+                    nitrogen_content=self.parameters.maintenance.reference_leaf_n,  # Use reference_leaf_n from parameters
                     tissue_type=TissueType.LEAVES,
                     age_days=0.0,  # Default age for early stages
                     recent_growth=0.0  # Default recent growth
                 ),
                 'stem': BiomassPool(
                     dry_mass=stem_biomass,
-                    nitrogen_content=self.parameters.reference_leaf_n * 0.8,  # Estimate stem nitrogen content
+                    nitrogen_content=self.parameters.maintenance.reference_leaf_n * 0.8,  # Estimate stem nitrogen content
                     tissue_type=TissueType.STEMS,
                     age_days=0.0,  # Default age for early stages
                     recent_growth=0.0  # Default recent growth
                 ),
                 'root': BiomassPool(
                     dry_mass=root_biomass,
-                    nitrogen_content=self.parameters.reference_leaf_n * 0.6,  # Estimate root nitrogen content
+                    nitrogen_content=self.parameters.maintenance.reference_leaf_n * 0.6,  # Estimate root nitrogen content
                     tissue_type=TissueType.ROOTS,
                     age_days=0.0,  # Default age for early stages
                     recent_growth=0.0  # Default recent growth
@@ -204,12 +202,12 @@ class RespirationSimulator(BaseSimulator):
                 total_new_growth = max(0.0, self.state.daily_biomass_gain)  # g/day (partial), clamped to zero
 
             growth_composition = {
-                'protein': self.parameters.protein_fraction,
-                'carbohydrate': self.parameters.carbohydrate_fraction,
-                'lipid': self.parameters.lipid_fraction,
-                'organic_acid': self.parameters.organic_acid_fraction,
-                'lignin': self.parameters.lignin_fraction,
-                'mineral': self.parameters.mineral_fraction
+                'protein': self.parameters.growth.protein_fraction,
+                'carbohydrate': self.parameters.growth.carbohydrate_fraction,
+                'lipid': self.parameters.growth.lipid_fraction,
+                'organic_acid': self.parameters.growth.organic_acid_fraction,
+                'lignin': self.parameters.growth.lignin_fraction,
+                'mineral': self.parameters.growth.mineral_fraction
             }
 
             result = self.model.calculate_total_respiration(
