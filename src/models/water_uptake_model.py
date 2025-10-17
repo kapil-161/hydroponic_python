@@ -36,7 +36,6 @@ class WaterUptakeParameters:
     """Parameters for water uptake calculations based on Penman-Monteith, SPAC, and physiological demand."""
     # Penman-Monteith parameters
     psychrometric_constant: float           # kPa/°C
-    wind_speed: float                      # m/s
     net_radiation_factor: float            # Fraction of solar radiation (0 to 1)
     radiation_offset: float                # MJ/m²/day
 
@@ -125,8 +124,6 @@ class WaterUptakeParameters:
             raise ValueError("All parameters must be numeric")
         if self.psychrometric_constant is not None and self.psychrometric_constant <= 0:
             raise ValueError("Psychrometric constant must be positive")
-        if self.wind_speed < 0:
-            raise ValueError("Wind speed must be non-negative")
         if not 0 <= self.net_radiation_factor <= 1:
             raise ValueError("Net radiation factor must be between 0 and 1")
         if self.radiation_offset < 0:
@@ -164,7 +161,7 @@ class WaterUptakeParameters:
         root_params = get_required_water_config(config, 'root_system_parameters')
         phenology_params = get_required_water_config(config, 'phenology_parameters')
         required_params = [
-            'psychrometric_constant', 'wind_speed', 'net_radiation_factor', 'radiation_offset',
+            'psychrometric_constant', 'net_radiation_factor', 'radiation_offset',
             'base_crop_coefficient', 'lai_coefficient_factor', 'vegetative_stage_factor',
             'head_formation_stage_factor', 'mature_stage_factor', 'optimal_vpd_min',
             'optimal_vpd_max', 'vpd_sensitivity', 'metabolic_water_per_biomass',
@@ -192,7 +189,6 @@ class WaterUptakeParameters:
                 raise ValueError(f"Missing required parameter: {param}")
         return cls(
             psychrometric_constant=float(water_params['psychrometric_constant']),
-            wind_speed=float(water_params['wind_speed']),
             net_radiation_factor=float(water_params['net_radiation_factor']),
             radiation_offset=float(water_params['radiation_offset']),
             base_crop_coefficient=float(water_params['base_crop_coefficient']),
@@ -288,6 +284,7 @@ class WaterUptakeModel:
                                         solar_radiation: float,
                                         lai: float,
                                         total_biomass: float,
+                                        wind_speed: float,
                                         growth_stage: str = GrowthStage.VEGETATIVE.value,
                                         stress_factors: Dict[str, float] = None,
                                         solution_ec: float = 1.5) -> WaterUptakeResponse:
@@ -300,6 +297,7 @@ class WaterUptakeModel:
             solar_radiation: Solar radiation (MJ/m²/day)
             lai: Leaf Area Index
             total_biomass: Plant biomass (g)
+            wind_speed: Wind speed from weather data (m/s)
             growth_stage: Growth stage ('vegetative', 'head_formation', 'mature')
 
         Returns:
@@ -323,13 +321,13 @@ class WaterUptakeModel:
         ea = es * (humidity / 100.0)
         vpd = max(self.params.minimum_vpd_threshold, es - ea)
 
-        # Penman-Monteith reference evapotranspiration
+        # Penman-Monteith reference evapotranspiration (using wind_speed from weather data)
         delta = self.params.saturation_curve_slope_constant * es / ((temperature + self.params.vapor_pressure_base_temp) ** 2)
         net_radiation = solar_radiation * self.params.net_radiation_factor - self.params.radiation_offset
         numerator = (self.params.penman_monteith_conversion * delta * net_radiation +
                      self.params.psychrometric_constant * self.params.aerodynamic_resistance_coefficient / (temperature + self.params.kelvin_conversion) *
-                     self.params.wind_speed * vpd)
-        denominator = delta + self.params.psychrometric_constant * (1 + self.params.wind_speed_coefficient * self.params.wind_speed)
+                     wind_speed * vpd)
+        denominator = delta + self.params.psychrometric_constant * (1 + self.params.wind_speed_coefficient * wind_speed)
         et0_mm = max(self.params.minimum_et0_threshold, numerator / denominator if denominator != 0 else self.params.minimum_et0_threshold)
 
         # Crop coefficient
@@ -357,10 +355,11 @@ class WaterUptakeModel:
         transpiration_mm = etc_mm * coverage_factor
 
         # Convert mm depth to liters: multiply by ground area per plant
-        # Note: Transpiration is depth (mm) over ground area, not leaf area
-        # LAI is already accounted for in kc calculation
+        # Unit conversion: mm × m² = L (because 1 mm × 1 m² = 0.001 m³ = 1 L)
+        # transpiration_mm (mm/day) × ground_area (m²) = volume (L/day)
+        # LAI effect is already incorporated in kc calculation
         # Returns DAILY values (mm/day, L/day) - caller must scale for hourly timesteps
-        transpiration_L = (transpiration_mm / 1000.0) * self.params.ground_area_per_plant
+        transpiration_L = transpiration_mm * self.params.ground_area_per_plant
 
         # Metabolic water demand (daily)
         metabolic_water_L = total_biomass * self.params.metabolic_water_per_biomass

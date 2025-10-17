@@ -120,6 +120,12 @@ class NutrientParameters:
     phloem_only_transport_factor: float
     transport_limitation_threshold: float
 
+    # Ion properties for scientific EC calculation (CSV-driven)
+    ion_molar_mass: Dict[str, float]
+    ion_lambda0_25C: Dict[str, float]
+    ion_valence: Dict[str, float]
+    temperature_coefficient_alpha: float
+
     # Tissue composition parameters - NO HARDCODED VALUES (Rules.md)
     tissue_nitrogen_content_fraction: float
     tissue_phosphorus_content_fraction: float
@@ -257,6 +263,23 @@ class NutrientParameters:
                     raise KeyError(f"Missing sink strength coefficient for {stage} reproductive")
                 sink_coeffs[stage]["reproductive"] = float(config[key])
 
+        # Ion properties required for ion-based EC
+        ion_molar_mass: Dict[str, float] = {}
+        ion_lambda0_25C: Dict[str, float] = {}
+        ion_valence: Dict[str, float] = {}
+        for nutrient in nutrients:
+            mm_key = f"molar_mass_{nutrient}"
+            lam_key = f"lambda0_25C_{nutrient}"
+            val_key = f"valence_{nutrient}"
+            if mm_key not in config or lam_key not in config or val_key not in config:
+                raise KeyError(f"Missing ion property for {nutrient}: require {mm_key}, {lam_key}, {val_key}")
+            ion_molar_mass[nutrient] = float(config[mm_key])
+            ion_lambda0_25C[nutrient] = float(config[lam_key])
+            ion_valence[nutrient] = float(config[val_key])
+
+        if 'temperature_coefficient_alpha' not in config:
+            raise KeyError("Missing temperature_coefficient_alpha in nutrient parameters")
+
         return cls(
             ec_factor_n_no3=float(config['ec_factor_n_no3']),
             ec_factor_n_nh4=float(config['ec_factor_n_nh4']),
@@ -371,6 +394,11 @@ class NutrientParameters:
             xylem_only_transport_factor=float(config['xylem_only_transport_factor']),
             phloem_only_transport_factor=float(config['phloem_only_transport_factor']),
             transport_limitation_threshold=float(config['transport_limitation_threshold']),
+            # Ion properties for scientific EC
+            ion_molar_mass=ion_molar_mass,
+            ion_lambda0_25C=ion_lambda0_25C,
+            ion_valence=ion_valence,
+            temperature_coefficient_alpha=float(config['temperature_coefficient_alpha']),
             # Tissue composition and organ allocation - NO HARDCODED VALUES (Rules.md)
             tissue_nitrogen_content_fraction=float(config['tissue_nitrogen_content_fraction']),
             tissue_phosphorus_content_fraction=float(config['tissue_phosphorus_content_fraction']),
@@ -451,6 +479,11 @@ class NutrientModel:
         self.organ_pools: Dict[str, Dict[str, OrganNutrientPools]] = {}
         self.transport_history: List[Dict[str, Any]] = []
         self.cumulative_redistribution: Dict[str, float] = {}
+        # Ion property caches for EC calculation
+        self.ion_molar_mass = self.params.ion_molar_mass
+        self.ion_lambda0_25C = self.params.ion_lambda0_25C
+        self.ion_valence = self.params.ion_valence
+        self.temp_alpha = self.params.temperature_coefficient_alpha
     
     def initialize(self):
         """Initialize the nutrient model"""
@@ -502,7 +535,7 @@ class NutrientModel:
             if key not in env_conditions:
                 raise KeyError(f"Missing env_conditions key: {key}")
 
-        ec_value = self._calculate_ec_from_concentrations(concentrations)
+        ec_value = self._calculate_ec_from_concentrations(concentrations, env_conditions['temperature'])
         uptake_modifiers = self._calculate_uptake_modifiers(ec_value, env_conditions)
         uptake_rates = self._calculate_uptake_rates(concentrations, plant_status, env_conditions, uptake_modifiers)
         updated_concentrations = self._update_concentrations(concentrations, uptake_rates, plant_status)
@@ -517,12 +550,28 @@ class NutrientModel:
             'transport_limitations': mobility_response.transport_limitations
         }
 
-    def _calculate_ec_from_concentrations(self, concentrations: Dict[str, float]) -> float:
-        total_ec = 0.0
-        for nutrient, concentration in concentrations.items():
-            if nutrient in self.ec_factors:
-                total_ec += concentration * self.ec_factors[nutrient]
-        return total_ec
+    def _calculate_ec_from_concentrations(self, concentrations: Dict[str, float], temperature: float) -> float:
+        """Calculate EC using ion chemistry (Kohlrausch's law) with CSV-driven properties.
+        Returns EC in dS/m.
+        """
+        kappa_S_per_cm = 0.0
+        for ion, conc_mg_per_L in concentrations.items():
+            if ion not in self.ion_molar_mass or ion not in self.ion_lambda0_25C:
+                raise KeyError(f"Missing ion properties for {ion} in parameters")
+            molar_mass = self.ion_molar_mass[ion]  # g/mol
+            lambda0 = self.ion_lambda0_25C[ion]    # S·cm^2/mol at 25°C
+            # Convert mg/L -> mol/L, then to mol/cm^3
+            conc_mol_per_L = (conc_mg_per_L / 1000.0) / molar_mass
+            conc_mol_per_cm3 = conc_mol_per_L / 1000.0
+            # Conductivity contribution in S/cm
+            kappa_i = lambda0 * conc_mol_per_cm3
+            kappa_S_per_cm += kappa_i
+        # Temperature correction relative to 25°C
+        delta_t = temperature - 25.0
+        kappa_S_per_cm *= (1.0 + self.temp_alpha * delta_t)
+        # Convert S/cm to dS/m (1 S/cm = 1000 dS/m)
+        ec_dS_per_m = kappa_S_per_cm * 1000.0
+        return ec_dS_per_m
 
     def _calculate_uptake_modifiers(self, current_ec: float, env_conditions: Dict[str, Any]) -> Dict[str, float]:
         ec_ratio = current_ec / env_conditions['optimal_ec']
@@ -580,27 +629,26 @@ class NutrientModel:
                              plant_status: Dict[str, Any]) -> Dict[str, float]:
         updated = {}
         plant_count = plant_status['plant_count']
+        tank_volume_L = plant_status['tank_volume_L']
 
-        # Calculate root zone volume based on root surface area instead of tank volume
-        root_surface_area = plant_status['root_surface_area']  # cm²
-        # Rhizosphere layer thickness around roots for nutrient depletion (from CSV)
-        rhizosphere_thickness = self.params.rhizosphere_thickness_cm  # cm
-        root_zone_volume_cm3 = root_surface_area * rhizosphere_thickness  # cm³
-        root_zone_volume_L = root_zone_volume_cm3 / 1000.0  # Convert to L
-
-        # Minimum root zone volume to prevent unrealistic depletion (from CSV)
-        min_root_zone_volume = self.params.minimum_root_zone_volume_L  # L
-        root_zone_volume_L = max(min_root_zone_volume, root_zone_volume_L)
+        # IMPORTANT: uptake_rates are in mg/plant/DAY but simulation runs HOURLY
+        # Convert daily uptake to hourly uptake
+        hourly_conversion_factor = 1.0 / 24.0
 
         for nutrient, initial_conc in concentrations.items():
             if nutrient in uptake_rates:
-                # Calculate depletion based on root zone volume, not tank volume
-                initial_mass = initial_conc * root_zone_volume_L
-                total_uptake = uptake_rates[nutrient] * plant_count
-                final_mass = max(0.0, initial_mass - total_uptake)
+                # Convert daily uptake rate to hourly
+                daily_uptake_per_plant = uptake_rates[nutrient]  # mg/plant/day
+                hourly_uptake_per_plant = daily_uptake_per_plant * hourly_conversion_factor  # mg/plant/hour
 
-                # Concentration change is limited by what's available in root zone
-                concentration_change = total_uptake / root_zone_volume_L
+                # Calculate total hourly uptake for all plants
+                total_hourly_uptake = hourly_uptake_per_plant * plant_count  # mg/hour
+
+                # Calculate concentration change in the tank
+                # Concentration change = uptake / tank volume
+                concentration_change = total_hourly_uptake / tank_volume_L  # mg/L per hour
+
+                # Update concentration
                 updated[nutrient] = max(0.0, initial_conc - concentration_change)
             else:
                 updated[nutrient] = initial_conc

@@ -153,6 +153,8 @@ water_recovery_rate,0.3,per_day,Recovery rate from water stress
 nutrient_critical_threshold,0.1,fraction,Critical nutrient deficiency threshold
 nutrient_toxicity_threshold,3.0,dimensionless,Threshold for nutrient toxicity stress
 nutrient_recovery_rate,0.25,per_day,Recovery rate from nutrient stress
+light_compensation_point,50.0,μmol_m2_s,Light compensation point for lettuce (Bugbee 2016)
+light_saturation_point,1000.0,μmol_m2_s,Light saturation point for lettuce (Both et al. 2017)
 light_max_ppfd,2000.0,μmol_m2_s,Maximum PPFD before stress (2x saturation)
 light_photoinhibition_threshold,1800.0,μmol_m2_s,PPFD threshold for photoinhibition onset
 light_recovery_rate,0.4,per_day,Recovery rate from light stress

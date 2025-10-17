@@ -283,7 +283,18 @@ class CanopyArchitectureSimulator(BaseSimulator):
             self.state.lai = result.total_lai
             self.state.leaf_area = leaf_area  # From dependency data
             self.state.canopy_height = result.canopy_height
-            self.state.canopy_width = self.parameters.canopy_width
+
+            # Calculate canopy width from leaf area (for lettuce rosette)
+            # Assume circular rosette: area = π * r², width = 2*r = 2*sqrt(area/π)
+            # Use a packing efficiency factor (~0.7) since leaves overlap
+            packing_efficiency = 0.7
+            effective_area = leaf_area * packing_efficiency
+            if effective_area > 0:
+                canopy_radius = math.sqrt(effective_area / math.pi)
+                self.state.canopy_width = 2.0 * canopy_radius  # Diameter in meters
+            else:
+                self.state.canopy_width = self.parameters.canopy_width  # Use initial parameter
+
             self.state.ground_coverage = self._calculate_ground_coverage(total_lai)
             self.state.light_extinction_coefficient = result.average_extinction_coefficient
             self.state.sunlit_leaf_fraction = result.sunlit_lai / total_lai if total_lai > 0 else 0.0
@@ -315,7 +326,8 @@ class CanopyArchitectureSimulator(BaseSimulator):
                 'temperature': inputs.temperature,
                 'humidity': inputs.humidity,
                 'light_intensity': inputs.light_intensity,
-                'wind_speed': weather_data.get('wind_speed', 1.0)  # From weather data or minimal default
+                # Per Rules.md: wind_speed must come from weather data; no defaults here
+                'wind_speed': inputs.environmental_conditions.get('wind_speed') if hasattr(inputs, 'environmental_conditions') and isinstance(inputs.environmental_conditions, dict) else None
             }
             
             # Execute canopy architecture step using model functions
@@ -348,13 +360,8 @@ class CanopyArchitectureSimulator(BaseSimulator):
             )
             
         except Exception as e:
-            return DailyUpdateOutput(
-                day=inputs.day,
-                hour=inputs.hour,
-                outputs={},
-                status='error',
-                message=f'Canopy architecture calculation failed: {str(e)}'
-            )
+            # Per Rules.md: raise errors, don't return error objects
+            raise
     
     def get_current_state(self) -> Dict[str, Any]:
         """Get current simulator state"""

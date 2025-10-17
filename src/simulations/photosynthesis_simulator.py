@@ -314,13 +314,8 @@ class PhotosynthesisSimulator(BaseSimulator):
             )
             
         except Exception as e:
-            return DailyUpdateOutput(
-                day=inputs.day,
-                hour=inputs.hour,
-                outputs={},
-                status='error',
-                message=f'Photosynthesis calculation failed: {str(e)}'
-            )
+            # Per Rules.md: raise errors, don't return error objects
+            raise
     
     def get_current_state(self) -> Dict[str, Any]:
         """Get current simulator state"""

@@ -228,6 +228,7 @@ class WaterUptakeSimulator(BaseSimulator):
                     solar_radiation=solar_radiation,  # Use actual solar radiation in MJ/m²/day
                     lai=lai,
                     total_biomass=total_biomass,  # Get from biomass_allocation_simulator
+                    wind_speed=wind_speed,  # Use actual wind speed from weather data
                     growth_stage=growth_stage,  # Use actual growth stage from phenology
                     stress_factors={
                         'water_stress_level': water_stress,
@@ -253,10 +254,20 @@ class WaterUptakeSimulator(BaseSimulator):
                       f"solar_rad={solar_radiation:.1f}MJ/m²/day, "
                       f"ET0={result.et0_mm:.2f}mm/day, kc={result.kc:.3f}, ETC={result.etc_mm:.2f}mm/day, "
                       f"transp_mm={result.transpiration_mm:.4f}mm/day, "
-                      f"uptake={result.total_water_uptake_L:.4f}L/day, transp={result.transpiration_L:.4f}L/day")
+                      f"uptake={result.total_water_uptake_L:.6f}L/day, transp={result.transpiration_L:.6f}L/day")
             self.state.water_availability = 1.0 - (result.total_water_uptake_L / 10.0)  # Calculate from uptake
-            self.state.root_water_potential = -0.5  # Will come from root system model
-            self.state.leaf_water_potential = -1.0  # Will come from leaf water potential calculation
+
+            # Calculate water potentials based on water status and transpiration
+            # Root water potential: based on water availability (hydroponic = high availability)
+            # Range: -0.1 MPa (full) to -1.5 MPa (depleted)
+            self.state.root_water_potential = -0.1 - (1.0 - self.state.water_availability) * 1.4
+
+            # Leaf water potential: based on transpiration demand
+            # Range: -0.5 MPa (low transpiration) to -2.5 MPa (high transpiration)
+            # Normalize transpiration by typical max for lettuce (~0.015 L/h)
+            transpiration_stress = min(1.0, self.state.transpiration_rate / 0.015)
+            self.state.leaf_water_potential = -0.5 - (transpiration_stress * 2.0)
+
             self.state.hydraulic_conductance = result.total_hydraulic_conductance
             self.state.crop_coefficient = result.kc
             
@@ -312,13 +323,8 @@ class WaterUptakeSimulator(BaseSimulator):
             )
             
         except Exception as e:
-            return DailyUpdateOutput(
-                day=inputs.day,
-                hour=inputs.hour,
-                outputs={},
-                status='error',
-                message=f'Water uptake calculation failed: {str(e)}'
-            )
+            # Per Rules.md: raise errors, don't return error objects
+            raise
     
     def get_current_state(self) -> Dict[str, Any]:
         """Get current simulator state"""

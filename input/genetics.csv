@@ -35,7 +35,6 @@ adaptation_index_min,0.1,dimensionless,Minimum adaptation index value
 adaptation_index_max,1.0,dimensionless,Maximum adaptation index value
 expression_min,0.0,dimensionless,Minimum trait expression value
 expression_max,1.0,dimensionless,Maximum trait expression value
-default_trait_value,0.5,dimensionless,Default trait value when not specified
 default_adaptation_weight,0.6,dimensionless,Default weight for adaptation scoring
 default_yield_weight,0.25,dimensionless,Default weight for yield scoring
 default_temperature_stress_weight,0.5,dimensionless,Default weight for temperature stress

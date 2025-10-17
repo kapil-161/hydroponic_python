@@ -8,6 +8,7 @@ initial_leaf_number,2.0,dimensionless,Initial number of leaves (cotyledons + fir
 leaf_appearance_rate,1.0,leaves_per_phyllochron,Leaves per phyllochron unit
 max_individual_leaf_area,0.09,m2,Maximum area per individual mature leaf (30cm × 30cm = 900 cm²)
 leaf_area_expansion_rate,0.15,dimensionless,Natural cellular expansion rate per day
+daily_thermal_time_equivalent,17.0,°C_day_per_day,Expected daily thermal time accumulation for typical growing conditions (avg_temp - base_temp)
 drought_threshold,0.6,dimensionless,Water stress threshold for leaf development
 n_stress_threshold,0.7,dimensionless,Nitrogen stress threshold for leaf expansion
 temperature_stress_sensitivity,0.8,dimensionless,Response sensitivity to temperature stress

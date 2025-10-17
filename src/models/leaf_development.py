@@ -62,6 +62,7 @@ class LeafAreaParameters:
     specific_leaf_area: float
     max_individual_leaf_area: float
     leaf_area_expansion_rate: float
+    daily_thermal_time_equivalent: float  # Expected daily thermal time accumulation (°C-day/day)
     initial_leaf_area_factor: float
     early_leaf_size_factor: float
     late_leaf_size_factor: float
@@ -148,6 +149,7 @@ class LeafParameters:
                 specific_leaf_area=merged_params['specific_leaf_area'],
                 max_individual_leaf_area=merged_params['max_individual_leaf_area'],
                 leaf_area_expansion_rate=merged_params['leaf_area_expansion_rate'],
+                daily_thermal_time_equivalent=merged_params['daily_thermal_time_equivalent'],
                 initial_leaf_area_factor=merged_params['initial_leaf_area_factor'],
                 early_leaf_size_factor=merged_params['early_leaf_size_factor'],
                 late_leaf_size_factor=merged_params['late_leaf_size_factor'],
@@ -387,9 +389,8 @@ class LeafDevelopmentModel:
                 
                 elif cohort.stage == LeafStage.EXPANDING:
                     # Base expansion rate is per day, scale by thermal time ratio
-                    # Assumes ~17 °C-day per actual day (22°C - 5°C base)
-                    daily_thermal_time_equivalent = 17.0  # °C-day per actual day
-                    time_scale = daily_thermal_time / daily_thermal_time_equivalent if daily_thermal_time_equivalent > 0 else 0
+                    # Use CSV parameter for expected daily thermal time (avg_temp - base_temp)
+                    time_scale = daily_thermal_time / self.params.area.daily_thermal_time_equivalent if self.params.area.daily_thermal_time_equivalent > 0 else 0
                     base_expansion_rate = self.params.area.leaf_area_expansion_rate * time_scale
 
                     temperature_factor = get_required_stress_factor(stress_factors, 'temperature_factor', [1.0] * len(daily_thermal_time_list))[day_idx]

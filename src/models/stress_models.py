@@ -1024,7 +1024,7 @@ class IntegratedStressModel:
         """Initialize the stress model"""
         pass
     
-    def calculate_integrated_stress(self, temperature: float, humidity: float, 
+    def calculate_integrated_stress(self, temperature: float, humidity: float,
                                   light_intensity: float, co2_concentration: float,
                                   water_uptake_rate: float = None, transpiration_rate: float = None,
                                   water_availability: float = None, nutrient_availability: float = None,
@@ -1032,41 +1032,23 @@ class IntegratedStressModel:
                                   ph_stability: float = None, growth_stage: str = None,
                                   development_index: float = None, current_stress_state: Any = None,
                                   water_stress: float = None, nutrient_stress: float = None,
-                                  ph_stress: float = None) -> Dict[str, Any]:
-        """Calculate integrated stress factors from environmental conditions"""
+                                  ph_stress: float = None, temperature_stress: float = None,
+                                  light_stress: float = None) -> Dict[str, Any]:
+        """Calculate integrated stress factors from environmental conditions
+
+        Note: Individual stress calculations should be done in the simulator using CSV parameters.
+        This method integrates the already-calculated stress values.
+        """
         try:
-            # Create current stress levels dictionary
+            # Create current stress levels dictionary from provided stress values
+            # Simulator should calculate these using CSV parameters (no hardcoded thresholds)
             current_stress_levels = {}
-            
-            # Temperature stress (0 = no stress, 1 = maximum stress)
-            if temperature is not None:
-                if temperature < 15 or temperature > 30:
-                    current_stress_levels['temperature_stress'] = min(1.0, abs(temperature - 22.5) / 15.0)
-                else:
-                    current_stress_levels['temperature_stress'] = 0.0
-            
-            # Humidity stress
-            if humidity is not None:
-                if humidity < 40 or humidity > 80:
-                    current_stress_levels['humidity_stress'] = min(1.0, abs(humidity - 60) / 40.0)
-                else:
-                    current_stress_levels['humidity_stress'] = 0.0
-            
-            # Light stress
-            if light_intensity is not None:
-                if light_intensity < 200 or light_intensity > 1000:
-                    current_stress_levels['light_stress'] = min(1.0, abs(light_intensity - 600) / 800.0)
-                else:
-                    current_stress_levels['light_stress'] = 0.0
-            
-            # CO2 stress
-            if co2_concentration is not None:
-                if co2_concentration < 300 or co2_concentration > 1500:
-                    current_stress_levels['co2_stress'] = min(1.0, abs(co2_concentration - 900) / 1200.0)
-                else:
-                    current_stress_levels['co2_stress'] = 0.0
-            
-            # Add other stress factors if provided
+
+            # Use provided stress values (calculated by simulator from CSV parameters)
+            if temperature_stress is not None:
+                current_stress_levels['temperature_stress'] = temperature_stress
+            if light_stress is not None:
+                current_stress_levels['light_stress'] = light_stress
             if water_stress is not None:
                 current_stress_levels['water_stress'] = water_stress
             if nutrient_stress is not None:
@@ -1076,18 +1058,17 @@ class IntegratedStressModel:
             
             # Use the existing daily_update method
             response = self.daily_update(current_stress_levels)
-            
-            # Return simplified response for simulator
+
+            # Return response with stress_states for acclimation/damage extraction
             return {
                 'temperature_stress': current_stress_levels.get('temperature_stress', 0.0),
-                'humidity_stress': current_stress_levels.get('humidity_stress', 0.0),
                 'light_stress': current_stress_levels.get('light_stress', 0.0),
-                'co2_stress': current_stress_levels.get('co2_stress', 0.0),
                 'water_stress': current_stress_levels.get('water_stress', 0.0),
                 'nutrient_stress': current_stress_levels.get('nutrient_stress', 0.0),
                 'ph_stress': current_stress_levels.get('ph_stress', 0.0),
                 'overall_stress_factor': response.overall_stress_factor,
-                'stress_severity': response.stress_severity
+                'stress_severity': response.stress_severity,
+                'stress_states': response.stress_states
             }
             
         except Exception as e:
@@ -1190,7 +1171,9 @@ class IntegratedStressModel:
             if sensitivity is None:
                 raise ValueError(f"Sensitivity for {st} in process {process_type} must be provided")
             combined = min(state.acute_stress, state.chronic_stress * self.params.chronic_stress_weight + state.acute_stress * self.params.acute_stress_weight)
-            proc_stress = 1.0 - ((1.0 - combined) * sensitivity)
+            # Process stress factor: 1.0 = no impact, 0.0 = complete inhibition
+            # combined is stress level (0=none, 1=max), sensitivity is how much this process cares
+            proc_stress = 1.0 - (combined * sensitivity)
             indiv[st] = proc_stress
             if proc_stress < 0.9:
                 active[st] = proc_stress
@@ -1442,14 +1425,16 @@ class UnifiedStressCalculator:
             salinity_factor * ph_factor * oxygen_factor
         )
 
+        # Calculate stress levels (0 = no stress, 1 = maximum stress)
+        # Stress = 1 - factor (since factor of 1.0 = no stress)
         stress_levels = {
-            'temperature': min(1.0, max(0.0, 1.0 - combined_temp_factor) + math.sin(day * 0.1) * 0.1),
-            'water': min(1.0, max(0.0, 1.0 - water_factor) + math.sin(day * 0.1) * 0.05),
-            'light': min(1.0, max(0.0, 1.0 - light_factor) + math.sin(day * 0.1) * 0.03),
-            'nitrogen': min(1.0, max(0.0, 1.0 - nitrogen_factor) + math.sin(day * 0.1) * 0.02),
-            'salinity': min(1.0, max(0.0, 1.0 - salinity_factor) + math.sin(day * 0.1) * 0.01),
-            'ph': min(1.0, max(0.0, 1.0 - ph_factor) + math.sin(day * 0.1) * 0.01),
-            'oxygen': min(1.0, max(0.0, 1.0 - oxygen_factor) + math.sin(day * 0.1) * 0.01)
+            'temperature': min(1.0, max(0.0, 1.0 - combined_temp_factor)),
+            'water': min(1.0, max(0.0, 1.0 - water_factor)),
+            'light': min(1.0, max(0.0, 1.0 - light_factor)),
+            'nitrogen': min(1.0, max(0.0, 1.0 - nitrogen_factor)),
+            'salinity': min(1.0, max(0.0, 1.0 - salinity_factor)),
+            'ph': min(1.0, max(0.0, 1.0 - ph_factor)),
+            'oxygen': min(1.0, max(0.0, 1.0 - oxygen_factor))
         }
 
         return {

@@ -133,6 +133,13 @@ class NitrogenBalanceSimulator(BaseSimulator):
         self.history.clear()
         self.dependency_cache.clear()
         
+        # Persist system_config from initials.csv into dependency cache for consistent access
+        system_config = data.get('system_config', {})
+        if system_config:
+            self.dependency_cache['system_config'] = system_config
+            # Also store on state for resilience against cache resets
+            setattr(self.state, 'system_config', dict(system_config))
+        
         # Initialize model with parameters from CSV
         self.model.initialize()
 
@@ -180,8 +187,10 @@ class NitrogenBalanceSimulator(BaseSimulator):
             self.state.step_count += 1
             self.state.last_update = datetime.now()
             
-            # Store history
-            self.history.append(NitrogenBalanceState(**self.state.__dict__))
+            # Store history (exclude non-dataclass fields like system_config)
+            allowed_fields = getattr(NitrogenBalanceState, '__annotations__', {}).keys()
+            filtered_state = {k: v for k, v in self.state.__dict__.items() if k in allowed_fields}
+            self.history.append(NitrogenBalanceState(**filtered_state))
 
             # Publish state data to dependency cache
             self.publish_state_data()
@@ -228,14 +237,22 @@ class NitrogenBalanceSimulator(BaseSimulator):
     def _execute_nitrogen_balance_step(self, weather_data: Dict[str, Any]):
         """Execute nitrogen balance calculation using model functions - no shortcuts"""
         try:
+            # Ensure system_config is available (prefer persisted state copy)
+            if 'system_config' not in self.dependency_cache:
+                sc = getattr(self.state, 'system_config', None)
+                if sc is not None:
+                    self.dependency_cache['system_config'] = sc
             # Get nutrient data from nutrient models simulator
             nutrient_data = self.dependency_cache.get('nutrient_models_simulator', {})
             nitrogen_availability = nutrient_data.get('nitrogen_availability')
-            nitrogen_uptake = nutrient_data.get('nitrogen_uptake')
+            # Use nitrogen uptake rates directly from nutrient_models_simulator (authoritative source)
+            nitrogen_uptake_mg_per_plant_per_day = nutrient_data.get('total_nitrogen_uptake', nutrient_data.get('nitrogen_uptake'))
+            nitrate_uptake_rate = nutrient_data.get('nutrient_uptake_rates', {}).get('N-NO3', 0.0)
+            ammonium_uptake_rate = nutrient_data.get('nutrient_uptake_rates', {}).get('N-NH4', 0.0)
             root_activity = nutrient_data.get('root_activity')
 
             # Skip on first step if nutrient data not available yet (circular dependency)
-            if any(x is None for x in [nitrogen_availability, nitrogen_uptake, root_activity]):
+            if any(x is None for x in [nitrogen_availability, nitrogen_uptake_mg_per_plant_per_day, root_activity]):
                 if self.state.step_count == 0:
                     print(f"N-Balance: Skipping calculation on step 0 due to missing nutrient_models data")
                     return
@@ -302,20 +319,13 @@ class NitrogenBalanceSimulator(BaseSimulator):
                 mobile_nitrogen=self.state.nitrogen_pools.get('mobile', 0.0),
                 structural_nitrogen=self.state.nitrogen_pools.get('structural', 0.0)
             )
-            
-            # Calculate nitrogen balance using individual model methods
-            # Call individual methods since combined method doesn't exist
-            uptake_result = self.model.calculate_nitrogen_uptake(
-                root_mass=root_mass,
-                solution_concentrations={'NO3': nitrogen_availability * 0.7, 'NH4': nitrogen_availability * 0.3, 'amino_acids': nitrogen_availability * 0.05},
-                environmental_factors={
-                    'temperature_factor': 1.0,
-                    'water_status': 1.0,
-                    'root_health': 1.0,
-                    'ph_factor': 1.0
-                }
-            )
 
+            # USE UPTAKE VALUES DIRECTLY FROM NUTRIENT_MODELS_SIMULATOR
+            # The nutrient_models_simulator is the authoritative source for nitrogen uptake rates
+            # It already accounts for root surface area, Michaelis-Menten kinetics, environmental factors, etc.
+            # No need to recalculate here - this creates consistency across the system
+
+            # Calculate nitrogen demand and allocation using model methods
             demand_result = self.model.calculate_nitrogen_demand(
                 organ_growth_rates={'leaves': 0.1, 'stems': 0.05, 'roots': 0.05},
                 growth_stage=growth_stage,
@@ -326,13 +336,13 @@ class NitrogenBalanceSimulator(BaseSimulator):
                 }
             )
 
-            # Create result dict from individual calculations
+            # Create result dict using uptake from nutrient_models and demand from nitrogen_balance model
             total_demand = sum(demand_result.values()) if demand_result else 0.0
             result = {
-                'total_nitrogen_uptake': uptake_result.total_uptake if uptake_result else 0.0,
-                'nitrate_uptake': uptake_result.uptake_by_form.get('NO3', 0.0) if uptake_result else 0.0,
-                'ammonium_uptake': uptake_result.uptake_by_form.get('NH4', 0.0) if uptake_result else 0.0,
-                'amino_acid_uptake': uptake_result.uptake_by_form.get('amino_acids', 0.0) if uptake_result else 0.0,
+                'total_nitrogen_uptake': nitrogen_uptake_mg_per_plant_per_day,  # From nutrient_models (mg/plant/day)
+                'nitrate_uptake': nitrate_uptake_rate,  # From nutrient_models (mg/plant/day)
+                'ammonium_uptake': ammonium_uptake_rate,  # From nutrient_models (mg/plant/day)
+                'amino_acid_uptake': 0.0,  # Amino acids negligible in hydroponic lettuce
                 'total_nitrogen_allocation': total_demand,
                 'leaf_nitrogen_allocation': demand_result.get('leaves', 0.0) if demand_result else 0.0,
                 'stem_nitrogen_allocation': demand_result.get('stems', 0.0) if demand_result else 0.0,
@@ -397,9 +407,24 @@ class NitrogenBalanceSimulator(BaseSimulator):
                     self.state.remobilization_rates[organ] = remobilization_rates[organ]
             
             # Update cumulative values
-            hourly_nitrogen_uptake = result.get('nitrogen_uptake_rate', 0.0) * 3600  # Convert to hourly
-            self.state.cumulative_nitrogen_uptake += hourly_nitrogen_uptake
-            self.state.daily_nitrogen_uptake += hourly_nitrogen_uptake
+            # Use total_nitrogen_uptake returned by model (mg/plant/day)
+            # Convert to hourly TOTAL for the system and to grams (no implicit unit mismatch)
+            total_n_uptake_mg_per_plant_per_day = result.get('total_nitrogen_uptake', 0.0)
+            hourly_n_uptake_mg_per_plant = total_n_uptake_mg_per_plant_per_day / 24.0
+
+            # Retrieve plant_count from system_config injected by orchestrator
+            system_config = self.dependency_cache.get('system_config', {})
+            plant_count = system_config.get('plant_count')
+            if plant_count is None:
+                raise ValueError("NitrogenBalance: plant_count missing from system_config - no defaults allowed")
+
+            hourly_n_uptake_mg_total = hourly_n_uptake_mg_per_plant * plant_count
+            hourly_n_uptake_g_total = hourly_n_uptake_mg_total / 1000.0
+
+            self.state.cumulative_nitrogen_uptake += hourly_n_uptake_g_total
+            self.state.daily_nitrogen_uptake += hourly_n_uptake_g_total
+            # Keep total_nitrogen_uptake in sync (g, system total)
+            self.state.total_nitrogen_uptake = self.state.cumulative_nitrogen_uptake
             
         except Exception as e:
             # Raise error according to Rules.md - no error suppression
@@ -450,7 +475,7 @@ class NitrogenBalanceSimulator(BaseSimulator):
                 day=inputs.day,
                 success=True,
                 primary_results={
-                    'total_nitrogen_uptake': self.state.total_nitrogen_uptake,
+                    'total_nitrogen_uptake': self.state.cumulative_nitrogen_uptake,
                     'nitrogen_use_efficiency': self.state.nitrogen_use_efficiency,
                     'nitrogen_stress_index': self.state.nitrogen_stress_index
                 },
@@ -464,16 +489,8 @@ class NitrogenBalanceSimulator(BaseSimulator):
             )
             
         except Exception as e:
-            return DailyUpdateOutput(
-                model_name='nitrogen_balance_simulator',
-                day=inputs.day,
-                success=False,
-                primary_results={},
-                secondary_results={'error_message': str(e)},
-                internal_state={},
-                validation_result=None,
-                processing_time_ms=0.0
-            )
+            # Per Rules.md: raise errors, don't return error objects
+            raise
     
     def get_current_state(self) -> Dict[str, Any]:
         """Get current simulator state"""

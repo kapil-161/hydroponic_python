@@ -153,6 +153,20 @@ class SimulationOrchestrator(BaseSimulator):
         # Collect initial data from all simulators into shared cache
         self._collect_simulator_data_to_shared_cache()
 
+        # Inject system_config from initials.csv into shared cache for simulators that depend on it
+        if initial_state and 'system_config' in initial_state:
+            system_config_seed = dict(initial_state['system_config'])
+            # Provide daily_growth_rate from initials.csv strictly (no defaults)
+            if 'daily_growth_rate' not in system_config_seed:
+                # Look for relative_growth_rate under initial_state block
+                try:
+                    rel_gr = initial_state.get('initial_state', {}).get('relative_growth_rate')
+                except Exception:
+                    rel_gr = None
+                if rel_gr is not None:
+                    system_config_seed['daily_growth_rate'] = rel_gr
+            self.shared_data_cache['system_config'] = system_config_seed
+
 
         # Start simulation loop
         self._run_simulation_loop(weather_data)
@@ -347,7 +361,8 @@ class SimulationOrchestrator(BaseSimulator):
                         'hour': self.current_hour,
                         'weather_data': weather_data,
                         'step': self.current_step,
-                        'shared_data': self.shared_data_cache  # Provide shared cache
+                        'shared_data': self.shared_data_cache,  # Provide shared cache
+                        'system_config': self.shared_data_cache.get('system_config', {})
                     }
 
                     # Inject shared data into simulator's dependency_cache before execution
@@ -645,8 +660,7 @@ class SimulationOrchestrator(BaseSimulator):
             base_record = {
                 'step': step_data['step'],
                 'day': step_data['day'],
-                'hour': step_data['hour'],
-                'timestamp': step_data['timestamp']
+                'hour': step_data['hour']
             }
 
             # Add simulator-specific data
@@ -668,7 +682,7 @@ class SimulationOrchestrator(BaseSimulator):
         print(f"Combined results exported to: {output_path}")
 
         # Export separate CSV files for each simulator
-        base_cols = ['step', 'day', 'hour', 'timestamp']
+        base_cols = ['step', 'day', 'hour']
         exported_files = []
 
         for simulator_id in self.simulators.keys():

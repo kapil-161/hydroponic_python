@@ -731,7 +731,6 @@ class StrictParameterLoader:
 
         # Water parameters
         config['water_parameters']['psychrometric_constant'] = self.get_parameter('water_parameters_psychrometric_constant')
-        config['water_parameters']['wind_speed'] = self.get_parameter('water_parameters_wind_speed')
         config['water_parameters']['net_radiation_factor'] = self.get_parameter('water_parameters_net_radiation_factor')
         config['water_parameters']['radiation_offset'] = self.get_parameter('water_parameters_radiation_offset')
         config['water_parameters']['base_crop_coefficient'] = self.get_parameter('water_parameters_base_crop_coefficient')
@@ -937,6 +936,16 @@ class StrictParameterLoader:
             phloem_factor = self.get_parameter('nutrient_parameters_phloem_transport_factor')
             config[f'phloem_transport_rates_{nutrient}'] = config[f'xylem_transport_rates_{nutrient}'] * phloem_factor
 
+        # Ion properties for EC calculation (literature-based, CSV-driven)
+        # Global temperature coefficient
+        config['temperature_coefficient_alpha'] = self.get_parameter('nutrient_parameters_temperature_coefficient_alpha')
+
+        # Per-ion properties: molar mass, limiting molar conductivity at 25C, valence
+        for nutrient in nutrients:
+            config[f'molar_mass_{nutrient}'] = self.get_parameter(f'nutrient_parameters_molar_mass_{nutrient}')
+            config[f'lambda0_25C_{nutrient}'] = self.get_parameter(f'nutrient_parameters_lambda0_25C_{nutrient}')
+            config[f'valence_{nutrient}'] = self.get_parameter(f'nutrient_parameters_valence_{nutrient}')
+
         # Provide minimal required parameters for complex data structures
         # Load base values from CSV - per Rules.md: no hardcoded values
         base_buffering = self.get_parameter('nitrogen_balance_buffering_capacity_base')
@@ -1101,15 +1110,15 @@ class StrictParameterLoader:
         config['initial_root_diameter'] = self.get_parameter('root_system_parameters_initial_root_diameter')
 
         # Root growth parameters - ALL from CSV per Rules.md
-        config['primary_root_growth_rate'] = self.get_parameter('root_system_parameters_primary_root_growth_rate_default')
-        config['lateral_root_density'] = self.get_parameter('root_system_parameters_lateral_root_density_default')
-        config['branching_angle_mean'] = self.get_parameter('root_system_parameters_branching_angle_mean_default')
-        config['branching_angle_std'] = self.get_parameter('root_system_parameters_branching_angle_std_default')
+        config['primary_root_growth_rate'] = self.get_parameter('root_system_parameters_primary_root_growth_rate')
+        config['lateral_root_density'] = self.get_parameter('root_system_parameters_lateral_root_density')
+        config['branching_angle_mean'] = self.get_parameter('root_system_parameters_branching_angle_mean')
+        config['branching_angle_std'] = self.get_parameter('root_system_parameters_branching_angle_std')
 
         # Root type fractions - ALL from CSV per Rules.md
-        config['fine_root_fraction'] = self.get_parameter('root_system_parameters_fine_root_fraction_default')
-        config['medium_root_fraction'] = self.get_parameter('root_system_parameters_medium_root_fraction_default')
-        config['coarse_root_fraction'] = self.get_parameter('root_system_parameters_coarse_root_fraction_default')
+        config['fine_root_fraction'] = self.get_parameter('root_system_parameters_fine_root_fraction')
+        config['medium_root_fraction'] = self.get_parameter('root_system_parameters_medium_root_fraction')
+        config['coarse_root_fraction'] = self.get_parameter('root_system_parameters_coarse_root_fraction')
 
         # Root diameter parameters
         config['fine_diameter_mean'] = self.get_parameter('root_system_parameters_fine_diameter_mean')
@@ -1379,7 +1388,7 @@ class StrictParameterLoader:
         config['leaf_development'] = {}
         leaf_dev_params = [
             'base_phyllochron', 'max_leaf_number', 'initial_leaf_number', 'leaf_appearance_rate',
-            'max_individual_leaf_area', 'leaf_area_expansion_rate', 'drought_threshold', 'n_stress_threshold',
+            'max_individual_leaf_area', 'leaf_area_expansion_rate', 'daily_thermal_time_equivalent', 'drought_threshold', 'n_stress_threshold',
             'temperature_stress_sensitivity', 'initial_leaf_area_factor', 'initial_thermal_time_factor',
             'emerging_to_expanding_factor', 'late_leaf_phyllochron_factor', 'very_late_leaf_phyllochron_factor',
             'early_leaf_size_factor', 'late_leaf_size_factor', 'leaf_maturation_thermal_time',

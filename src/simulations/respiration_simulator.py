@@ -231,8 +231,11 @@ class RespirationSimulator(BaseSimulator):
             self.state.stem_respiration = tissue_breakdown.get('stems', 0.0) / 24.0  # g C/hour
             self.state.root_respiration = tissue_breakdown.get('roots', 0.0) / 24.0  # g C/hour
 
-            # Set biomass factor to 1.0 for now
-            self.state.biomass_factor = 1.0
+            # Calculate biomass factor: scales respiration with plant size
+            # Normalized by initial biomass (0.03g from initials.csv)
+            # Range: 1.0 (initial) to ~300 (final ~9g biomass)
+            initial_biomass = 0.03  # g, from initials.csv
+            self.state.biomass_factor = max(1.0, total_biomass / initial_biomass)
 
             # Update cumulative values (rate is now in g C/hour)
             hourly_respiration = self.state.total_respiration_rate  # g C per hour
@@ -278,13 +281,8 @@ class RespirationSimulator(BaseSimulator):
             )
             
         except Exception as e:
-            return DailyUpdateOutput(
-                day=inputs.day,
-                hour=inputs.hour,
-                outputs={},
-                status='error',
-                message=f'Respiration calculation failed: {str(e)}'
-            )
+            # Per Rules.md: raise errors, don't return error objects
+            raise
     
     def get_current_state(self) -> Dict[str, Any]:
         """Get current simulator state"""

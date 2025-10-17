@@ -248,12 +248,33 @@ class RootSystemSimulator(BaseSimulator):
                 'nutrient_concentrations': nutrient_concentrations  # From nutrient models simulator
             }
             
+            # Get stress data for root growth
+            stress_data = self.dependency_cache.get('stress_models', {})
+            nitrogen_stress = stress_data.get('nitrogen_stress', 0.0)
+            water_stress = stress_data.get('water_stress', 0.0)
+            temperature_stress = stress_data.get('temperature_stress', 0.0)
+
             growth_factors = {
                 'temperature': temperature,
                 'water_availability': 1.0,
-                'nutrient_availability': nutrient_availability
+                'nutrient_availability': nutrient_availability,
+                'nitrogen_stress': nitrogen_stress,
+                'water_stress': water_stress,
+                'temperature_stress': temperature_stress
             }
-            
+
+            # Update environmental conditions in zones BEFORE generating new roots
+            # This is critical - zones need current conditions for growth potential calculation
+            self.model.update_environmental_conditions(environmental_conditions)
+
+            # Generate new root growth based on biomass increase and stress factors
+            # This updates the root cohorts within the model
+            new_root_growth = self.model.generate_new_roots(growth_factors, environmental_conditions)
+
+            # Update root aging (daily aging of existing roots)
+            if weather_data.get('hour', 0) == 0:  # Once per day
+                self.model.update_root_aging()
+
             result = self.model.calculate_hourly_root_metrics(
                 environmental_conditions=environmental_conditions,
                 growth_factors=growth_factors,
@@ -355,16 +376,8 @@ class RootSystemSimulator(BaseSimulator):
             )
             
         except Exception as e:
-            return DailyUpdateOutput(
-                model_name='root_system_simulator',
-                day=inputs.day,
-                success=False,
-                primary_results={},
-                secondary_results={'error_message': f'Root system calculation failed: {str(e)}'},
-                internal_state={},
-                validation_result=None,
-                processing_time_ms=0.0
-            )
+            # Per Rules.md: raise errors, don't return error objects
+            raise
     
     def get_current_state(self) -> Dict[str, Any]:
         """Get current simulator state"""

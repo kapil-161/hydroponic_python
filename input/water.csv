@@ -2,8 +2,19 @@ parameter_name,value,unit,description
 # Water Uptake and Transpiration Model Parameters
 # All water-related parameters for evapotranspiration, water uptake, and plant water relations
 # Includes Penman-Monteith parameters, crop coefficients, and environmental responses
+
+# Penman-Monteith equation parameters (FAO-56 standard)
+kelvin_conversion,273.15,K,Kelvin conversion constant (0°C = 273.15K)
+saturation_vapor_pressure_constant,0.6108,kPa,Saturation vapor pressure constant at 0°C
+vapor_pressure_temp_coefficient,17.27,dimensionless,Vapor pressure temperature coefficient
+vapor_pressure_base_temp,237.3,°C,Base temperature for vapor pressure calculation
+saturation_curve_slope_constant,4098.0,dimensionless,Saturation vapor pressure curve slope constant
+penman_monteith_conversion,0.408,dimensionless,Penman-Monteith conversion factor (MJ to mm)
+aerodynamic_resistance_coefficient,900.0,dimensionless,Aerodynamic resistance coefficient for reference crop
+wind_speed_coefficient,0.34,dimensionless,Wind speed coefficient in denominator
+
+# Other ET0 parameters
 psychrometric_constant,0.665,kPa_°C,Psychrometric constant for Penman-Monteith
-wind_speed,2.0,m_s,Wind speed for evapotranspiration calculations
 net_radiation_factor,0.77,dimensionless,Fraction of solar radiation converted to net radiation
 radiation_offset,2.45,MJ_m2_day,Radiation offset for net radiation calculation
 base_crop_coefficient,1.0,dimensionless,Base crop coefficient for lettuce

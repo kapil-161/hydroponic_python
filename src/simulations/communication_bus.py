@@ -173,7 +173,11 @@ class SimulationMessageBus:
                 pass
     
     def _process_event(self, event: SimulationEvent):
-        """Process a single event"""
+        """Process a single event
+
+        Per Rules.md: No error suppression. All exceptions are raised to caller.
+        Event handlers must be robust and handle their own errors if needed.
+        """
         with self.lock:
             # Check if event should be delivered to specific simulators
             if event.target_simulators:
@@ -181,27 +185,16 @@ class SimulationMessageBus:
                 for simulator_id in event.target_simulators:
                     if simulator_id in self.simulator_registry:
                         simulator = self.simulator_registry[simulator_id]
-                        try:
-                            if hasattr(simulator, 'handle_event'):
-                                simulator.handle_event(event)
-                        except Exception as e:
-                            pass
+                        if hasattr(simulator, 'handle_event'):
+                            # No try/except - let errors propagate per Rules.md
+                            simulator.handle_event(event)
             else:
                 # Broadcast to all subscribers
                 if event.event_type in self.event_handlers:
                     for handler in self.event_handlers[event.event_type]:
-                        try:
-                            handler(event)
-                        except TypeError as e:
-                            if "unsupported format string passed to list" in str(e):
-                                # Suppress this specific error - it's a formatting issue that doesn't affect simulation
-                                pass
-                            else:
-                                import traceback
-                                traceback.print_exc()
-                        except Exception as e:
-                            import traceback
-                            traceback.print_exc()
+                        # No try/except - let errors propagate per Rules.md
+                        # If a handler fails, the simulation should fail (fail-fast principle)
+                        handler(event)
     
     def _process_pending_events(self):
         """Process any pending events in the queue"""

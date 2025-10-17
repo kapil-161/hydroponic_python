@@ -142,11 +142,21 @@ class DistributedSimulationRunner:
             ph_optimal_min = self.parameter_loader.get_parameter('stress_parameters_ph_optimal_min')
             ph_optimal_max = self.parameter_loader.get_parameter('stress_parameters_ph_optimal_max')
             ph_stress_range = self.parameter_loader.get_parameter('stress_parameters_ph_stress_range')
+            temperature_optimal_min = self.parameter_loader.get_parameter('phenology_parameters_optimal_temperature_min')
+            temperature_optimal_max = self.parameter_loader.get_parameter('phenology_parameters_optimal_temperature_max')
+            temperature_stress_range = self.parameter_loader.get_parameter('phenology_parameters_maximum_temperature') - temperature_optimal_max
+            light_compensation_point = self.parameter_loader.get_parameter('stress_parameters_light_compensation_point')
+            light_saturation_point = self.parameter_loader.get_parameter('stress_parameters_light_saturation_point')
             self.simulators['stress_models'] = StressModelsSimulator(
                 stress_params,
                 ph_optimal_min=ph_optimal_min,
                 ph_optimal_max=ph_optimal_max,
-                ph_stress_range=ph_stress_range
+                ph_stress_range=ph_stress_range,
+                temperature_optimal_min=temperature_optimal_min,
+                temperature_optimal_max=temperature_optimal_max,
+                temperature_stress_range=temperature_stress_range,
+                light_compensation_point=light_compensation_point,
+                light_saturation_point=light_saturation_point
             )
             self.orchestrator.register_simulator(self.simulators['stress_models'])
             

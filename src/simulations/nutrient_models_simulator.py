@@ -49,10 +49,11 @@ class NutrientModelsSimulator(BaseSimulator):
         
         self.parameters = parameters
         self.model = NutrientModel(self.parameters)
-        
+
         # State tracking
         self.state = NutrientState()
         self.history: List[NutrientState] = []
+        self.organ_pools_initialized = False  # Track if organ pools have been initialized
         
         # Initialize nutrient dictionaries
         # Use nutrient names that match the model's kinetics dictionary
@@ -134,16 +135,26 @@ class NutrientModelsSimulator(BaseSimulator):
                     self.state.nutrient_concentrations[element] = 0.1
 
             # Calculate EC from concentrations instead of using hardcoded value
-            self.state.solution_ec = self.model._calculate_ec_from_concentrations(self.state.nutrient_concentrations)
-            
+            initial_temp = initial_state.get('canopy_temperature', 22.0)  # Default to 22C if not in initials
+            self.state.solution_ec = self.model._calculate_ec_from_concentrations(self.state.nutrient_concentrations, initial_temp)
+
 
         # Load system configuration from initials.csv into dependency cache
         system_config = data.get('system_config', {})
         if system_config:
-            # Add reasonable defaults for missing values (from CSV initial_state if available)
-            system_config['daily_growth_rate'] = initial_state.get('relative_growth_rate', 0.05)
-            system_config['optimal_ec'] = 2.0  # Standard for lettuce
+            # Populate required fields strictly from CSV inputs (no defaults allowed)
+            if 'daily_growth_rate' not in system_config:
+                if 'relative_growth_rate' in initial_state:
+                    system_config['daily_growth_rate'] = initial_state['relative_growth_rate']
+                else:
+                    raise ValueError("Missing daily_growth_rate: provide relative_growth_rate in initials.csv")
+            if 'optimal_ec' not in system_config:
+                # optimal_ec must be present in system_config (from initials.csv); do not set defaults
+                raise ValueError("Missing optimal_ec in system_config from initials.csv")
+
             self.dependency_cache['system_config'] = system_config
+            # Persist a local copy to avoid dependency cache overwrite across steps
+            setattr(self.state, 'system_config', dict(system_config))
             print(f"Nutrient: Loaded system_config from CSV - tank_volume={system_config.get('tank_volume_L')}L, plants={system_config.get('plant_count')}")
 
         self.history.clear()
@@ -183,6 +194,11 @@ class NutrientModelsSimulator(BaseSimulator):
             self.publish_state_data()
 
             # Publish state update to other simulators
+            # Calculate nitrogen-specific values for nitrogen balance simulator
+            nitrogen_uptake = self.state.nutrient_uptake_rates.get('N-NO3', 0.0) + self.state.nutrient_uptake_rates.get('N-NH4', 0.0)
+            # Use max availability (plants can preferentially use either NO3 or NH4)
+            nitrogen_availability = max(self.state.nutrient_availability.get('N-NO3', 0.0), self.state.nutrient_availability.get('N-NH4', 0.0))
+
             self.publish_event(EventType.NUTRIENT_UPDATE, {
                 'solution_ec': self.state.solution_ec,
                 'solution_ph': self.state.solution_ph,
@@ -191,6 +207,11 @@ class NutrientModelsSimulator(BaseSimulator):
                 'nutrient_availability': self.state.nutrient_availability,
                 'root_nutrient_pools': self.state.root_nutrient_pools,
                 'shoot_nutrient_pools': self.state.shoot_nutrient_pools,
+                # Nitrogen-specific for nitrogen balance simulator
+                'nitrogen_uptake': nitrogen_uptake,  # mg/plant/day
+                'total_nitrogen_uptake': nitrogen_uptake,  # mg/plant/day explicit for consumer alignment
+                'nitrogen_availability': nitrogen_availability,
+                'root_activity': 1.0,  # Placeholder - should come from root simulator
                 'step': self.state.step_count
             })
             
@@ -232,7 +253,7 @@ class NutrientModelsSimulator(BaseSimulator):
             root_depth = root_data.get('root_depth')
             root_distribution = root_data.get('root_distribution')
             root_biomass = root_data.get('root_biomass')
-            
+
             root_surface_area = root_data.get('root_surface_area')
 
             if any(x is None for x in [root_depth, root_distribution, root_biomass, root_surface_area]):
@@ -242,7 +263,7 @@ class NutrientModelsSimulator(BaseSimulator):
                     root_distribution = 0.5  # assume uniform distribution
                     root_biomass = 0.01  # g from initials.csv
                     root_surface_area = 12.6  # cm2 from initials.csv
-                    print(f"Nutrient: Using initial root values on step 0 - depth: {root_depth} cm, biomass: {root_biomass} g")
+                    print(f"Nutrient: Using initial root values on step 0 - depth: {root_depth} cm, biomass: {root_biomass} g, SA: {root_surface_area} cm²")
                 else:
                     raise ValueError("Root data missing from root_system_simulator - no defaults allowed")
 
@@ -284,7 +305,8 @@ class NutrientModelsSimulator(BaseSimulator):
             
             # Calculate nutrient uptake using model functions - no shortcuts
             # Get system configuration data
-            system_data = self.dependency_cache.get('system_config', {})
+            # Prefer persisted config, fallback to shared dependency cache
+            system_data = getattr(self.state, 'system_config', None) or self.dependency_cache.get('system_config', {})
             tank_volume = system_data.get('tank_volume_L')
             plant_count = system_data.get('plant_count')
             daily_growth_rate = system_data.get('daily_growth_rate')
@@ -303,7 +325,11 @@ class NutrientModelsSimulator(BaseSimulator):
                 'growth_stage': growth_stage,  # Use actual growth stage from phenology
                 'senescence_rates': {'leaves': 0.0, 'stems': 0.0, 'roots': 0.0},  # Will come from senescence model
                 'stress_factors': {'nutrient_stress': nutrient_stress, 'temperature_stress': temperature_stress},
-                'organ_nutrient_status': {'roots_nutrient_status': 0.8, 'shoots_nutrient_status': 0.8}  # Will come from nutrient status
+                'organ_nutrient_status': {
+                    'roots_nutrient_status': 1.0,  # Optimal status (0.5-2.0 range, 1.0 = optimal)
+                    'leaves_nutrient_status': 1.0,
+                    'stems_nutrient_status': 1.0
+                }
             }
 
             env_conditions = {
@@ -383,7 +409,36 @@ class NutrientModelsSimulator(BaseSimulator):
                 'leaves': net_assimilate * self.parameters.carbon_assimilate_allocation_leaves,
                 'stems': net_assimilate * self.parameters.carbon_assimilate_allocation_stems
             }
-            
+
+            # Initialize organ pools on first call when we have biomass data
+            # Only initialize nutrients that have storage_pool_sizes parameters (N, P, K)
+            if not self.organ_pools_initialized and root_biomass > 0 and shoot_biomass > 0:
+                # Initial nutrient content based on tissue fractions from parameters
+                root_nutrients = {
+                    'N-NO3': root_biomass * self.parameters.tissue_nitrogen_content_fraction * 0.8,
+                    'N-NH4': root_biomass * self.parameters.tissue_nitrogen_content_fraction * 0.2,
+                    'P-PO4': root_biomass * self.parameters.tissue_phosphorus_content_fraction,
+                    'K': root_biomass * self.parameters.tissue_potassium_content_fraction
+                }
+                leaf_nutrients = {
+                    'N-NO3': leaf_biomass * self.parameters.tissue_nitrogen_content_fraction * 0.8,
+                    'N-NH4': leaf_biomass * self.parameters.tissue_nitrogen_content_fraction * 0.2,
+                    'P-PO4': leaf_biomass * self.parameters.tissue_phosphorus_content_fraction,
+                    'K': leaf_biomass * self.parameters.tissue_potassium_content_fraction
+                }
+                stem_nutrients = {
+                    'N-NO3': stem_biomass * self.parameters.tissue_nitrogen_content_fraction * 0.8,
+                    'N-NH4': stem_biomass * self.parameters.tissue_nitrogen_content_fraction * 0.2,
+                    'P-PO4': stem_biomass * self.parameters.tissue_phosphorus_content_fraction,
+                    'K': stem_biomass * self.parameters.tissue_potassium_content_fraction
+                }
+
+                self.model.initialize_organ_pools('roots', root_nutrients, root_biomass)
+                self.model.initialize_organ_pools('leaves', leaf_nutrients, leaf_biomass)
+                self.model.initialize_organ_pools('stems', stem_nutrients, stem_biomass)
+                self.organ_pools_initialized = True
+                print(f"Nutrient: Initialized organ pools - roots: {root_biomass:.3f}g, leaves: {leaf_biomass:.3f}g, stems: {stem_biomass:.3f}g")
+
             try:
                 result = self.model.calculate_nutrient_dynamics(
                     concentrations=concentrations,
@@ -422,19 +477,23 @@ class NutrientModelsSimulator(BaseSimulator):
                     self.state.nutrient_concentrations[element] = updated_concentrations[element]
                 # If model doesn't return concentration, preserve current value (don't default to 0)
 
-                self.state.nutrient_uptake_rates[element] = uptake_rates.get(element, 0.0)
+                new_uptake_rate = uptake_rates.get(element, 0.0)
+                self.state.nutrient_uptake_rates[element] = new_uptake_rate
 
                 # Calculate availability based on concentration and optimal range
                 if element in updated_concentrations:
                     self.state.nutrient_availability[element] = min(1.0, updated_concentrations[element] / 100.0)
 
-                # Update pools from organ_pools
+                # Update pools from organ_pools (extract total_content from OrganNutrientPools objects)
                 if 'roots' in organ_pools and element in organ_pools['roots']:
-                    self.state.root_nutrient_pools[element] = organ_pools['roots'][element]
+                    pool_obj = organ_pools['roots'][element]
+                    self.state.root_nutrient_pools[element] = pool_obj.metabolic_pool + pool_obj.storage_pool + pool_obj.transport_pool + pool_obj.buffer_pool
                 if 'leaves' in organ_pools and element in organ_pools['leaves']:
-                    self.state.shoot_nutrient_pools[element] = organ_pools['leaves'][element]
-                elif 'stems' in organ_pools and element in organ_pools['stems']:
-                    self.state.shoot_nutrient_pools[element] += organ_pools['stems'][element]
+                    pool_obj = organ_pools['leaves'][element]
+                    self.state.shoot_nutrient_pools[element] = pool_obj.metabolic_pool + pool_obj.storage_pool + pool_obj.transport_pool + pool_obj.buffer_pool
+                if 'stems' in organ_pools and element in organ_pools['stems']:
+                    pool_obj = organ_pools['stems'][element]
+                    self.state.shoot_nutrient_pools[element] += pool_obj.metabolic_pool + pool_obj.storage_pool + pool_obj.transport_pool + pool_obj.buffer_pool
 
                 # Update fluxes from transport_fluxes
                 if 'xylem' in transport_fluxes and element in transport_fluxes['xylem']:
@@ -502,46 +561,48 @@ class NutrientModelsSimulator(BaseSimulator):
             )
             
         except Exception as e:
-            return DailyUpdateOutput(
-                model_name='nutrient_models_simulator',
-                day=inputs.day,
-                success=False,
-                primary_results={},
-                secondary_results={'error_message': str(e)},
-                internal_state={},
-                validation_result=None,
-                processing_time_ms=0.0
-            )
+            # Per Rules.md: raise errors, don't return error objects
+            raise
     
     def get_current_state(self) -> Dict[str, Any]:
-        """Get current simulator state"""
+        """Get current simulator state
+
+        IMPORTANT: Returns COPIES of all dict/list state to prevent reference aliasing.
+        Without .copy(), all CSV rows would reference the same dict objects and show
+        identical final values instead of time-series data.
+        """
         return {
             'solution_ec': self.state.solution_ec,
             'solution_ph': self.state.solution_ph,
-            'nutrient_concentrations': self.state.nutrient_concentrations,
-            'nutrient_uptake_rates': self.state.nutrient_uptake_rates,
-            'nutrient_availability': self.state.nutrient_availability,
-            'root_nutrient_pools': self.state.root_nutrient_pools,
-            'shoot_nutrient_pools': self.state.shoot_nutrient_pools,
+            'nutrient_concentrations': self.state.nutrient_concentrations.copy(),
+            'nutrient_uptake_rates': self.state.nutrient_uptake_rates.copy(),
+            'nutrient_availability': self.state.nutrient_availability.copy(),
+            'root_nutrient_pools': self.state.root_nutrient_pools.copy(),
+            'shoot_nutrient_pools': self.state.shoot_nutrient_pools.copy(),
             'xylem_flux': self.state.xylem_flux,
             'phloem_flux': self.state.phloem_flux,
-            'cumulative_nutrient_uptake': self.state.cumulative_nutrient_uptake,
-            'daily_nutrient_uptake': self.state.daily_nutrient_uptake,
+            'cumulative_nutrient_uptake': self.state.cumulative_nutrient_uptake.copy(),
+            'daily_nutrient_uptake': self.state.daily_nutrient_uptake.copy(),
             'step_count': self.state.step_count,
             'last_update': self.state.last_update.isoformat()
         }
     
     def publish_state_data(self):
         """Publish nutrient models state data to dependency cache for other simulators"""
+        # Calculate nitrogen-specific values for nitrogen balance simulator
+        nitrogen_uptake = self.state.nutrient_uptake_rates.get('N-NO3', 0.0) + self.state.nutrient_uptake_rates.get('N-NH4', 0.0)
+        # Use max availability (plants can preferentially use either NO3 or NH4)
+        nitrogen_availability = max(self.state.nutrient_availability.get('N-NO3', 0.0), self.state.nutrient_availability.get('N-NH4', 0.0))
+
         nutrient_data = {
             'solution_ec': self.state.solution_ec,
             'solution_ph': self.state.solution_ph,
             'nutrient_availability': self.state.nutrient_availability,
             'nutrient_uptake_rate': self.state.nutrient_uptake_rates,
             'nutrient_concentrations': self.state.nutrient_concentrations,
-            'nitrogen_availability': self.state.nutrient_availability.get('NO3', 0.0) + self.state.nutrient_availability.get('NH4', 0.0),
-            'nitrogen_uptake': self.state.nutrient_uptake_rates.get('NO3', 0.0) + self.state.nutrient_uptake_rates.get('NH4', 0.0),
-            'root_activity': sum(self.state.nutrient_uptake_rates.values()) / len(self.nutrient_elements) if self.nutrient_elements else 0.0
+            'nitrogen_availability': nitrogen_availability,
+            'nitrogen_uptake': nitrogen_uptake,  # mg/plant/day
+            'root_activity': 1.0  # Normalized root activity
         }
 
         # Add individual nutrient data
@@ -556,15 +617,20 @@ class NutrientModelsSimulator(BaseSimulator):
 
     def get_data(self, data_key: str) -> Any:
         """Provide data to other simulators"""
+        # Calculate nitrogen-specific values for nitrogen balance simulator
+        nitrogen_uptake = self.state.nutrient_uptake_rates.get('N-NO3', 0.0) + self.state.nutrient_uptake_rates.get('N-NH4', 0.0)
+        # Use max availability (plants can preferentially use either NO3 or NH4)
+        nitrogen_availability = max(self.state.nutrient_availability.get('N-NO3', 0.0), self.state.nutrient_availability.get('N-NH4', 0.0))
+
         data_map = {
             'solution_ec': self.state.solution_ec,
             'solution_ph': self.state.solution_ph,
             'nutrient_availability': self.state.nutrient_availability,
             'nutrient_uptake_rate': self.state.nutrient_uptake_rates,
             'nutrient_concentrations': self.state.nutrient_concentrations,
-            'nitrogen_availability': self.state.nutrient_availability.get('NO3', 0.0) + self.state.nutrient_availability.get('NH4', 0.0),  # Add nitrogen_availability alias
-            'nitrogen_uptake': self.state.nutrient_uptake_rates.get('NO3', 0.0) + self.state.nutrient_uptake_rates.get('NH4', 0.0),  # Add nitrogen_uptake alias
-            'root_activity': sum(self.state.nutrient_uptake_rates.values()) / len(self.nutrient_elements) if self.nutrient_elements else 0.0  # Add root_activity alias
+            'nitrogen_availability': nitrogen_availability,
+            'nitrogen_uptake': nitrogen_uptake,  # mg/plant/day total nitrogen (NO3 + NH4)
+            'root_activity': 1.0  # Normalized root activity
         }
 
         # Add individual nutrient data

@@ -268,11 +268,13 @@ class BiomassAllocationSimulator(BaseSimulator):
             # total_respiration_rate is already in g C/hour from respiration simulator
             net_carbon_gain = (hourly_carbon_gain - total_respiration_rate)  # g C/hour
 
-            # Convert net carbon gain to biomass using quantum use efficiency
-            # allocation_efficiency is quantum use efficiency (17 × 10⁻⁶ g/J from literature)
-            # carbon_content_fraction converts C to dry biomass (typically 0.42 for lettuce)
+            # Convert net carbon gain to biomass
+            # Photosynthesis model already converted light → carbon (includes quantum efficiency)
+            # Respiration model already subtracted maintenance + growth respiration
+            # So net_carbon_gain is the net carbon available for biomass growth
+            # carbon_content_fraction converts g C to g dry biomass (typically 0.42 for lettuce)
             carbon_fraction = self.parameters.carbon_content_fraction  # From CSV
-            hourly_biomass_gain = (net_carbon_gain / carbon_fraction) * allocation_efficiency  # g dry biomass/hour
+            hourly_biomass_gain = net_carbon_gain / carbon_fraction  # g dry biomass/hour
 
             # DEBUG: Log biomass gain for first few steps and key checkpoints
 
@@ -334,13 +336,8 @@ class BiomassAllocationSimulator(BaseSimulator):
             )
             
         except Exception as e:
-            return DailyUpdateOutput(
-                day=inputs.day,
-                hour=inputs.hour,
-                outputs={},
-                status='error',
-                message=f'Biomass allocation calculation failed: {str(e)}'
-            )
+            # Per Rules.md: raise errors, don't return error objects
+            raise
     
     def get_current_state(self) -> Dict[str, Any]:
         """Get current simulator state"""

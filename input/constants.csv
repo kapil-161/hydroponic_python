@@ -43,5 +43,5 @@ saturation_curve_slope_constant,4098,kPa_K,Slope of saturation vapor pressure cu
 
 # Water and Energy Constants
 penman_monteith_conversion,0.408,kPa_°C,Conversion factor for Penman-Monteith equation,Allen et al. (1998)
-aerodynamic_resistance_coefficient,0.34,s_m,Aerodynamic resistance coefficient for reference crop,Allen et al. (1998)
-wind_speed_coefficient,0.5,dimensionless,Wind speed coefficient for aerodynamic resistance,Allen et al. (1998)
+aerodynamic_resistance_coefficient,900.0,s_m,Aerodynamic resistance coefficient for reference crop (numerator term),Allen et al. (1998) FAO-56 eq. 6
+wind_speed_coefficient,0.34,s_m,Wind speed coefficient for aerodynamic resistance (denominator term),Allen et al. (1998) FAO-56 eq. 6

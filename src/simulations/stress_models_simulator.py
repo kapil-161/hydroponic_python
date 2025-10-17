@@ -47,7 +47,10 @@ class StressModelsSimulator(BaseSimulator):
     """Simulator for stress models - follows Rules.md strictly"""
 
     def __init__(self, parameters: IntegratedStressParameters = None, ph_optimal_min: float = None,
-                 ph_optimal_max: float = None, ph_stress_range: float = None):
+                 ph_optimal_max: float = None, ph_stress_range: float = None,
+                 temperature_optimal_min: float = None, temperature_optimal_max: float = None,
+                 temperature_stress_range: float = None, light_compensation_point: float = None,
+                 light_saturation_point: float = None):
         super().__init__("stress_models")
 
         # Initialize model - parameters MUST come from CSV, no defaults
@@ -58,11 +61,24 @@ class StressModelsSimulator(BaseSimulator):
         if ph_optimal_min is None or ph_optimal_max is None or ph_stress_range is None:
             raise ValueError("pH parameters (optimal_min, optimal_max, stress_range) must be provided from CSV - no defaults allowed per Rules.md")
 
+        # Temperature parameters must come from CSV
+        if temperature_optimal_min is None or temperature_optimal_max is None or temperature_stress_range is None:
+            raise ValueError("Temperature parameters (optimal_min, optimal_max, stress_range) must be provided from CSV - no defaults allowed per Rules.md")
+
+        # Light parameters must come from CSV
+        if light_compensation_point is None or light_saturation_point is None:
+            raise ValueError("Light parameters (compensation_point, saturation_point) must be provided from CSV - no defaults allowed per Rules.md")
+
         self.parameters = parameters
         self.model = IntegratedStressModel(self.parameters)
         self.ph_optimal_min = ph_optimal_min
         self.ph_optimal_max = ph_optimal_max
         self.ph_stress_range = ph_stress_range
+        self.temperature_optimal_min = temperature_optimal_min
+        self.temperature_optimal_max = temperature_optimal_max
+        self.temperature_stress_range = temperature_stress_range
+        self.light_compensation_point = light_compensation_point
+        self.light_saturation_point = light_saturation_point
         
         # State tracking
         self.state = StressState()
@@ -227,11 +243,37 @@ class StressModelsSimulator(BaseSimulator):
                 else:
                     raise ValueError(f"Required dependency data missing: {missing_data} - no defaults allowed per Rules.md")
 
-            # Use IntegratedStressModel for sophisticated stress calculations
+            # Calculate individual stress factors using CSV parameters
+
             # Water stress: convert availability (0-1) to stress (0-1)
             water_stress = 1.0 - min(1.0, max(0.0, water_availability))
+
             # Nutrient stress: convert availability (0-1) to stress (0-1)
             nutrient_stress = 1.0 - min(1.0, max(0.0, nitrogen_availability))
+
+            # Temperature stress calculation using parameters from CSV
+            if self.temperature_optimal_min <= temperature <= self.temperature_optimal_max:
+                temperature_stress = 0.0
+            elif temperature < self.temperature_optimal_min:
+                temperature_stress = min(1.0, (self.temperature_optimal_min - temperature) / self.temperature_stress_range)
+            else:
+                temperature_stress = min(1.0, (temperature - self.temperature_optimal_max) / self.temperature_stress_range)
+
+            # Light stress calculation using parameters from CSV
+            # Only calculate light stress during photoperiod (light_intensity > 0)
+            if light_intensity > 0:
+                if light_intensity < self.light_compensation_point:
+                    # Below compensation point = stress
+                    light_stress = min(1.0, (self.light_compensation_point - light_intensity) / self.light_compensation_point)
+                elif light_intensity > self.light_saturation_point * 2:
+                    # Above 2x saturation = excessive light stress
+                    light_stress = min(1.0, (light_intensity - self.light_saturation_point * 2) / (self.light_saturation_point * 2))
+                else:
+                    # Within optimal range
+                    light_stress = 0.0
+            else:
+                # No light stress at night (light_intensity = 0)
+                light_stress = 0.0
 
             # pH stress calculation using parameters from CSV
             if self.ph_optimal_min <= ph <= self.ph_optimal_max:
@@ -241,7 +283,7 @@ class StressModelsSimulator(BaseSimulator):
             else:
                 ph_stress = min(1.0, (ph - self.ph_optimal_max) / self.ph_stress_range)
 
-            # Call IntegratedStressModel to calculate all stress factors
+            # Call IntegratedStressModel to integrate all stress factors
             stress_result = self.model.calculate_integrated_stress(
                 temperature=temperature,
                 humidity=humidity,
@@ -255,6 +297,8 @@ class StressModelsSimulator(BaseSimulator):
                 ph=ph,
                 growth_stage=growth_stage,
                 development_index=development_index,
+                temperature_stress=temperature_stress,
+                light_stress=light_stress,
                 water_stress=water_stress,
                 nutrient_stress=nutrient_stress,
                 ph_stress=ph_stress
@@ -272,9 +316,20 @@ class StressModelsSimulator(BaseSimulator):
             self.state.integrated_stress = stress_result['overall_stress_factor']
             self.state.stress_severity = stress_result['stress_severity'].upper()
 
-            # Acclimation and damage (currently not calculated by model)
-            self.state.acclimation_level = 0.0
-            self.state.damage_level = 0.0
+            # Extract acclimation and damage from stress_states
+            # Get maximum acclimation and damage across all stress types
+            max_acclimation = 0.0
+            max_damage = 0.0
+            if 'stress_states' in stress_result:
+                stress_states = stress_result['stress_states']
+                for stress_type, state in stress_states.items():
+                    if hasattr(state, 'acclimation_level'):
+                        max_acclimation = max(max_acclimation, state.acclimation_level)
+                    if hasattr(state, 'damage_level'):
+                        max_damage = max(max_damage, state.damage_level)
+
+            self.state.acclimation_level = max_acclimation
+            self.state.damage_level = max_damage
 
             # Update cumulative values (accumulate actual stress, not deficit)
             hourly_stress = self.state.integrated_stress * 3600
@@ -327,16 +382,8 @@ class StressModelsSimulator(BaseSimulator):
             )
             
         except Exception as e:
-            return DailyUpdateOutput(
-                model_name="stress_models",
-                day=inputs.day,
-                success=False,
-                primary_results={},
-                secondary_results={'error_message': f'Stress calculation failed: {str(e)}'},
-                internal_state={},
-                validation_result=None,
-                processing_time_ms=1.0
-            )
+            # Per Rules.md: raise errors, don't return error objects
+            raise
     
     def get_current_state(self) -> Dict[str, Any]:
         """Get current simulator state"""
