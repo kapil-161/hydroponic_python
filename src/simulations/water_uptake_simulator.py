@@ -406,12 +406,22 @@ class WaterUptakeSimulator(BaseSimulator):
     
     def on_simulation_end(self, data: Dict[str, Any]):
         """Handle simulation end"""
+        # Get tissue water retention from biomass simulator
+        biomass_data = self.dependency_cache.get('biomass_allocation_simulator', {})
+        tissue_water_retention = biomass_data.get('cumulative_tissue_water_retention', 0.0)
+        total_fresh_weight = biomass_data.get('total_fresh_weight', 0.0)
+
+        total_water_used = self.state.cumulative_water_uptake + tissue_water_retention
+
         print(f"Water uptake simulator: Simulation ended after {self.state.step_count} steps")
         print(f"Total water uptake: {self.state.cumulative_water_uptake:.2f} L")
         print(f"Total transpiration: {self.state.cumulative_transpiration:.2f} L")
+        print(f"Tissue water retained: {tissue_water_retention:.3f} L")
+        print(f"Total water used: {total_water_used:.2f} L (transpiration + tissue retention)")
+        print(f"Final fresh weight: {total_fresh_weight:.2f} g")
         print(f"Final water availability: {self.state.water_availability:.3f}")
         print(f"Final crop coefficient: {self.state.crop_coefficient:.3f}")
-        
+
         # Publish final results
         self.publish_event(EventType.WATER_UPDATE, {
             'final_water_uptake_rate': self.state.water_uptake_rate,
@@ -424,6 +434,8 @@ class WaterUptakeSimulator(BaseSimulator):
             'final_crop_coefficient': self.state.crop_coefficient,
             'total_cumulative_water_uptake': self.state.cumulative_water_uptake,
             'total_cumulative_transpiration': self.state.cumulative_transpiration,
+            'tissue_water_retention': tissue_water_retention,
+            'total_water_used': total_water_used,
             'total_steps': self.state.step_count
         })
     

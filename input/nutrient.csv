@@ -26,10 +26,10 @@ ec_uptake_modifier_ca_high,0.1,dimensionless,Calcium uptake modifier under high 
 ec_uptake_modifier_n_low,0.2,dimensionless,Nitrogen uptake modifier under low EC
 ec_uptake_modifier_p_low,0.3,dimensionless,Phosphorus uptake modifier under low EC
 ec_uptake_modifier_fe_low,0.4,dimensionless,Iron uptake modifier under low EC
-kinetics_n_no3_vmax,0.5,mg_cm2_day,Maximum uptake rate for nitrate nitrogen (calibrated to realistic lettuce uptake ~100-150 mg/plant/day)
+kinetics_n_no3_vmax,0.051,mg_cm2_day,Maximum uptake rate for nitrate nitrogen (calibrated for 4% N content in lettuce ~8-10 mg/plant/day)
 kinetics_n_no3_km,15.0,mg_L,Michaelis constant for nitrate nitrogen
 kinetics_n_no3_min_conc,0.01,mg_L,Minimum concentration for nitrate nitrogen uptake
-kinetics_n_nh4_vmax,0.2,mg_cm2_day,Maximum uptake rate for ammonium nitrogen (calibrated to ~30-50 mg/plant/day)
+kinetics_n_nh4_vmax,0.020,mg_cm2_day,Maximum uptake rate for ammonium nitrogen (calibrated for 4% N content ~2-3 mg/plant/day)
 kinetics_n_nh4_km,5.0,mg_L,Michaelis constant for ammonium nitrogen
 kinetics_n_nh4_min_conc,0.2,mg_L,Minimum concentration for ammonium nitrogen uptake
 kinetics_p_po4_vmax,0.0008,mg_cm2_day,Maximum uptake rate for phosphate phosphorus (calibrated)

@@ -15,3 +15,6 @@ carbon_content_fraction,0.4,g C per g DM,Carbon to biomass conversion factor (ca
 carbon_allocation_roots,0.25,dimensionless,Fraction of net carbon allocated to roots
 carbon_allocation_leaves,0.65,dimensionless,Fraction of net carbon allocated to leaves
 carbon_allocation_stems,0.1,dimensionless,Fraction of net carbon allocated to stems
+leaf_water_content,0.95,fraction,Leaf tissue water content fraction (fresh weight basis)
+stem_water_content,0.92,fraction,Stem tissue water content fraction (fresh weight basis)
+root_water_content,0.88,fraction,Root tissue water content fraction (fresh weight basis)

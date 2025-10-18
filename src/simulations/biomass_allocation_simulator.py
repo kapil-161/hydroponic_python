@@ -32,6 +32,14 @@ class BiomassState:
     hourly_biomass_gain: float = 0.0  # Current hourly biomass gain rate
     cumulative_biomass_gain: float = 0.0
     daily_biomass_gain: float = 0.0
+    # Tissue water retention tracking
+    cumulative_tissue_water_retention: float = 0.0  # Total tissue water retained (L)
+    hourly_tissue_water_retention: float = 0.0  # Tissue water retention this hour (L)
+    daily_tissue_water_retention: float = 0.0  # Tissue water retention today (L)
+    total_fresh_weight: float = 0.0  # Total fresh weight (g)
+    leaf_fresh_weight: float = 0.0  # Leaf fresh weight (g)
+    stem_fresh_weight: float = 0.0  # Stem fresh weight (g)
+    root_fresh_weight: float = 0.0  # Root fresh weight (g)
     step_count: int = 0
     last_update: datetime = field(default_factory=datetime.now)
 
@@ -157,12 +165,16 @@ class BiomassAllocationSimulator(BaseSimulator):
                 'stem_allocation_fraction': self.state.stem_allocation_fraction,
                 'root_allocation_fraction': self.state.root_allocation_fraction,
                 'allocation_efficiency': self.state.allocation_efficiency,
+                'hourly_tissue_water_retention': self.state.hourly_tissue_water_retention,
+                'cumulative_tissue_water_retention': self.state.cumulative_tissue_water_retention,
+                'total_fresh_weight': self.state.total_fresh_weight,
                 'step': self.state.step_count
             })
-            
+
             # Daily reset
             if data.get('hour', 0) == 0:  # Start of new day
                 self.state.daily_biomass_gain = 0.0
+                self.state.daily_tissue_water_retention = 0.0
                 
         except Exception as e:
             self.publish_event(EventType.ERROR_OCCURRED, {
@@ -293,6 +305,25 @@ class BiomassAllocationSimulator(BaseSimulator):
                 self.state.root_biomass += new_root_biomass
                 self.state.total_biomass = self.state.leaf_biomass + self.state.stem_biomass + self.state.root_biomass
 
+                # Calculate tissue water retention for new biomass growth
+                biomass_growth = {
+                    'leaves': new_leaf_biomass,
+                    'stems': new_stem_biomass,
+                    'roots': new_root_biomass
+                }
+                tissue_water = self.model.calculate_tissue_water_retention(biomass_growth)
+
+                # Update tissue water tracking
+                self.state.hourly_tissue_water_retention = tissue_water['total']
+                self.state.cumulative_tissue_water_retention += tissue_water['total']
+                self.state.daily_tissue_water_retention += tissue_water['total']
+
+                # Calculate fresh weights (dry matter / (1 - water_content))
+                self.state.leaf_fresh_weight = self.state.leaf_biomass / (1.0 - self.parameters.leaf_water_content)
+                self.state.stem_fresh_weight = self.state.stem_biomass / (1.0 - self.parameters.stem_water_content)
+                self.state.root_fresh_weight = self.state.root_biomass / (1.0 - self.parameters.root_water_content)
+                self.state.total_fresh_weight = self.state.leaf_fresh_weight + self.state.stem_fresh_weight + self.state.root_fresh_weight
+
                 # Update cumulative values
                 self.state.cumulative_biomass_gain += hourly_biomass_gain
                 self.state.daily_biomass_gain += hourly_biomass_gain
@@ -369,7 +400,13 @@ class BiomassAllocationSimulator(BaseSimulator):
             'allocation_efficiency': self.state.allocation_efficiency,
             'hourly_biomass_gain': self.state.hourly_biomass_gain,  # For respiration calculator
             'cumulative_biomass_gain': self.state.cumulative_biomass_gain,
-            'daily_biomass_gain': self.state.daily_biomass_gain
+            'daily_biomass_gain': self.state.daily_biomass_gain,
+            'hourly_tissue_water_retention': self.state.hourly_tissue_water_retention,
+            'cumulative_tissue_water_retention': self.state.cumulative_tissue_water_retention,
+            'total_fresh_weight': self.state.total_fresh_weight,
+            'leaf_fresh_weight': self.state.leaf_fresh_weight,
+            'stem_fresh_weight': self.state.stem_fresh_weight,
+            'root_fresh_weight': self.state.root_fresh_weight
         }
 
         # Store in dependency cache for other simulators to access
@@ -416,13 +453,17 @@ class BiomassAllocationSimulator(BaseSimulator):
         print(f"Leaf biomass: {self.state.leaf_biomass:.2f} g DM")
         print(f"Stem biomass: {self.state.stem_biomass:.2f} g DM")
         print(f"Root biomass: {self.state.root_biomass:.2f} g DM")
-        
+        print(f"Total fresh weight: {self.state.total_fresh_weight:.2f} g")
+        print(f"Tissue water retained: {self.state.cumulative_tissue_water_retention:.3f} L")
+
         # Publish final results
         self.publish_event(EventType.BIOMASS_UPDATE, {
             'final_total_biomass': self.state.total_biomass,
             'final_leaf_biomass': self.state.leaf_biomass,
             'final_stem_biomass': self.state.stem_biomass,
             'final_root_biomass': self.state.root_biomass,
+            'final_total_fresh_weight': self.state.total_fresh_weight,
+            'final_tissue_water_retention': self.state.cumulative_tissue_water_retention,
             'final_allocation_efficiency': self.state.allocation_efficiency,
             'total_steps': self.state.step_count,
             'cumulative_biomass_gain': self.state.cumulative_biomass_gain

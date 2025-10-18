@@ -6,16 +6,16 @@ system_config,grow_area,1,m2,Growing area
 system_config,optimal_ec,1.2,dS_m,Optimal electrical conductivity for nutrient solution
 
 # Initial Plant State (at planting/germination)
-initial_state,root_biomass,0.01,g,Initial root biomass at transplant
+initial_state,root_biomass,0.0262,g,Initial root biomass at transplant (adjusted to match 5cm root length at SRL~191 cm/g)
 initial_state,shoot_biomass,0.02,g,Initial shoot biomass at transplant
 initial_state,leaf_biomass,0.015,g,Initial leaf biomass at transplant
 initial_state,stem_biomass,0.005,g,Initial stem biomass at transplant
-initial_state,total_biomass,0.03,g,Initial total plant biomass
+initial_state,total_biomass,0.0462,g,Initial total plant biomass (root 0.0262g + shoot 0.02g)
 initial_state,lai,0.001,m2_m2,Initial leaf area index
 initial_state,leaf_area,0.00001,m2,Initial leaf area per plant
 initial_state,plant_height,0.02,m,Initial plant height (2 cm)
 initial_state,root_length,5.0,cm,Initial root length (changed from m to cm)
-initial_state,root_surface_area,12.6,cm2,Initial root surface area (π × 0.8mm × 5cm)
+initial_state,root_surface_area,1.26,cm2,Initial root surface area (π × 0.08cm × 5cm = 1.26 cm²)
 
 # Initial Stress Levels (no stress at start)
 initial_state,water_stress,0.0,fraction,Initial water stress level

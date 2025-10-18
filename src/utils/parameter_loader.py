@@ -537,6 +537,11 @@ class StrictParameterLoader:
         params_dict['carbon_allocation_leaves'] = self.get_parameter('allocation_parameters_carbon_allocation_leaves')
         params_dict['carbon_allocation_stems'] = self.get_parameter('allocation_parameters_carbon_allocation_stems')
 
+        # Tissue water content fractions - NO HARDCODED VALUES (Rules.md)
+        params_dict['leaf_water_content'] = self.get_parameter('allocation_parameters_leaf_water_content')
+        params_dict['stem_water_content'] = self.get_parameter('allocation_parameters_stem_water_content')
+        params_dict['root_water_content'] = self.get_parameter('allocation_parameters_root_water_content')
+
         return BiomassAllocationParameters(**params_dict)
 
     def create_phenology_parameters(self):

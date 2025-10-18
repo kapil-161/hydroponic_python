@@ -29,6 +29,10 @@ class BiomassAllocationParameters:
     carbon_allocation_roots: float
     carbon_allocation_leaves: float
     carbon_allocation_stems: float
+    # Tissue water content fractions - NO HARDCODED VALUES (Rules.md)
+    leaf_water_content: float
+    stem_water_content: float
+    root_water_content: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'BiomassAllocationParameters':
@@ -39,7 +43,9 @@ class BiomassAllocationParameters:
             'light_response_factor', 'nitrogen_response_factor', 'water_response_factor',
             'minimum_organ_fraction', 'carbon_content_fraction', 'allocation_efficiency',
             # Carbon allocation fractions - NO HARDCODED VALUES (Rules.md)
-            'carbon_allocation_roots', 'carbon_allocation_leaves', 'carbon_allocation_stems'
+            'carbon_allocation_roots', 'carbon_allocation_leaves', 'carbon_allocation_stems',
+            # Tissue water content fractions - NO HARDCODED VALUES (Rules.md)
+            'leaf_water_content', 'stem_water_content', 'root_water_content'
         ]
         for param in required_params:
             if param not in config:
@@ -61,7 +67,11 @@ class BiomassAllocationParameters:
             # Carbon allocation fractions - NO HARDCODED VALUES (Rules.md)
             carbon_allocation_roots=float(config['carbon_allocation_roots']),
             carbon_allocation_leaves=float(config['carbon_allocation_leaves']),
-            carbon_allocation_stems=float(config['carbon_allocation_stems'])
+            carbon_allocation_stems=float(config['carbon_allocation_stems']),
+            # Tissue water content fractions - NO HARDCODED VALUES (Rules.md)
+            leaf_water_content=float(config['leaf_water_content']),
+            stem_water_content=float(config['stem_water_content']),
+            root_water_content=float(config['root_water_content'])
         )
 
 
@@ -182,6 +192,47 @@ class BiomassAllocationModel:
                         fractions[organ] -= reduction
 
         return fractions
+
+    def calculate_tissue_water_retention(self,
+                                        biomass_growth: Dict[str, float]) -> Dict[str, float]:
+        """
+        Calculate tissue water retained in growing biomass.
+
+        Scientific basis: Fresh weight = Dry matter / (1 - water_content)
+        Tissue water = Fresh weight - Dry matter
+
+        Args:
+            biomass_growth: Dictionary with organ dry matter growth (g)
+                          {'leaves': g, 'stems': g, 'roots': g}
+
+        Returns:
+            Dictionary with tissue water retention per organ (L)
+            {'leaves': L, 'stems': L, 'roots': L, 'total': L}
+        """
+        water_content_map = {
+            'leaves': self.params.leaf_water_content,
+            'stems': self.params.stem_water_content,
+            'roots': self.params.root_water_content
+        }
+
+        tissue_water = {}
+        total_water = 0.0
+
+        for organ, dry_matter_growth in biomass_growth.items():
+            if organ in water_content_map:
+                water_content = water_content_map[organ]
+                # Fresh weight = Dry matter / (1 - water_content)
+                # Tissue water = Fresh weight - Dry matter
+                # Simplified: Tissue water = Dry matter × (water_content / (1 - water_content))
+                tissue_water_g = dry_matter_growth * (water_content / (1.0 - water_content))
+                tissue_water_L = tissue_water_g / 1000.0  # Convert g to L (1g water = 1mL = 0.001L)
+                tissue_water[organ] = tissue_water_L
+                total_water += tissue_water_L
+            else:
+                tissue_water[organ] = 0.0
+
+        tissue_water['total'] = total_water
+        return tissue_water
 
 
 def create_lettuce_biomass_allocation_model(system_config: Any) -> BiomassAllocationModel:

@@ -33,6 +33,7 @@ class NutrientState:
     phloem_flux: Dict[str, float] = field(default_factory=dict)
     cumulative_nutrient_uptake: Dict[str, float] = field(default_factory=dict)
     daily_nutrient_uptake: Dict[str, float] = field(default_factory=dict)
+    system_config: Dict[str, Any] = field(default_factory=dict)  # System configuration data
     step_count: int = 0
     last_update: datetime = field(default_factory=datetime.now)
 
@@ -186,7 +187,7 @@ class NutrientModelsSimulator(BaseSimulator):
             # Update state
             self.state.step_count += 1
             self.state.last_update = datetime.now()
-            
+
             # Store history
             self.history.append(NutrientState(**self.state.__dict__))
 
@@ -439,26 +440,15 @@ class NutrientModelsSimulator(BaseSimulator):
                 self.organ_pools_initialized = True
                 print(f"Nutrient: Initialized organ pools - roots: {root_biomass:.3f}g, leaves: {leaf_biomass:.3f}g, stems: {stem_biomass:.3f}g")
 
-            try:
-                result = self.model.calculate_nutrient_dynamics(
-                    concentrations=concentrations,
-                    plant_status=plant_status,
-                    env_conditions=env_conditions,
-                    organ_demands=organ_demands,
-                    water_fluxes=water_fluxes,
-                    assimilate_fluxes=assimilate_fluxes
-                )
-                uptake_rates = result.get('uptake_rates_mg_per_plant_per_day', {})
-            except KeyError as e:
-                if "sink strength" in str(e) or "N-NO3" in str(e) or any(elem in str(e) for elem in self.nutrient_elements):
-                    # Skip nutrient calculation if parameters are missing
-                    result = {
-                        'solution_ec': self.state.solution_ec,
-                        'nutrient_concentrations': self.state.nutrient_concentrations,
-                        'nutrient_uptake_rates': self.state.nutrient_uptake_rates
-                    }
-                else:
-                    raise
+            # Per Rules.md: raise errors, don't skip calculations with missing parameters
+            result = self.model.calculate_nutrient_dynamics(
+                concentrations=concentrations,
+                plant_status=plant_status,
+                env_conditions=env_conditions,
+                organ_demands=organ_demands,
+                water_fluxes=water_fluxes,
+                assimilate_fluxes=assimilate_fluxes
+            )
             
             # Update state with model results - using actual keys returned by model
             self.state.solution_ec = result.get('calculated_ec', self.state.solution_ec)
@@ -599,9 +589,11 @@ class NutrientModelsSimulator(BaseSimulator):
             'solution_ph': self.state.solution_ph,
             'nutrient_availability': self.state.nutrient_availability,
             'nutrient_uptake_rate': self.state.nutrient_uptake_rates,
+            'nutrient_uptake_rates': self.state.nutrient_uptake_rates,  # For nitrogen balance simulator
             'nutrient_concentrations': self.state.nutrient_concentrations,
             'nitrogen_availability': nitrogen_availability,
             'nitrogen_uptake': nitrogen_uptake,  # mg/plant/day
+            'total_nitrogen_uptake': nitrogen_uptake,  # mg/plant/day (explicit for nitrogen balance simulator)
             'root_activity': 1.0  # Normalized root activity
         }
 
