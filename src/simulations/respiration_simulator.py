@@ -33,6 +33,7 @@ class RespirationState:
     cumulative_respiration: float = 0.0
     daily_respiration: float = 0.0
     daily_biomass_gain: float = 0.0  # Accumulator for daily biomass gain
+    last_update: datetime = field(default_factory=datetime.now)
     
 
 
@@ -92,7 +93,7 @@ class RespirationSimulator(BaseSimulator):
             self._execute_respiration_step(weather_data)
             
             # Update state
-            self.state.step_count += 1
+            self.current_step += 1
             self.state.last_update = datetime.now()
             
             # Store history
@@ -109,7 +110,7 @@ class RespirationSimulator(BaseSimulator):
                 'leaf_respiration': self.state.leaf_respiration,
                 'stem_respiration': self.state.stem_respiration,
                 'root_respiration': self.state.root_respiration,
-                'step': self.state.step_count
+                'step': self.current_step
             })
             
             # Daily reset
@@ -120,7 +121,7 @@ class RespirationSimulator(BaseSimulator):
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
-                'step': self.state.step_count
+                'step': self.current_step
             })
             # Per Rules.md: raise error, no fallbacks
             raise
@@ -187,13 +188,13 @@ class RespirationSimulator(BaseSimulator):
 
             # Accumulate daily biomass gain (reset every 24 hours)
             self.state.daily_biomass_gain += hourly_biomass_gain
-            current_hour = self.state.step_count % 24
+            current_hour = self.current_step % 24
 
             # Use daily biomass gain for respiration calculation (model expects g/day)
             # Scientific principle: Growth respiration only applies to positive growth
             # When respiration > photosynthesis, net growth is negative = no growth respiration
             # Reset accumulator at the start of each new day
-            if current_hour == 0 and self.state.step_count > 0:
+            if current_hour == 0 and self.current_step > 0:
                 total_new_growth = max(0.0, self.state.daily_biomass_gain)  # g/day, clamped to zero
                 self.state.daily_biomass_gain = 0.0  # Reset for next day
             else:
@@ -354,14 +355,14 @@ class RespirationSimulator(BaseSimulator):
     
     def on_simulation_end(self, data: Dict[str, Any]):
         """Handle simulation end"""
-        print(f"Respiration simulator: Simulation ended after {self.state.step_count} steps")
+        print(f"Respiration simulator: Simulation ended after {self.current_step} steps")
         print(f"Total respiration: {self.state.cumulative_respiration:.2f} g C")
         
         # Publish final results
         self.publish_event(EventType.RESPIRATION_UPDATE, {
             'final_cumulative_respiration': self.state.cumulative_respiration,
             'final_daily_respiration': self.state.daily_respiration,
-            'total_steps': self.state.step_count,
+            'total_steps': self.current_step,
             'avg_respiration_rate': sum(s.total_respiration_rate for s in self.history) / len(self.history) if self.history else 0
         })
     

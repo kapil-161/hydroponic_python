@@ -135,7 +135,7 @@ class CanopyArchitectureSimulator(BaseSimulator):
             self._execute_canopy_step(weather_data)
             
             # Update state
-            self.state.step_count += 1
+            self.current_step += 1
             self.state.last_update = datetime.now()
             
             
@@ -156,7 +156,7 @@ class CanopyArchitectureSimulator(BaseSimulator):
                 'sunlit_leaf_fraction': self.state.sunlit_leaf_fraction,
                 'shaded_leaf_fraction': self.state.shaded_leaf_fraction,
                 'light_interception_efficiency': self.state.light_interception_efficiency,
-                'step': self.state.step_count
+                'step': self.current_step
             })
             
             # Daily reset
@@ -167,7 +167,7 @@ class CanopyArchitectureSimulator(BaseSimulator):
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
-                'step': self.state.step_count
+                'step': self.current_step
             })
             # Per Rules.md: raise error, no fallbacks
             raise
@@ -183,7 +183,7 @@ class CanopyArchitectureSimulator(BaseSimulator):
 
             # Skip on first step if biomass data not available yet (circular dependency)
             if any(x is None for x in [leaf_biomass, total_biomass]):
-                if self.state.step_count == 0:
+                if self.current_step <= 2:
                     print(f"Canopy: Skipping calculation on step 0 due to missing biomass_allocation data")
                     return
                 raise ValueError("Biomass data missing from biomass_allocation_simulator - no defaults allowed")
@@ -449,7 +449,7 @@ class CanopyArchitectureSimulator(BaseSimulator):
     
     def on_simulation_end(self, data: Dict[str, Any]):
         """Handle simulation end"""
-        print(f"Canopy architecture simulator: Simulation ended after {self.state.step_count} steps")
+        print(f"Canopy architecture simulator: Simulation ended after {self.current_step} steps")
         print(f"Final LAI: {self.state.lai:.3f}")
         print(f"Final canopy height: {self.state.canopy_height:.2f} cm")
         print(f"Final ground coverage: {self.state.ground_coverage:.3f}")
@@ -468,7 +468,7 @@ class CanopyArchitectureSimulator(BaseSimulator):
             'final_shaded_leaf_fraction': self.state.shaded_leaf_fraction,
             'final_light_interception_efficiency': self.state.light_interception_efficiency,
             'total_light_interception': self.state.cumulative_light_interception,
-            'total_steps': self.state.step_count
+            'total_steps': self.current_step
         })
     
     def on_terminate(self, data: Dict[str, Any]):

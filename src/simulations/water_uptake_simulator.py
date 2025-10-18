@@ -33,6 +33,7 @@ class WaterUptakeState:
     daily_water_uptake: float = 0.0
     cumulative_transpiration: float = 0.0
     daily_transpiration: float = 0.0
+    last_update: datetime = field(default_factory=datetime.now)
     
 
 class WaterUptakeSimulator(BaseSimulator):
@@ -96,7 +97,7 @@ class WaterUptakeSimulator(BaseSimulator):
             self._execute_water_uptake_step(weather_data)
             
             # Update state
-            self.state.step_count += 1
+            self.current_step += 1
             self.state.last_update = datetime.now()
             
             # Store history
@@ -115,7 +116,7 @@ class WaterUptakeSimulator(BaseSimulator):
                 'leaf_water_potential': self.state.leaf_water_potential,
                 'hydraulic_conductance': self.state.hydraulic_conductance,
                 'crop_coefficient': self.state.crop_coefficient,
-                'step': self.state.step_count
+                'step': self.current_step
             })
             
             # Daily reset
@@ -127,7 +128,7 @@ class WaterUptakeSimulator(BaseSimulator):
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
-                'step': self.state.step_count
+                'step': self.current_step
             })
             # Raise error according to Rules.md - no error suppression
             raise
@@ -169,7 +170,7 @@ class WaterUptakeSimulator(BaseSimulator):
             canopy_height = canopy_data.get('canopy_height')
             
             if any(x is None for x in [lai, leaf_area, canopy_height]):
-                if self.state.step_count == 0:
+                if self.current_step <= 2:
                     print(f"Water: Skipping calculation on first step due to missing canopy data")
                     return
                 raise ValueError("Canopy data missing from canopy_architecture_simulator - no defaults allowed")
@@ -181,7 +182,7 @@ class WaterUptakeSimulator(BaseSimulator):
             root_biomass = root_data.get('root_biomass')
 
             if any(x is None for x in [root_depth, root_distribution, root_biomass]):
-                if self.state.step_count == 0:
+                if self.current_step <= 2:
                     print(f"Water: Skipping calculation on first step due to missing root data")
                     return
                 raise ValueError("Root data missing from root_system_simulator - no defaults allowed")
@@ -192,7 +193,7 @@ class WaterUptakeSimulator(BaseSimulator):
             development_index = phenology_data.get('development_index')
 
             if any(x is None for x in [growth_stage, development_index]):
-                if self.state.step_count == 0:
+                if self.current_step <= 2:
                     print(f"Water: Skipping calculation on first step due to missing phenology data")
                     return
                 raise ValueError("Phenology data missing from phenology_simulator - no defaults allowed")
@@ -203,7 +204,7 @@ class WaterUptakeSimulator(BaseSimulator):
             temperature_stress = stress_data.get('temperature_stress')
 
             if any(x is None for x in [water_stress, temperature_stress]):
-                if self.state.step_count == 0:
+                if self.current_step <= 2:
                     print(f"Water: Skipping calculation on first step due to missing stress data")
                     return
                 raise ValueError("Stress data missing from stress_models - no defaults allowed")
@@ -213,7 +214,7 @@ class WaterUptakeSimulator(BaseSimulator):
             total_biomass = biomass_data.get('total_biomass')
 
             if total_biomass is None:
-                if self.state.step_count == 0:
+                if self.current_step <= 2:
                     print(f"Water: Skipping calculation on first step due to missing biomass data")
                     return
                 raise ValueError("Total biomass missing from biomass_allocation_simulator - no defaults allowed")
@@ -236,7 +237,7 @@ class WaterUptakeSimulator(BaseSimulator):
                     solution_ec=stress_data.get('solution_ec', 1.5)  # Get from stress models or use typical hydroponic value
                 )
             except (TypeError, ValueError) as e:
-                if self.state.step_count == 0 and ("NoneType" in str(e) or "<=" in str(e)):
+                if self.current_step == 0 and ("NoneType" in str(e) or "<=" in str(e)):
                     return
                 raise
             
@@ -247,8 +248,8 @@ class WaterUptakeSimulator(BaseSimulator):
             self.state.evapotranspiration = result.etc_mm / 24.0
 
             # DEBUG: Print water uptake calculation
-            if self.state.step_count < 5 or self.state.step_count % 400 == 0:
-                print(f"Water step {self.state.step_count}: LAI={lai:.3f}, biomass={total_biomass:.2f}g, "
+            if self.current_step < 5 or self.current_step % 400 == 0:
+                print(f"Water step {self.current_step}: LAI={lai:.3f}, biomass={total_biomass:.2f}g, "
                       f"solar_rad={solar_radiation:.1f}MJ/m²/day, "
                       f"ET0={result.et0_mm:.2f}mm/day, kc={result.kc:.3f}, ETC={result.etc_mm:.2f}mm/day, "
                       f"transp_mm={result.transpiration_mm:.4f}mm/day, "
@@ -409,7 +410,7 @@ class WaterUptakeSimulator(BaseSimulator):
 
         total_water_used = self.state.cumulative_water_uptake + tissue_water_retention
 
-        print(f"Water uptake simulator: Simulation ended after {self.state.step_count} steps")
+        print(f"Water uptake simulator: Simulation ended after {self.current_step} steps")
         print(f"Total water uptake: {self.state.cumulative_water_uptake:.2f} L")
         print(f"Total transpiration: {self.state.cumulative_transpiration:.2f} L")
         print(f"Tissue water retained: {tissue_water_retention:.3f} L")
@@ -432,7 +433,7 @@ class WaterUptakeSimulator(BaseSimulator):
             'total_cumulative_transpiration': self.state.cumulative_transpiration,
             'tissue_water_retention': tissue_water_retention,
             'total_water_used': total_water_used,
-            'total_steps': self.state.step_count
+            'total_steps': self.current_step
         })
     
     def on_terminate(self, data: Dict[str, Any]):

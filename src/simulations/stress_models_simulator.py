@@ -39,6 +39,7 @@ class StressState:
     damage_level: float = 0.0
     cumulative_stress: float = 0.0
     daily_stress: float = 0.0
+    last_update: datetime = field(default_factory=datetime.now)
     
 
 class StressModelsSimulator(BaseSimulator):
@@ -146,7 +147,7 @@ class StressModelsSimulator(BaseSimulator):
             self._execute_stress_step(weather_data)
             
             # Update state
-            self.state.step_count += 1
+            self.current_step += 1
             self.state.last_update = datetime.now()
             
             # Store history
@@ -167,7 +168,7 @@ class StressModelsSimulator(BaseSimulator):
                 'stress_severity': self.state.stress_severity,
                 'acclimation_level': self.state.acclimation_level,
                 'damage_level': self.state.damage_level,
-                'step': self.state.step_count
+                'step': self.current_step
             })
             
             # Daily reset
@@ -178,7 +179,7 @@ class StressModelsSimulator(BaseSimulator):
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
-                'step': self.state.step_count
+                'step': self.current_step
             })
             # Per Rules.md: raise errors, don't suppress them
             raise e
@@ -234,12 +235,12 @@ class StressModelsSimulator(BaseSimulator):
             if development_index is None: missing_data.append('development_index')
 
             if missing_data:
-                # On first step, dependencies may not be available yet - use minimal stress levels
-                if self.state.step_count == 0:
-                    print(f"Stress: Skipping calculation on first step due to missing dependencies: {missing_data}")
+                # On early steps, dependencies may not be available yet - use minimal stress levels
+                if self.current_step <= 2:
+                    print(f"Stress: Skipping calculation on step {self.current_step} due to missing dependencies: {missing_data}")
                     return
                 else:
-                    raise ValueError(f"Required dependency data missing: {missing_data} - no defaults allowed per Rules.md")
+                    raise ValueError(f"Required dependency data missing at step {self.current_step}: {missing_data} - no defaults allowed per Rules.md")
 
             # Calculate individual stress factors using CSV parameters
 
@@ -463,7 +464,7 @@ class StressModelsSimulator(BaseSimulator):
     
     def on_simulation_end(self, data: Dict[str, Any]):
         """Handle simulation end"""
-        print(f"Stress models simulator: Simulation ended after {self.state.step_count} steps")
+        print(f"Stress models simulator: Simulation ended after {self.current_step} steps")
         print(f"Final integrated stress: {self.state.integrated_stress:.3f}")
         print(f"Final stress severity: {self.state.stress_severity}")
         print(f"Total cumulative stress: {self.state.cumulative_stress:.2f}")
@@ -483,7 +484,7 @@ class StressModelsSimulator(BaseSimulator):
             'final_acclimation_level': self.state.acclimation_level,
             'final_damage_level': self.state.damage_level,
             'total_cumulative_stress': self.state.cumulative_stress,
-            'total_steps': self.state.step_count
+            'total_steps': self.current_step
         })
     
     def on_terminate(self, data: Dict[str, Any]):

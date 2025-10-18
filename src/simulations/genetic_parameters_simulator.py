@@ -35,6 +35,7 @@ class GeneticState:
     heritability: Dict[str, float] = field(default_factory=dict)
     cumulative_genetic_response: float = 0.0
     daily_genetic_response: float = 0.0
+    last_update: datetime = field(default_factory=datetime.now)
     
 
 
@@ -152,7 +153,7 @@ class GeneticParametersSimulator(BaseSimulator):
             self._execute_genetic_parameters_step(weather_data)
             
             # Update state
-            self.state.step_count += 1
+            self.current_step += 1
             self.state.last_update = datetime.now()
             
             # Store history
@@ -172,7 +173,7 @@ class GeneticParametersSimulator(BaseSimulator):
                 'adaptation_index': self.state.adaptation_index,
                 'performance_index': self.state.performance_index,
                 'phenotype_expression': self.state.phenotype_expression,
-                'step': self.state.step_count
+                'step': self.current_step
             })
             
             # Daily reset
@@ -183,7 +184,7 @@ class GeneticParametersSimulator(BaseSimulator):
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
-                'step': self.state.step_count
+                'step': self.current_step
             })
             # Per Rules.md: raise errors, don't suppress them
             raise e
@@ -213,7 +214,7 @@ class GeneticParametersSimulator(BaseSimulator):
 
             # Skip on first step if stress data not available yet (circular dependency)
             if any(x is None for x in [temperature_stress, water_stress, nutrient_stress]):
-                if self.state.step_count == 0:
+                if self.current_step <= 2:
                     print(f"Genetic: Skipping calculation on step 0 due to missing stress_models data")
                     return
                 # Per Rules.md: no fallback values, data must come from stress models
@@ -354,7 +355,7 @@ class GeneticParametersSimulator(BaseSimulator):
             'heritability': self.state.heritability,
             'cumulative_genetic_response': self.state.cumulative_genetic_response,
             'daily_genetic_response': self.state.daily_genetic_response,
-            'step_count': self.state.step_count,
+            'step_count': self.current_step,
             'last_update': self.state.last_update.isoformat()
         }
     
@@ -442,7 +443,7 @@ class GeneticParametersSimulator(BaseSimulator):
     
     def on_simulation_end(self, data: Dict[str, Any]):
         """Handle simulation end"""
-        print(f"Genetic parameters simulator: Simulation ended after {self.state.step_count} steps")
+        print(f"Genetic parameters simulator: Simulation ended after {self.current_step} steps")
         print(f"Cultivar: {self.state.cultivar_name} ({self.state.lettuce_type})")
         print(f"Final adaptation index: {self.state.adaptation_index:.3f}")
         print(f"Final performance index: {self.state.performance_index:.3f}")
@@ -465,7 +466,7 @@ class GeneticParametersSimulator(BaseSimulator):
             'final_performance_index': self.state.performance_index,
             'final_phenotype_expressions': self.state.phenotype_expression,
             'total_genetic_response': self.state.cumulative_genetic_response,
-            'total_steps': self.state.step_count
+            'total_steps': self.current_step
         })
     
     def on_terminate(self, data: Dict[str, Any]):

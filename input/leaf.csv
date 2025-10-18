@@ -39,7 +39,7 @@ late_position_scaling_factor,10.0,dimensionless,Scaling factor for late leaf pos
 # Temperature Parameters
 minimum_temperature,4.5,°C,Minimum temperature for leaf development
 maximum_temperature,35.0,°C,Maximum temperature for leaf development
-specific_leaf_area,150.0,cm2_g,Specific leaf area (cm²/g dry weight)
+specific_leaf_area,200.0,cm2_g,Specific leaf area (cm²/g dry weight) - higher for hydroponic lettuce with optimal light
 
 # Initial Leaf Development Parameters
 initial_leaf_stage,emerging,string,Initial leaf development stage

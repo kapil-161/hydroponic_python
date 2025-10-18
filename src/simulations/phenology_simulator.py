@@ -32,6 +32,7 @@ class PhenologyState:
     cumulative_thermal_time: float = 0.0
     daily_thermal_time: float = 0.0
     stage_progress_fraction: float = 0.0
+    last_update: datetime = field(default_factory=datetime.now)
     
 class PhenologySimulator(BaseSimulator):
     """Simulator for phenology processes - follows Rules.md strictly"""
@@ -131,8 +132,7 @@ class PhenologySimulator(BaseSimulator):
                 self.state.days_in_current_stage += 1
                 self.state.total_days_from_planting += 1
 
-            # Update state
-            self.state.step_count += 1
+            # Update timestamp
             self.state.last_update = datetime.now()
 
             # Store history
@@ -151,14 +151,14 @@ class PhenologySimulator(BaseSimulator):
                 'days_in_current_stage': self.state.days_in_current_stage,
                 'total_days_from_planting': self.state.total_days_from_planting,
                 'stage_progress_fraction': self.state.stage_progress_fraction,
-                'step': self.state.step_count
+                'step': self.current_step
             })
                 
         except Exception as e:
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
-                'step': self.state.step_count
+                'step': self.current_step
             })
             # Per Rules.md: raise error, no fallbacks
             raise
@@ -178,7 +178,7 @@ class PhenologySimulator(BaseSimulator):
             if photoperiod is None:
                 # Calculate photoperiod from day of year and latitude (scientific method)
                 # This is NOT a default - it's a proper calculation from available data
-                day_of_year = weather_data.get('day_of_year', self.state.step_count)
+                day_of_year = weather_data.get('day_of_year', self.current_step)
                 latitude = weather_data.get('latitude', 40.0)  # Should be in system config
 
                 # Calculate day length using solar geometry (scientific formula)
@@ -354,7 +354,7 @@ class PhenologySimulator(BaseSimulator):
     
     def on_simulation_end(self, data: Dict[str, Any]):
         """Handle simulation end"""
-        print(f"Phenology simulator: Simulation ended after {self.state.step_count} steps")
+        print(f"Phenology simulator: Simulation ended after {self.current_step} steps")
         print(f"Final growth stage: {self.state.current_growth_stage}")
         print(f"Total thermal time: {self.state.cumulative_thermal_time:.2f} °C days")
         print(f"Development index: {self.state.development_index:.3f}")
@@ -367,7 +367,7 @@ class PhenologySimulator(BaseSimulator):
             'final_thermal_time': self.state.cumulative_thermal_time,
             'final_bolting_risk': self.state.bolting_risk,
             'total_days_from_planting': self.state.total_days_from_planting,
-            'total_steps': self.state.step_count,
+            'total_steps': self.current_step,
             'stage_transitions': len([s for s in self.history if s.current_growth_stage != self.state.current_growth_stage])
         })
     

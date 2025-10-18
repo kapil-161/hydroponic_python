@@ -1,7 +1,7 @@
 parameter_name,value,unit,description
-vegetative_leaf_allocation,0.65,dimensionless,Base leaf allocation fraction during vegetative stage
-vegetative_stem_allocation,0.1,dimensionless,Base stem allocation fraction during vegetative stage
-vegetative_root_allocation,0.25,dimensionless,Base root allocation fraction during vegetative stage
+vegetative_leaf_allocation,0.68,dimensionless,Base leaf allocation fraction during vegetative stage - higher in hydroponics
+vegetative_stem_allocation,0.12,dimensionless,Base stem allocation fraction during vegetative stage
+vegetative_root_allocation,0.20,dimensionless,Base root allocation fraction during vegetative stage - lower in hydroponics (abundant nutrients)
 reproductive_leaf_allocation,0.4,dimensionless,Base leaf allocation fraction during reproductive stage
 reproductive_stem_allocation,0.35,dimensionless,Base stem allocation fraction during reproductive stage
 reproductive_root_allocation,0.25,dimensionless,Base root allocation fraction during reproductive stage

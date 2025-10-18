@@ -63,6 +63,7 @@ class LeafDevelopmentState:
     phyllochron_adjusted: float = 0.0
     leaf_growth_stress: float = 1.0
     leaf_senescence_stress: float = 1.0
+    last_update: datetime = field(default_factory=datetime.now)
     
     # NOTE: leaf_area_index removed - LAI now calculated by canopy architecture using actual plant spacing
 
@@ -157,7 +158,7 @@ class LeafDevelopmentSimulator(BaseSimulator):
             self._execute_leaf_development_step(weather_data)
             
             # Update state
-            self.state.step_count += 1
+            self.current_step += 1
             self.state.last_update = datetime.now()
             
             # Store history
@@ -184,7 +185,7 @@ class LeafDevelopmentSimulator(BaseSimulator):
                 'phyllochron_adjusted': self.state.phyllochron_adjusted,
                 'leaf_growth_stress': self.state.leaf_growth_stress,
                 'leaf_senescence_stress': self.state.leaf_senescence_stress,
-                'step': self.state.step_count
+                'step': self.current_step
             })
             
             # Daily reset
@@ -195,7 +196,7 @@ class LeafDevelopmentSimulator(BaseSimulator):
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
-                'step': self.state.step_count
+                'step': self.current_step
             })
             # Raise error according to Rules.md - no error suppression
             raise
@@ -211,7 +212,7 @@ class LeafDevelopmentSimulator(BaseSimulator):
             
             # Skip on first step if weather data not available yet
             if any(x is None for x in [temperature, humidity, light_intensity]):
-                if self.state.step_count == 0:
+                if self.current_step <= 2:
                     print(f"Leaf Dev: Skipping calculation on step 0 due to missing weather data")
                     return
                 raise ValueError("Weather data missing - no defaults allowed")
@@ -222,7 +223,7 @@ class LeafDevelopmentSimulator(BaseSimulator):
             development_index = phenology_data.get('development_index')
             
             if any(x is None for x in [growth_stage, development_index]):
-                if self.state.step_count == 0:
+                if self.current_step <= 2:
                     print(f"Leaf Dev: Skipping calculation on step 0 due to missing phenology data")
                     return
                 raise ValueError("Phenology data missing from phenology_simulator - no defaults allowed")
@@ -498,7 +499,7 @@ class LeafDevelopmentSimulator(BaseSimulator):
     
     def on_simulation_end(self, data: Dict[str, Any]):
         """Handle simulation end"""
-        print(f"Leaf development simulator: Simulation ended after {self.state.step_count} steps")
+        print(f"Leaf development simulator: Simulation ended after {self.current_step} steps")
         print(f"Final total leaves: {self.state.total_leaves}")
         print(f"Final leaf area: {self.state.total_leaf_area:.2f} m²")
         print(f"Final leaf weight: {self.state.total_leaf_weight:.2f} g")
@@ -526,7 +527,7 @@ class LeafDevelopmentSimulator(BaseSimulator):
             'final_leaf_size_distribution': self.state.leaf_size_distribution,
             'final_leaf_nitrogen_distribution': self.state.leaf_nitrogen_distribution,
             'total_thermal_time': self.state.cumulative_thermal_time,
-            'total_steps': self.state.step_count
+            'total_steps': self.current_step
         })
     
     def on_terminate(self, data: Dict[str, Any]):

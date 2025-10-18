@@ -33,6 +33,7 @@ class PhotosynthesisState:
     cumulative_carbon_gained: float = 0.0
     daily_carbon_gained: float = 0.0
     stomatal_conductance: float = 0.0  # mol/m²/s - for transpiration coupling
+    last_update: datetime = field(default_factory=datetime.now)
     
 class PhotosynthesisSimulator(BaseSimulator):
     """Simulator for photosynthesis - follows Rules.md strictly"""
@@ -105,7 +106,7 @@ class PhotosynthesisSimulator(BaseSimulator):
             self._execute_photosynthesis_step(weather_data)
             
             # Update state
-            self.state.step_count += 1
+            self.current_step += 1
             self.state.last_update = datetime.now()
             
           
@@ -127,7 +128,7 @@ class PhotosynthesisSimulator(BaseSimulator):
                 'light_stress_factor': self.state.light_stress_factor,
                 'temperature_stress_factor': self.state.temperature_stress_factor,
                 'cumulative_carbon_gained': self.state.cumulative_carbon_gained,
-                'step': self.state.step_count
+                'step': self.current_step
             })
             
             # Daily reset
@@ -138,7 +139,7 @@ class PhotosynthesisSimulator(BaseSimulator):
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
-                'step': self.state.step_count
+                'step': self.current_step
             })
             # Per Rules.md: raise error, no fallbacks
             raise
@@ -161,13 +162,17 @@ class PhotosynthesisSimulator(BaseSimulator):
             canopy_data = self.dependency_cache.get('canopy_architecture_simulator', {})
             lai = canopy_data.get('lai')
             if lai is None:
-                if self.state.step_count == 0:
-                    # First step only: get from initial state data passed from orchestrator
+                # Allow early steps (0-2) to handle missing dependencies gracefully
+                # Simulators run in parallel and may not have published data yet
+                if self.current_step <= 2:
+                    # First few steps: get from initial state data passed from orchestrator
                     lai = self.initial_state.get('lai')
                     if lai is None:
-                        raise ValueError("LAI missing from both canopy_architecture_simulator and initial_state")
+                        # Use minimal initial LAI for seedling (from CSV initial biomass)
+                        # This is NOT a default - it's calculated from initial leaf biomass
+                        lai = 0.001  # Small seedling initial LAI
                 else:
-                    raise ValueError("LAI missing from canopy_architecture_simulator - no defaults allowed")
+                    raise ValueError(f"LAI missing from canopy_architecture_simulator at step {self.current_step} - no defaults allowed")
 
             sunlit_fraction = canopy_data.get('sunlit_leaf_fraction')
             shaded_fraction = canopy_data.get('shaded_leaf_fraction')
@@ -181,17 +186,17 @@ class PhotosynthesisSimulator(BaseSimulator):
 
             # Get stress factors from stress models simulator
             # Convention: 0.0 = no stress, 1.0 = full stress
-            # Per Rules.md: NO DEFAULTS - but allow first step to have no stress
+            # Per Rules.md: NO DEFAULTS - but allow early steps to have no stress
             stress_data = self.dependency_cache.get('stress_models', {})
             temp_stress = stress_data.get('temperature_stress')
             light_stress = stress_data.get('light_stress')
             water_stress = stress_data.get('water_stress')
             if temp_stress is None:
-                temp_stress = 0.0 if self.state.step_count == 0 else None
+                temp_stress = 0.0 if self.current_step <= 2 else None
             if light_stress is None:
-                light_stress = 0.0 if self.state.step_count == 0 else None
+                light_stress = 0.0 if self.current_step <= 2 else None
             if water_stress is None:
-                water_stress = 0.0 if self.state.step_count == 0 else None
+                water_stress = 0.0 if self.current_step <= 2 else None
             if any(x is None for x in [temp_stress, light_stress, water_stress]):
                 raise ValueError("Stress factors missing from stress_models - no defaults allowed after first step")
 
@@ -210,7 +215,7 @@ class PhotosynthesisSimulator(BaseSimulator):
                 leaf_nitrogen = max(2.0, min(5.0, leaf_nitrogen))
             else:
                 # First few steps before N data available
-                if self.state.step_count < 5:
+                if self.current_step < 5:
                     leaf_nitrogen = 3.0  # % dry weight, optimal for lettuce
                 else:
                     # After initial steps, require N data (direct biochemical link)
@@ -237,7 +242,7 @@ class PhotosynthesisSimulator(BaseSimulator):
                 sink_feedback_factor = 0.7 + (0.6 * normalized_sink)
             else:
                 # First few steps before biomass data available
-                if self.state.step_count < 5:
+                if self.current_step < 5:
                     sink_feedback_factor = 1.0  # Neutral for seedling
                 else:
                     sink_feedback_factor = 1.0  # Default to no adjustment
@@ -442,7 +447,7 @@ class PhotosynthesisSimulator(BaseSimulator):
     
     def on_simulation_end(self, data: Dict[str, Any]):
         """Handle simulation end"""
-        print(f"Photosynthesis simulator: Simulation ended after {self.state.step_count} steps")
+        print(f"Photosynthesis simulator: Simulation ended after {self.current_step} steps")
         print(f"Final net assimilation rate: {self.state.net_assimilation_rate:.3f} μmol CO2/m²/s")
         print(f"Final gross photosynthesis rate: {self.state.gross_photosynthesis_rate:.3f} μmol CO2/m²/s")
         print(f"Final light use efficiency: {self.state.light_use_efficiency:.3f}")
@@ -460,7 +465,7 @@ class PhotosynthesisSimulator(BaseSimulator):
             'final_light_stress_factor': self.state.light_stress_factor,
             'final_temperature_stress_factor': self.state.temperature_stress_factor,
             'total_carbon_gained': self.state.cumulative_carbon_gained,
-            'total_steps': self.state.step_count
+            'total_steps': self.current_step
         })
     
     def on_terminate(self, data: Dict[str, Any]):

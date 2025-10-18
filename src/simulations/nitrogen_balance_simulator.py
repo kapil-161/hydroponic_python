@@ -64,7 +64,8 @@ class NitrogenBalanceState:
     remobilization_rates: Dict[str, float] = field(default_factory=dict)
     cumulative_nitrogen_uptake: float = 0.0
     daily_nitrogen_uptake: float = 0.0
-    
+    last_update: datetime = field(default_factory=datetime.now)
+
 class NitrogenBalanceSimulator(BaseSimulator):
     """Simulator for nitrogen balance - follows Rules.md strictly"""
     
@@ -184,7 +185,7 @@ class NitrogenBalanceSimulator(BaseSimulator):
             self._execute_nitrogen_balance_step(weather_data)
             
             # Update state
-            self.state.step_count += 1
+            self.current_step += 1
             self.state.last_update = datetime.now()
             
             # Store history (exclude non-dataclass fields like system_config)
@@ -217,7 +218,7 @@ class NitrogenBalanceSimulator(BaseSimulator):
                 'uptake_rates': self.state.uptake_rates,
                 'allocation_rates': self.state.allocation_rates,
                 'remobilization_rates': self.state.remobilization_rates,
-                'step': self.state.step_count
+                'step': self.current_step
             })
             
             # Daily reset
@@ -228,7 +229,7 @@ class NitrogenBalanceSimulator(BaseSimulator):
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
-                'step': self.state.step_count
+                'step': self.current_step
             })
             # Raise error according to Rules.md - no error suppression
             raise
@@ -253,7 +254,7 @@ class NitrogenBalanceSimulator(BaseSimulator):
 
             # Skip on first step if nutrient data not available yet (circular dependency)
             if any(x is None for x in [nitrogen_availability, nitrogen_uptake_mg_per_plant_per_day, root_activity]):
-                if self.state.step_count == 0:
+                if self.current_step <= 2:
                     print(f"N-Balance: Skipping calculation on step 0 due to missing nutrient_models data")
                     return
                 raise ValueError("Nutrient data missing from nutrient_models_simulator - no defaults allowed")
@@ -501,7 +502,7 @@ class NitrogenBalanceSimulator(BaseSimulator):
                     'nitrogen_stress_index': self.state.nitrogen_stress_index
                 },
                 secondary_results={
-                    'step_count': self.state.step_count,
+                    'step_count': self.current_step,
                     'cumulative_nitrogen_uptake': self.state.cumulative_nitrogen_uptake
                 },
                 internal_state=outputs,
@@ -649,7 +650,7 @@ class NitrogenBalanceSimulator(BaseSimulator):
     
     def on_simulation_end(self, data: Dict[str, Any]):
         """Handle simulation end"""
-        print(f"Nitrogen balance simulator: Simulation ended after {self.state.step_count} steps")
+        print(f"Nitrogen balance simulator: Simulation ended after {self.current_step} steps")
         print(f"Final total nitrogen uptake: {self.state.total_nitrogen_uptake:.2f} g")
         print(f"Final nitrogen use efficiency: {self.state.nitrogen_use_efficiency:.3f}")
         print(f"Final nitrogen stress index: {self.state.nitrogen_stress_index:.3f}")
@@ -694,7 +695,7 @@ class NitrogenBalanceSimulator(BaseSimulator):
             'final_nitrogen_pools': self.state.nitrogen_pools,
             'final_nitrogen_concentrations': self.state.nitrogen_concentrations,
             'total_nitrogen_uptake': self.state.cumulative_nitrogen_uptake,
-            'total_steps': self.state.step_count
+            'total_steps': self.current_step
         })
     
     def on_terminate(self, data: Dict[str, Any]):

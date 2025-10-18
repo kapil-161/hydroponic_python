@@ -37,6 +37,7 @@ class RootSystemState:
     coarse_root_fraction: float = 0.0
     cumulative_root_growth: float = 0.0
     daily_root_growth: float = 0.0
+    last_update: datetime = field(default_factory=datetime.now)
     
 
 class RootSystemSimulator(BaseSimulator):
@@ -125,7 +126,7 @@ class RootSystemSimulator(BaseSimulator):
             self._execute_root_system_step(weather_data)
             
             # Update state
-            self.state.step_count += 1
+            self.current_step += 1
             self.state.last_update = datetime.now()
             
             # Store history
@@ -147,7 +148,7 @@ class RootSystemSimulator(BaseSimulator):
                 'fine_root_fraction': self.state.fine_root_fraction,
                 'medium_root_fraction': self.state.medium_root_fraction,
                 'coarse_root_fraction': self.state.coarse_root_fraction,
-                'step': self.state.step_count
+                'step': self.current_step
             })
             
             # Daily reset
@@ -158,7 +159,7 @@ class RootSystemSimulator(BaseSimulator):
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
-                'step': self.state.step_count
+                'step': self.current_step
             })
             # Raise error according to Rules.md - no error suppression
             raise
@@ -463,7 +464,7 @@ class RootSystemSimulator(BaseSimulator):
     
     def on_simulation_end(self, data: Dict[str, Any]):
         """Handle simulation end"""
-        print(f"Root system simulator: Simulation ended after {self.state.step_count} steps")
+        print(f"Root system simulator: Simulation ended after {self.current_step} steps")
         print(f"Final root depth: {self.state.root_depth:.2f} cm")
         print(f"Final root biomass: {self.state.root_biomass:.2f} g DM")
         print(f"Final root length: {self.state.root_length:.2f} cm")
@@ -489,7 +490,7 @@ class RootSystemSimulator(BaseSimulator):
             'final_medium_root_fraction': self.state.medium_root_fraction,
             'final_coarse_root_fraction': self.state.coarse_root_fraction,
             'total_root_growth': self.state.cumulative_root_growth,
-            'total_steps': self.state.step_count
+            'total_steps': self.current_step
         })
     
     def on_terminate(self, data: Dict[str, Any]):

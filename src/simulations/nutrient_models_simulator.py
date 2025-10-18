@@ -34,6 +34,7 @@ class NutrientState:
     cumulative_nutrient_uptake: Dict[str, float] = field(default_factory=dict)
     daily_nutrient_uptake: Dict[str, float] = field(default_factory=dict)
     system_config: Dict[str, Any] = field(default_factory=dict)  # System configuration data
+    last_update: datetime = field(default_factory=datetime.now)
     
 
 class NutrientModelsSimulator(BaseSimulator):
@@ -183,7 +184,7 @@ class NutrientModelsSimulator(BaseSimulator):
             self._execute_nutrient_step(weather_data)
             
             # Update state
-            self.state.step_count += 1
+            self.current_step += 1
             self.state.last_update = datetime.now()
 
             # Store history
@@ -211,7 +212,7 @@ class NutrientModelsSimulator(BaseSimulator):
                 'total_nitrogen_uptake': nitrogen_uptake,  # mg/plant/day explicit for consumer alignment
                 'nitrogen_availability': nitrogen_availability,
                 'root_activity': 1.0,  # Placeholder - should come from root simulator
-                'step': self.state.step_count
+                'step': self.current_step
             })
             
             # Daily reset
@@ -223,7 +224,7 @@ class NutrientModelsSimulator(BaseSimulator):
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
-                'step': self.state.step_count
+                'step': self.current_step
             })
             # Raise error according to Rules.md - no error suppression
             raise
@@ -239,7 +240,7 @@ class NutrientModelsSimulator(BaseSimulator):
 
             # Use initial values on first step if water data not available yet (circular dependency)
             if any(x is None for x in [water_uptake_rate, transpiration_rate]):
-                if self.state.step_count == 0:
+                if self.current_step <= 2:
                     # Use minimal initial values for first step to break circular dependency
                     water_uptake_rate = 0.001  # 1 mL/hour initial uptake
                     transpiration_rate = 0.0005  # 0.5 mL/hour initial transpiration
@@ -256,7 +257,7 @@ class NutrientModelsSimulator(BaseSimulator):
             root_surface_area = root_data.get('root_surface_area')
 
             if any(x is None for x in [root_depth, root_distribution, root_biomass, root_surface_area]):
-                if self.state.step_count == 0:
+                if self.current_step <= 2:
                     # Use initial values from CSV for first step to break circular dependency
                     root_depth = 5.0  # cm from initials.csv
                     root_distribution = 0.5  # assume uniform distribution
@@ -275,7 +276,7 @@ class NutrientModelsSimulator(BaseSimulator):
             development_index = phenology_data.get('development_index')
 
             if any(x is None for x in [growth_stage, development_index]):
-                if self.state.step_count == 0:
+                if self.current_step <= 2:
                     # Use initial values for first step to break circular dependency
                     growth_stage = "vegetative"  # Use nutrient model's expected growth stage
                     development_index = 0.0  # Initial development
@@ -289,7 +290,7 @@ class NutrientModelsSimulator(BaseSimulator):
             temperature_stress = stress_data.get('temperature_stress')
 
             if any(x is None for x in [nutrient_stress, temperature_stress]):
-                if self.state.step_count == 0:
+                if self.current_step <= 2:
                     # Use initial values for first step to break circular dependency
                     nutrient_stress = 0.0  # No stress initially
                     temperature_stress = 0.0  # No stress initially
@@ -344,7 +345,7 @@ class NutrientModelsSimulator(BaseSimulator):
 
             if any(x is None for x in [leaf_biomass, stem_biomass]):
                 # On first step, biomass may not be available yet
-                if self.state.step_count == 0:
+                if self.current_step <= 2:
                     # Use initial values from CSV for first step to break circular dependency
                     leaf_biomass = 0.015  # g from initials.csv
                     stem_biomass = 0.005  # g from initials.csv
@@ -540,7 +541,7 @@ class NutrientModelsSimulator(BaseSimulator):
                     'total_nutrient_uptake': sum(self.state.nutrient_uptake_rates.values())
                 },
                 secondary_results={
-                    'step_count': self.state.step_count,
+                    'step_count': self.current_step,
                     'last_update': self.state.last_update.isoformat()
                 },
                 internal_state=outputs,
@@ -653,7 +654,7 @@ class NutrientModelsSimulator(BaseSimulator):
     
     def on_simulation_end(self, data: Dict[str, Any]):
         """Handle simulation end"""
-        print(f"Nutrient models simulator: Simulation ended after {self.state.step_count} steps")
+        print(f"Nutrient models simulator: Simulation ended after {self.current_step} steps")
         print(f"Final solution EC: {self.state.solution_ec:.2f} mS/cm")
         print(f"Final solution pH: {self.state.solution_ph:.2f}")
         
@@ -670,7 +671,7 @@ class NutrientModelsSimulator(BaseSimulator):
             'final_nutrient_concentrations': self.state.nutrient_concentrations,
             'final_nutrient_availability': self.state.nutrient_availability,
             'total_cumulative_uptake': self.state.cumulative_nutrient_uptake,
-            'total_steps': self.state.step_count
+            'total_steps': self.current_step
         })
     
     def on_terminate(self, data: Dict[str, Any]):

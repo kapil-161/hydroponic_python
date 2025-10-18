@@ -146,7 +146,7 @@ class BiomassAllocationSimulator(BaseSimulator):
             self._execute_biomass_allocation_step(weather_data)
             
             # Update state
-            self.state.step_count += 1
+            self.current_step += 1
             self.state.last_update = datetime.now()
             
             
@@ -169,7 +169,7 @@ class BiomassAllocationSimulator(BaseSimulator):
                 'hourly_tissue_water_retention': self.state.hourly_tissue_water_retention,
                 'cumulative_tissue_water_retention': self.state.cumulative_tissue_water_retention,
                 'total_fresh_weight': self.state.total_fresh_weight,
-                'step': self.state.step_count
+                'step': self.current_step
             })
 
             # Daily reset
@@ -181,7 +181,7 @@ class BiomassAllocationSimulator(BaseSimulator):
             self.publish_event(EventType.ERROR_OCCURRED, {
                 'simulator': self.simulator_id,
                 'error': str(e),
-                'step': self.state.step_count
+                'step': self.current_step
             })
             # Per Rules.md: raise error, no fallbacks
             raise
@@ -195,23 +195,23 @@ class BiomassAllocationSimulator(BaseSimulator):
             hourly_carbon_gain = photosynthesis_data.get('hourly_carbon_gain')  # g C/hour (already converted)
             net_assimilation_rate = photosynthesis_data.get('net_assimilation_rate')  # μmol/m²/s (for logging)
 
-            # Allow skipping on first step while initial values propagate
-            if self.state.step_count == 0 and hourly_carbon_gain is None:
-                print(f"Biomass: Skipping calculation on first step - waiting for photosynthesis data")
+            # Allow skipping on early steps while initial values propagate
+            if self.current_step <= 2 and hourly_carbon_gain is None:
+                print(f"Biomass: Skipping calculation on step {self.current_step} - waiting for photosynthesis data")
                 return
 
-            # Per Rules.md: raise error if missing after first step, no defaults
+            # Per Rules.md: raise error if missing after initial steps, no defaults
             if hourly_carbon_gain is None:
-                raise ValueError("Hourly carbon gain missing from photosynthesis_simulator - no defaults allowed")
+                raise ValueError(f"Hourly carbon gain missing from photosynthesis_simulator at step {self.current_step} - no defaults allowed")
 
             # Get respiration data from respiration simulator
             respiration_data = self.dependency_cache.get('respiration_simulator', {})
             total_respiration_rate = respiration_data.get('total_respiration_rate')
             cumulative_respiration = respiration_data.get('cumulative_respiration')
 
-            # Allow skipping on first step while initial values propagate
-            if self.state.step_count == 0 and total_respiration_rate is None:
-                print(f"Biomass: Skipping calculation on first step - waiting for respiration data")
+            # Allow skipping on early steps while initial values propagate
+            if self.current_step <= 2 and total_respiration_rate is None:
+                print(f"Biomass: Skipping calculation on step {self.current_step} - waiting for respiration data")
                 return
 
             if total_respiration_rate is None:
@@ -395,7 +395,7 @@ class BiomassAllocationSimulator(BaseSimulator):
             'cumulative_biomass_gain': self.state.cumulative_biomass_gain,
             'daily_biomass_gain': self.state.daily_biomass_gain,
             'sink_strength': self.state.sink_strength,  # For source-sink feedback
-            'step_count': self.state.step_count,
+            'step_count': self.current_step,
             'last_update': self.state.last_update.isoformat()
         }
     
@@ -462,7 +462,7 @@ class BiomassAllocationSimulator(BaseSimulator):
     
     def on_simulation_end(self, data: Dict[str, Any]):
         """Handle simulation end"""
-        print(f"Biomass allocation simulator: Simulation ended after {self.state.step_count} steps")
+        print(f"Biomass allocation simulator: Simulation ended after {self.current_step} steps")
         print(f"Total biomass: {self.state.total_biomass:.2f} g DM")
         print(f"Leaf biomass: {self.state.leaf_biomass:.2f} g DM")
         print(f"Stem biomass: {self.state.stem_biomass:.2f} g DM")
@@ -479,7 +479,7 @@ class BiomassAllocationSimulator(BaseSimulator):
             'final_total_fresh_weight': self.state.total_fresh_weight,
             'final_tissue_water_retention': self.state.cumulative_tissue_water_retention,
             'final_allocation_efficiency': self.state.allocation_efficiency,
-            'total_steps': self.state.step_count,
+            'total_steps': self.current_step,
             'cumulative_biomass_gain': self.state.cumulative_biomass_gain
         })
     
