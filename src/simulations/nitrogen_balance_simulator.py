@@ -64,10 +64,7 @@ class NitrogenBalanceState:
     remobilization_rates: Dict[str, float] = field(default_factory=dict)
     cumulative_nitrogen_uptake: float = 0.0
     daily_nitrogen_uptake: float = 0.0
-    step_count: int = 0
-    last_update: datetime = field(default_factory=datetime.now)
-
-
+    
 class NitrogenBalanceSimulator(BaseSimulator):
     """Simulator for nitrogen balance - follows Rules.md strictly"""
     

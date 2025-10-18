@@ -33,10 +33,7 @@ class PhotosynthesisState:
     cumulative_carbon_gained: float = 0.0
     daily_carbon_gained: float = 0.0
     stomatal_conductance: float = 0.0  # mol/m²/s - for transpiration coupling
-    step_count: int = 0
-    last_update: datetime = field(default_factory=datetime.now)
-
-
+    
 class PhotosynthesisSimulator(BaseSimulator):
     """Simulator for photosynthesis - follows Rules.md strictly"""
     
