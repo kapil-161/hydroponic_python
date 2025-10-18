@@ -35,8 +35,7 @@ class GeneticState:
     heritability: Dict[str, float] = field(default_factory=dict)
     cumulative_genetic_response: float = 0.0
     daily_genetic_response: float = 0.0
-    step_count: int = 0
-    last_update: datetime = field(default_factory=datetime.now)
+    
 
 
 class GeneticParametersSimulator(BaseSimulator):

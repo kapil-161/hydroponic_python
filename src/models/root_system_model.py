@@ -4,6 +4,9 @@ from enum import Enum
 import math
 import random
 
+# Set random seed for reproducibility - per Rules.md: no random behavior without control
+random.seed(42)
+
 class RootType(Enum):
     FINE = "fine"
     MEDIUM = "medium"

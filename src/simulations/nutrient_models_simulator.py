@@ -34,9 +34,7 @@ class NutrientState:
     cumulative_nutrient_uptake: Dict[str, float] = field(default_factory=dict)
     daily_nutrient_uptake: Dict[str, float] = field(default_factory=dict)
     system_config: Dict[str, Any] = field(default_factory=dict)  # System configuration data
-    step_count: int = 0
-    last_update: datetime = field(default_factory=datetime.now)
-
+    
 
 class NutrientModelsSimulator(BaseSimulator):
     """Simulator for nutrient models - follows Rules.md strictly"""

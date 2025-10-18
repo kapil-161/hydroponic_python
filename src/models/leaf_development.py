@@ -358,7 +358,6 @@ class LeafDevelopmentModel:
         - senescence_rate = f(age_factor, stress_senescence)
         """
         total_areas = []
-        lai_values = []
         visible_leaf_counts = []
         active_leaf_counts = []
         senesced_areas = []

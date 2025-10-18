@@ -63,8 +63,7 @@ class LeafDevelopmentState:
     phyllochron_adjusted: float = 0.0
     leaf_growth_stress: float = 1.0
     leaf_senescence_stress: float = 1.0
-    step_count: int = 0
-    last_update: datetime = field(default_factory=datetime.now)
+    
     # NOTE: leaf_area_index removed - LAI now calculated by canopy architecture using actual plant spacing
 
 

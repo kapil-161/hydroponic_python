@@ -58,6 +58,7 @@ class NitrogenBalanceState:
     luxury_uptake_factor: float = 1.0
     nitrogen_pools: Dict[str, float] = field(default_factory=dict)
     nitrogen_concentrations: Dict[str, float] = field(default_factory=dict)
+    nitrogen_area_based: Dict[str, float] = field(default_factory=dict)  # g N/m² for photosynthesis
     uptake_rates: Dict[str, float] = field(default_factory=dict)
     allocation_rates: Dict[str, float] = field(default_factory=dict)
     remobilization_rates: Dict[str, float] = field(default_factory=dict)
@@ -110,7 +111,8 @@ class NitrogenBalanceSimulator(BaseSimulator):
             'photosynthesis_simulator': ['photosynthesis_rate', 'light_use_efficiency'],
             'phenology_simulator': ['growth_stage', 'development_index'],
             'stress_models': ['nutrient_stress', 'water_stress', 'temperature_stress'],
-            'leaf_development_simulator': ['leaf_nitrogen_content', 'leaf_nitrogen_ratio']
+            'leaf_development_simulator': ['leaf_nitrogen_content', 'leaf_nitrogen_ratio'],
+            'canopy_architecture_simulator': ['leaf_area', 'lai']  # For area-based N calculation
         }
         
         # Data cache for dependencies
@@ -390,6 +392,27 @@ class NitrogenBalanceSimulator(BaseSimulator):
             for organ in self.organs:
                 if organ in nitrogen_concentrations:
                     self.state.nitrogen_concentrations[organ] = nitrogen_concentrations[organ]
+
+            # Calculate AREA-BASED nitrogen for photosynthesis (DIRECT BIOCHEMICAL LINK)
+            # This enables direct N → Photosynthesis feedback
+            canopy_data = self.dependency_cache.get('canopy_architecture_simulator', {})
+            leaf_area = canopy_data.get('leaf_area')  # m²
+
+            if leaf_area is not None and leaf_area > 0:
+                # Calculate leaf N content (assume 60% of total N goes to leaves - typical for lettuce)
+                leaf_n_fraction = 0.60  # From literature (Evans 1989, Field & Mooney 1986)
+                cumulative_n_g = self.state.cumulative_nitrogen_uptake  # grams
+                leaf_n_total = cumulative_n_g * leaf_n_fraction  # g N in leaves
+
+                # Area-based concentration (g N/m² leaf area)
+                leaf_n_area = leaf_n_total / leaf_area  # g N/m²
+                self.state.nitrogen_area_based['leaves'] = leaf_n_area
+
+                # Also calculate for stems and roots if needed (using biomass allocation fractions)
+                stem_n_fraction = 0.25
+                root_n_fraction = 0.15
+                self.state.nitrogen_area_based['stems'] = cumulative_n_g * stem_n_fraction
+                self.state.nitrogen_area_based['roots'] = cumulative_n_g * root_n_fraction
             
             # Update rates
             uptake_rates = result.get('uptake_rates', {})
@@ -513,6 +536,7 @@ class NitrogenBalanceSimulator(BaseSimulator):
             'luxury_uptake_factor': self.state.luxury_uptake_factor,
             'nitrogen_pools': self.state.nitrogen_pools,
             'nitrogen_concentrations': self.state.nitrogen_concentrations,
+            'nitrogen_area_based': self.state.nitrogen_area_based,  # For direct N → Photosynthesis link
             'uptake_rates': self.state.uptake_rates,
             'allocation_rates': self.state.allocation_rates,
             'remobilization_rates': self.state.remobilization_rates,
@@ -540,6 +564,7 @@ class NitrogenBalanceSimulator(BaseSimulator):
             'luxury_uptake_factor': self.state.luxury_uptake_factor,
             'nitrogen_pools': self.state.nitrogen_pools,
             'nitrogen_concentrations': self.state.nitrogen_concentrations,
+            'nitrogen_area_based': self.state.nitrogen_area_based,  # For direct N → Photosynthesis link
             'uptake_rates': self.state.uptake_rates,
             'allocation_rates': self.state.allocation_rates,
             'remobilization_rates': self.state.remobilization_rates,
@@ -581,6 +606,7 @@ class NitrogenBalanceSimulator(BaseSimulator):
             'luxury_uptake_factor': self.state.luxury_uptake_factor,
             'nitrogen_pools': self.state.nitrogen_pools,
             'nitrogen_concentrations': self.state.nitrogen_concentrations,
+            'nitrogen_area_based': self.state.nitrogen_area_based,  # For direct N → Photosynthesis link
             'uptake_rates': self.state.uptake_rates,
             'allocation_rates': self.state.allocation_rates,
             'remobilization_rates': self.state.remobilization_rates,

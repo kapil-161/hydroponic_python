@@ -32,6 +32,7 @@ class BiomassState:
     hourly_biomass_gain: float = 0.0  # Current hourly biomass gain rate
     cumulative_biomass_gain: float = 0.0
     daily_biomass_gain: float = 0.0
+    sink_strength: float = 0.0  # Relative growth rate - for source-sink feedback
     # Tissue water retention tracking
     cumulative_tissue_water_retention: float = 0.0  # Total tissue water retained (L)
     hourly_tissue_water_retention: float = 0.0  # Tissue water retention this hour (L)
@@ -327,6 +328,16 @@ class BiomassAllocationSimulator(BaseSimulator):
                 # Update cumulative values
                 self.state.cumulative_biomass_gain += hourly_biomass_gain
                 self.state.daily_biomass_gain += hourly_biomass_gain
+
+                # Calculate SINK STRENGTH for source-sink feedback
+                # Sink strength = Relative Growth Rate (RGR) = (growth rate / current biomass)
+                # Units: g/g/hour (dimensionless growth rate)
+                # High RGR → high sink demand → upregulate photosynthesis
+                # Low RGR → low sink demand → photosynthesis can slow down
+                if self.state.total_biomass > 0:
+                    self.state.sink_strength = hourly_biomass_gain / self.state.total_biomass
+                else:
+                    self.state.sink_strength = 0.0
             
         except Exception as e:
             # Per Rules.md: raise error, no fallbacks
@@ -383,6 +394,7 @@ class BiomassAllocationSimulator(BaseSimulator):
             'allocation_efficiency': self.state.allocation_efficiency,
             'cumulative_biomass_gain': self.state.cumulative_biomass_gain,
             'daily_biomass_gain': self.state.daily_biomass_gain,
+            'sink_strength': self.state.sink_strength,  # For source-sink feedback
             'step_count': self.state.step_count,
             'last_update': self.state.last_update.isoformat()
         }
@@ -401,6 +413,7 @@ class BiomassAllocationSimulator(BaseSimulator):
             'hourly_biomass_gain': self.state.hourly_biomass_gain,  # For respiration calculator
             'cumulative_biomass_gain': self.state.cumulative_biomass_gain,
             'daily_biomass_gain': self.state.daily_biomass_gain,
+            'sink_strength': self.state.sink_strength,  # For source-sink feedback to photosynthesis
             'hourly_tissue_water_retention': self.state.hourly_tissue_water_retention,
             'cumulative_tissue_water_retention': self.state.cumulative_tissue_water_retention,
             'total_fresh_weight': self.state.total_fresh_weight,
@@ -425,7 +438,8 @@ class BiomassAllocationSimulator(BaseSimulator):
             'root_allocation_fraction': self.state.root_allocation_fraction,
             'allocation_efficiency': self.state.allocation_efficiency,
             'cumulative_biomass_gain': self.state.cumulative_biomass_gain,
-            'daily_biomass_gain': self.state.daily_biomass_gain
+            'daily_biomass_gain': self.state.daily_biomass_gain,
+            'sink_strength': self.state.sink_strength
         }
         return data_map.get(data_key)
     

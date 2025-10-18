@@ -39,9 +39,7 @@ class StressState:
     damage_level: float = 0.0
     cumulative_stress: float = 0.0
     daily_stress: float = 0.0
-    step_count: int = 0
-    last_update: datetime = field(default_factory=datetime.now)
-
+    
 
 class StressModelsSimulator(BaseSimulator):
     """Simulator for stress models - follows Rules.md strictly"""

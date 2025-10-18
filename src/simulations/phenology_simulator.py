@@ -32,10 +32,7 @@ class PhenologyState:
     cumulative_thermal_time: float = 0.0
     daily_thermal_time: float = 0.0
     stage_progress_fraction: float = 0.0
-    step_count: int = 0
-    last_update: datetime = field(default_factory=datetime.now)
-
-
+    
 class PhenologySimulator(BaseSimulator):
     """Simulator for phenology processes - follows Rules.md strictly"""
     

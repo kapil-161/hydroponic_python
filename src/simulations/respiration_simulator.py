@@ -33,8 +33,7 @@ class RespirationState:
     cumulative_respiration: float = 0.0
     daily_respiration: float = 0.0
     daily_biomass_gain: float = 0.0  # Accumulator for daily biomass gain
-    step_count: int = 0
-    last_update: datetime = field(default_factory=datetime.now)
+    
 
 
 class RespirationSimulator(BaseSimulator):

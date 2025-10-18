@@ -57,10 +57,11 @@ class WaterUptakeSimulator(BaseSimulator):
         # Inter-simulator dependencies - all data comes from other simulators
         self.dependencies = {
             'canopy_architecture_simulator': ['lai', 'leaf_area', 'canopy_height'],
-            'root_system_simulator': ['root_depth', 'root_distribution', 'root_biomass'],
+            'root_system_simulator': ['root_depth', 'root_distribution', 'root_biomass', 'root_surface_area'],
             'phenology_simulator': ['growth_stage', 'development_index'],
             'stress_models': ['water_stress', 'temperature_stress'],
-            'biomass_allocation_simulator': ['total_biomass']
+            'biomass_allocation_simulator': ['total_biomass'],
+            'photosynthesis_simulator': ['stomatal_conductance']  # Stomatal control coupling
         }
         
         # Data cache for dependencies
@@ -181,8 +182,9 @@ class WaterUptakeSimulator(BaseSimulator):
             root_depth = root_data.get('root_depth')
             root_distribution = root_data.get('root_distribution')
             root_biomass = root_data.get('root_biomass')
+            root_surface_area = root_data.get('root_surface_area')  # cm² - for hydraulic conductance
 
-            if any(x is None for x in [root_depth, root_distribution, root_biomass]):
+            if any(x is None for x in [root_depth, root_distribution, root_biomass, root_surface_area]):
                 if self.state.step_count == 0:
                     print(f"Water: Skipping calculation on first step due to missing root data")
                     return
@@ -220,7 +222,85 @@ class WaterUptakeSimulator(BaseSimulator):
                     return
                 raise ValueError("Total biomass missing from biomass_allocation_simulator - no defaults allowed")
 
-            # Calculate water uptake using model functions - no shortcuts
+            # COMBINED STOMATAL + HYDRAULIC MODEL
+            # This creates realistic water stress when roots can't supply demand
+            photo_data = self.dependency_cache.get('photosynthesis_simulator', {})
+            gs = photo_data.get('stomatal_conductance', None)  # mol/m²/s
+
+            # If stomatal conductance available, use combined model
+            if gs is not None and gs > 0:
+                # STEP 1: Calculate DEMAND from stomatal conductance (atmospheric pull)
+                transpiration_demand = self._calculate_transpiration_from_stomata(
+                    stomatal_conductance=gs,
+                    temperature=temperature,
+                    humidity=humidity,
+                    lai=lai
+                )  # L/hour
+
+                # STEP 2: Calculate SUPPLY from hydraulic model (soil-root-plant capacity)
+                # Use actual root surface area from root_system model!
+                hydraulic_supply = self._calculate_hydraulic_supply(
+                    root_surface_area=root_surface_area,  # cm² - from root_system
+                    lai=lai,
+                    temperature=temperature,
+                    transpiration_demand=transpiration_demand,
+                    total_biomass=total_biomass
+                )  # L/hour
+
+                # STEP 3: Actual uptake = min(demand, supply)
+                # This is KEY: roots can limit uptake even if stomata are open!
+                actual_water_uptake = min(transpiration_demand, hydraulic_supply)
+
+                # STEP 4: Calculate water stress from demand-supply mismatch
+                if transpiration_demand > 0:
+                    supply_ratio = hydraulic_supply / transpiration_demand
+                    hydraulic_stress_factor = min(1.0, supply_ratio)
+                else:
+                    hydraulic_stress_factor = 1.0
+
+                # Update state with ACTUAL uptake (not just demand)
+                self.state.transpiration_rate = actual_water_uptake  # L/hour
+                self.state.water_uptake_rate = actual_water_uptake  # L/hour
+
+                # Calculate evapotranspiration for tracking (mm/hour)
+                plant_area = 0.06  # m²/plant
+                etc_mm = (actual_water_uptake / plant_area) * 1000 if plant_area > 0 else 0
+                self.state.evapotranspiration = etc_mm
+
+                # Water availability based on hydraulic supply vs demand
+                self.state.water_availability = hydraulic_stress_factor
+
+                # Root water potential based on uptake rate
+                # Higher uptake → more negative potential (more tension)
+                max_uptake_rate = 0.02  # L/hour typical max for lettuce
+                uptake_fraction = min(1.0, actual_water_uptake / max_uptake_rate)
+                self.state.root_water_potential = -0.1 - (uptake_fraction * 0.5)  # MPa
+
+                # Leaf water potential based on transpiration demand vs supply
+                if hydraulic_stress_factor < 1.0:
+                    # Water deficit → more negative leaf potential
+                    deficit = transpiration_demand - hydraulic_supply
+                    deficit_stress = min(1.0, deficit / 0.01)  # Normalize
+                    self.state.leaf_water_potential = -0.5 - (deficit_stress * 3.0)  # MPa
+                else:
+                    # Adequate supply
+                    transpiration_stress = min(1.0, transpiration_demand / 0.015)
+                    self.state.leaf_water_potential = -0.5 - (transpiration_stress * 2.0)
+
+                # Estimate crop coefficient
+                et0_typical = 0.005
+                self.state.crop_coefficient = etc_mm / et0_typical if et0_typical > 0 else 0.8
+
+                # Update cumulative values
+                self.state.cumulative_water_uptake += actual_water_uptake
+                self.state.daily_water_uptake += actual_water_uptake
+                self.state.cumulative_transpiration += actual_water_uptake
+                self.state.daily_transpiration += actual_water_uptake
+
+                # Return - combined model complete
+                return
+
+            # Fallback: Calculate water uptake using model functions if gs not available
             try:
                 result = self.model.calculate_realistic_water_uptake(
                     temperature=temperature,
@@ -283,7 +363,137 @@ class WaterUptakeSimulator(BaseSimulator):
         except Exception as e:
             # Raise error according to Rules.md - no error suppression
             raise
-    
+
+    def _calculate_transpiration_from_stomata(self, stomatal_conductance: float,
+                                              temperature: float, humidity: float,
+                                              lai: float) -> float:
+        """
+        Calculate transpiration using stomatal conductance (Penman-Monteith approach)
+
+        Args:
+            stomatal_conductance: mol/m²/s
+            temperature: °C
+            humidity: % (0-100)
+            lai: m²/m²
+
+        Returns:
+            transpiration_rate: L/plant/hour
+        """
+        # Convert gs from mol/m²/s to m/s
+        # 1 mol/m²/s ≈ 0.024 m/s at 20°C (depends on temp, but we use simplified conversion)
+        gs_m_s = stomatal_conductance * 0.024
+
+        # Stomatal resistance (s/m)
+        rs = 1.0 / gs_m_s if gs_m_s > 0 else 1000.0  # Very high if closed
+
+        # Aerodynamic resistance (simplified, ~50 s/m for lettuce in controlled environment)
+        ra = 50.0
+
+        # Boundary layer resistance (~10 s/m for small leaves like lettuce)
+        rb = 10.0
+
+        # Total resistance
+        r_total = rs + rb + ra
+
+        # Calculate VPD (Vapor Pressure Deficit) in kPa
+        # Saturation vapor pressure (kPa) using Tetens equation
+        es = 0.6108 * (2.71828 ** ((17.27 * temperature) / (temperature + 237.3)))
+
+        # Actual vapor pressure (kPa)
+        ea = es * (humidity / 100.0)
+
+        # VPD in kPa
+        vpd = es - ea
+        vpd = max(0.0, vpd)  # Ensure non-negative
+
+        # Convert VPD to Pa
+        vpd_pa = vpd * 1000
+
+        # Latent heat of vaporization (J/kg) at temperature
+        # lambda_v = 2.501 - 0.00236 * T (MJ/kg)
+        lambda_v = (2.501 - 0.00236 * temperature) * 1e6  # Convert to J/kg
+
+        # Transpiration rate (kg/m²/s) - simplified Penman-Monteith
+        # E = VPD / (lambda_v * r_total)
+        e_rate = vpd_pa / (lambda_v * r_total) if r_total > 0 else 0.0
+
+        # Scale by LAI and convert to L/plant/hour
+        # Assuming 0.06 m²/plant spacing (lettuce in hydroponic system)
+        plant_area = 0.06  # m²/plant
+        transpiration_kg_plant_s = e_rate * lai * plant_area
+
+        # Convert kg/s to L/hour (1 kg water = 1 L)
+        transpiration_l_plant_hour = transpiration_kg_plant_s * 3600
+
+        return max(0.0, transpiration_l_plant_hour)
+
+    def _calculate_hydraulic_supply(self, root_surface_area: float, lai: float,
+                                    temperature: float, transpiration_demand: float,
+                                    total_biomass: float) -> float:
+        """
+        Calculate water supply capacity based on actual root system hydraulic conductance.
+        Uses REAL root surface area from root_system model (not LAI/2.0!).
+
+        Args:
+            root_surface_area: Actual root surface area from root_system (cm²)
+            lai: Leaf area index (m²/m²)
+            temperature: Temperature (°C)
+            transpiration_demand: Transpiration demand from stomata (L/hour)
+            total_biomass: Total plant biomass (g)
+
+        Returns:
+            hydraulic_supply: Maximum water supply capacity (L/hour)
+        """
+        # Convert root surface area from cm² to m²
+        root_surface_area_m2 = root_surface_area / 10000.0
+
+        # Root hydraulic conductance scales with actual root surface area
+        # Base conductance: lettuce in hydroponics has VERY HIGH conductivity
+        # Hydroponics: roots directly in solution, minimal resistance
+        # Need high value to avoid limiting seedlings with small root surface area
+        base_root_conductivity = 5.0  # L/hour/m²/MPa (1000× soil, matches xylem scale)
+        root_conductance = base_root_conductivity * root_surface_area_m2  # L/hour/MPa
+
+        # Xylem conductance scales with stem biomass (conducting tissue)
+        # Assume 20% of biomass is stem
+        stem_biomass = total_biomass * 0.2  # g
+        stem_biomass_kg = stem_biomass / 1000.0  # kg
+        # Increase xylem conductance to match transpiration rates
+        xylem_conductance = 0.5 * (stem_biomass_kg ** 0.5)  # L/hour/MPa (50× higher)
+
+        # Total hydraulic conductance (resistances in series)
+        if root_conductance > 0 and xylem_conductance > 0:
+            total_conductance = 1.0 / (1.0/root_conductance + 1.0/xylem_conductance)
+        else:
+            total_conductance = 0.001  # Minimal fallback
+
+        # Water potential gradient
+        # Soil potential in hydroponics: ~0 MPa (well-watered)
+        soil_potential = 0.0  # MPa
+
+        # Leaf potential driven by transpiration demand
+        # Higher demand → more negative potential (more tension)
+        # Typical range: -0.5 to -3.0 MPa
+        max_demand = 0.02  # L/hour typical max
+        demand_fraction = min(1.0, transpiration_demand / max_demand)
+        leaf_potential = -0.5 - (demand_fraction * 2.5)  # MPa (more negative with demand)
+
+        # Water potential gradient (driving force)
+        potential_gradient = soil_potential - leaf_potential  # MPa (positive = upward flow)
+
+        # Hydraulic water supply capacity = conductance × gradient
+        hydraulic_supply = total_conductance * potential_gradient  # L/hour
+
+        # Apply temperature effect (higher temp → lower viscosity → better flow)
+        # Q10 = 1.3 for water viscosity
+        temp_effect = 1.3 ** ((temperature - 20.0) / 10.0)
+        hydraulic_supply *= temp_effect
+
+        # Ensure positive and realistic range
+        hydraulic_supply = max(0.0, min(hydraulic_supply, 0.05))  # L/hour max for lettuce
+
+        return hydraulic_supply
+
     def daily_update(self, inputs: DailyUpdateInput) -> DailyUpdateOutput:
         """Implement the daily update interface - uses all model functions"""
         try:
