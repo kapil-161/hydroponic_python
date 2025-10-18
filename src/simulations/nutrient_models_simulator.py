@@ -555,7 +555,7 @@ class NutrientModelsSimulator(BaseSimulator):
             raise
     
     def get_current_state(self) -> Dict[str, Any]:
-        """Get current simulator state
+        """Get current simulator state - only scientific results, no internal tracking fields
 
         IMPORTANT: Returns COPIES of all dict/list state to prevent reference aliasing.
         Without .copy(), all CSV rows would reference the same dict objects and show
@@ -572,9 +572,7 @@ class NutrientModelsSimulator(BaseSimulator):
             'xylem_flux': self.state.xylem_flux,
             'phloem_flux': self.state.phloem_flux,
             'cumulative_nutrient_uptake': self.state.cumulative_nutrient_uptake.copy(),
-            'daily_nutrient_uptake': self.state.daily_nutrient_uptake.copy(),
-            'step_count': self.state.step_count,
-            'last_update': self.state.last_update.isoformat()
+            'daily_nutrient_uptake': self.state.daily_nutrient_uptake.copy()
         }
     
     def publish_state_data(self):

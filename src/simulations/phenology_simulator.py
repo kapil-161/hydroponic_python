@@ -276,7 +276,7 @@ class PhenologySimulator(BaseSimulator):
             raise
     
     def get_current_state(self) -> Dict[str, Any]:
-        """Get current simulator state"""
+        """Get current simulator state - only scientific results, no internal tracking fields"""
         return {
             'current_growth_stage': self.state.current_growth_stage,
             'development_index': self.state.development_index,
@@ -287,9 +287,7 @@ class PhenologySimulator(BaseSimulator):
             'total_days_from_planting': self.state.total_days_from_planting,
             'stage_progress_fraction': self.state.stage_progress_fraction,
             'cumulative_thermal_time': self.state.cumulative_thermal_time,
-            'daily_thermal_time': self.state.daily_thermal_time,
-            'step_count': self.state.step_count,
-            'last_update': self.state.last_update.isoformat()
+            'daily_thermal_time': self.state.daily_thermal_time
         }
     
     def publish_state_data(self):

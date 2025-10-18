@@ -382,19 +382,11 @@ class LeafDevelopmentSimulator(BaseSimulator):
             )
             
         except Exception as e:
-            return DailyUpdateOutput(
-                model_name='leaf_development_simulator',
-                day=inputs.day,
-                success=False,
-                primary_results={},
-                secondary_results={'error_message': f'Leaf development calculation failed: {str(e)}'},
-                internal_state={},
-                validation_result=None,
-                processing_time_ms=0.0
-            )
+            # Per Rules.md: raise errors, don't return error objects
+            raise
     
     def get_current_state(self) -> Dict[str, Any]:
-        """Get current simulator state"""
+        """Get current simulator state - only scientific results, no internal tracking fields"""
         return {
             'total_leaves': self.state.total_leaves,
             'leaf_appearance_rate': self.state.leaf_appearance_rate,
@@ -411,9 +403,7 @@ class LeafDevelopmentSimulator(BaseSimulator):
             'cumulative_thermal_time': self.state.cumulative_thermal_time,
             'phyllochron_adjusted': self.state.phyllochron_adjusted,
             'leaf_growth_stress': self.state.leaf_growth_stress,
-            'leaf_senescence_stress': self.state.leaf_senescence_stress,
-            'step_count': self.state.step_count,
-            'last_update': self.state.last_update.isoformat()
+            'leaf_senescence_stress': self.state.leaf_senescence_stress
         }
     
     def publish_state_data(self):

@@ -75,4 +75,4 @@ trait_cold_tolerance,0.8,dimensionless,Cold tolerance trait value
 trait_salinity_tolerance,0.5,dimensionless,Salinity tolerance trait value
 trait_disease_resistance,0.7,dimensionless,Disease resistance trait value
 trait_growth_rate,0.7,dimensionless,Growth rate trait value
-maturity_days,60,days,Days to maturity for standard lettuce cultivar
+maturity_days,35,days,Days to maturity for standard lettuce cultivar

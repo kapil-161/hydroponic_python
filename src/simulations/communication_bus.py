@@ -170,7 +170,9 @@ class SimulationMessageBus:
             except queue.Empty:
                 continue
             except Exception as e:
-                pass
+                # Per Rules.md: raise errors instead of silently passing
+                print(f"ERROR in event processing thread: {e}")
+                raise
     
     def _process_event(self, event: SimulationEvent):
         """Process a single event
@@ -211,7 +213,9 @@ class SimulationMessageBus:
             except queue.Empty:
                 break
             except Exception as e:
-                break
+                # Per Rules.md: raise errors instead of silently breaking
+                print(f"ERROR processing pending event: {e}")
+                raise
     
     def get_simulator_data(self, simulator_id: str, data_key: str, max_retries: int = 3) -> Any:
         """Request data from a specific simulator with retry logic"""
@@ -240,7 +244,8 @@ class SimulationMessageBus:
                         if data is not None:
                             responses[simulator_id] = data
                     except Exception as e:
-                        pass
+                        # Per Rules.md: raise errors instead of silently passing
+                        raise RuntimeError(f"Error getting data '{data_key}' from simulator '{simulator_id}': {e}")
         return responses
     
     def get_system_status(self) -> Dict[str, Any]:

@@ -153,7 +153,8 @@ class NitrogenBalanceSimulator(BaseSimulator):
                 try:
                     self.model.initialize_organ_nitrogen(organ, initial_mass, initial_n_conc)
                 except Exception as e:
-                    print(f"N-Balance: Could not initialize {organ}: {e}")
+                    # Per Rules.md: raise errors instead of silently passing
+                    raise RuntimeError(f"N-Balance: Failed to initialize {organ}: {e}")
 
         # Initialize nitrogen pools
         initial_pools = NitrogenPools(
@@ -493,7 +494,7 @@ class NitrogenBalanceSimulator(BaseSimulator):
             raise
     
     def get_current_state(self) -> Dict[str, Any]:
-        """Get current simulator state"""
+        """Get current simulator state - only scientific results, no internal tracking fields"""
         return {
             'total_nitrogen_uptake': self.state.total_nitrogen_uptake,
             'nitrate_uptake': self.state.nitrate_uptake,
@@ -516,9 +517,7 @@ class NitrogenBalanceSimulator(BaseSimulator):
             'allocation_rates': self.state.allocation_rates,
             'remobilization_rates': self.state.remobilization_rates,
             'cumulative_nitrogen_uptake': self.state.cumulative_nitrogen_uptake,
-            'daily_nitrogen_uptake': self.state.daily_nitrogen_uptake,
-            'step_count': self.state.step_count,
-            'last_update': self.state.last_update.isoformat()
+            'daily_nitrogen_uptake': self.state.daily_nitrogen_uptake
         }
     
     def get_data(self, data_key: str) -> Any:

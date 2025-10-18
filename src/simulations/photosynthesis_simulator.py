@@ -318,7 +318,7 @@ class PhotosynthesisSimulator(BaseSimulator):
             raise
     
     def get_current_state(self) -> Dict[str, Any]:
-        """Get current simulator state"""
+        """Get current simulator state - only scientific results, no internal tracking fields"""
         return {
             'net_assimilation_rate': self.state.net_assimilation_rate,
             'gross_photosynthesis_rate': self.state.gross_photosynthesis_rate,
@@ -329,9 +329,7 @@ class PhotosynthesisSimulator(BaseSimulator):
             'daily_carbon_gained': self.state.daily_carbon_gained,
             'leaf_temperature': self.state.leaf_temperature,
             'temperature_stress_factor': self.state.temperature_stress_factor,
-            'light_stress_factor': self.state.light_stress_factor,
-            'step_count': self.state.step_count,
-            'last_update': self.state.last_update.isoformat()
+            'light_stress_factor': self.state.light_stress_factor
         }
     
     def publish_state_data(self):

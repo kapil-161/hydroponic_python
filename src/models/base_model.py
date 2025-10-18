@@ -292,19 +292,9 @@ class BaseHydroponicModel(ABC):
             return output
 
         except Exception as e:
+            # Per Rules.md: raise errors, don't return error objects
             self.state = ModelState.ERROR
-            validation_result.add_error(f"Model execution failed: {str(e)}")
-
-            return DailyUpdateOutput(
-                model_name=self.model_name,
-                day=input_data.day,
-                success=False,
-                primary_results={},
-                secondary_results={},
-                internal_state={},
-                validation_result=validation_result,
-                processing_time_ms=(time.time() - start_time) * 1000
-            )
+            raise
 
     def _get_internal_state(self) -> Dict[str, Any]:
         """Get internal model state for debugging. Override in subclasses."""

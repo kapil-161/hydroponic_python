@@ -936,10 +936,11 @@ def quick_validate() -> bool:
             return False
         if temp_stress != 1.0:
             return False
-        
+
         return True
-    except:
-        return False
+    except Exception as e:
+        # Per Rules.md: raise errors instead of silently passing
+        raise RuntimeError(f"Core utilities validation failed: {e}")
 
 def check_critical_params(config: Any) -> List[str]:
     """

@@ -9,8 +9,10 @@ def load_config_param(df, param_name, default="N/A"):
         row = df[df['parameter_name'] == param_name]
         if not row.empty:
             return row.iloc[0]['value']
-    except:
-        pass
+    except KeyError as e:
+        raise KeyError(f"Missing column in config dataframe while looking for '{param_name}': {e}")
+    except Exception as e:
+        raise RuntimeError(f"Error loading config parameter '{param_name}': {e}")
     return default
 
 def load_initial_param(df, param_name, default="N/A"):
@@ -20,8 +22,10 @@ def load_initial_param(df, param_name, default="N/A"):
         row = row[row['parameter_name'] == param_name]
         if not row.empty:
             return row.iloc[0]['value']
-    except:
-        pass
+    except KeyError as e:
+        raise KeyError(f"Missing column in initials dataframe while looking for '{param_name}': {e}")
+    except Exception as e:
+        raise RuntimeError(f"Error loading initial parameter '{param_name}': {e}")
     return default
 
 # Load configuration files
@@ -199,8 +203,9 @@ for csv_file in csv_files:
                                 else:
                                     print(f"      - {str(k):<35} {str(v):>12}")
                             continue
-                    except:
-                        pass
+                    except (ValueError, SyntaxError) as e:
+                        # Could not parse dictionary - skip and show as string
+                        print(f"  WARNING: Could not parse dictionary for {param_name}: {e}")
 
                 if isinstance(value, (int, float)):
                     print(f"  ★ {param_name:<40} {value:>12.4f}  {unit}")

@@ -364,7 +364,7 @@ class CanopyArchitectureSimulator(BaseSimulator):
             raise
     
     def get_current_state(self) -> Dict[str, Any]:
-        """Get current simulator state"""
+        """Get current simulator state - only scientific results, no internal tracking fields"""
         return {
             'lai': self.state.lai,
             'leaf_area': self.state.leaf_area,
@@ -379,9 +379,7 @@ class CanopyArchitectureSimulator(BaseSimulator):
             'humidity_gradient': self.state.humidity_gradient,
             'wind_speed_reduction': self.state.wind_speed_reduction,
             'cumulative_light_interception': self.state.cumulative_light_interception,
-            'daily_light_interception': self.state.daily_light_interception,
-            'step_count': self.state.step_count,
-            'last_update': self.state.last_update.isoformat()
+            'daily_light_interception': self.state.daily_light_interception
         }
     
     def publish_state_data(self):

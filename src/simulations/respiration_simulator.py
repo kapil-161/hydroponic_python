@@ -285,7 +285,7 @@ class RespirationSimulator(BaseSimulator):
             raise
     
     def get_current_state(self) -> Dict[str, Any]:
-        """Get current simulator state"""
+        """Get current simulator state - only scientific results, no internal tracking fields"""
         return {
             'total_respiration_rate': self.state.total_respiration_rate,
             'maintenance_respiration': self.state.maintenance_respiration,
@@ -296,9 +296,7 @@ class RespirationSimulator(BaseSimulator):
             'cumulative_respiration': self.state.cumulative_respiration,
             'daily_respiration': self.state.daily_respiration,
             'temperature_factor': self.state.temperature_factor,
-            'biomass_factor': self.state.biomass_factor,
-            'step_count': self.state.step_count,
-            'last_update': self.state.last_update.isoformat()
+            'biomass_factor': self.state.biomass_factor
         }
     
     def publish_state_data(self):

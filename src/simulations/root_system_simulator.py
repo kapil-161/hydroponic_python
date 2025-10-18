@@ -380,7 +380,7 @@ class RootSystemSimulator(BaseSimulator):
             raise
     
     def get_current_state(self) -> Dict[str, Any]:
-        """Get current simulator state"""
+        """Get current simulator state - only scientific results, no internal tracking fields"""
         return {
             'root_depth': self.state.root_depth,
             'root_biomass': self.state.root_biomass,
@@ -396,9 +396,7 @@ class RootSystemSimulator(BaseSimulator):
             'medium_root_fraction': self.state.medium_root_fraction,
             'coarse_root_fraction': self.state.coarse_root_fraction,
             'cumulative_root_growth': self.state.cumulative_root_growth,
-            'daily_root_growth': self.state.daily_root_growth,
-            'step_count': self.state.step_count,
-            'last_update': self.state.last_update.isoformat()
+            'daily_root_growth': self.state.daily_root_growth
         }
     
     def publish_state_data(self):

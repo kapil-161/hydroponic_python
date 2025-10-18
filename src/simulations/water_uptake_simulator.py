@@ -327,7 +327,7 @@ class WaterUptakeSimulator(BaseSimulator):
             raise
     
     def get_current_state(self) -> Dict[str, Any]:
-        """Get current simulator state"""
+        """Get current simulator state - only scientific results, no internal tracking fields"""
         return {
             'water_uptake_rate': self.state.water_uptake_rate,
             'transpiration_rate': self.state.transpiration_rate,
@@ -340,9 +340,7 @@ class WaterUptakeSimulator(BaseSimulator):
             'cumulative_water_uptake': self.state.cumulative_water_uptake,
             'daily_water_uptake': self.state.daily_water_uptake,
             'cumulative_transpiration': self.state.cumulative_transpiration,
-            'daily_transpiration': self.state.daily_transpiration,
-            'step_count': self.state.step_count,
-            'last_update': self.state.last_update.isoformat()
+            'daily_transpiration': self.state.daily_transpiration
         }
     
     def get_data(self, data_key: str) -> Any:

@@ -1072,19 +1072,8 @@ class IntegratedStressModel:
             }
             
         except Exception as e:
-            print(f"Error in calculate_integrated_stress: {e}")
-            # Return default values
-            return {
-                'temperature_stress': 0.0,
-                'humidity_stress': 0.0,
-                'light_stress': 0.0,
-                'co2_stress': 0.0,
-                'water_stress': 0.0,
-                'nutrient_stress': 0.0,
-                'ph_stress': 0.0,
-                'overall_stress_factor': 1.0,
-                'stress_severity': 'mild'
-            }
+            # Per Rules.md: raise errors instead of returning defaults
+            raise RuntimeError(f"Error in calculate_integrated_stress: {e}")
 
     def calculate_acute_stress(self, stress_type: str, current_level: float) -> float:
         if not 0 <= current_level <= 1:

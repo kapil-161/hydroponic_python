@@ -161,8 +161,9 @@ class SimulationOrchestrator(BaseSimulator):
                 # Look for relative_growth_rate under initial_state block
                 try:
                     rel_gr = initial_state.get('initial_state', {}).get('relative_growth_rate')
-                except Exception:
-                    rel_gr = None
+                except Exception as e:
+                    # Per Rules.md: raise errors instead of silently passing
+                    raise RuntimeError(f"Error accessing relative_growth_rate from initial_state: {e}")
                 if rel_gr is not None:
                     system_config_seed['daily_growth_rate'] = rel_gr
             self.shared_data_cache['system_config'] = system_config_seed
@@ -241,8 +242,10 @@ class SimulationOrchestrator(BaseSimulator):
             try:
                 self._collect_simulator_data_to_shared_cache()
                 self._collect_step_data()
-            except Exception:
-                pass
+            except Exception as e:
+                # Per Rules.md: raise errors instead of silently passing
+                print(f"ERROR collecting final simulation data: {e}")
+                raise
 
             # End simulation
             self.end_time = datetime.now()
@@ -301,8 +304,8 @@ class SimulationOrchestrator(BaseSimulator):
                                     continue
                         self.shared_data_cache[simulator_id] = state_dict
             except Exception as e:
-                # Make collection non-fatal - simulator will work with partial data
-                self.shared_data_cache[simulator_id] = {}
+                # Per Rules.md: raise errors instead of silently using empty dict
+                raise RuntimeError(f"Failed to collect data from simulator '{simulator_id}': {e}")
 
     def _execute_dependency_ordered_step(self, weather_data: Dict[str, Any]):
         """
@@ -395,9 +398,11 @@ class SimulationOrchestrator(BaseSimulator):
                     
                     # Process message bus events immediately
                     self.message_bus._process_pending_events()
-                    
+
                 except Exception as e:
+                    # Per Rules.md: raise errors instead of silently incrementing counter
                     self.error_count += 1
+                    raise RuntimeError(f"Error executing parallel step for simulator '{simulator_id}': {e}")
             
           
     
@@ -454,9 +459,11 @@ class SimulationOrchestrator(BaseSimulator):
                 # Track performance
                 step_duration = time.time() - step_start
                 self.simulator_performance[simulator_id].append(step_duration)
-                
+
             except Exception as e:
+                # Per Rules.md: raise errors instead of silently incrementing counter
                 self.error_count += 1
+                raise RuntimeError(f"Error in sequential step for simulator '{simulator_id}': {e}")
     
     def _execute_parallel_step(self, weather_data: Dict[str, Any] = None):
         """Execute simulation step in parallel"""
@@ -481,7 +488,9 @@ class SimulationOrchestrator(BaseSimulator):
                     if output:
                         self._process_simulator_output(simulator_id, output)
                 except Exception as e:
+                    # Per Rules.md: raise errors instead of silently incrementing counter
                     self.error_count += 1
+                    raise RuntimeError(f"Error in parallel execution for simulator '{simulator_id}': {e}")
     
     def _execute_event_driven_step(self):
         """Execute simulation step using event-driven approach"""
@@ -533,9 +542,10 @@ class SimulationOrchestrator(BaseSimulator):
             
             if hasattr(simulator, 'daily_update'):
                 return simulator.daily_update(daily_input)
-            
+
         except Exception as e:
-            return None
+            # Per Rules.md: raise errors instead of returning None (default value)
+            raise RuntimeError(f"Error running simulator '{simulator_id}': {e}")
     
     def _process_simulator_output(self, simulator_id: str, output: DailyUpdateOutput):
         """Process output from a simulator"""
@@ -575,7 +585,8 @@ class SimulationOrchestrator(BaseSimulator):
                     state = simulator.get_current_state()
                     step_data['simulators'][simulator_id] = state
             except Exception as e:
-                pass
+                # Per Rules.md: raise errors instead of silently passing
+                raise RuntimeError(f"Error collecting step data from simulator '{simulator_id}': {e}")
         
         self.simulation_data.append(step_data)
     
@@ -741,10 +752,10 @@ class SimulationOrchestrator(BaseSimulator):
                 print(f"Harvest maturity reached! Current stage: {current_stage} on day {self.current_day}")
 
             return harvest_maturity_reached
-            
+
         except Exception as e:
-            print(f"Error checking harvest maturity: {e}")
-            return False
+            # Per Rules.md: raise errors instead of returning default value False
+            raise RuntimeError(f"Error checking harvest maturity: {e}")
     
     def cleanup(self):
         """Cleanup orchestrator resources"""

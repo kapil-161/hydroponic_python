@@ -386,7 +386,7 @@ class StressModelsSimulator(BaseSimulator):
             raise
     
     def get_current_state(self) -> Dict[str, Any]:
-        """Get current simulator state"""
+        """Get current simulator state - only scientific results, no internal tracking fields"""
         return {
             'temperature_stress': self.state.temperature_stress,
             'water_stress': self.state.water_stress,
@@ -399,9 +399,7 @@ class StressModelsSimulator(BaseSimulator):
             'acclimation_level': self.state.acclimation_level,
             'damage_level': self.state.damage_level,
             'cumulative_stress': self.state.cumulative_stress,
-            'daily_stress': self.state.daily_stress,
-            'step_count': self.state.step_count,
-            'last_update': self.state.last_update.isoformat()
+            'daily_stress': self.state.daily_stress
         }
     
     def publish_state_data(self):
