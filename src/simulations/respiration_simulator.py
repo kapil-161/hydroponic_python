@@ -62,7 +62,7 @@ class RespirationSimulator(BaseSimulator):
         # Data cache for dependencies
         self.dependency_cache: Dict[str, Dict[str, Any]] = {}
         self.cache_timestamp: Dict[str, datetime] = {}
-        self.cache_timeout = 1.0  # seconds - default cache timeout per Rules.md
+        self.cache_timeout = 0.1  # seconds - optimized for performance
         
     
     def on_simulation_start(self, data: Dict[str, Any]):
@@ -98,6 +98,11 @@ class RespirationSimulator(BaseSimulator):
             
             # Store history
             self.history.append(RespirationState(**self.state.__dict__))
+
+            # Prevent unbounded history growth - keep last 100 steps only for performance
+
+            if len(self.history) > 100:
+                self.history = self.history[-100:]
 
             # Publish state data to dependency cache
             self.publish_state_data()

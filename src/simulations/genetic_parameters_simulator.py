@@ -159,6 +159,12 @@ class GeneticParametersSimulator(BaseSimulator):
             # Store history
             self.history.append(GeneticState(**self.state.__dict__))
 
+            # Prevent unbounded history growth - keep last 1000 steps only
+
+            if len(self.history) > 1000:
+
+                self.history = self.history[-1000:]
+
             # Publish state data to dependency cache
             self.publish_state_data()
 

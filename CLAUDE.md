@@ -138,3 +138,16 @@
 ## Research Framework Principles
 
 **Remember: This is a research framework, not production software. The research framework should be strong and scientifically accurate, not complicated with unnecessary software engineering features.**
+
+
+Analyze model data flow and dependencies
+
+Check for circular dependencies
+
+Verify model output compatibility
+
+Check communication bus usage
+
+Identify missing model connections
+
+Generate integration recommendations

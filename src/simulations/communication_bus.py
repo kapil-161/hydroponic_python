@@ -94,7 +94,7 @@ class SimulationEvent:
 class SimulationMessageBus:
     """Central message bus for inter-simulator communication"""
     
-    def __init__(self, max_queue_size: int = 10000):
+    def __init__(self, max_queue_size: int = 50000):
         self.max_queue_size = max_queue_size
         self.event_handlers: Dict[EventType, List[Callable]] = {}
         self.simulator_registry: Dict[str, Any] = {}
@@ -201,7 +201,7 @@ class SimulationMessageBus:
     def _process_pending_events(self):
         """Process any pending events in the queue"""
         processed_count = 0
-        max_process = 10  # Limit to prevent infinite loops
+        max_process = 50  # Increased for better performance
         
         while processed_count < max_process:
             try:

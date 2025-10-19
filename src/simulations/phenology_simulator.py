@@ -64,7 +64,7 @@ class PhenologySimulator(BaseSimulator):
         # Data cache for dependencies
         self.dependency_cache: Dict[str, Dict[str, Any]] = {}
         self.cache_timestamp: Dict[str, datetime] = {}
-        self.cache_timeout = 1.0  # seconds
+        self.cache_timeout = 0.1  # seconds - optimized for performance
         
 
     def _map_growth_stage_to_simplified(self, detailed_stage) -> str:
@@ -137,6 +137,12 @@ class PhenologySimulator(BaseSimulator):
 
             # Store history
             self.history.append(PhenologyState(**self.state.__dict__))
+
+            # Prevent unbounded history growth - keep last 1000 steps only
+
+            if len(self.history) > 1000:
+
+                self.history = self.history[-1000:]
 
             # Publish state data to dependency cache
             self.publish_state_data()

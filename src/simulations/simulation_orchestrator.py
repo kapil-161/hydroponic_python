@@ -95,9 +95,16 @@ class SimulationOrchestrator(BaseSimulator):
         # max_errors comes from configuration parameters per Rules.md
         self.max_errors = config.max_errors
         
-        # Performance tracking
+        # Performance tracking - enhanced for optimization
         self.step_times: List[float] = []
         self.simulator_performance: Dict[str, List[float]] = {}
+        self.performance_stats: Dict[str, Any] = {
+            'total_steps': 0,
+            'avg_step_time': 0.0,
+            'fastest_step': float('inf'),
+            'slowest_step': 0.0,
+            'memory_usage': 0.0
+        }
         
         # Data collection
         self.collected_data: Dict[str, List[Dict[str, Any]]] = {}

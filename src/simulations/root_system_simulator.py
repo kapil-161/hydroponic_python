@@ -132,6 +132,11 @@ class RootSystemSimulator(BaseSimulator):
             # Store history
             self.history.append(RootSystemState(**self.state.__dict__))
 
+            # Prevent unbounded history growth - keep last 100 steps only for performance
+
+            if len(self.history) > 100:
+                self.history = self.history[-100:]
+
             # Publish state data to dependency cache
             self.publish_state_data()
 

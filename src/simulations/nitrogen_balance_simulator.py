@@ -193,6 +193,12 @@ class NitrogenBalanceSimulator(BaseSimulator):
             filtered_state = {k: v for k, v in self.state.__dict__.items() if k in allowed_fields}
             self.history.append(NitrogenBalanceState(**filtered_state))
 
+            # Prevent unbounded history growth - keep last 1000 steps only
+
+            if len(self.history) > 1000:
+
+                self.history = self.history[-1000:]
+
             # Publish state data to dependency cache
             self.publish_state_data()
 
