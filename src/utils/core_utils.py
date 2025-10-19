@@ -9,6 +9,10 @@ class ParameterAccessError(Exception):
     """Custom exception for parameter access errors."""
     pass
 
+class ParameterError(Exception):
+    """Custom exception for parameter validation and missing parameter errors."""
+    pass
+
 class StrictParameterAccessor:
     """
     Strictly access parameters from configuration, enforcing CSV-based inputs.

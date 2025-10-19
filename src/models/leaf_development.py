@@ -13,11 +13,6 @@ from dataclasses import dataclass
 from enum import Enum
 
 
-class ParameterError(Exception):
-    """Raised when required parameters are missing"""
-    pass
-
-
 def get_required_config(config: Dict[str, Any], param_name: str) -> Dict[str, Any]:
     """Get required configuration section or raise error if missing"""
     if param_name not in config:
@@ -56,11 +51,11 @@ class PhyllochronParameters:
 @dataclass
 class LeafAreaParameters:
     """Parameters for leaf area, size, and expansion."""
-    max_leaf_number: float
+    maximum_leaf_number: float
     initial_leaf_number: float
     leaf_appearance_rate: float
     specific_leaf_area: float
-    max_individual_leaf_area: float
+    maximum_individual_leaf_area: float
     leaf_area_expansion_rate: float
     daily_thermal_time_equivalent: float  # Expected daily thermal time accumulation (°C-day/day)
     initial_leaf_area_factor: float
@@ -143,11 +138,11 @@ class LeafParameters:
                 very_late_leaf_phyllochron_factor=merged_params['very_late_leaf_phyllochron_factor'],
             ),
             area=LeafAreaParameters(
-                max_leaf_number=merged_params['max_leaf_number'],
+                maximum_leaf_number=merged_params['maximum_leaf_number'],
                 initial_leaf_number=merged_params['initial_leaf_number'],
                 leaf_appearance_rate=merged_params['leaf_appearance_rate'],
                 specific_leaf_area=merged_params['specific_leaf_area'],
-                max_individual_leaf_area=merged_params['max_individual_leaf_area'],
+                maximum_individual_leaf_area=merged_params['maximum_individual_leaf_area'],
                 leaf_area_expansion_rate=merged_params['leaf_area_expansion_rate'],
                 daily_thermal_time_equivalent=merged_params['daily_thermal_time_equivalent'],
                 initial_leaf_area_factor=merged_params['initial_leaf_area_factor'],
@@ -230,7 +225,7 @@ class LeafDevelopmentModel:
     
     def calculate_thermal_time(self, temperature_list: list) -> list:
         """Use consolidated thermal time calculation from core_utils."""
-        from utils.core_utils import calculate_thermal_time_list
+        from utils.core_utils import calculate_thermal_time_list, ParameterError
 
         # Create config structure for consolidated function
         thermal_config = type('Config', (), {
@@ -316,7 +311,7 @@ class LeafDevelopmentModel:
             
             # Check if we can add a new leaf
             if (self.cumulative_thermal_time >= thermal_time_for_next_leaf and 
-                self.current_v_stage < self.params.area.max_leaf_number):
+                self.current_v_stage < self.params.area.maximum_leaf_number):
                 
                 # Create new leaf cohort
                 self._create_new_leaf_cohort()
@@ -462,14 +457,14 @@ class LeafDevelopmentModel:
     
     def _create_initial_leaf_cohort(self, cohort_id: int):
         """Create initial leaf cohorts (cotyledons + first leaves)."""
-        initial_area = self.params.area.max_individual_leaf_area * self.params.area.initial_leaf_area_factor
+        initial_area = self.params.area.maximum_individual_leaf_area * self.params.area.initial_leaf_area_factor
         initial_biomass = initial_area / self.params.area.specific_leaf_area if self.params.area.specific_leaf_area > 0 else 0
         cohort = LeafCohort(
             cohort_id=cohort_id,
             appearance_day=0.0,
             current_area=initial_area,
             current_biomass=initial_biomass,
-            max_potential_area=self.params.area.max_individual_leaf_area,
+            max_potential_area=self.params.area.maximum_individual_leaf_area,
             stage=LeafStage.EXPANDING,
             thermal_time_since_appearance=self.params.timing.leaf_maturation_thermal_time * self.params.timing.initial_thermal_time_factor,
             senescence_rate=0.0,
@@ -481,7 +476,7 @@ class LeafDevelopmentModel:
     def _create_new_leaf_cohort(self):
         """Create a new leaf cohort."""
         position_factors = self.calculate_leaf_position_factors([self.current_v_stage])
-        max_area = self.params.area.max_individual_leaf_area * position_factors[0]
+        max_area = self.params.area.maximum_individual_leaf_area * position_factors[0]
         current_biomass = self.params.area.minimum_visible_leaf_area / self.params.area.specific_leaf_area if self.params.area.specific_leaf_area > 0 else 0
 
         cohort = LeafCohort(
@@ -528,10 +523,10 @@ INPUT PARAMETERS (from CSV):
 - opt_temp_min: lower optimum temperature (°C)
 - opt_temp_max: upper optimum temperature (°C)
 - max_temp: maximum temperature for development (°C)
-- max_leaf_number: maximum number of leaves
+- maximum_leaf_number: maximum number of leaves
 - initial_leaf_number: initial number of leaves (cotyledons + first true leaves)
 - leaf_appearance_rate: leaves per phyllochron unit
-- max_individual_leaf_area: maximum area per individual leaf (m²)
+- maximum_individual_leaf_area: maximum area per individual leaf (m²)
 - leaf_area_expansion_rate: natural cellular expansion rate
 - specific_leaf_area: leaf area per unit dry weight (cm²/g)
 - drought_threshold: water stress threshold for leaf development

@@ -9,22 +9,19 @@ Key equations:
 """
 
 import math
+from utils.core_utils import ParameterError
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple, Optional, Any
 from enum import Enum
-import numpy as np
 
 
-class ParameterError(Exception):
-    """Raised when required parameters are missing"""
-    pass
-
-
-def get_required_genetic_param(params: Dict[str, Any], param_name: str) -> float:
-    """Get required genetic parameter or raise error if missing"""
-    if param_name not in params or params[param_name] is None:
-        raise ParameterError(f"Required genetic parameter '{param_name}' missing from configuration")
+def get_required_genetic_param(params: dict, param_name: str) -> float:
+    """Get required parameter or raise ParameterError if missing"""
+    if param_name not in params: raise ParameterError(f"Missing: {param_name}")
     return params[param_name]
+
+
+
 
 
 def get_required_weight(weights: Dict[str, float], weight_name: str) -> float:
@@ -183,8 +180,8 @@ class GeneticParameterDatabase:
         
         for cultivar_id, cultivar in self.cultivars.items():
             adaptation_score = cultivar.calculate_adaptation_index(environment_factors)
-            adaptation_weight = get_required_genetic_param(environment_factors, 'adaptation_weight')  # Adaptation score weight from CSV
-            yield_weight = get_required_genetic_param(environment_factors, 'yield_weight')  # Yield potential weight from CSV
+            adaptation_weight = get_strict_param(environment_factors, 'adaptation_weight')  # Adaptation score weight from CSV
+            yield_weight = get_strict_param(environment_factors, 'yield_weight')  # Yield potential weight from CSV
             overall_score = (
                 adaptation_score * adaptation_weight
                 + cultivar.yield_potential * yield_weight
@@ -234,36 +231,36 @@ class GenotypeEnvironmentModel:
         
         # Environmental modulation of trait expression
         if trait == GeneticTrait.HEAT_TOLERANCE:
-            temp_stress = get_required_genetic_param(environment_factors, 'temperature_stress')
+            temp_stress = get_strict_param(environment_factors, 'temperature_stress')
             if temp_stress > 0:  # Heat stress present
-                weight = get_required_genetic_param(environment_factors, 'temperature_stress_weight')  # Temperature stress weight from CSV
+                weight = get_strict_param(environment_factors, 'temperature_stress_weight')  # Temperature stress weight from CSV
                 expression = base_trait_value * (1.0 - temp_stress * weight)
             else:
                 expression = base_trait_value
         
         elif trait == GeneticTrait.COLD_TOLERANCE:
-            temp_stress = get_required_genetic_param(environment_factors, 'temperature_stress')
+            temp_stress = get_strict_param(environment_factors, 'temperature_stress')
             if temp_stress < 0:  # Cold stress present
-                weight = get_required_genetic_param(environment_factors, 'temperature_stress_weight')  # Temperature stress weight from CSV
+                weight = get_strict_param(environment_factors, 'temperature_stress_weight')  # Temperature stress weight from CSV
                 expression = base_trait_value * (1.0 + temp_stress * weight)  # temp_stress is negative
             else:
                 expression = base_trait_value
                 
         elif trait == GeneticTrait.CHLOROPHYLL_CONTENT:
-            light_level = get_required_genetic_param(environment_factors, 'light_intensity')
-            nitrogen_status = get_required_genetic_param(environment_factors, 'nitrogen_status')
+            light_level = get_strict_param(environment_factors, 'light_intensity')
+            nitrogen_status = get_strict_param(environment_factors, 'nitrogen_status')
             # Chlorophyll responds to light and nitrogen
             expression = base_trait_value * light_level * nitrogen_status
             
         elif trait == GeneticTrait.NITRATE_ACCUMULATION:
-            nitrogen_excess = get_required_genetic_param(environment_factors, 'nitrogen_excess')
+            nitrogen_excess = get_strict_param(environment_factors, 'nitrogen_excess')
             # Higher nitrogen leads to more nitrate accumulation
-            nitrogen_weight = get_required_genetic_param(environment_factors, 'nitrogen_excess_weight')  # Nitrogen excess weight from CSV
+            nitrogen_weight = get_strict_param(environment_factors, 'nitrogen_excess_weight')  # Nitrogen excess weight from CSV
             expression = base_trait_value + nitrogen_excess * nitrogen_weight
             
         elif trait == GeneticTrait.ROOT_DEVELOPMENT:
-            water_stress = get_required_genetic_param(environment_factors, 'water_stress')
-            nutrient_stress = get_required_genetic_param(environment_factors, 'nutrient_stress')
+            water_stress = get_strict_param(environment_factors, 'water_stress')
+            nutrient_stress = get_strict_param(environment_factors, 'nutrient_stress')
             # Root development increases under stress
             # Use reasonable default stress response weight (following "model output" rule)
             stress_weight = 0.2  # Calculated default for stress response
@@ -297,11 +294,11 @@ class GenotypeEnvironmentModel:
         # Use CSV genetic parameters for weights
         genetic_params = getattr(cultivar, 'genetic_params_ref', {})  # Reference to genetic params
         yield_weights = {
-            'leaf_size': get_required_genetic_param(genetic_params, 'yield_weight_leaf_size'),
-            'chlorophyll': get_required_genetic_param(genetic_params, 'yield_weight_chlorophyll'),
-            'nitrate_avoidance': get_required_genetic_param(genetic_params, 'yield_weight_nitrate_avoidance'),
-            'root_development': get_required_genetic_param(genetic_params, 'yield_weight_root_development'),
-            'yield_potential': get_required_genetic_param(genetic_params, 'yield_weight_yield_potential')
+            'leaf_size': get_strict_param(genetic_params, 'yield_weight_leaf_size'),
+            'chlorophyll': get_strict_param(genetic_params, 'yield_weight_chlorophyll'),
+            'nitrate_avoidance': get_strict_param(genetic_params, 'yield_weight_nitrate_avoidance'),
+            'root_development': get_strict_param(genetic_params, 'yield_weight_root_development'),
+            'yield_potential': get_strict_param(genetic_params, 'yield_weight_yield_potential')
         }
         performance_metrics['yield_index'] = (
             trait_expressions[GeneticTrait.LEAF_SIZE] * get_required_weight(yield_weights, 'leaf_size') +
@@ -311,7 +308,7 @@ class GenotypeEnvironmentModel:
             cultivar.yield_potential * get_required_weight(yield_weights, 'yield_potential')
         )
         
-        quality_weights = get_required_genetic_param(environment_factors, 'quality_index_weights')
+        quality_weights = get_strict_param(environment_factors, 'quality_index_weights')
         performance_metrics['quality_index'] = (
             trait_expressions[GeneticTrait.VITAMIN_C_CONTENT] * get_required_weight(quality_weights, 'vitamin_c') +
             trait_expressions[GeneticTrait.CAROTENOID_CONTENT] * get_required_weight(quality_weights, 'carotenoid') +
@@ -319,7 +316,7 @@ class GenotypeEnvironmentModel:
             trait_expressions[GeneticTrait.CHLOROPHYLL_CONTENT] * get_required_weight(quality_weights, 'chlorophyll')
         )
         
-        stress_weights = get_required_genetic_param(environment_factors, 'stress_tolerance_weights')
+        stress_weights = get_strict_param(environment_factors, 'stress_tolerance_weights')
         performance_metrics['stress_tolerance'] = (
             trait_expressions[GeneticTrait.HEAT_TOLERANCE] * get_required_weight(stress_weights, 'heat') +
             trait_expressions[GeneticTrait.COLD_TOLERANCE] * get_required_weight(stress_weights, 'cold') +

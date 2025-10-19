@@ -2,11 +2,13 @@ import math
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
 from enum import Enum
+from utils.core_utils import ParameterError, get_strict_param
 
 
-class ParameterError(Exception):
-    """Raised when required parameters are missing"""
-    pass
+def get_required_water_param(params: dict, param_name: str) -> float:
+    """Get required parameter or raise ParameterError if missing (minimal wrapper for compatibility)"""
+    if param_name not in params: raise ParameterError(f"Missing parameter: {param_name}")
+    return params[param_name]
 
 
 def get_required_water_config(config: Dict[str, Any], param_name: str) -> Dict[str, Any]:
@@ -16,15 +18,6 @@ def get_required_water_config(config: Dict[str, Any], param_name: str) -> Dict[s
     return config[param_name]
 
 
-def get_required_water_param(params: Dict[str, Any], param_name: str) -> float:
-    """Get required water parameter or raise error if missing"""
-    if param_name not in params:
-        raise ParameterError(f"Required water parameter '{param_name}' missing from water parameters")
-    return params[param_name]
-
-# =========================
-# Water Uptake Model
-# =========================
 
 class GrowthStage(Enum):
     VEGETATIVE = "vegetative"
@@ -101,7 +94,7 @@ class WaterUptakeParameters:
     minimum_vpd_threshold: float
     minimum_et0_threshold: float
     ground_area_per_plant: float
-    max_lai_coverage_factor: float
+    maximum_lai_coverage_factor: float
     max_root_surface_area_factor: float
     cavitation_gradient_denominator: float
     lai_to_light_interception_factor: float
@@ -175,7 +168,7 @@ class WaterUptakeParameters:
             'vapor_pressure_base_temp', 'saturation_curve_slope_constant', 'penman_monteith_conversion',
             'aerodynamic_resistance_coefficient', 'wind_speed_coefficient',
             # Hardcoded value replacements
-            'minimum_vpd_threshold', 'minimum_et0_threshold', 'max_lai_coverage_factor',
+            'minimum_vpd_threshold', 'minimum_et0_threshold', 'maximum_lai_coverage_factor',
             'max_root_surface_area_factor', 'cavitation_gradient_denominator', 'lai_to_light_interception_factor',
             'temperature_response_exponent_denominator', 'vpd_effect_divisor', 'transpiration_base_rate_scale_factor',
             'transpiration_scaling_multiplier', 'lai_coefficient_threshold', 'minimum_coverage_factor',
@@ -231,7 +224,7 @@ class WaterUptakeParameters:
             # Hardcoded value replacements
             minimum_vpd_threshold=float(water_params['minimum_vpd_threshold']),
             minimum_et0_threshold=float(water_params['minimum_et0_threshold']),
-            max_lai_coverage_factor=float(water_params['max_lai_coverage_factor']),
+            maximum_lai_coverage_factor=float(water_params['maximum_lai_coverage_factor']),
             max_root_surface_area_factor=float(water_params['max_root_surface_area_factor']),
             cavitation_gradient_denominator=float(water_params['cavitation_gradient_denominator']),
             lai_to_light_interception_factor=float(water_params['lai_to_light_interception_factor']),
@@ -351,7 +344,7 @@ class WaterUptakeModel:
         etc_mm = et0_mm * kc * environmental_factor
 
         # Scale by canopy coverage
-        coverage_factor = min(1.0, lai / self.params.max_lai_coverage_factor) if lai > 0 else self.params.minimum_coverage_factor
+        coverage_factor = min(1.0, lai / self.params.maximum_lai_coverage_factor) if lai > 0 else self.params.minimum_coverage_factor
         transpiration_mm = etc_mm * coverage_factor
 
         # Convert mm depth to liters: multiply by ground area per plant
@@ -478,7 +471,7 @@ class WaterUptakeModel:
 
     def _calculate_temperature_factor(self, temperature: float) -> float:
         """Use consolidated temperature factor calculation from core_utils."""
-        from utils.core_utils import calculate_temperature_factor
+        from utils.core_utils import calculate_temperature_factor, ParameterError
 
         if not isinstance(temperature, (int, float)):
             raise ValueError("Temperature must be numeric")

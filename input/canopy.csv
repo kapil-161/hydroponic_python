@@ -1,9 +1,6 @@
 parameter_name,value,unit,description
-# Canopy Architecture Model Parameters
-# All canopy-related parameters for light calculations, architecture, and distribution
-# Includes extinction coefficients, layer distribution, and environmental responses
 number_of_layers,5,dimensionless,Number of canopy layers for light calculations
-max_lai,2.5,m2_m2,Maximum LAI for single lettuce plant (realistic: 0.5-2.5 per plant)
+maximum_lai,2.5,m2_m2,Maximum LAI for single lettuce plant (realistic: 0.5-2.5 per plant)
 extinction_coefficient,0.6,dimensionless,Base light extinction coefficient
 diffuse_extinction_coeff,0.8,dimensionless,Extinction coefficient multiplier for diffuse light
 beam_extinction_coeff,0.5,dimensionless,Extinction coefficient multiplier for direct beam light
@@ -21,15 +18,13 @@ self_shading_factor,0.7,dimensionless,Factor for self-shading within individual 
 neighbor_shading_distance,0.5,m,Distance threshold for neighbor plant shading effects
 sunlit_fraction_method,campbell,text,Method for calculating sunlit leaf fraction
 clumping_index,0.85,dimensionless,Leaf clumping index (1=random distribution 0=completely clumped)
-max_extinction_coefficient,20.0,dimensionless,Maximum extinction coefficient when sun is at horizon
+maximum_extinction_coefficient,20.0,dimensionless,Maximum extinction coefficient when sun is at horizon
 upper_canopy_lai_factor,0.3,dimensionless,LAI distribution factor for upper canopy layers
 middle_canopy_lai_factor,0.4,dimensionless,LAI distribution factor for middle canopy layers
 lower_middle_canopy_lai_factor,0.25,dimensionless,LAI distribution factor for lower-middle canopy layers
 bottom_canopy_lai_factor,0.05,dimensionless,LAI distribution factor for bottom canopy layers
-max_temperature_gradient,3.0,°C,Maximum temperature gradient from top to bottom of canopy
+maximum_temperature_gradient,3.0,°C,Maximum temperature gradient from top to bottom of canopy
 temperature_gradient_factor,0.5,°C_per_LAI,Temperature gradient factor per unit LAI
-
-# Canopy Architecture Hardcoded Constants
 spherical_x_coefficient,1.0,dimensionless,Leaf angle coefficient for spherical distribution
 planophile_x_coefficient,0.637,dimensionless,Leaf angle coefficient for planophile distribution (2/π)
 erectophile_x_coefficient,2.0,dimensionless,Leaf angle coefficient for erectophile distribution

@@ -1,3 +1,4 @@
+from .core_utils import ParameterError
 """
 Parameter Loader Utility
 
@@ -8,11 +9,6 @@ Follows Rules.md - no default values allowed.
 import pandas as pd
 from typing import Dict, Any, Optional
 import os
-
-
-class ParameterError(Exception):
-    """Exception raised when parameter loading fails"""
-    pass
 
 
 class StrictParameterLoader:
@@ -368,13 +364,13 @@ class StrictParameterLoader:
         params_dict['phi_psii'] = self.get_parameter('photosynthesis_parameters_phi_psii')
         params_dict['r'] = self.get_parameter('photosynthesis_parameters_r')
         params_dict['g_max'] = self.get_parameter('photosynthesis_parameters_g_max')
-        params_dict['min_par_threshold'] = self.get_parameter('photosynthesis_parameters_min_par_threshold')
+        params_dict['minimum_par_threshold'] = self.get_parameter('photosynthesis_parameters_minimum_par_threshold')
         
         # Add all the required parameters from CSV
         params_dict['enzyme_saturation_lai'] = self.get_parameter('photosynthesis_parameters_enzyme_saturation_lai')
         params_dict['light_penetration_lai'] = self.get_parameter('photosynthesis_parameters_light_penetration_lai')
         params_dict['enzyme_saturation_rate'] = self.get_parameter('photosynthesis_parameters_enzyme_saturation_rate')
-        params_dict['min_enzyme_factor'] = self.get_parameter('photosynthesis_parameters_min_enzyme_factor')
+        params_dict['minimum_enzyme_factor'] = self.get_parameter('photosynthesis_parameters_minimum_enzyme_factor')
         params_dict['excess_lai_efficiency'] = self.get_parameter('photosynthesis_parameters_excess_lai_efficiency')
         params_dict['umol_to_g_carbon_ratio'] = self.get_parameter('photosynthesis_parameters_umol_to_g_carbon_ratio')
         params_dict['seconds_per_hour'] = self.get_parameter('photosynthesis_parameters_seconds_per_hour')
@@ -394,7 +390,7 @@ class StrictParameterLoader:
         params_dict['shaded_light_fraction'] = self.get_parameter('photosynthesis_parameters_shaded_light_fraction')
         params_dict['photosynthesis_cold_limit'] = self.get_parameter('photosynthesis_parameters_photosynthesis_cold_limit')
         params_dict['photosynthesis_heat_limit'] = self.get_parameter('photosynthesis_parameters_photosynthesis_heat_limit')
-        params_dict['min_stress_factor'] = self.get_parameter('photosynthesis_parameters_min_stress_factor')
+        params_dict['minimum_stress_factor'] = self.get_parameter('photosynthesis_parameters_minimum_stress_factor')
 
         # Add new parameters required by Rules.md - all from CSV
         params_dict['optimal_temperature_min'] = self.get_parameter('phenology_parameters_optimal_temperature_min')
@@ -435,7 +431,7 @@ class StrictParameterLoader:
         # Add respiration-specific parameters using actual CSV parameter names
         params_dict['maintenance_base_rate'] = self.get_parameter('respiration_parameters_maintenance_base_rate')
         params_dict['reference_temperature'] = self.get_parameter('respiration_parameters_reference_temperature')
-        params_dict['q10_factor'] = self.get_parameter('respiration_parameters_q10_factor')
+        params_dict['q10_factor'] = self.get_parameter('temperature_q10_factor')
         params_dict['growth_efficiency'] = self.get_parameter('respiration_parameters_growth_efficiency')
         params_dict['biosynthetic_cost'] = self.get_parameter('respiration_parameters_biosynthetic_cost')
         # Add tissue factors as individual parameters for model compatibility
@@ -456,7 +452,7 @@ class StrictParameterLoader:
         
         # Add missing required parameters
         params_dict['glucose_to_carbon_ratio'] = self.get_parameter('respiration_parameters_glucose_to_carbon_ratio')
-        params_dict['min_history_threshold'] = self.get_parameter('respiration_parameters_min_history_threshold')
+        params_dict['minimum_history_threshold'] = self.get_parameter('respiration_parameters_minimum_history_threshold')
         params_dict['day_start_hour'] = self.get_parameter('respiration_parameters_day_start_hour')
         params_dict['day_end_hour'] = self.get_parameter('respiration_parameters_day_end_hour')
         params_dict['day_respiration_factor'] = self.get_parameter('respiration_parameters_day_respiration_factor')
@@ -500,7 +496,7 @@ class StrictParameterLoader:
         params_dict['mineral_fraction'] = self.get_parameter('respiration_parameters_mineral_fraction')
 
         # Hardcoded value replacements
-        params_dict['max_temperature_factor'] = self.get_parameter('respiration_parameters_max_temperature_factor')
+        params_dict['maximum_temperature_factor'] = self.get_parameter('respiration_parameters_maximum_temperature_factor')
         params_dict['minimum_temperature_factor'] = self.get_parameter('respiration_parameters_minimum_temperature_factor')
         params_dict['minimum_respiration_rate_fraction'] = self.get_parameter('respiration_parameters_minimum_respiration_rate_fraction')
         params_dict['default_total_biomass_g'] = self.get_parameter('respiration_parameters_default_total_biomass_g')
@@ -619,7 +615,7 @@ class StrictParameterLoader:
         config['temperature']['critical_max'] = self.get_parameter('photosynthesis_parameters_photosynthesis_heat_limit')
         config['temperature']['lethal_min'] = self.get_parameter('stress_parameters_temperature_lethal_min')
         config['temperature']['lethal_max'] = self.get_parameter('phenology_parameters_maximum_temperature')
-        config['temperature']['stress_factor_slope'] = self.get_parameter('photosynthesis_parameters_min_stress_factor')
+        config['temperature']['stress_factor_slope'] = self.get_parameter('photosynthesis_parameters_minimum_stress_factor')
         config['temperature']['acclimation_rate'] = self.get_parameter('phenology_parameters_stress_acceleration_factor')
         config['temperature']['recovery_rate'] = self.get_parameter('stress_parameters_temperature_recovery_rate')
 
@@ -788,7 +784,7 @@ class StrictParameterLoader:
         config['water_parameters']['minimum_vpd_threshold'] = self.get_parameter('water_parameters_minimum_vpd_threshold')
         config['water_parameters']['minimum_et0_threshold'] = self.get_parameter('water_parameters_minimum_et0_threshold')
         config['water_parameters']['ground_area_per_plant'] = self.get_parameter('water_parameters_ground_area_per_plant')
-        config['water_parameters']['max_lai_coverage_factor'] = self.get_parameter('water_parameters_max_lai_coverage_factor')
+        config['water_parameters']['maximum_lai_coverage_factor'] = self.get_parameter('water_parameters_maximum_lai_coverage_factor')
         config['water_parameters']['max_root_surface_area_factor'] = self.get_parameter('water_parameters_max_root_surface_area_factor')
         config['water_parameters']['cavitation_gradient_denominator'] = self.get_parameter('water_parameters_cavitation_gradient_denominator')
         config['water_parameters']['lai_to_light_interception_factor'] = self.get_parameter('water_parameters_lai_to_light_interception_factor')
@@ -1052,7 +1048,7 @@ class StrictParameterLoader:
         params_dict = {}
         # Add all canopy architecture parameters from CSV
         params_dict['number_of_layers'] = self.get_parameter('canopy_parameters_number_of_layers')
-        params_dict['max_lai'] = self.get_parameter('canopy_parameters_max_lai')
+        params_dict['maximum_lai'] = self.get_parameter('canopy_parameters_maximum_lai')
         params_dict['extinction_coefficient'] = self.get_parameter('canopy_parameters_extinction_coefficient')
         params_dict['diffuse_extinction_coeff'] = self.get_parameter('canopy_parameters_diffuse_extinction_coeff')
         params_dict['beam_extinction_coeff'] = self.get_parameter('canopy_parameters_beam_extinction_coeff')
@@ -1070,13 +1066,13 @@ class StrictParameterLoader:
         params_dict['neighbor_shading_distance'] = self.get_parameter('canopy_parameters_neighbor_shading_distance')
         params_dict['sunlit_fraction_method'] = self.get_parameter('canopy_parameters_sunlit_fraction_method')
         params_dict['clumping_index'] = self.get_parameter('canopy_parameters_clumping_index')
-        params_dict['max_extinction_coefficient'] = self.get_parameter('canopy_parameters_max_extinction_coefficient')
+        params_dict['maximum_extinction_coefficient'] = self.get_parameter('canopy_parameters_maximum_extinction_coefficient')
         params_dict['upper_canopy_lai_factor'] = self.get_parameter('canopy_parameters_upper_canopy_lai_factor')
         params_dict['middle_canopy_lai_factor'] = self.get_parameter('canopy_parameters_middle_canopy_lai_factor')
         params_dict['lower_middle_canopy_lai_factor'] = self.get_parameter('canopy_parameters_lower_middle_canopy_lai_factor')
         params_dict['bottom_canopy_lai_factor'] = self.get_parameter('canopy_parameters_bottom_canopy_lai_factor')
         params_dict['shaded_light_fraction'] = self.get_parameter('photosynthesis_parameters_shaded_light_fraction')
-        params_dict['max_temperature_gradient'] = self.get_parameter('canopy_parameters_max_temperature_gradient')
+        params_dict['maximum_temperature_gradient'] = self.get_parameter('canopy_parameters_maximum_temperature_gradient')
         params_dict['temperature_gradient_factor'] = self.get_parameter('canopy_parameters_temperature_gradient_factor')
         params_dict['ppfd_to_photosynthesis_factor'] = self.get_parameter('canopy_parameters_ppfd_to_photosynthesis_factor')
         params_dict['spherical_x_coefficient'] = self.get_parameter('canopy_parameters_spherical_x_coefficient')
@@ -1157,7 +1153,7 @@ class StrictParameterLoader:
         # Temperature parameters - use consolidated from phenology
         config['optimal_temperature_min'] = self.get_parameter('phenology_parameters_optimal_temperature_min')
         config['optimal_temperature_max'] = self.get_parameter('phenology_parameters_optimal_temperature_max')
-        config['q10_factor'] = self.get_parameter('root_system_parameters_q10_factor')
+        config['q10_factor'] = self.get_parameter('temperature_q10_factor')
 
         # Phenology parameters sub-dict (required by RootSystemParameters.from_config)
         config['phenology_parameters'] = {
@@ -1186,13 +1182,16 @@ class StrictParameterLoader:
 
         # Additional hardcoded parameters extracted from code
         config['temperature_range_factor'] = self.get_parameter('root_system_parameters_temperature_range_factor')
+        config['minimum_temperature_factor'] = self.get_parameter('root_system_parameters_minimum_temperature_factor')
+        config['maximum_temperature_factor'] = self.get_parameter('root_system_parameters_maximum_temperature_factor')
         config['min_temperature_factor'] = self.get_parameter('root_system_parameters_minimum_temperature_factor')
-        config['max_temperature_factor'] = self.get_parameter('root_system_parameters_max_temperature_factor')
+        config['maximum_temperature_factor'] = self.get_parameter('root_system_parameters_maximum_temperature_factor')
         config['low_flow_factor'] = self.get_parameter('root_system_parameters_low_flow_factor')
         config['high_flow_factor'] = self.get_parameter('root_system_parameters_high_flow_factor')
         config['ph_zone_min'] = self.get_parameter('root_system_parameters_ph_zone_min')
         config['ph_zone_max'] = self.get_parameter('root_system_parameters_ph_zone_max')
-        config['min_ph_factor'] = self.get_parameter('root_system_parameters_min_ph_factor')
+        config['minimum_ph_factor'] = self.get_parameter('root_system_parameters_minimum_ph_factor')
+        config['min_ph_factor'] = self.get_parameter('root_system_parameters_minimum_ph_factor')
         config['ph_penalty_factor'] = self.get_parameter('root_system_parameters_ph_penalty_factor')
 
         # Zone fraction parameters
@@ -1219,8 +1218,8 @@ class StrictParameterLoader:
         config['oxygen_effect_weight'] = self.get_parameter('root_system_parameters_oxygen_effect_weight')
         config['competition_effect_weight'] = self.get_parameter('root_system_parameters_competition_effect_weight')
         config['temperature_effect_weight'] = self.get_parameter('root_system_parameters_temperature_effect_weight')
-        config['min_growth_potential'] = self.get_parameter('root_system_parameters_min_growth_potential')
-        config['max_growth_potential'] = self.get_parameter('root_system_parameters_max_growth_potential')
+        config['minimum_growth_potential'] = self.get_parameter('root_system_parameters_minimum_growth_potential')
+        config['maximum_growth_potential'] = self.get_parameter('root_system_parameters_maximum_growth_potential')
         config['max_temp_threshold'] = self.get_parameter('root_system_parameters_maximum_temperature_threshold')
         config['temp_decay_factor'] = self.get_parameter('root_system_parameters_temperature_decay_factor')
 
@@ -1288,7 +1287,7 @@ class StrictParameterLoader:
         config['cache_timeout'] = self.get_parameter('root_system_parameters_cache_timeout')
 
         # Hardcoded value replacements
-        config['min_flow_rate_multiplier'] = self.get_parameter('root_system_parameters_min_flow_rate_multiplier')
+        config['minimum_flow_rate_multiplier'] = self.get_parameter('root_system_parameters_minimum_flow_rate_multiplier')
         config['default_michaelis_constant'] = self.get_parameter('root_system_parameters_default_michaelis_constant')
         config['default_reference_nutrient_concentration'] = self.get_parameter('root_system_parameters_default_reference_nutrient_concentration')
         config['nutrient_inhibition_minimum_factor'] = self.get_parameter('root_system_parameters_nutrient_inhibition_minimum_factor')
@@ -1392,8 +1391,8 @@ class StrictParameterLoader:
         # Leaf development parameters
         config['leaf_development'] = {}
         leaf_dev_params = [
-            'base_phyllochron', 'max_leaf_number', 'initial_leaf_number', 'leaf_appearance_rate',
-            'max_individual_leaf_area', 'leaf_area_expansion_rate', 'daily_thermal_time_equivalent', 'drought_threshold', 'n_stress_threshold',
+            'base_phyllochron', 'maximum_leaf_number', 'initial_leaf_number', 'leaf_appearance_rate',
+            'maximum_individual_leaf_area', 'leaf_area_expansion_rate', 'daily_thermal_time_equivalent', 'drought_threshold', 'n_stress_threshold',
             'temperature_stress_sensitivity', 'initial_leaf_area_factor', 'initial_thermal_time_factor',
             'emerging_to_expanding_factor', 'late_leaf_phyllochron_factor', 'very_late_leaf_phyllochron_factor',
             'early_leaf_size_factor', 'late_leaf_size_factor', 'leaf_maturation_thermal_time',
@@ -1408,7 +1407,7 @@ class StrictParameterLoader:
 
         # Canopy parameters (required by from_config)
         config['canopy_parameters'] = {}
-        canopy_params = ['number_of_layers', 'max_lai', 'extinction_coefficient']
+        canopy_params = ['number_of_layers', 'maximum_lai', 'extinction_coefficient']
         for param in canopy_params:
             config['canopy_parameters'][param] = self.get_parameter(f'canopy_parameters_{param}')
 
@@ -1458,14 +1457,21 @@ class StrictParameterLoader:
 
         # Uptake kinetics for NO3, NH4, amino_acids
         config['uptake_kinetics'] = {}
-        n_forms = ['NO3', 'NH4', 'amino_acids']
-        for n_form in n_forms:
+        # NO3 and NH4: vmax/km from roots, min_conc/inhibition from nitrogen_balance
+        for n_form in ['NO3', 'NH4']:
             config['uptake_kinetics'][n_form] = {
-                'vmax': self.get_parameter(f'nitrogen_parameters_uptake_kinetics_{n_form}_vmax'),
-                'km': self.get_parameter(f'nitrogen_parameters_uptake_kinetics_{n_form}_km'),
+                'vmax': self.get_parameter(f'root_system_parameters_{n_form.lower()}_uptake_vmax'),
+                'km': self.get_parameter(f'root_system_parameters_{n_form.lower()}_uptake_km'),
                 'min_conc': self.get_parameter(f'nitrogen_parameters_uptake_kinetics_{n_form}_min_conc'),
                 'inhibition_ki': self.get_parameter(f'nitrogen_parameters_uptake_kinetics_{n_form}_inhibition_ki')
             }
+        # amino_acids: use its own vmax, NH4 km as proxy, own min_conc/inhibition
+        config['uptake_kinetics']['amino_acids'] = {
+            'vmax': self.get_parameter('nitrogen_parameters_amino_acid_uptake_rate'),
+            'km': self.get_parameter('root_system_parameters_nh4_uptake_km'),
+            'min_conc': self.get_parameter('nitrogen_parameters_uptake_kinetics_amino_acids_min_conc'),
+            'inhibition_ki': self.get_parameter('nitrogen_parameters_uptake_kinetics_amino_acids_inhibition_ki')
+        }
 
         # Allocation coefficients for growth stages and organs
         config['allocation_coefficients'] = {}

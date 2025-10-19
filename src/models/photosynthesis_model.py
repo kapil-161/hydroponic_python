@@ -7,11 +7,11 @@ class PhotosynthesisParameters:
     phi_psii: float
     r: float
     g_max: float
-    min_par_threshold: float
+    minimum_par_threshold: float
     enzyme_saturation_lai: float
     light_penetration_lai: float
     enzyme_saturation_rate: float
-    min_enzyme_factor: float
+    minimum_enzyme_factor: float
     excess_lai_efficiency: float
     umol_to_g_carbon_ratio: float
     seconds_per_hour: int
@@ -31,7 +31,7 @@ class PhotosynthesisParameters:
     shaded_light_fraction: float
     photosynthesis_cold_limit: float
     photosynthesis_heat_limit: float
-    min_stress_factor: float
+    minimum_stress_factor: float
     optimal_temperature_min: float
     optimal_temperature_max: float
     light_saturation_threshold: float
@@ -60,13 +60,13 @@ class PhotosynthesisParameters:
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'PhotosynthesisParameters':
         required_params = [
-            'phi_psii', 'r', 'g_max', 'min_par_threshold', 'enzyme_saturation_lai',
-            'light_penetration_lai', 'enzyme_saturation_rate', 'min_enzyme_factor',
+            'phi_psii', 'r', 'g_max', 'minimum_par_threshold', 'enzyme_saturation_lai',
+            'light_penetration_lai', 'enzyme_saturation_rate', 'minimum_enzyme_factor',
             'excess_lai_efficiency', 'umol_to_g_carbon_ratio', 'seconds_per_hour',
             'hours_per_day', 'kc', 'ko', 'gamma_star', 'jmax_25', 'vcmax_25',
             'theta', 'alpha', 'rd_25', 'eaj', 'eav', 'ear', 'o2_mmol_mol',
             'shaded_light_fraction', 'photosynthesis_cold_limit', 'photosynthesis_heat_limit',
-            'min_stress_factor', 'optimal_temperature_min', 'optimal_temperature_max',
+            'minimum_stress_factor', 'optimal_temperature_min', 'optimal_temperature_max',
             'light_saturation_threshold', 'optimal_vpd_min', 'optimal_vpd_max',
             'reference_leaf_nitrogen', 'nitrogen_sensitivity', 'water_stress_sensitivity',
             # Physical constants
@@ -83,8 +83,8 @@ class PhotosynthesisParameters:
             if param not in config:
                 raise KeyError(f"Missing required parameter: {param}")
 
-        if config['min_par_threshold'] < 0:
-            raise ValueError("min_par_threshold must be non-negative")
+        if config['minimum_par_threshold'] < 0:
+            raise ValueError("minimum_par_threshold must be non-negative")
         if config['g_max'] <= 0:
             raise ValueError("g_max must be positive")
         if config['seconds_per_hour'] <= 0 or config['hours_per_day'] <= 0:
@@ -93,18 +93,18 @@ class PhotosynthesisParameters:
             raise ValueError("shaded_light_fraction must be between 0 and 1")
         if config['theta'] <= 0 or config['theta'] >= 1:
             raise ValueError("theta must be between 0 and 1")
-        if config['min_enzyme_factor'] <= 0 or config['min_enzyme_factor'] >= 1:
-            raise ValueError("min_enzyme_factor must be between 0 and 1")
+        if config['minimum_enzyme_factor'] <= 0 or config['minimum_enzyme_factor'] >= 1:
+            raise ValueError("minimum_enzyme_factor must be between 0 and 1")
 
         return cls(
             phi_psii=float(config['phi_psii']),
             r=float(config['r']),
             g_max=float(config['g_max']),
-            min_par_threshold=float(config['min_par_threshold']),
+            minimum_par_threshold=float(config['minimum_par_threshold']),
             enzyme_saturation_lai=float(config['enzyme_saturation_lai']),
             light_penetration_lai=float(config['light_penetration_lai']),
             enzyme_saturation_rate=float(config['enzyme_saturation_rate']),
-            min_enzyme_factor=float(config['min_enzyme_factor']),
+            minimum_enzyme_factor=float(config['minimum_enzyme_factor']),
             excess_lai_efficiency=float(config['excess_lai_efficiency']),
             umol_to_g_carbon_ratio=float(config['umol_to_g_carbon_ratio']),
             seconds_per_hour=int(config['seconds_per_hour']),
@@ -124,7 +124,7 @@ class PhotosynthesisParameters:
             shaded_light_fraction=float(config['shaded_light_fraction']),
             photosynthesis_cold_limit=float(config['photosynthesis_cold_limit']),
             photosynthesis_heat_limit=float(config['photosynthesis_heat_limit']),
-            min_stress_factor=float(config['min_stress_factor']),
+            minimum_stress_factor=float(config['minimum_stress_factor']),
             optimal_temperature_min=float(config['optimal_temperature_min']),
             optimal_temperature_max=float(config['optimal_temperature_max']),
             light_saturation_threshold=float(config['light_saturation_threshold']),
@@ -179,7 +179,7 @@ class PhotosynthesisModel:
                                             leaf_nitrogen: float, water_stress: float) -> Tuple[float, float]:
         if any(x is None for x in [par_umol_m2_s, co2_ppm, temp_c, humidity, lai, ec_factor, config, leaf_nitrogen, water_stress]):
             raise ValueError("All inputs (par, co2, temp, humidity, lai, ec_factor, config, leaf_nitrogen, water_stress) must be provided")
-        if par_umol_m2_s < self.params.min_par_threshold:
+        if par_umol_m2_s < self.params.minimum_par_threshold:
             return 0.0, 0.0
         if lai < 0 or ec_factor < 0 or humidity < 0 or humidity > 100:
             raise ValueError("Invalid input: lai, ec_factor must be non-negative, humidity must be 0-100")
@@ -198,7 +198,7 @@ class PhotosynthesisModel:
         enzyme_saturation_lai = config.get('enzyme_saturation_lai', self.params.enzyme_saturation_lai)
         if lai > enzyme_saturation_lai:
             enzyme_saturation_factor = 1.0 - self.params.enzyme_saturation_rate * (lai - enzyme_saturation_lai)
-            enzyme_saturation_factor = max(self.params.min_enzyme_factor, enzyme_saturation_factor)
+            enzyme_saturation_factor = max(self.params.minimum_enzyme_factor, enzyme_saturation_factor)
             vcmax *= enzyme_saturation_factor
             jmax *= enzyme_saturation_factor
 
@@ -280,7 +280,7 @@ class PhotosynthesisModel:
                 # These parameters must be defined in CSV - no hardcoded fallbacks
                 'photosynthesis_cold_limit': self.params.photosynthesis_cold_limit,
                 'photosynthesis_heat_limit': self.params.photosynthesis_heat_limit,
-                'min_factor': self.params.min_stress_factor
+                'min_factor': self.params.minimum_stress_factor
             }
         })
 
@@ -365,11 +365,11 @@ INPUT PARAMETERS (from configuration):
 - phi_psii: Quantum yield of PSII (mol e-/mol photons)
 - r: Gas constant (J/mol/K)
 - g_max: Maximum stomatal conductance (mol/m2/s)
-- min_par_threshold: Minimum PAR for photosynthesis (umol/m2/s)
+- minimum_par_threshold: Minimum PAR for photosynthesis (umol/m2/s)
 - enzyme_saturation_lai: LAI threshold for enzyme saturation
 - light_penetration_lai: LAI threshold for light penetration
 - enzyme_saturation_rate: Rate of enzyme saturation decline
-- min_enzyme_factor: Minimum enzyme efficiency factor
+- minimum_enzyme_factor: Minimum enzyme efficiency factor
 - excess_lai_efficiency: Efficiency factor for excess LAI
 - umol_to_g_carbon_ratio: Conversion ratio from umol CO2 to g C
 - seconds_per_hour: Seconds per hour for time conversions

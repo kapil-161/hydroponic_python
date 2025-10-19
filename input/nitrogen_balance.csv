@@ -13,14 +13,6 @@ nitrogen_parameters,growth_n_use_efficiency,0.6,dimensionless,Growth nitrogen us
 nitrogen_parameters,luxury_uptake_threshold,1.2,dimensionless,Luxury uptake threshold
 nitrogen_parameters,specific_root_activity,0.4,per_day,Specific root activity
 nitrogen_parameters,root_zone_exploration,0.7,dimensionless,Root zone exploration factor
-nitrogen_parameters,uptake_kinetics_NO3_vmax,0.03,g_N_g_root_day,Maximum nitrate uptake rate
-nitrogen_parameters,uptake_kinetics_NO3_km,0.5,mg_N_L,Michaelis constant for nitrate
-nitrogen_parameters,uptake_kinetics_NO3_min_conc,0.1,mg_N_L,Minimum nitrate concentration for uptake
-nitrogen_parameters,uptake_kinetics_NO3_inhibition_ki,2.0,mg_N_L,Ammonium inhibition constant for nitrate uptake
-nitrogen_parameters,uptake_kinetics_NH4_vmax,0.02,g_N_g_root_day,Maximum ammonium uptake rate
-nitrogen_parameters,uptake_kinetics_NH4_km,0.3,mg_N_L,Michaelis constant for ammonium
-nitrogen_parameters,uptake_kinetics_NH4_min_conc,0.05,mg_N_L,Minimum ammonium concentration for uptake
-nitrogen_parameters,uptake_kinetics_NH4_inhibition_ki,1.5,mg_N_L,Nitrate inhibition constant for ammonium uptake
 nitrogen_parameters,allocation_coefficients_vegetative_leaves,0.6,dimensionless,N allocation to vegetative leaves
 nitrogen_parameters,allocation_coefficients_vegetative_stems,0.2,dimensionless,N allocation to vegetative stems
 nitrogen_parameters,allocation_coefficients_vegetative_roots,0.2,dimensionless,N allocation to vegetative roots
@@ -32,11 +24,11 @@ nitrogen_parameters,allocation_coefficients_reproductive_reproductive,0.3,dimens
 nitrogen_parameters,remobilization_rates_structural,0.02,g_N_g_pool_day,Remobilization rate for structural nitrogen pool
 nitrogen_parameters,remobilization_rates_metabolic,0.15,g_N_g_pool_day,Remobilization rate for metabolic nitrogen pool
 nitrogen_parameters,remobilization_rates_storage,0.25,g_N_g_pool_day,Remobilization rate for storage nitrogen pool
-nitrogen_parameters,remobilization_rates_transport,0.30,g_N_g_pool_day,Remobilization rate for transport nitrogen pool
+nitrogen_parameters,remobilization_rates_transport,0.3,g_N_g_pool_day,Remobilization rate for transport nitrogen pool
 nitrogen_parameters,remobilization_efficiency_leaves,0.75,dimensionless,Nitrogen remobilization efficiency from leaves
-nitrogen_parameters,remobilization_efficiency_stems,0.60,dimensionless,Nitrogen remobilization efficiency from stems
-nitrogen_parameters,remobilization_efficiency_roots,0.50,dimensionless,Nitrogen remobilization efficiency from roots
-nitrogen_parameters,remobilization_efficiency_reproductive,0.40,dimensionless,Nitrogen remobilization efficiency from reproductive organs
+nitrogen_parameters,remobilization_efficiency_stems,0.6,dimensionless,Nitrogen remobilization efficiency from stems
+nitrogen_parameters,remobilization_efficiency_roots,0.5,dimensionless,Nitrogen remobilization efficiency from roots
+nitrogen_parameters,remobilization_efficiency_reproductive,0.4,dimensionless,Nitrogen remobilization efficiency from reproductive organs
 nitrogen_parameters,organ_weights_leaves,0.5,dimensionless,Weight factor for leaves in nitrogen stress calculation
 nitrogen_parameters,organ_weights_stems,0.2,dimensionless,Weight factor for stems in nitrogen stress calculation
 nitrogen_parameters,organ_weights_roots,0.2,dimensionless,Weight factor for roots in nitrogen stress calculation
@@ -61,3 +53,9 @@ nitrogen_parameters,uptake_kinetics_amino_acids_vmax,0.08,g_N_g_root_day,Maximum
 nitrogen_parameters,uptake_kinetics_amino_acids_km,0.8,mg_N_L,Michaelis constant for amino acids
 nitrogen_parameters,uptake_kinetics_amino_acids_min_conc,0.2,mg_N_L,Minimum amino acid concentration for uptake
 nitrogen_parameters,uptake_kinetics_amino_acids_inhibition_ki,0.0,mg_N_L,No competitive inhibition for amino acids
+nitrogen_parameters,uptake_kinetics_NO3_min_conc,0.1,mg_N_L,Minimum NO3 concentration for uptake
+nitrogen_parameters,uptake_kinetics_NO3_inhibition_ki,2.0,mg_N_L,NH4 inhibition constant for NO3 uptake
+nitrogen_parameters,uptake_kinetics_NH4_min_conc,0.05,mg_N_L,Minimum NH4 concentration for uptake
+nitrogen_parameters,uptake_kinetics_NH4_inhibition_ki,1.5,mg_N_L,NO3 inhibition constant for NH4 uptake
+nitrogen_parameters,uptake_kinetics_amino_acids_min_conc,0.01,mg_N_L,Minimum amino acid concentration for uptake
+nitrogen_parameters,uptake_kinetics_amino_acids_inhibition_ki,1.0,mg_N_L,Inhibition constant for amino acid uptake

@@ -1,0 +1,8 @@
+Parameter,Multiplier,Value,Total_Biomass_g,LAI_m2_m2,Cumulative_Water_L,Biomass_Change_%,LAI_Change_%
+BASELINE,1.0,-,8.2693,3.2274,8.6898,0,0
+vegetative_leaf_allocation,0.9,0.6120000000000001,8.2693,3.2274,8.6898,0.0,0.0
+vegetative_leaf_allocation,1.1,0.7480000000000001,8.2693,3.2274,8.6898,0.0,0.0
+vegetative_stem_allocation,0.9,0.108,8.2693,3.2274,8.6898,0.0,0.0
+vegetative_stem_allocation,1.1,0.132,8.2693,3.2274,8.6898,0.0,0.0
+vegetative_root_allocation,0.9,0.16200000000000003,8.2693,3.2274,8.6898,0.0,0.0
+vegetative_root_allocation,1.1,0.19800000000000004,8.2693,3.2274,8.6898,0.0,0.0

@@ -8,16 +8,13 @@ import math
 import numpy as np
 
 
-class ParameterError(Exception):
-    """Raised when required parameters are missing"""
-    pass
+def get_required_stress_param(params: dict, param_name: str) -> float:
+    """Get required parameter or raise ParameterError if missing (minimal wrapper for compatibility)"""
+    if param_name not in params: raise ParameterError(f"Missing parameter: {param_name}")
+    return params[param_name]
 
 
-def get_required_stress_param(config_dict: Dict[str, Any], param_name: str) -> float:
-    """Get required stress parameter or raise error if missing"""
-    if param_name not in config_dict:
-        raise ParameterError(f"Required stress parameter '{param_name}' missing from configuration")
-    return float(config_dict[param_name])
+
 
 
 def _build_simple_interactions(stress_weights: Dict[str, float]) -> Dict[str, Dict[str, Dict[str, Any]]]:
@@ -364,7 +361,7 @@ def get_stress_sensitivity_dict(config_dict: Dict[str, Any], process_name: str, 
     result = {}
     for k in stress_keys:
         param_name = f'process_sensitivity_{process_name}_{k}'
-        result[k] = get_required_stress_param(config_dict, param_name)
+        result[k] = get_strict_param(config_dict, param_name)
     return result
 
 
@@ -373,7 +370,7 @@ def get_threshold_dict(config_dict: Dict[str, Any], threshold_type: str, stress_
     result = {}
     for k in stress_keys:
         param_name = f'{threshold_type}_{k}'
-        result[k] = get_required_stress_param(config_dict, param_name)
+        result[k] = get_strict_param(config_dict, param_name)
     return result
 
 # =========================
@@ -1285,11 +1282,11 @@ def create_lettuce_integrated_stress_model(system_config: Any) -> IntegratedStre
         config = {**stress_params, **environment_params}
         if genetic_params:
             config.update({
-                'stress_weight_water': get_required_stress_param(genetic_params, 'salinity_stress_weight'),
-                'stress_weight_temperature': get_required_stress_param(genetic_params, 'temperature_stress_weight'),
-                'stress_weight_nutrient': get_required_stress_param(genetic_params, 'nutrient_stress_weight'),
-                'stress_weight_light': get_required_stress_param(genetic_params, 'light_stress_weight'),
-                'stress_weight_salinity': get_required_stress_param(genetic_params, 'salinity_stress_weight'),
+                'stress_weight_water': get_strict_param(genetic_params, 'salinity_stress_weight'),
+                'stress_weight_temperature': get_strict_param(genetic_params, 'temperature_stress_weight'),
+                'stress_weight_nutrient': get_strict_param(genetic_params, 'nutrient_stress_weight'),
+                'stress_weight_light': get_strict_param(genetic_params, 'light_stress_weight'),
+                'stress_weight_salinity': get_strict_param(genetic_params, 'salinity_stress_weight'),
                 'stress_weight_oxygen': 0.1,
                 'stress_weight_ph': 0.15
             })
@@ -1325,7 +1322,7 @@ class UnifiedStressCalculator:
         if not ec_calculator or not solution_temp_calculator:
             raise ValueError("ec_calculator and solution_temp_calculator must be provided")
 
-        from utils.core_utils import calculate_ph_effect
+        from utils.core_utils import calculate_ph_effect, ParameterError
 
         actual_temperature = env_conditions['actual_temperature']
         actual_vpd = env_conditions['actual_vpd']
@@ -1335,8 +1332,8 @@ class UnifiedStressCalculator:
         solution_temperature = solution_temp_calculator(
             air_temp=actual_temperature,
             solar_radiation=solar_radiation,
-            tank_volume=get_required_stress_param(plant_state, 'tank_volume'),
-            day=get_required_stress_param(plant_state, 'day')
+            tank_volume=get_strict_param(plant_state, 'tank_volume'),
+            day=get_strict_param(plant_state, 'day')
         )
 
         temp_stress_response = self.temperature_stress.daily_update(actual_temperature)
@@ -1350,11 +1347,11 @@ class UnifiedStressCalculator:
         combined_temp_factor = min(temperature_factor, root_temp_factor)
 
         env_params = getattr(self.system_config, 'environment', {})
-        optimal_vpd_min = get_required_stress_param(env_params, 'optimal_vpd_min')
-        optimal_vpd_max = get_required_stress_param(env_params, 'optimal_vpd_max')
+        optimal_vpd_min = get_strict_param(env_params, 'optimal_vpd_min')
+        optimal_vpd_max = get_strict_param(env_params, 'optimal_vpd_max')
         stress_params = getattr(self.system_config, 'stress_parameters', {})
-        vpd_stress_low_factor = get_required_stress_param(stress_params, 'vpd_stress_low_factor')
-        vpd_stress_high_factor = get_required_stress_param(stress_params, 'vpd_stress_high_factor')
+        vpd_stress_low_factor = get_strict_param(stress_params, 'vpd_stress_low_factor')
+        vpd_stress_high_factor = get_strict_param(stress_params, 'vpd_stress_high_factor')
         water_stress_level = (min(0.2, (optimal_vpd_min - actual_vpd) * vpd_stress_low_factor) if actual_vpd < optimal_vpd_min
                               else min(0.4, (actual_vpd - optimal_vpd_max) * vpd_stress_high_factor) if actual_vpd > optimal_vpd_max
                               else 0.0)

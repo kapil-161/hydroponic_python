@@ -22,3 +22,4 @@ simulator_defaults,default_light_intensity,200.0,μmol_m2_s,Default light intens
 validation,max_daily_lai_change,1.0,per_day,Maximum realistic daily LAI change
 validation,max_k_concentration,110.0,mg_per_g,Maximum realistic tissue K concentration
 validation,min_respiration_photosynthesis_ratio,0.001,dimensionless,Minimum realistic respiration to photosynthesis ratio for young plants
+temperature,q10_factor,2.0,dimensionless,Q10 temperature response coefficient (universal)

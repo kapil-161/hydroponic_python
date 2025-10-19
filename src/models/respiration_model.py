@@ -48,7 +48,7 @@ class EnvironmentalResponseParams:
     acclimation_memory: float
     min_acclimation_temperature: float
     max_acclimation_temperature: float
-    min_history_threshold: int
+    minimum_history_threshold: int
     day_start_hour: int
     day_end_hour: int
     day_respiration_factor: float
@@ -74,7 +74,7 @@ class StressResponseParams:
     moderate_stress_factor: float
     severe_stress_base: float
     severe_stress_factor: float
-    max_temperature_factor: float
+    maximum_temperature_factor: float
     minimum_temperature_factor: float
     minimum_respiration_rate_fraction: float
     default_total_biomass_g: float
@@ -100,7 +100,7 @@ class RespirationParameters:
             'biosynthetic_cost', 'age_effect_coefficient', 'max_age_effect', 'acclimation_rate',
             'acclimation_memory', 'n_effect_slope', 'reference_leaf_n', 'max_temperature_threshold',
             'temperature_decay_factor', 'size_penalty_threshold', 'size_penalty_rate',
-            'glucose_to_carbon_ratio', 'min_history_threshold', 'day_start_hour', 'day_end_hour',
+            'glucose_to_carbon_ratio', 'minimum_history_threshold', 'day_start_hour', 'day_end_hour',
             'day_respiration_factor', 'night_respiration_factor', 'carbon_to_co2_ratio',
             'circadian_amplitude_1', 'circadian_peak_1', 'circadian_amplitude_2', 'circadian_peak_2',
             'diurnal_base_factor', 'moderate_stress_threshold',
@@ -117,7 +117,7 @@ class RespirationParameters:
             'protein_fraction', 'carbohydrate_fraction', 'lipid_fraction', 'organic_acid_fraction',
             'lignin_fraction', 'mineral_fraction',
             # Hardcoded value replacements
-            'max_temperature_factor', 'minimum_temperature_factor', 'minimum_respiration_rate_fraction', 'default_total_biomass_g'
+            'maximum_temperature_factor', 'minimum_temperature_factor', 'minimum_respiration_rate_fraction', 'default_total_biomass_g'
         ]
         for param in required_params:
             if param not in config and param not in phenology_params:
@@ -143,8 +143,8 @@ class RespirationParameters:
             raise ValueError("q10_factor must be greater than 1")
         if config['growth_efficiency'] <= 0 or config['growth_efficiency'] >= 1:
             raise ValueError("growth_efficiency must be between 0 and 1")
-        if config['min_history_threshold'] <= 0:
-            raise ValueError("min_history_threshold must be positive")
+        if config['minimum_history_threshold'] <= 0:
+            raise ValueError("minimum_history_threshold must be positive")
         if config['day_start_hour'] >= config['day_end_hour']:
             raise ValueError("day_start_hour must be less than day_end_hour")
         # Get optimal temperature from phenology parameters (consolidation per Rules.md)
@@ -185,7 +185,7 @@ class RespirationParameters:
                 acclimation_memory=float(config['acclimation_memory']),
                 min_acclimation_temperature=float(config['min_acclimation_temperature']),
                 max_acclimation_temperature=float(config['max_acclimation_temperature']),
-                min_history_threshold=int(config['min_history_threshold']),
+                minimum_history_threshold=int(config['minimum_history_threshold']),
                 day_start_hour=int(config['day_start_hour']),
                 day_end_hour=int(config['day_end_hour']),
                 day_respiration_factor=float(config['day_respiration_factor']),
@@ -208,7 +208,7 @@ class RespirationParameters:
                 moderate_stress_factor=float(config['moderate_stress_factor']),
                 severe_stress_base=float(config['severe_stress_base']),
                 severe_stress_factor=float(config['severe_stress_factor']),
-                max_temperature_factor=float(config['max_temperature_factor']),
+                maximum_temperature_factor=float(config['maximum_temperature_factor']),
                 minimum_temperature_factor=float(config['minimum_temperature_factor']),
                 minimum_respiration_rate_fraction=float(config['minimum_respiration_rate_fraction']),
                 default_total_biomass_g=float(config['default_total_biomass_g'])
@@ -268,7 +268,7 @@ class EnhancedRespirationModel:
         reference_temp = acclimated_temp or self.acclimated_reference_temp
         temp_diff = temperature - self.params.maintenance.reference_temperature
         factor = self.params.maintenance.q10_factor ** (temp_diff / 10.0)
-        factor = max(self.params.stress.minimum_temperature_factor, min(self.params.stress.max_temperature_factor, factor))
+        factor = max(self.params.stress.minimum_temperature_factor, min(self.params.stress.maximum_temperature_factor, factor))
         if temperature > self.params.stress.max_temperature_threshold:
             excess_temp = temperature - self.params.stress.max_temperature_threshold
             factor *= math.exp(-self.params.stress.temperature_decay_factor * excess_temp)
@@ -344,7 +344,7 @@ class EnhancedRespirationModel:
         max_history_days = int(self.params.environment.acclimation_memory)
         if len(self.temperature_history) > max_history_days:
             self.temperature_history = self.temperature_history[-max_history_days:]
-        if len(self.temperature_history) >= self.params.environment.min_history_threshold:
+        if len(self.temperature_history) >= self.params.environment.minimum_history_threshold:
             recent_avg_temp = sum(self.temperature_history) / len(self.temperature_history)
             temp_diff = recent_avg_temp - self.acclimated_reference_temp
             acclimation_change = temp_diff * self.params.environment.acclimation_rate
@@ -490,7 +490,7 @@ INPUT PARAMETERS (from configuration):
 - size_penalty_threshold: Biomass threshold for size penalty (g)
 - size_penalty_rate: Rate of size penalty increase
 - glucose_to_carbon_ratio: Glucose to carbon conversion ratio
-- min_history_threshold: Minimum temperature history days for acclimation
+- minimum_history_threshold: Minimum temperature history days for acclimation
 - day_start_hour: Start hour of day
 - day_end_hour: End hour of day
 - day_respiration_factor: Day respiration factor

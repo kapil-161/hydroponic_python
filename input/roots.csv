@@ -1,16 +1,9 @@
 parameter_name,value,unit,description
-# Root System Parameters
-# All root-related parameters for root growth, architecture, hydraulic properties, and zone distribution
-# Includes root conductance, water uptake, nutrient absorption, and root zone characteristics
-
-# Container and System Parameters
 container_volume_default,10.0,L,Default container volume for hydroponic system
 channel_length_default,1.0,m,Default channel length for NFT system
 channel_width_default,0.1,m,Default channel width for NFT system
 channel_depth_default,0.05,m,Default channel depth for NFT system
 n_channels_default,4,dimensionless,Default number of channels in NFT system
-
-# Root Growth Parameters
 initial_root_biomass,0.3,g,Initial root biomass at transplant
 initial_root_length,5.0,cm,Initial root length at transplant
 initial_root_diameter,0.8,mm,Initial root diameter at transplant
@@ -18,42 +11,30 @@ primary_root_growth_rate_default,0.5,cm_day,Default primary root growth rate
 lateral_root_density_default,2.0,roots_cm,Default lateral root density
 branching_angle_mean_default,45.0,degrees,Default mean branching angle
 branching_angle_std_default,15.0,degrees,Default branching angle standard deviation
-
-# Root Type Fractions
 fine_root_fraction_default,0.6,dimensionless,Default fraction of fine roots
 medium_root_fraction_default,0.3,dimensionless,Default fraction of medium roots
 coarse_root_fraction_default,0.1,dimensionless,Default fraction of coarse roots
-
-# Root Diameter Parameters
 fine_diameter_mean,0.5,mm,Mean diameter of fine roots
 fine_diameter_std,0.1,mm,Standard deviation of fine root diameter
 medium_diameter_mean,1.0,mm,Mean diameter of medium roots
 medium_diameter_std,0.2,mm,Standard deviation of medium root diameter
 coarse_diameter_mean,2.0,mm,Mean diameter of coarse roots
 coarse_diameter_std,0.5,mm,Standard deviation of coarse root diameter
-
-# Root Turnover Parameters
 fine_turnover_rate,0.1,per_day,Fine root turnover rate
 medium_turnover_rate,0.05,per_day,Medium root turnover rate
 coarse_turnover_rate,0.02,per_day,Coarse root turnover rate
 fine_half_life_days,7.0,days,Fine root half-life in days
 medium_half_life_days,14.0,days,Medium root half-life in days
 coarse_half_life_days,35.0,days,Coarse root half-life in days
-
-# Root Activity Parameters
 zone_efficiency_factor,0.8,dimensionless,Root zone efficiency factor
 fine_min_activity,0.1,dimensionless,Minimum fine root activity
 medium_min_activity,0.2,dimensionless,Minimum medium root activity
 coarse_min_activity,0.3,dimensionless,Minimum coarse root activity
 establishment_plateau_days,14.0,days,Days for root establishment plateau
 initial_activity,0.5,dimensionless,Initial root activity level
-
-# Root Effectiveness Parameters
 fine_effectiveness,0.9,dimensionless,Fine root effectiveness factor
 medium_effectiveness,0.7,dimensionless,Medium root effectiveness factor
 coarse_effectiveness,0.5,dimensionless,Coarse root effectiveness factor
-
-# Root Threshold Parameters
 coarse_min_threshold,0.1,g,Minimum coarse root biomass threshold
 fine_min_threshold,0.05,g,Minimum fine root biomass threshold
 diameter_minimum_limit,0.1,mm,Minimum root diameter limit
@@ -62,13 +43,10 @@ optimal_flow_rate,1.0,L_day,Optimal flow rate for root system
 auxin_decay_rate,0.1,per_day,Auxin decay rate for root growth
 optimal_density,0.8,g_cm3,Optimal root density
 biomass_density,0.6,g_cm3,Root biomass density
-min_growth_potential,0.1,dimensionless,Minimum root growth potential
-max_growth_potential,1.0,dimensionless,Maximum root growth potential
+minimum_growth_potential,0.1,dimensionless,Minimum root growth potential
+maximum_growth_potential,1.0,dimensionless,Maximum root growth potential
 maximum_temperature_threshold,35.0,°C,Maximum temperature threshold for roots
 temperature_decay_factor,0.1,per_°C,Temperature decay factor for root growth
-q10_factor,2.0,dimensionless,Q10 temperature factor for root processes
-
-# Root Stress Parameters
 density_stress_factor,0.2,dimensionless,Root density stress factor
 root_temperature_optimum,25.0,°C,Optimal root temperature
 root_temperature_maximum,35.0,°C,Maximum root temperature
@@ -82,51 +60,32 @@ young_root_activity,0.9,dimensionless,Activity factor for young roots
 old_root_activity,0.6,dimensionless,Activity factor for old roots
 temperature_range_factor,10.0,°C,Temperature range factor for root zones
 minimum_temperature_factor,0.1,dimensionless,Minimum temperature factor for root uptake
-max_temperature_factor,4.0,dimensionless,Maximum temperature factor for root uptake
+maximum_temperature_factor,4.0,dimensionless,Maximum temperature factor for root uptake
 low_flow_factor,0.4,dimensionless,Flow factor when below minimum flow rate
 high_flow_factor,0.6,dimensionless,Flow factor when above maximum flow rate
 ph_zone_min,5.5,pH,Minimum optimal pH for root zones
 ph_zone_max,6.5,pH,Maximum optimal pH for root zones
-min_ph_factor,0.2,dimensionless,Minimum pH factor for root uptake
+minimum_ph_factor,0.2,dimensionless,Minimum pH factor for root uptake
 ph_penalty_factor,0.1,dimensionless,pH penalty factor for root growth
-nft_zone_1_fraction,0.4,dimensionless,Fraction of roots in NFT zone 1
-nft_zone_2_fraction,0.3,dimensionless,Fraction of roots in NFT zone 2
-nft_zone_3_fraction,0.2,dimensionless,Fraction of roots in NFT zone 3
-nft_zone_4_fraction,0.1,dimensionless,Fraction of roots in NFT zone 4
-dwc_zone_1_fraction,0.4,dimensionless,Fraction of roots in DWC zone 1
-dwc_zone_2_fraction,0.3,dimensionless,Fraction of roots in DWC zone 2
-dwc_zone_3_fraction,0.2,dimensionless,Fraction of roots in DWC zone 3
-general_zone_1_fraction,0.4,dimensionless,Fraction of roots in general zone 1
-general_zone_2_fraction,0.3,dimensionless,Fraction of roots in general zone 2
-general_zone_3_fraction,0.2,dimensionless,Fraction of roots in general zone 3
-general_zone_4_fraction,0.1,dimensionless,Fraction of roots in general zone 4
-
-# Growth Potential Weight Parameters
 auxin_gradient_weight,0.3,dimensionless,Weight for auxin gradient in root growth
 nutrient_signal_weight,0.4,dimensionless,Weight for nutrient signal in root growth
 oxygen_effect_weight,0.2,dimensionless,Weight for oxygen effect in root growth
 competition_effect_weight,0.1,dimensionless,Weight for competition effect in root growth
 temperature_effect_weight,0.2,dimensionless,Weight for temperature effect in root growth
-
-# Flow and Transport Parameters
 flow_rate_offset,0.1,L_day,Flow rate offset for root system
 flow_rate_multiplier,1.0,dimensionless,Flow rate multiplier for root system
 transport_temperature_exponent,2.0,dimensionless,Temperature exponent for transport processes
-min_flow_rate_multiplier,0.5,dimensionless,Minimum flow rate multiplier
+minimum_flow_rate_multiplier,0.5,dimensionless,Minimum flow rate multiplier
 default_michaelis_constant,0.5,mg_L,Default Michaelis constant for nutrient uptake
 default_reference_nutrient_concentration,10.0,mg_L,Default reference nutrient concentration
 nutrient_inhibition_minimum_factor,0.1,dimensionless,Minimum nutrient inhibition factor
 optimization_flow_min,0.1,L_day,Minimum flow rate for optimization
 optimization_flow_max,2.0,L_day,Maximum flow rate for optimization
 optimization_flow_step,0.1,L_day,Flow rate step for optimization
-
-# Minimum Value Parameters
 minimum_surface_area,0.1,m2,Minimum root surface area
 minimum_biomass,0.01,g,Minimum root biomass
 minimum_volume,0.001,L,Minimum root volume
 effective_area_minimum,0.001,cm2,Minimum effective root area
-
-# Nutrient Uptake Parameters
 no3_uptake_vmax,0.5,mg_g_root_day,Maximum NO3 uptake rate
 nh4_uptake_vmax,0.3,mg_g_root_day,Maximum NH4 uptake rate
 po4_uptake_vmax,0.2,mg_g_root_day,Maximum PO4 uptake rate
@@ -141,8 +100,6 @@ k_uptake_km,1.8,mg_L,K uptake Km constant
 ca_uptake_km,1.2,mg_L,Ca uptake Km constant
 mg_uptake_km,0.8,mg_L,Mg uptake Km constant
 so4_uptake_km,0.5,mg_L,SO4 uptake Km constant
-
-# System Multiplier Parameters
 multipliers_nutrient_film_technique_root_length_multiplier,1.0,dimensionless,NFT root length multiplier
 multipliers_deep_water_culture_root_length_multiplier,1.2,dimensionless,DWC root length multiplier
 multipliers_aeroponics_root_length_multiplier,0.8,dimensionless,Aeroponics root length multiplier
@@ -161,30 +118,22 @@ multipliers_aeroponics_branching_multiplier,0.7,dimensionless,Aeroponics branchi
 multipliers_drip_branching_multiplier,1.1,dimensionless,Drip system branching multiplier
 multipliers_wick_system_branching_multiplier,0.9,dimensionless,Wick system branching multiplier
 multipliers_ebb_flow_branching_multiplier,1.0,dimensionless,Ebb and flow branching multiplier
-
-# Nutrient Demand Weight Parameters
 nutrient_demand_weight_no3,0.4,dimensionless,NO3 nutrient demand weight
 nutrient_demand_weight_po4,0.3,dimensionless,PO4 nutrient demand weight
 nutrient_demand_weight_k,0.2,dimensionless,K nutrient demand weight
 nutrient_demand_weight_ca,0.1,dimensionless,Ca nutrient demand weight
 nutrient_demand_weight_mg,0.1,dimensionless,Mg nutrient demand weight
-
-# Nutrient Reference Concentration Parameters
 nutrient_ref_concentration_no3,10.0,mg_L,NO3 reference concentration
 nutrient_ref_concentration_po4,5.0,mg_L,PO4 reference concentration
 nutrient_ref_concentration_k,8.0,mg_L,K reference concentration
 nutrient_ref_concentration_ca,6.0,mg_L,Ca reference concentration
 nutrient_ref_concentration_mg,3.0,mg_L,Mg reference concentration
-
-# Nutrient Competition Parameters
 nutrient_competition_no3,NO3,string,NO3 competition group
 nutrient_competition_nh4,NH4,string,NH4 competition group
 nutrient_competition_po4,PO4,string,PO4 competition group
 nutrient_competition_k,K,string,K competition group
 nutrient_competition_ca,Ca,string,Ca competition group
 nutrient_competition_mg,Mg,string,Mg competition group
-
-# pH Optimum Parameters
 ph_optimum_no3_min,5.5,pH,Minimum pH for NO3 uptake
 ph_optimum_no3_max,6.5,pH,Maximum pH for NO3 uptake
 ph_optimum_nh4_min,6.0,pH,Minimum pH for NH4 uptake
@@ -197,8 +146,6 @@ ph_optimum_ca_min,6.0,pH,Minimum pH for Ca uptake
 ph_optimum_ca_max,7.5,pH,Maximum pH for Ca uptake
 ph_optimum_mg_min,5.5,pH,Minimum pH for Mg uptake
 ph_optimum_mg_max,7.0,pH,Maximum pH for Mg uptake
-
-# Cache Parameters
 cache_timeout,1.0,seconds,Cache timeout for root system
 base_root_conductance,0.5,L_day_MPa_m2,Base root hydraulic conductance
 root_conductance_scaling_factor,2.0,dimensionless,Root conductance scaling factor
@@ -210,12 +157,12 @@ solution_potential_factor,-0.036,MPa_dS_m,Solution potential change per EC unit
 cavitation_threshold,-2.0,MPa,Water potential threshold for cavitation
 temperature_range_factor,10.0,°C,Temperature range factor for root zone layers
 minimum_temperature_factor,0.1,dimensionless,Minimum temperature factor for root uptake
-max_temperature_factor,4.0,dimensionless,Maximum temperature factor for root uptake
+maximum_temperature_factor,4.0,dimensionless,Maximum temperature factor for root uptake
 low_flow_factor,0.4,dimensionless,Flow factor when below minimum flow rate
 high_flow_factor,0.6,dimensionless,Flow factor when above maximum flow rate
 ph_zone_min,5.5,pH,Minimum optimal pH for root zones
 ph_zone_max,6.5,pH,Maximum optimal pH for root zones
-min_ph_factor,0.2,dimensionless,Minimum pH factor for root uptake
+minimum_ph_factor,0.2,dimensionless,Minimum pH factor for root uptake
 ph_penalty_factor,0.5,dimensionless,pH penalty factor outside optimal range
 nft_zone_1_fraction,0.4,dimensionless,Volume fraction for NFT zone 1 (0-2cm)
 nft_zone_2_fraction,0.4,dimensionless,Volume fraction for NFT zone 2 (2-4cm)
@@ -236,8 +183,8 @@ nutrient_signal_weight,0.1,dimensionless,Weight of nutrient signal in growth pot
 oxygen_effect_weight,0.1,dimensionless,Weight of oxygen effect in growth potential
 competition_effect_weight,0.05,dimensionless,Weight of competition effect in growth potential
 temperature_effect_weight,0.03,dimensionless,Weight of temperature effect in growth potential
-min_growth_potential,0.02,dimensionless,Minimum zone growth potential
-max_growth_potential,0.2,dimensionless,Maximum zone growth potential
+minimum_growth_potential,0.02,dimensionless,Minimum zone growth potential
+maximum_growth_potential,0.2,dimensionless,Maximum zone growth potential
 maximum_temperature_threshold,35.0,°C,Maximum temperature threshold for root activity
 temperature_decay_factor,0.1,dimensionless,Temperature decay factor above optimal
 flow_rate_offset,0.5,dimensionless,Offset for flow rate calculation
@@ -280,7 +227,6 @@ initial_root_activity,1.0,dimensionless,Initial activity factor for new roots
 fine_root_effectiveness,1.0,dimensionless,Fine root effectiveness factor
 medium_root_effectiveness,0.7,dimensionless,Medium root effectiveness factor
 coarse_root_effectiveness,0.3,dimensionless,Coarse root effectiveness factor
-q10_factor,2.0,dimensionless,Q10 factor for temperature response
 optimal_flow_rate,1.5,L_min,Optimal flow rate
 flow_stress_threshold,4.0,L_min,Flow rate stress threshold
 root_growth_auxin_decay_rate,0.1,per_zone,Auxin decay rate for growth potential
@@ -335,20 +281,8 @@ nutrient_competition_po4,K-Ca,string,PO4 competition group
 nutrient_competition_k,Ca-Mg,string,K competition group
 nutrient_competition_ca,K-Mg,string,Ca competition group
 nutrient_competition_mg,K-Ca,string,Mg competition group
-ph_optimum_no3_min,5.5,pH,NO3 optimal pH minimum
-ph_optimum_no3_max,6.5,pH,NO3 optimal pH maximum
-ph_optimum_nh4_min,6.0,pH,NH4 optimal pH minimum
-ph_optimum_nh4_max,7.0,pH,NH4 optimal pH maximum
-ph_optimum_po4_min,6.0,pH,PO4 optimal pH minimum
-ph_optimum_po4_max,7.0,pH,PO4 optimal pH maximum
-ph_optimum_k_min,5.5,pH,K optimal pH minimum
-ph_optimum_k_max,7.5,pH,K optimal pH maximum
-ph_optimum_ca_min,6.0,pH,Ca optimal pH minimum
-ph_optimum_ca_max,8.0,pH,Ca optimal pH maximum
-ph_optimum_mg_min,6.0,pH,Mg optimal pH minimum
-ph_optimum_mg_max,8.0,pH,Mg optimal pH maximum
 root_zone_efficiency_factor,0.8,dimensionless,Root zone efficiency factor
-min_flow_rate_multiplier,0.5,dimensionless,Minimum flow rate multiplier for optimal flow
+minimum_flow_rate_multiplier,0.5,dimensionless,Minimum flow rate multiplier for optimal flow
 default_michaelis_constant,50.0,µM,Default Michaelis constant for unknown nutrients
 default_reference_nutrient_concentration,200.0,µM,Default reference nutrient concentration
 nutrient_inhibition_minimum_factor,0.1,dimensionless,Minimum nutrient competitive inhibition factor

@@ -1,19 +1,9 @@
-```python
+from .core_utils import ParameterError
 from typing import Any, Dict, List
 from hydro_system_data import DailyResults
 from core_utilities import format_scientific, create_summary_table, ParameterAccessError, get_strict_param
 
 
-class ParameterError(Exception):
-    """Raised when required parameters are missing"""
-    pass
-
-
-def get_required_threshold_param(thresholds: Dict[str, Any], param_name: str) -> float:
-    """Get required threshold parameter or raise error if missing"""
-    if param_name not in thresholds:
-        raise ParameterError(f"Required threshold parameter '{param_name}' missing from nutrient thresholds")
-    return thresholds[param_name]
 
 class ResultsDisplayUtility:
     """
@@ -153,8 +143,8 @@ class ResultsDisplayUtility:
             if conc is not None:
                 if key not in nutrient_thresholds:
                     raise ParameterError(f"Nutrient thresholds for '{key}' missing from configuration")
-                optimal = get_required_threshold_param(nutrient_thresholds[key], 'optimal')
-                low = get_required_threshold_param(nutrient_thresholds[key], 'low')
+                optimal = get_strict_param(nutrient_thresholds[key], 'optimal')
+                low = get_strict_param(nutrient_thresholds[key], 'low')
                 status = "🟢 Optimal" if conc > optimal else "🟡 Low" if conc > low else "🔴 Critical"
                 uptake_str = f"{uptake:.2f}" if uptake is not None else "N/A"
                 output.append(f"  {name:<10} {conc:<15.1f} mg/L {uptake_str:<20} {status:<15}")

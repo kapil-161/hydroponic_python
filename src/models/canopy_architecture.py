@@ -8,7 +8,6 @@ Key equations:
 - Temperature gradient: T = T_air - (gradient × position)
 """
 
-import numpy as np
 from typing import Dict, Tuple, Optional, Any, List
 from dataclasses import dataclass
 from enum import Enum
@@ -27,7 +26,7 @@ class LeafAngleDistribution(Enum):
 @dataclass
 class CanopyArchitectureParameters:
     number_of_layers: int
-    max_lai: float
+    maximum_lai: float
     extinction_coefficient: float
     diffuse_extinction_coeff: float
     beam_extinction_coeff: float
@@ -45,13 +44,13 @@ class CanopyArchitectureParameters:
     neighbor_shading_distance: float
     sunlit_fraction_method: str
     clumping_index: float
-    max_extinction_coefficient: float
+    maximum_extinction_coefficient: float
     upper_canopy_lai_factor: float
     middle_canopy_lai_factor: float
     lower_middle_canopy_lai_factor: float
     bottom_canopy_lai_factor: float
     shaded_light_fraction: float
-    max_temperature_gradient: float
+    maximum_temperature_gradient: float
     direct_beam_fraction: float
     diffuse_fraction: float
     temperature_gradient_factor: float
@@ -69,13 +68,13 @@ class CanopyArchitectureParameters:
     @classmethod
     def from_config(cls, config_dict: dict) -> 'CanopyArchitectureParameters':
         required_params = [
-            'number_of_layers', 'max_lai', 'extinction_coefficient', 'diffuse_extinction_coeff',
+            'number_of_layers', 'maximum_lai', 'extinction_coefficient', 'diffuse_extinction_coeff',
             'beam_extinction_coeff', 'leaf_angle_distribution', 'mean_leaf_angle', 'leaf_angle_variance',
             'row_spacing', 'plant_spacing', 'plant_height', 'canopy_width', 'leaf_reflectance',
             'leaf_transmittance', 'leaf_absorptance', 'self_shading_factor', 'neighbor_shading_distance',
-            'sunlit_fraction_method', 'clumping_index', 'max_extinction_coefficient', 'upper_canopy_lai_factor',
+            'sunlit_fraction_method', 'clumping_index', 'maximum_extinction_coefficient', 'upper_canopy_lai_factor',
             'middle_canopy_lai_factor', 'lower_middle_canopy_lai_factor', 'bottom_canopy_lai_factor',
-            'shaded_light_fraction', 'max_temperature_gradient', 'temperature_gradient_factor',
+            'shaded_light_fraction', 'maximum_temperature_gradient', 'temperature_gradient_factor',
             'ppfd_to_photosynthesis_factor', 'spherical_x_coefficient', 'planophile_x_coefficient',
             'erectophile_x_coefficient', 'plagiophile_x_coefficient', 'upper_canopy_height_threshold',
             'middle_canopy_height_threshold', 'lower_middle_canopy_height_threshold', 'zenith_angle_precision_threshold'
@@ -87,7 +86,7 @@ class CanopyArchitectureParameters:
 
         return cls(
             number_of_layers=int(config_dict['number_of_layers']),
-            max_lai=float(config_dict['max_lai']),
+            maximum_lai=float(config_dict['maximum_lai']),
             extinction_coefficient=float(config_dict['extinction_coefficient']),
             diffuse_extinction_coeff=float(config_dict['diffuse_extinction_coeff']),
             beam_extinction_coeff=float(config_dict['beam_extinction_coeff']),
@@ -105,13 +104,13 @@ class CanopyArchitectureParameters:
             neighbor_shading_distance=float(config_dict['neighbor_shading_distance']),
             sunlit_fraction_method=config_dict['sunlit_fraction_method'],
             clumping_index=float(config_dict['clumping_index']),
-            max_extinction_coefficient=float(config_dict['max_extinction_coefficient']),
+            maximum_extinction_coefficient=float(config_dict['maximum_extinction_coefficient']),
             upper_canopy_lai_factor=float(config_dict['upper_canopy_lai_factor']),
             middle_canopy_lai_factor=float(config_dict['middle_canopy_lai_factor']),
             lower_middle_canopy_lai_factor=float(config_dict['lower_middle_canopy_lai_factor']),
             bottom_canopy_lai_factor=float(config_dict['bottom_canopy_lai_factor']),
             shaded_light_fraction=float(config_dict['shaded_light_fraction']),
-            max_temperature_gradient=float(config_dict['max_temperature_gradient']),
+            maximum_temperature_gradient=float(config_dict['maximum_temperature_gradient']),
             temperature_gradient_factor=float(config_dict['temperature_gradient_factor']),
             ppfd_to_photosynthesis_factor=float(config_dict['ppfd_to_photosynthesis_factor']),
             spherical_x_coefficient=float(config_dict['spherical_x_coefficient']),
@@ -214,7 +213,7 @@ class CanopyArchitectureModel:
         if abs(math.cos(zenith_rad)) > self.params.zenith_angle_precision_threshold:
             k_beam = x / math.cos(zenith_rad)
         else:
-            k_beam = self.params.max_extinction_coefficient
+            k_beam = self.params.maximum_extinction_coefficient
 
         k_diffuse = x * self.params.diffuse_extinction_coeff
 
@@ -402,7 +401,7 @@ class CanopyArchitectureModel:
     
     def calculate_temperature_profile(self, air_temperature: float,
                                     total_lai: float) -> None:
-        max_temp_gradient = self.params.max_temperature_gradient
+        max_temp_gradient = self.params.maximum_temperature_gradient
         temp_gradient = min(max_temp_gradient, total_lai * self.params.temperature_gradient_factor)
 
         for i, layer in enumerate(self.canopy_layers):
@@ -477,7 +476,7 @@ def create_lettuce_canopy_model(system_config) -> CanopyArchitectureModel:
 """
 INPUT PARAMETERS (from CSV):
 - number_of_layers: number of canopy layers
-- max_lai: maximum leaf area index
+- maximum_lai: maximum leaf area index
 - extinction_coefficient: light extinction coefficient
 - diffuse_extinction_coeff: extinction coefficient for diffuse light
 - beam_extinction_coeff: extinction coefficient for direct beam light
@@ -495,13 +494,13 @@ INPUT PARAMETERS (from CSV):
 - neighbor_shading_distance: distance for neighbor shading (m)
 - sunlit_fraction_method: method for calculating sunlit fraction
 - clumping_index: leaf clumping index (0-1)
-- max_extinction_coefficient: maximum extinction coefficient for horizontal sun
+- maximum_extinction_coefficient: maximum extinction coefficient for horizontal sun
 - upper_canopy_lai_factor: LAI distribution factor for upper canopy
 - middle_canopy_lai_factor: LAI distribution factor for middle canopy
 - lower_middle_canopy_lai_factor: LAI distribution factor for lower-middle canopy
 - bottom_canopy_lai_factor: LAI distribution factor for bottom canopy
 - shaded_light_fraction: fraction of diffuse light reaching shaded leaves
-- max_temperature_gradient: maximum temperature gradient through canopy
+- maximum_temperature_gradient: maximum temperature gradient through canopy
 - temperature_gradient_factor: temperature gradient factor per LAI unit
 - ppfd_to_photosynthesis_factor: PPFD to photosynthesis conversion factor
 

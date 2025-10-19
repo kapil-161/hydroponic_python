@@ -1,9 +1,4 @@
 parameter_name,value,unit,description
-# Water Uptake and Transpiration Model Parameters
-# All water-related parameters for evapotranspiration, water uptake, and plant water relations
-# Includes Penman-Monteith parameters, crop coefficients, and environmental responses
-
-# Penman-Monteith equation parameters (FAO-56 standard)
 kelvin_conversion,273.15,K,Kelvin conversion constant (0°C = 273.15K)
 saturation_vapor_pressure_constant,0.6108,kPa,Saturation vapor pressure constant at 0°C
 vapor_pressure_temp_coefficient,17.27,dimensionless,Vapor pressure temperature coefficient
@@ -12,8 +7,6 @@ saturation_curve_slope_constant,4098.0,dimensionless,Saturation vapor pressure c
 penman_monteith_conversion,0.408,dimensionless,Penman-Monteith conversion factor (MJ to mm)
 aerodynamic_resistance_coefficient,900.0,dimensionless,Aerodynamic resistance coefficient for reference crop
 wind_speed_coefficient,0.34,dimensionless,Wind speed coefficient in denominator
-
-# Other ET0 parameters
 psychrometric_constant,0.665,kPa_°C,Psychrometric constant for Penman-Monteith
 net_radiation_factor,0.77,dimensionless,Fraction of solar radiation converted to net radiation
 radiation_offset,2.45,MJ_m2_day,Radiation offset for net radiation calculation
@@ -26,22 +19,22 @@ temperature_sensitivity,0.15,°C_inverse,Temperature response sensitivity factor
 optimal_vpd_min,0.8,kPa,Minimum optimal vapor pressure deficit
 optimal_vpd_max,1.5,kPa,Maximum optimal vapor pressure deficit
 vpd_sensitivity,0.3,kPa_inverse,VPD response sensitivity factor
-metabolic_water_per_biomass,0.00001,L_g_biomass,Metabolic water demand per unit biomass (cellular processes only; not transpiration)
+metabolic_water_per_biomass,1e-05,L_g_biomass,Metabolic water demand per unit biomass (cellular processes only; not transpiration)
 metabolic_water_per_lai,0.1,L_LAI,Metabolic water demand per LAI unit
 temperature_tolerance,15.0,°C,Temperature tolerance range for water uptake
-minimum_temperature_factor,0.3,dimensionless,Minimum temperature response factor
+minimum_temperature_factor,0.1,dimensionless,Minimum temperature response factor
 stem_biomass_fraction,0.3,dimensionless,Fraction of total biomass allocated to stem
 leaf_area_to_biomass_ratio,0.1,g_per_m2,Ratio for converting leaf area to biomass
 water_uptake_sensitivity_low,0.06,per_°C,Water uptake sensitivity per °C below optimum for RZT
-water_uptake_sensitivity_high,0.10,per_°C,Water uptake sensitivity per °C above optimum for RZT
+water_uptake_sensitivity_high,0.1,per_°C,Water uptake sensitivity per °C above optimum for RZT
 minimum_vpd_threshold,0.1,kPa,Minimum vapor pressure deficit threshold
 minimum_et0_threshold,0.1,mm/day,Minimum reference evapotranspiration threshold
 ground_area_per_plant,0.06,m2,Ground area allocated per plant (0.2m × 0.3m spacing)
-max_lai_coverage_factor,0.5,dimensionless,LAI at which canopy reaches full coverage (lower value = faster coverage)
+maximum_lai_coverage_factor,0.5,dimensionless,LAI at which canopy reaches full coverage (lower value = faster coverage)
 minimum_coverage_factor,0.01,dimensionless,Minimum canopy coverage factor (prevents zero transpiration at low LAI)
 max_root_surface_area_factor,2.0,dimensionless,Maximum root surface area factor
 cavitation_gradient_denominator,1.0,MPa,Cavitation gradient denominator
-temperature_response_exponent_denominator,200,dimensionless,Temperature response exponent denominator
+temperature_response_exponent_denominator,200.0,dimensionless,Temperature response exponent denominator
 vpd_effect_divisor,1.0,kPa,VPD effect divisor
 transpiration_base_rate_scale_factor,0.5,dimensionless,Base rate scaling factor for transpiration
 transpiration_scaling_multiplier,0.1,dimensionless,Transpiration scaling multiplier
@@ -50,4 +43,4 @@ minimum_coverage_factor,0.01,dimensionless,Minimum coverage factor when LAI is z
 minimum_cavitation_factor,0.1,dimensionless,Minimum cavitation factor
 maximum_vpd_effect,2.0,dimensionless,Maximum VPD effect multiplier
 sensitivity_low,0.06,dimensionless,Low water uptake sensitivity
-sensitivity_high,0.10,dimensionless,High water uptake sensitivity
+sensitivity_high,0.1,dimensionless,High water uptake sensitivity

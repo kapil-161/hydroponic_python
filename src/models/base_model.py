@@ -12,19 +12,11 @@ from enum import Enum
 import math
 from datetime import datetime
 
-class ParameterError(Exception):
-    """Raised when required parameters are missing"""
-    pass
 
-
-def get_required_weather_param(weather_data: Dict[str, Any], param_name: str) -> float:
-    """Get required weather parameter or raise error if missing"""
-    if param_name not in weather_data or weather_data[param_name] is None:
-        raise ParameterError(f"Required weather parameter '{param_name}' missing from weather data")
-    return weather_data[param_name]
 
 
 from utils.core_utils import (
+    ParameterError,
     get_strict_param,
     ParameterAccessError,
     validate_parameter_range
@@ -437,10 +429,10 @@ def create_daily_input(day: int, date: datetime, weather_data: Dict[str, float],
         day=day,
         date=date,
         temperature=weather_data['temperature'],
-        humidity=get_required_weather_param(weather_data, 'humidity'),
+        humidity=get_strict_param(weather_data, 'humidity'),
         solar_radiation=weather_data['solar_radiation'],
-        vpd=get_required_weather_param(weather_data, 'vpd'),
-        co2_concentration=get_required_weather_param(weather_data, 'co2'),
+        vpd=get_strict_param(weather_data, 'vpd'),
+        co2_concentration=get_strict_param(weather_data, 'co2'),
         environmental_conditions=weather_data,
         plant_state=plant_data or {},
         system_state=system_data or {}
