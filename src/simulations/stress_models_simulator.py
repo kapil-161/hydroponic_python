@@ -242,7 +242,6 @@ class StressModelsSimulator(BaseSimulator):
             if missing_data:
                 # On early steps, dependencies may not be available yet - use minimal stress levels
                 if self.current_step <= 2:
-                    print(f"Stress: Skipping calculation on step {self.current_step} due to missing dependencies: {missing_data}")
                     return
                 else:
                     raise ValueError(f"Required dependency data missing at step {self.current_step}: {missing_data} - no defaults allowed per Rules.md")

@@ -250,7 +250,6 @@ class NutrientModelsSimulator(BaseSimulator):
                     # Use minimal initial values for first step to break circular dependency
                     water_uptake_rate = 0.001  # 1 mL/hour initial uptake
                     transpiration_rate = 0.0005  # 0.5 mL/hour initial transpiration
-                    print(f"Nutrient: Using initial water values on step 0 - uptake: {water_uptake_rate} L/h, transpiration: {transpiration_rate} L/h")
                 else:
                     raise ValueError("Water data missing from water_uptake_simulator - no defaults allowed")
             
@@ -269,7 +268,6 @@ class NutrientModelsSimulator(BaseSimulator):
                     root_distribution = 0.5  # assume uniform distribution
                     root_biomass = 0.01  # g from initials.csv
                     root_surface_area = 12.6  # cm2 from initials.csv
-                    print(f"Nutrient: Using initial root values on step 0 - depth: {root_depth} cm, biomass: {root_biomass} g, SA: {root_surface_area} cm²")
                 else:
                     raise ValueError("Root data missing from root_system_simulator - no defaults allowed")
 
@@ -286,7 +284,6 @@ class NutrientModelsSimulator(BaseSimulator):
                     # Use initial values for first step to break circular dependency
                     growth_stage = "vegetative"  # Use nutrient model's expected growth stage
                     development_index = 0.0  # Initial development
-                    print(f"Nutrient: Using initial phenology values on step 0 - stage: {growth_stage}, index: {development_index}")
                 else:
                     raise ValueError("Phenology data missing from phenology_simulator - no defaults allowed")
 
@@ -300,7 +297,6 @@ class NutrientModelsSimulator(BaseSimulator):
                     # Use initial values for first step to break circular dependency
                     nutrient_stress = 0.0  # No stress initially
                     temperature_stress = 0.0  # No stress initially
-                    print(f"Nutrient: Using initial stress values on step 0 - nutrient: {nutrient_stress}, temp: {temperature_stress}")
                 else:
                     raise ValueError("Stress data missing from stress_models - no defaults allowed")
             
@@ -355,7 +351,6 @@ class NutrientModelsSimulator(BaseSimulator):
                     # Use initial values from CSV for first step to break circular dependency
                     leaf_biomass = 0.015  # g from initials.csv
                     stem_biomass = 0.005  # g from initials.csv
-                    print(f"Nutrient: Using initial biomass values on step 0 - leaf: {leaf_biomass} g, stem: {stem_biomass} g")
                 else:
                     raise ValueError("Biomass data missing from biomass_allocation_simulator - no defaults allowed")
             

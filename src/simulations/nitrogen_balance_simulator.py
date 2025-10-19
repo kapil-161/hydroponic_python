@@ -48,6 +48,11 @@ class NitrogenBalanceState:
     root_nitrogen_allocation: float = 0.0
     reproductive_nitrogen_allocation: float = 0.0
     total_nitrogen_remobilization: float = 0.0
+    # Cumulative nitrogen in each organ (for concentration calculation)
+    cumulative_leaf_nitrogen: float = 0.0
+    cumulative_stem_nitrogen: float = 0.0
+    cumulative_root_nitrogen: float = 0.0
+    cumulative_reproductive_nitrogen: float = 0.0
     leaf_nitrogen_remobilization: float = 0.0
     stem_nitrogen_remobilization: float = 0.0
     root_nitrogen_remobilization: float = 0.0
@@ -278,7 +283,6 @@ class NitrogenBalanceSimulator(BaseSimulator):
             # Skip on first step if nutrient data not available yet (circular dependency)
             if any(x is None for x in [nitrogen_availability, nitrogen_uptake_mg_per_plant_per_day, root_activity]):
                 if self.current_step <= 2:
-                    print(f"N-Balance: Skipping calculation on step 0 due to missing nutrient_models data")
                     return
                 raise ValueError("Nutrient data missing from nutrient_models_simulator - no defaults allowed")
             
@@ -383,12 +387,23 @@ class NitrogenBalanceSimulator(BaseSimulator):
             ammonium_uptake_rate = result.get('ammonium_uptake', 0.0)
             amino_acid_uptake_rate = result.get('amino_acid_uptake', 0.0)
             
-            # Update allocation
+            # Update allocation (hourly rates)
             self.state.total_nitrogen_allocation = result.get('total_nitrogen_allocation', self.state.total_nitrogen_allocation)
-            self.state.leaf_nitrogen_allocation = result.get('leaf_nitrogen_allocation', self.state.leaf_nitrogen_allocation)
-            self.state.stem_nitrogen_allocation = result.get('stem_nitrogen_allocation', self.state.stem_nitrogen_allocation)
-            self.state.root_nitrogen_allocation = result.get('root_nitrogen_allocation', self.state.root_nitrogen_allocation)
-            self.state.reproductive_nitrogen_allocation = result.get('reproductive_nitrogen_allocation', self.state.reproductive_nitrogen_allocation)
+            leaf_alloc_hourly = result.get('leaf_nitrogen_allocation', self.state.leaf_nitrogen_allocation)
+            stem_alloc_hourly = result.get('stem_nitrogen_allocation', self.state.stem_nitrogen_allocation)
+            root_alloc_hourly = result.get('root_nitrogen_allocation', self.state.root_nitrogen_allocation)
+            reproductive_alloc_hourly = result.get('reproductive_nitrogen_allocation', self.state.reproductive_nitrogen_allocation)
+
+            self.state.leaf_nitrogen_allocation = leaf_alloc_hourly
+            self.state.stem_nitrogen_allocation = stem_alloc_hourly
+            self.state.root_nitrogen_allocation = root_alloc_hourly
+            self.state.reproductive_nitrogen_allocation = reproductive_alloc_hourly
+
+            # Accumulate into cumulative totals for concentration calculation
+            self.state.cumulative_leaf_nitrogen += leaf_alloc_hourly
+            self.state.cumulative_stem_nitrogen += stem_alloc_hourly
+            self.state.cumulative_root_nitrogen += root_alloc_hourly
+            self.state.cumulative_reproductive_nitrogen += reproductive_alloc_hourly
             
             # Update remobilization
             self.state.total_nitrogen_remobilization = result.get('total_nitrogen_remobilization', self.state.total_nitrogen_remobilization)
@@ -409,11 +424,21 @@ class NitrogenBalanceSimulator(BaseSimulator):
                 if pool in nitrogen_pools:
                     self.state.nitrogen_pools[pool] = nitrogen_pools[pool]
             
-            # Update concentrations
-            nitrogen_concentrations = result.get('nitrogen_concentrations', {})
-            for organ in self.organs:
-                if organ in nitrogen_concentrations:
-                    self.state.nitrogen_concentrations[organ] = nitrogen_concentrations[organ]
+            # Calculate nitrogen concentrations using cumulative nitrogen and current biomass
+            biomass_data = self.dependency_cache.get('biomass_allocation_simulator', {})
+            leaf_biomass = biomass_data.get('leaf_biomass', 0.001)  # Avoid division by zero
+            stem_biomass = biomass_data.get('stem_biomass', 0.001)
+            root_biomass = biomass_data.get('root_biomass', 0.001)
+
+            # Calculate concentrations as cumulative N / current biomass (g N / g biomass)
+            if leaf_biomass > 0:
+                self.state.nitrogen_concentrations['leaves'] = self.state.cumulative_leaf_nitrogen / leaf_biomass
+            if stem_biomass > 0:
+                self.state.nitrogen_concentrations['stems'] = self.state.cumulative_stem_nitrogen / stem_biomass
+            if root_biomass > 0:
+                self.state.nitrogen_concentrations['roots'] = self.state.cumulative_root_nitrogen / root_biomass
+            if self.state.cumulative_reproductive_nitrogen > 0 and stem_biomass > 0:
+                self.state.nitrogen_concentrations['reproductive'] = self.state.cumulative_reproductive_nitrogen / stem_biomass
 
             # Calculate AREA-BASED nitrogen for photosynthesis (DIRECT BIOCHEMICAL LINK)
             # This enables direct N → Photosynthesis feedback
@@ -648,7 +673,12 @@ class NitrogenBalanceSimulator(BaseSimulator):
             'allocation_rates': self.state.allocation_rates,
             'remobilization_rates': self.state.remobilization_rates,
             'cumulative_nitrogen_uptake': self.state.cumulative_nitrogen_uptake,
-            'daily_nitrogen_uptake': self.state.daily_nitrogen_uptake
+            'daily_nitrogen_uptake': self.state.daily_nitrogen_uptake,
+            # Add cumulative nitrogen by organ for leaf development simulator
+            'cumulative_leaf_nitrogen': self.state.cumulative_leaf_nitrogen,
+            'cumulative_stem_nitrogen': self.state.cumulative_stem_nitrogen,
+            'cumulative_root_nitrogen': self.state.cumulative_root_nitrogen,
+            'cumulative_reproductive_nitrogen': self.state.cumulative_reproductive_nitrogen
         }
 
         # Add individual form and organ data

@@ -37,6 +37,7 @@ class RootSystemState:
     coarse_root_fraction: float = 0.0
     cumulative_root_growth: float = 0.0
     daily_root_growth: float = 0.0
+    previous_root_length: float = 0.0  # Track previous length for net growth calculation
     last_update: datetime = field(default_factory=datetime.now)
     
 
@@ -62,6 +63,7 @@ class RootSystemSimulator(BaseSimulator):
         self.state.root_biomass = 0.02  # Small initial root biomass
         self.state.root_length = 5.0  # Small initial root length
         self.state.root_surface_area = 0.5  # Small initial surface area
+        self.state.previous_root_length = 5.0  # Initialize to match initial root length
         
         # Initialize root distribution
         self.root_zones = ['upper', 'middle', 'lower']
@@ -287,13 +289,11 @@ class RootSystemSimulator(BaseSimulator):
             
             # Update state with model results
             self.state.root_depth = result.get('root_depth', self.state.root_depth)
-            # Calculate root biomass from model results to ensure consistency
-            # This makes root_system_simulator the authoritative source for root biomass
-            model_root_biomass = result.get('total_root_biomass', 0.0)
-            if model_root_biomass > 0:
-                self.state.root_biomass = model_root_biomass
-            else:
-                # Fallback to biomass allocation value if model doesn't return biomass
+            # Use root biomass from biomass_allocation_simulator as authoritative source
+            # The biomass allocation simulator calculates root biomass from photosynthesis carbon gain
+            # Root system simulator uses this to calculate root architecture (depth, length, surface area)
+            # This ensures consistency and avoids circular dependency issues
+            if root_biomass is not None:
                 self.state.root_biomass = root_biomass
             self.state.root_length = result.get('total_root_length', self.state.root_length)
 
@@ -335,10 +335,18 @@ class RootSystemSimulator(BaseSimulator):
             root_cohorts = result.get('root_cohorts', [])
             self.state.root_cohorts = root_cohorts
             
-            # Update cumulative values
-            hourly_root_growth = result.get('root_growth_rate', 0.0) * 3600  # Convert to hourly
-            self.state.cumulative_root_growth += hourly_root_growth
-            self.state.daily_root_growth += hourly_root_growth
+            # Calculate NET root growth (accounts for both growth and senescence)
+            # This is the change in actual root length, not gross production
+            current_root_length = self.state.root_length
+            net_hourly_growth = current_root_length - self.state.previous_root_length
+
+            # Update cumulative and daily growth with NET growth
+            # This gives realistic values that account for root turnover
+            self.state.cumulative_root_growth += net_hourly_growth
+            self.state.daily_root_growth += net_hourly_growth
+
+            # Update previous length for next calculation
+            self.state.previous_root_length = current_root_length
             
         except Exception as e:
             # Raise error according to Rules.md - no error suppression

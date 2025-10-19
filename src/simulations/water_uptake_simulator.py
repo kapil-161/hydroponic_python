@@ -176,7 +176,6 @@ class WaterUptakeSimulator(BaseSimulator):
             
             if any(x is None for x in [lai, leaf_area, canopy_height]):
                 if self.current_step <= 2:
-                    print(f"Water: Skipping calculation on first step due to missing canopy data")
                     return
                 raise ValueError("Canopy data missing from canopy_architecture_simulator - no defaults allowed")
 
@@ -188,7 +187,6 @@ class WaterUptakeSimulator(BaseSimulator):
 
             if any(x is None for x in [root_depth, root_distribution, root_biomass]):
                 if self.current_step <= 2:
-                    print(f"Water: Skipping calculation on first step due to missing root data")
                     return
                 raise ValueError("Root data missing from root_system_simulator - no defaults allowed")
 
@@ -199,7 +197,6 @@ class WaterUptakeSimulator(BaseSimulator):
 
             if any(x is None for x in [growth_stage, development_index]):
                 if self.current_step <= 2:
-                    print(f"Water: Skipping calculation on first step due to missing phenology data")
                     return
                 raise ValueError("Phenology data missing from phenology_simulator - no defaults allowed")
 
@@ -210,7 +207,6 @@ class WaterUptakeSimulator(BaseSimulator):
 
             if any(x is None for x in [water_stress, temperature_stress]):
                 if self.current_step <= 2:
-                    print(f"Water: Skipping calculation on first step due to missing stress data")
                     return
                 raise ValueError("Stress data missing from stress_models - no defaults allowed")
 
@@ -220,7 +216,6 @@ class WaterUptakeSimulator(BaseSimulator):
 
             if total_biomass is None:
                 if self.current_step <= 2:
-                    print(f"Water: Skipping calculation on first step due to missing biomass data")
                     return
                 raise ValueError("Total biomass missing from biomass_allocation_simulator - no defaults allowed")
 
@@ -252,13 +247,13 @@ class WaterUptakeSimulator(BaseSimulator):
             self.state.transpiration_rate = result.transpiration_L / 24.0
             self.state.evapotranspiration = result.etc_mm / 24.0
 
-            # DEBUG: Print water uptake calculation
-            if self.current_step < 5 or self.current_step % 400 == 0:
-                print(f"Water step {self.current_step}: LAI={lai:.3f}, biomass={total_biomass:.2f}g, "
-                      f"solar_rad={solar_radiation:.1f}MJ/m²/day, "
-                      f"ET0={result.et0_mm:.2f}mm/day, kc={result.kc:.3f}, ETC={result.etc_mm:.2f}mm/day, "
-                      f"transp_mm={result.transpiration_mm:.4f}mm/day, "
-                      f"uptake={result.total_water_uptake_L:.6f}L/day, transp={result.transpiration_L:.6f}L/day")
+            # DEBUG: Disabled for performance
+            # if self.current_step < 5 or self.current_step % 400 == 0:
+            #     print(f"Water step {self.current_step}: LAI={lai:.3f}, biomass={total_biomass:.2f}g, "
+            #           f"solar_rad={solar_radiation:.1f}MJ/m²/day, "
+            #           f"ET0={result.et0_mm:.2f}mm/day, kc={result.kc:.3f}, ETC={result.etc_mm:.2f}mm/day, "
+            #           f"transp_mm={result.transpiration_mm:.4f}mm/day, "
+            #           f"uptake={result.total_water_uptake_L:.6f}L/day, transp={result.transpiration_L:.6f}L/day")
             # Calculate water availability based on realistic hydroponic conditions
             # Hydroponic systems maintain high water availability (0.8-1.0)
             # Use transpiration rate as stress indicator instead of arbitrary scaling

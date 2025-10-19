@@ -284,23 +284,7 @@ class DistributedSimulationRunner:
         print(f"  Queue size: {bus_status['queue_size']}")
         print(f"  Event handlers: {sum(bus_status['event_handlers'].values())}")
         print(f"  Registered simulators: {len(bus_status['registered_simulators'])}")
-        
-        # Data consistency validation results
-        validation_summary = self.orchestrator.get_validation_summary()
-        print(f"\nData Consistency Validation:")
-        print(f"  Total validations: {validation_summary['total_validations']}")
-        print(f"  Errors: {validation_summary['total_errors']}")
-        print(f"  Warnings: {validation_summary['total_warnings']}")
-        print(f"  Critical issues: {validation_summary['total_critical']}")
-        print(f"  Validation enabled: {validation_summary['validation_enabled']}")
-        
-        if validation_summary['total_errors'] > 0 or validation_summary['total_critical'] > 0:
-            print(f"  ⚠️  Data consistency issues detected!")
-        elif validation_summary['total_warnings'] > 0:
-            print(f"  ⚠️  Data consistency warnings detected")
-        else:
-            print(f"  ✅ All data consistency checks passed")
-    
+
     def get_system_status(self) -> Dict[str, Any]:
         """Get current system status"""
         return {

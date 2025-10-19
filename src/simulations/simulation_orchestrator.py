@@ -18,7 +18,6 @@ from simulations.communication_bus import (
     SimulationMessageBus, SimulationEvent, EventType, BaseSimulator,
     message_bus
 )
-from simulations.data_consistency_validator import DataConsistencyValidator
 from models.base_model import DailyUpdateInput, DailyUpdateOutput
 
 
@@ -109,12 +108,7 @@ class SimulationOrchestrator(BaseSimulator):
         
         # Data collection
         self.collected_data: Dict[str, List[Dict[str, Any]]] = {}
-        
-        # Data consistency validation
-        self.data_validator = DataConsistencyValidator()
-        self.validation_enabled = True
-        self.validation_results: List[Dict[str, Any]] = []
-        
+
     def register_simulator(self, simulator: BaseSimulator):
         """Register a simulator with the orchestrator"""
         self.simulators[simulator.simulator_id] = simulator
@@ -233,12 +227,6 @@ class SimulationOrchestrator(BaseSimulator):
                         self._execute_dependency_ordered_step(daily_weather)
 
                     # Validate data consistency across simulators
-                    # PERFORMANCE: Only validate once per day (every 24 steps) to reduce overhead
-                    # Validation runs 24 rules × 12 simulators = 288 checks per call
-                    # Daily validation: 33 days × 288 = ~9,500 checks (vs 793 × 288 = ~228,000 hourly)
-                    if self.current_hour == 0:  # Midnight - once per day
-                        self._validate_data_consistency()
-
                     # Check for harvest maturity (adjusted for extended simulation)
                     harvest_maturity_reached = self._check_harvest_maturity()
                     if harvest_maturity_reached:
@@ -587,78 +575,6 @@ class SimulationOrchestrator(BaseSimulator):
                 'model_name': output.model_name,
                 'data': all_results
             })
-    
-    def _validate_data_consistency(self):
-        """Validate data consistency across all simulators"""
-        if not self.validation_enabled:
-            return
-        
-        try:
-            # Collect current data from all simulators
-            simulator_data = {}
-            for simulator_id, simulator in self.simulators.items():
-                if hasattr(simulator, 'get_current_state'):
-                    simulator_data[simulator_id] = simulator.get_current_state()
-                elif hasattr(simulator, 'state'):
-                    simulator_data[simulator_id] = simulator.state.__dict__
-            
-            # Run validation
-            validation_results = self.data_validator.validate_simulator_data(simulator_data)
-            
-            # Store results
-            validation_summary = self.data_validator.get_validation_summary()
-            self.validation_results.append({
-                'step': self.current_step,
-                'day': self.current_day,
-                'hour': self.current_hour,
-                'timestamp': datetime.now(),
-                'summary': validation_summary,
-                'results': validation_results
-            })
-            
-            # Report critical errors
-            if validation_summary['critical'] > 0 or validation_summary['errors'] > 0:
-                print(f"⚠️  Data consistency validation failed at step {self.current_step}:")
-                for result in validation_results:
-                    if result.severity in ['ERROR', 'CRITICAL']:
-                        print(f"   {result.severity}: {result.error_message}")
-                        if result.suggested_fix:
-                            print(f"   Suggested fix: {result.suggested_fix}")
-            
-            # Report warnings
-            if validation_summary['warnings'] > 0:
-                print(f"⚠️  Data consistency warnings at step {self.current_step}:")
-                for result in validation_results:
-                    if result.severity == 'WARNING':
-                        print(f"   WARNING: {result.warning_message or result.error_message}")
-        
-        except Exception as e:
-            print(f"❌ Data consistency validation failed with error: {e}")
-    
-    def get_validation_summary(self) -> Dict[str, Any]:
-        """Get summary of data consistency validation results"""
-        if not self.validation_results:
-            return {
-                'total_validations': 0,
-                'total_errors': 0,
-                'total_warnings': 0,
-                'total_critical': 0,
-                'validation_enabled': self.validation_enabled
-            }
-        
-        total_validations = len(self.validation_results)
-        total_errors = sum(r['summary']['errors'] for r in self.validation_results)
-        total_warnings = sum(r['summary']['warnings'] for r in self.validation_results)
-        total_critical = sum(r['summary']['critical'] for r in self.validation_results)
-        
-        return {
-            'total_validations': total_validations,
-            'total_errors': total_errors,
-            'total_warnings': total_warnings,
-            'total_critical': total_critical,
-            'validation_enabled': self.validation_enabled,
-            'latest_results': self.validation_results[-1] if self.validation_results else None
-        }
     
     def _collect_step_data(self):
         """Collect data from all simulators for current step"""

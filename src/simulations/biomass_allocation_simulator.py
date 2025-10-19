@@ -203,7 +203,6 @@ class BiomassAllocationSimulator(BaseSimulator):
 
             # Allow skipping on early steps while initial values propagate
             if self.current_step <= 2 and hourly_carbon_gain is None:
-                print(f"Biomass: Skipping calculation on step {self.current_step} - waiting for photosynthesis data")
                 return
 
             # Per Rules.md: raise error if missing after initial steps, no defaults
@@ -217,7 +216,6 @@ class BiomassAllocationSimulator(BaseSimulator):
 
             # Allow skipping on early steps while initial values propagate
             if self.current_step <= 2 and total_respiration_rate is None:
-                print(f"Biomass: Skipping calculation on step {self.current_step} - waiting for respiration data")
                 return
 
             if total_respiration_rate is None:
@@ -299,16 +297,12 @@ class BiomassAllocationSimulator(BaseSimulator):
                 new_root_biomass = hourly_biomass_gain * self.state.root_allocation_fraction
 
                 # Update biomass pools
+                # Biomass allocation simulator is authoritative source for biomass from photosynthesis
+                # Root system simulator uses root_biomass to calculate architecture (depth, length, surface area)
                 self.state.leaf_biomass += new_leaf_biomass
                 self.state.stem_biomass += new_stem_biomass
                 self.state.root_biomass += new_root_biomass
-                
-                # Use root biomass from root system simulator if available (authoritative source)
-                root_data = self.dependency_cache.get('root_system_simulator', {})
-                root_biomass_from_root_system = root_data.get('root_biomass')
-                if root_biomass_from_root_system is not None and root_biomass_from_root_system > 0:
-                    self.state.root_biomass = root_biomass_from_root_system
-                
+
                 self.state.total_biomass = self.state.leaf_biomass + self.state.stem_biomass + self.state.root_biomass
 
                 # Calculate tissue water retention for new biomass growth

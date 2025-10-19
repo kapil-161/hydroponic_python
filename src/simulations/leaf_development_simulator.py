@@ -99,7 +99,8 @@ class LeafDevelopmentSimulator(BaseSimulator):
             'biomass_allocation_simulator': ['leaf_biomass', 'total_biomass'],
             'stress_models': ['temperature_stress', 'water_stress', 'nutrient_stress'],
             'nutrient_models_simulator': ['nitrogen_availability', 'nitrogen_uptake'],
-            'canopy_architecture_simulator': ['canopy_height', 'lai']
+            'canopy_architecture_simulator': ['canopy_height', 'lai'],
+            'nitrogen_balance_simulator': ['leaf_nitrogen_allocation', 'nitrogen_concentrations']
         }
         
         # Data cache for dependencies
@@ -219,7 +220,6 @@ class LeafDevelopmentSimulator(BaseSimulator):
             # Skip on first step if weather data not available yet
             if any(x is None for x in [temperature, humidity, light_intensity]):
                 if self.current_step <= 2:
-                    print(f"Leaf Dev: Skipping calculation on step 0 due to missing weather data")
                     return
                 raise ValueError("Weather data missing - no defaults allowed")
             
@@ -230,7 +230,6 @@ class LeafDevelopmentSimulator(BaseSimulator):
             
             if any(x is None for x in [growth_stage, development_index]):
                 if self.current_step <= 2:
-                    print(f"Leaf Dev: Skipping calculation on step 0 due to missing phenology data")
                     return
                 raise ValueError("Phenology data missing from phenology_simulator - no defaults allowed")
             
@@ -263,9 +262,16 @@ class LeafDevelopmentSimulator(BaseSimulator):
             canopy_data = self.dependency_cache.get('canopy_architecture_simulator', {})
             canopy_height = canopy_data.get('canopy_height')
             lai = canopy_data.get('lai')
-            
+
             if any(x is None for x in [canopy_height, lai]):
                 raise ValueError("Canopy data missing from canopy_architecture_simulator - no defaults allowed")
+
+            # Get nitrogen data from nitrogen balance simulator
+            nitrogen_balance_data = self.dependency_cache.get('nitrogen_balance_simulator', {})
+            # Use cumulative nitrogen for content, not hourly allocation
+            cumulative_leaf_nitrogen = nitrogen_balance_data.get('cumulative_leaf_nitrogen', 0.0)
+            nitrogen_concentrations = nitrogen_balance_data.get('nitrogen_concentrations', {})
+            leaf_nitrogen_concentration = nitrogen_concentrations.get('leaves', 0.0) if isinstance(nitrogen_concentrations, dict) else 0.0
             
             # Calculate thermal time for this hour
             # Use the model's thermal time calculation method
@@ -309,8 +315,11 @@ class LeafDevelopmentSimulator(BaseSimulator):
             self.state.total_leaf_area = result.get('total_leaf_area', self.state.total_leaf_area)
             self.state.total_leaf_weight = result.get('total_leaf_weight', self.state.total_leaf_weight)
             self.state.leaf_weight_ratio = result.get('leaf_weight_ratio', self.state.leaf_weight_ratio)
-            self.state.leaf_nitrogen_content = result.get('leaf_nitrogen_content', self.state.leaf_nitrogen_content)
-            self.state.leaf_nitrogen_ratio = result.get('leaf_nitrogen_ratio', self.state.leaf_nitrogen_ratio)
+
+            # Update nitrogen content from nitrogen balance simulator
+            self.state.leaf_nitrogen_content = cumulative_leaf_nitrogen
+            # Use nitrogen concentration from nitrogen balance (already calculated as g N / g biomass)
+            self.state.leaf_nitrogen_ratio = leaf_nitrogen_concentration
             
             # Update distributions
             leaf_age_dist = result.get('leaf_age_distribution', {})
