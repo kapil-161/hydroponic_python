@@ -287,7 +287,14 @@ class RootSystemSimulator(BaseSimulator):
             
             # Update state with model results
             self.state.root_depth = result.get('root_depth', self.state.root_depth)
-            self.state.root_biomass = root_biomass  # From biomass allocation simulator
+            # Calculate root biomass from model results to ensure consistency
+            # This makes root_system_simulator the authoritative source for root biomass
+            model_root_biomass = result.get('total_root_biomass', 0.0)
+            if model_root_biomass > 0:
+                self.state.root_biomass = model_root_biomass
+            else:
+                # Fallback to biomass allocation value if model doesn't return biomass
+                self.state.root_biomass = root_biomass
             self.state.root_length = result.get('total_root_length', self.state.root_length)
 
             # Calculate root surface area from biomass if model returns 0

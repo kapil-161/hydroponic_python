@@ -59,7 +59,8 @@ class PhotosynthesisSimulator(BaseSimulator):
             'stress_models': ['temperature_stress', 'light_stress', 'water_stress'],
             'leaf_development_simulator': ['total_leaf_area', 'leaf_nitrogen_content'],
             'nitrogen_balance_simulator': ['nitrogen_area_based'],  # Direct N → Photosynthesis link
-            'biomass_allocation_simulator': ['sink_strength']  # Source-sink feedback
+            'biomass_allocation_simulator': ['sink_strength'],  # Source-sink feedback
+            'respiration_simulator': ['total_respiration_rate']  # For gross photosynthesis calculation
         }
         
         # Data cache for dependencies
@@ -292,10 +293,15 @@ class PhotosynthesisSimulator(BaseSimulator):
             # Update state with model results
             self.state.net_assimilation_rate = net_assimilation  # Already in g C/hour (from model)
             self.state.stomatal_conductance = stomatal_conductance  # mol/m²/s - for transpiration coupling
-            # NOTE: Gross photosynthesis and respiration should come from respiration_simulator
-            # Per Rules.md: No shortcuts, no estimations - use model outputs
-            self.state.gross_photosynthesis_rate = net_assimilation  # Will be corrected by respiration model
-            self.state.respiration_rate = 0.0  # Will be set by respiration_simulator
+            
+            # Get respiration rate from respiration simulator (if available)
+            respiration_data = self.dependency_cache.get('respiration_simulator', {})
+            respiration_rate = respiration_data.get('total_respiration_rate', 0.0)
+            
+            # Calculate gross photosynthesis correctly: Gross = Net + Respiration
+            # This ensures the carbon balance equation: Net = Gross - Respiration
+            self.state.gross_photosynthesis_rate = net_assimilation + respiration_rate
+            self.state.respiration_rate = respiration_rate
             
             # FIXED: Calculate light use efficiency properly
             # Convert net_assimilation from g C/hour to μmol CO2/m²/s for proper comparison with PAR

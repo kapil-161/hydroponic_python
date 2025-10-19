@@ -37,6 +37,7 @@ class CanopyState:
     wind_speed_reduction: float = 0.0
     cumulative_light_interception: float = 0.0
     daily_light_interception: float = 0.0
+    canopy_biomass: float = 0.0  # Above-ground biomass (leaves + stems)
     step_count: int = 0
     last_update: datetime = field(default_factory=datetime.now)
 
@@ -187,6 +188,12 @@ class CanopyArchitectureSimulator(BaseSimulator):
             leaf_biomass = biomass_data.get('leaf_biomass')
             total_biomass = biomass_data.get('total_biomass')
 
+            # Calculate canopy biomass even if other calculations are skipped
+            # This ensures canopy biomass is always calculated when biomass data is available
+            stem_biomass = biomass_data.get('stem_biomass', 0.0)
+            canopy_biomass = leaf_biomass + stem_biomass if leaf_biomass is not None and stem_biomass is not None else 0.0
+            self.state.canopy_biomass = canopy_biomass
+            
             # Skip on first step if biomass data not available yet (circular dependency)
             if any(x is None for x in [leaf_biomass, total_biomass]):
                 if self.current_step <= 2:
@@ -311,6 +318,8 @@ class CanopyArchitectureSimulator(BaseSimulator):
             self.state.humidity_gradient = 0.0  # Placeholder for future implementation
             self.state.wind_speed_reduction = min(0.8, total_lai * 0.2)  # Simple wind reduction model
             
+            # Canopy biomass already calculated above
+            
             # Update cumulative values - convert PAR to energy
             # light_intensity is in μmol photons/m²/s (PAR)
             # Convert to MJ/m²/hour: μmol/m²/s × 3600 s/hr × 0.219 J/μmol × 10^-6 MJ/J
@@ -385,7 +394,8 @@ class CanopyArchitectureSimulator(BaseSimulator):
             'humidity_gradient': self.state.humidity_gradient,
             'wind_speed_reduction': self.state.wind_speed_reduction,
             'cumulative_light_interception': self.state.cumulative_light_interception,
-            'daily_light_interception': self.state.daily_light_interception
+            'daily_light_interception': self.state.daily_light_interception,
+            'canopy_biomass': self.state.canopy_biomass  # FIX: Add canopy_biomass to CSV output
         }
     
     def publish_state_data(self):
@@ -404,7 +414,8 @@ class CanopyArchitectureSimulator(BaseSimulator):
             'humidity_gradient': self.state.humidity_gradient,
             'wind_speed_reduction': self.state.wind_speed_reduction,
             'cumulative_light_interception': self.state.cumulative_light_interception,
-            'daily_light_interception': self.state.daily_light_interception
+            'daily_light_interception': self.state.daily_light_interception,
+            'canopy_biomass': self.state.canopy_biomass
         }
 
         # Store in dependency cache for other simulators to access
@@ -427,7 +438,8 @@ class CanopyArchitectureSimulator(BaseSimulator):
             'humidity_gradient': self.state.humidity_gradient,
             'wind_speed_reduction': self.state.wind_speed_reduction,
             'cumulative_light_interception': self.state.cumulative_light_interception,
-            'daily_light_interception': self.state.daily_light_interception
+            'daily_light_interception': self.state.daily_light_interception,
+            'canopy_biomass': self.state.canopy_biomass
         }
         return data_map.get(data_key)
     

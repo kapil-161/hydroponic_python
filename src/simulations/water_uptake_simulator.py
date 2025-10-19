@@ -259,18 +259,40 @@ class WaterUptakeSimulator(BaseSimulator):
                       f"ET0={result.et0_mm:.2f}mm/day, kc={result.kc:.3f}, ETC={result.etc_mm:.2f}mm/day, "
                       f"transp_mm={result.transpiration_mm:.4f}mm/day, "
                       f"uptake={result.total_water_uptake_L:.6f}L/day, transp={result.transpiration_L:.6f}L/day")
-            self.state.water_availability = 1.0 - (result.total_water_uptake_L / 10.0)  # Calculate from uptake
+            # Calculate water availability based on realistic hydroponic conditions
+            # Hydroponic systems maintain high water availability (0.8-1.0)
+            # Use transpiration rate as stress indicator instead of arbitrary scaling
+            max_daily_transpiration = 0.5  # L/day - realistic max for lettuce
+            daily_transpiration = self.state.transpiration_rate * 24  # Convert hourly to daily
+            self.state.water_availability = max(0.8, 1.0 - (daily_transpiration / max_daily_transpiration) * 0.2)
 
-            # Calculate water potentials based on water status and transpiration
-            # Root water potential: based on water availability (hydroponic = high availability)
-            # Range: -0.1 MPa (full) to -1.5 MPa (depleted)
-            self.state.root_water_potential = -0.1 - (1.0 - self.state.water_availability) * 1.4
+            # Calculate water potentials with physiologically realistic ranges
+            # Root water potential: hydroponic systems maintain high water potential
+            # Range: -0.1 MPa (optimal) to -0.8 MPa (stressed) - much more realistic
+            water_stress_factor = max(0.0, min(1.0, (1.0 - self.state.water_availability) / 0.2))
+            self.state.root_water_potential = -0.1 - (water_stress_factor * 0.7)  # -0.1 to -0.8 MPa
 
-            # Leaf water potential: based on transpiration demand
-            # Range: -0.5 MPa (low transpiration) to -2.5 MPa (high transpiration)
-            # Normalize transpiration by typical max for lettuce (~0.015 L/h)
-            transpiration_stress = min(1.0, self.state.transpiration_rate / 0.015)
-            self.state.leaf_water_potential = -0.5 - (transpiration_stress * 2.0)
+            # Leaf water potential: based on transpiration and environmental conditions
+            # Range: -0.3 MPa (low transpiration) to -1.5 MPa (high transpiration) - realistic for lettuce
+            # Use actual transpiration rate normalized by plant size (LAI)
+            if lai > 0:
+                transpiration_per_lai = self.state.transpiration_rate / lai  # L/h per LAI
+                max_transpiration_per_lai = 0.01  # L/h per LAI - realistic maximum
+                transpiration_stress = min(1.0, transpiration_per_lai / max_transpiration_per_lai)
+            else:
+                transpiration_stress = 0.0
+            
+            self.state.leaf_water_potential = -0.3 - (transpiration_stress * 1.2)  # -0.3 to -1.5 MPa
+            
+            # Apply physiological bounds to prevent unrealistic values
+            # Root water potential: -0.1 to -0.8 MPa (hydroponic range)
+            self.state.root_water_potential = max(-0.8, min(-0.1, self.state.root_water_potential))
+            
+            # Leaf water potential: -0.3 to -1.5 MPa (lettuce range)
+            self.state.leaf_water_potential = max(-1.5, min(-0.3, self.state.leaf_water_potential))
+            
+            # Ensure water availability stays within realistic bounds
+            self.state.water_availability = max(0.8, min(1.0, self.state.water_availability))
 
             self.state.hydraulic_conductance = result.total_hydraulic_conductance
             self.state.crop_coefficient = result.kc

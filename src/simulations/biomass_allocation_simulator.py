@@ -75,7 +75,8 @@ class BiomassAllocationSimulator(BaseSimulator):
             'respiration_simulator': ['total_respiration_rate', 'cumulative_respiration'],
             'phenology_simulator': ['growth_stage', 'development_index', 'thermal_time'],
             'stress_models': ['temperature_stress', 'water_stress', 'nutrient_stress'],
-            'genetic_parameters_simulator': ['genetic_coefficients', 'cultivar_profile']
+            'genetic_parameters_simulator': ['genetic_coefficients', 'cultivar_profile'],
+            'root_system_simulator': ['root_biomass']  # Use root biomass from root system simulator
         }
         
         # Data cache for dependencies
@@ -310,6 +311,13 @@ class BiomassAllocationSimulator(BaseSimulator):
                 self.state.leaf_biomass += new_leaf_biomass
                 self.state.stem_biomass += new_stem_biomass
                 self.state.root_biomass += new_root_biomass
+                
+                # Use root biomass from root system simulator if available (authoritative source)
+                root_data = self.dependency_cache.get('root_system_simulator', {})
+                root_biomass_from_root_system = root_data.get('root_biomass')
+                if root_biomass_from_root_system is not None and root_biomass_from_root_system > 0:
+                    self.state.root_biomass = root_biomass_from_root_system
+                
                 self.state.total_biomass = self.state.leaf_biomass + self.state.stem_biomass + self.state.root_biomass
 
                 # Calculate tissue water retention for new biomass growth

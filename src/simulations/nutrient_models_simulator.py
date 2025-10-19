@@ -622,9 +622,11 @@ class NutrientModelsSimulator(BaseSimulator):
             'solution_ph': self.state.solution_ph,
             'nutrient_availability': self.state.nutrient_availability,
             'nutrient_uptake_rate': self.state.nutrient_uptake_rates,
+            'nutrient_uptake_rates': self.state.nutrient_uptake_rates,  # For nitrogen balance simulator
             'nutrient_concentrations': self.state.nutrient_concentrations,
             'nitrogen_availability': nitrogen_availability,
             'nitrogen_uptake': nitrogen_uptake,  # mg/plant/day total nitrogen (NO3 + NH4)
+            'total_nitrogen_uptake': nitrogen_uptake,  # mg/plant/day (explicit for nitrogen balance simulator)
             'root_activity': 1.0  # Normalized root activity
         }
 

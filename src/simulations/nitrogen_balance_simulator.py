@@ -130,6 +130,14 @@ class NitrogenBalanceSimulator(BaseSimulator):
     def on_simulation_start(self, data: Dict[str, Any]):
         """Handle simulation start"""
         self.state = NitrogenBalanceState()
+        # Initialize cumulative nitrogen uptake values to zero
+        self.state.total_nitrogen_uptake = 0.0
+        self.state.nitrate_uptake = 0.0
+        self.state.ammonium_uptake = 0.0
+        self.state.amino_acid_uptake = 0.0
+        self.state.cumulative_nitrogen_uptake = 0.0
+        self.state.daily_nitrogen_uptake = 0.0
+
         self.history.clear()
         self.dependency_cache.clear()
         
@@ -252,10 +260,19 @@ class NitrogenBalanceSimulator(BaseSimulator):
             # Get nutrient data from nutrient models simulator
             nutrient_data = self.dependency_cache.get('nutrient_models_simulator', {})
             nitrogen_availability = nutrient_data.get('nitrogen_availability')
-            # Use nitrogen uptake rates directly from nutrient_models_simulator (authoritative source)
-            nitrogen_uptake_mg_per_plant_per_day = nutrient_data.get('total_nitrogen_uptake', nutrient_data.get('nitrogen_uptake'))
-            nitrate_uptake_rate = nutrient_data.get('nutrient_uptake_rates', {}).get('N-NO3', 0.0)
-            ammonium_uptake_rate = nutrient_data.get('nutrient_uptake_rates', {}).get('N-NH4', 0.0)
+            # Get nitrogen uptake data from nutrient_models_simulator
+            # Use the same data source for both total and individual forms to ensure consistency
+            nutrient_uptake_rates = nutrient_data.get('nutrient_uptake_rates', {})
+            nitrate_uptake_rate = nutrient_uptake_rates.get('N-NO3', 0.0)
+            ammonium_uptake_rate = nutrient_uptake_rates.get('N-NH4', 0.0)
+            
+            # Use the total nitrogen uptake directly from nutrient_models_simulator
+            # This ensures consistency with the authoritative source
+            nitrogen_uptake_mg_per_plant_per_day = nutrient_data.get('total_nitrogen_uptake', 0.0)
+            
+            # If total is not available, calculate from individual forms as fallback
+            if nitrogen_uptake_mg_per_plant_per_day == 0.0:
+                nitrogen_uptake_mg_per_plant_per_day = nitrate_uptake_rate + ammonium_uptake_rate
             root_activity = nutrient_data.get('root_activity')
 
             # Skip on first step if nutrient data not available yet (circular dependency)
@@ -360,10 +377,11 @@ class NitrogenBalanceSimulator(BaseSimulator):
             }
             
             # Update state with model results
-            self.state.total_nitrogen_uptake = result.get('total_nitrogen_uptake', self.state.total_nitrogen_uptake)
-            self.state.nitrate_uptake = result.get('nitrate_uptake', self.state.nitrate_uptake)
-            self.state.ammonium_uptake = result.get('ammonium_uptake', self.state.ammonium_uptake)
-            self.state.amino_acid_uptake = result.get('amino_acid_uptake', self.state.amino_acid_uptake)
+            # Note: nitrate_uptake and ammonium_uptake from result are RATES (mg/plant/day)
+            # We need to accumulate them to match total_nitrogen_uptake (which becomes cumulative below)
+            nitrate_uptake_rate = result.get('nitrate_uptake', 0.0)
+            ammonium_uptake_rate = result.get('ammonium_uptake', 0.0)
+            amino_acid_uptake_rate = result.get('amino_acid_uptake', 0.0)
             
             # Update allocation
             self.state.total_nitrogen_allocation = result.get('total_nitrogen_allocation', self.state.total_nitrogen_allocation)
@@ -453,6 +471,21 @@ class NitrogenBalanceSimulator(BaseSimulator):
             self.state.daily_nitrogen_uptake += hourly_n_uptake_g_total
             # Keep total_nitrogen_uptake in sync (g, system total)
             self.state.total_nitrogen_uptake = self.state.cumulative_nitrogen_uptake
+
+            # FIX: Also accumulate individual nitrogen forms to ensure consistency
+            # Convert rates to hourly system-total values in grams (same units as total_nitrogen_uptake)
+            hourly_nitrate_mg_per_plant = nitrate_uptake_rate / 24.0
+            hourly_ammonium_mg_per_plant = ammonium_uptake_rate / 24.0
+            hourly_amino_acid_mg_per_plant = amino_acid_uptake_rate / 24.0
+
+            hourly_nitrate_g_total = (hourly_nitrate_mg_per_plant * plant_count) / 1000.0
+            hourly_ammonium_g_total = (hourly_ammonium_mg_per_plant * plant_count) / 1000.0
+            hourly_amino_acid_g_total = (hourly_amino_acid_mg_per_plant * plant_count) / 1000.0
+
+            # Accumulate individual forms
+            self.state.nitrate_uptake += hourly_nitrate_g_total
+            self.state.ammonium_uptake += hourly_ammonium_g_total
+            self.state.amino_acid_uptake += hourly_amino_acid_g_total
             
         except Exception as e:
             # Raise error according to Rules.md - no error suppression
