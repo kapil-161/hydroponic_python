@@ -31,7 +31,6 @@ from simulations.water_uptake_simulator import WaterUptakeSimulator
 from simulations.nutrient_models_simulator import NutrientModelsSimulator
 from simulations.canopy_architecture_simulator import CanopyArchitectureSimulator
 from simulations.root_system_simulator import RootSystemSimulator
-from simulations.genetic_parameters_simulator import GeneticParametersSimulator
 from simulations.leaf_development_simulator import LeafDevelopmentSimulator
 from simulations.nitrogen_balance_simulator import NitrogenBalanceSimulator
 
@@ -181,18 +180,13 @@ class DistributedSimulationRunner:
             self.simulators['root_system'] = RootSystemSimulator(root_params)
             self.orchestrator.register_simulator(self.simulators['root_system'])
             
-            
-            # 10. Genetic Parameters Simulator
-            genetic_db, cultivar_profile = self.parameter_loader.create_genetic_parameters()
-            self.simulators['genetic_parameters'] = GeneticParametersSimulator(genetic_db, cultivar_profile)
-            self.orchestrator.register_simulator(self.simulators['genetic_parameters'])
-            
-            # 11. Leaf Development Simulator
+
+            # 10. Leaf Development Simulator
             leaf_params = self.parameter_loader.create_leaf_development_parameters()
             self.simulators['leaf_development'] = LeafDevelopmentSimulator(leaf_params)
             self.orchestrator.register_simulator(self.simulators['leaf_development'])
             
-            # 12. Nitrogen Balance Simulator
+            # 11. Nitrogen Balance Simulator
             nitrogen_params = self.parameter_loader.create_nitrogen_balance_parameters()
             self.simulators['nitrogen_balance'] = NitrogenBalanceSimulator(nitrogen_params)
             self.orchestrator.register_simulator(self.simulators['nitrogen_balance'])

@@ -57,8 +57,7 @@ class PhenologySimulator(BaseSimulator):
         
         # Inter-simulator dependencies - proper scientific dependencies
         self.dependencies = {
-            'stress_models': ['temperature_stress', 'light_stress'],
-            'genetic_parameters_simulator': ['genetic_coefficients', 'cultivar_profile']
+            'stress_models': ['temperature_stress', 'light_stress']
         }
         
         # Data cache for dependencies
@@ -204,13 +203,7 @@ class PhenologySimulator(BaseSimulator):
             # Get stress factors from stress models simulator (proper scientific approach)
             stress_data = self.dependency_cache.get('stress_models', {})
             temperature_stress = stress_data.get('temperature_stress')
-            light_stress = stress_data.get('light_stress')
-            
-            # Get genetic parameters from genetic parameters simulator
-            genetic_data = self.dependency_cache.get('genetic_parameters_simulator', {})
-            genetic_coefficients = genetic_data.get('genetic_coefficients')
-            cultivar_profile = genetic_data.get('cultivar_profile')
-            
+
             # Calculate phenology using model functions - no shortcuts
             result = self.model.update_developmental_state(
                 temperature=temperature,

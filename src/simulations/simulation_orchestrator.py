@@ -347,7 +347,6 @@ class SimulationOrchestrator(BaseSimulator):
         execution_order = [
             # Level 1: Independent simulators (weather data only or initial state from CSV)
             'phenology_simulator',
-            'genetic_parameters_simulator',
             'root_system_simulator',
 
             # Level 2: Water, nutrients, and environmental before stress calculation

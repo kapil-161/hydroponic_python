@@ -58,9 +58,7 @@ class StrictParameterLoader:
         if self.roots_csv_path:
             self._load_specialized_file(self.roots_csv_path, 'root_system_parameters')
 
-        # Load genetic parameters if path provided
-        if self.genetics_csv_path:
-            self._load_specialized_file(self.genetics_csv_path, 'genetic_parameters')
+        # Genetic parameters removed (was producing fake data)
 
         # Senescence parameters removed
 
@@ -665,7 +663,7 @@ class StrictParameterLoader:
 
         # Integrated stress parameters
         config['integration'] = {}
-        config['integration']['temperature_weight'] = self.get_parameter('genetic_parameters_default_temperature_stress_weight')
+        config['integration']['temperature_weight'] = self.get_parameter('stress_parameters_stress_weight_temperature')
         config['integration']['water_weight'] = self.get_parameter('stress_parameters_integration_water_weight')
         config['integration']['nutrient_weight'] = self.get_parameter('stress_parameters_integration_nutrient_weight')
         config['integration']['light_weight'] = self.get_parameter('stress_parameters_integration_light_weight')
@@ -1303,84 +1301,6 @@ class StrictParameterLoader:
         return RootSystemParameters.from_config(config)
 
 
-    def create_genetic_parameters(self):
-        """Create genetic parameters from CSV - follows Rules.md strictly"""
-        from models.genetic_parameters import (
-            GeneticParameterDatabase, CultivarProfile, GeneticCoefficients,
-            LettuceType, GeneticTrait
-        )
-
-        # Build configuration from CSV parameters - ALL from CSV per Rules.md
-        config = {
-            'default_air_temperature': self.get_parameter('simulator_defaults_default_air_temperature'),
-            'default_humidity': self.get_parameter('simulator_defaults_default_humidity'),
-            'default_light_intensity': self.get_parameter('simulator_defaults_default_light_intensity'),
-            'cache_timeout': self.get_parameter('simulator_defaults_cache_timeout_global')
-        }
-
-        # Create genetic database with CSV config
-        genetic_db = GeneticParameterDatabase(config)
-
-        # Build genetic coefficients from CSV
-        genetic_coeffs = GeneticCoefficients(
-            EM_FL=self.get_parameter('genetic_parameters_EM_FL'),
-            FL_SH=self.get_parameter('genetic_parameters_FL_SH'),
-            FL_SD=self.get_parameter('genetic_parameters_FL_SD'),
-            SD_PM=self.get_parameter('genetic_parameters_SD_PM'),
-            FL_LF=self.get_parameter('genetic_parameters_FL_LF'),
-            LFMAX=self.get_parameter('genetic_parameters_LFMAX'),
-            SLAVR=self.get_parameter('genetic_parameters_SLAVR'),
-            SIZLF=self.get_parameter('genetic_parameters_SIZLF'),
-            XFRT=self.get_parameter('genetic_parameters_XFRT'),
-            SFDUR=self.get_parameter('genetic_parameters_SFDUR'),
-            SDPDV=self.get_parameter('genetic_parameters_SDPDV'),
-            PODUR=self.get_parameter('genetic_parameters_PODUR'),
-            WTPSD=self.get_parameter('genetic_parameters_WTPSD'),
-            THRSH=self.get_parameter('genetic_parameters_THRSH'),
-            SDPRO=self.get_parameter('genetic_parameters_SDPRO'),
-            SDLIP=self.get_parameter('genetic_parameters_SDLIP'),
-            EC_TOLERANCE=self.get_parameter('genetic_parameters_EC_TOLERANCE'),
-            ROOT_ACTIVITY=self.get_parameter('genetic_parameters_ROOT_ACTIVITY'),
-            PHOTOSYNTHETIC_CAPACITY=self.get_parameter('genetic_parameters_PHOTOSYNTHETIC_CAPACITY'),
-            NITRATE_EFFICIENCY=self.get_parameter('genetic_parameters_NITRATE_EFFICIENCY')
-        )
-
-        # Build trait values from CSV
-        trait_values = {
-            GeneticTrait.DAYS_TO_EMERGENCE: self.get_parameter('genetic_parameters_trait_days_to_emergence'),
-            GeneticTrait.DAYS_TO_HARVEST: self.get_parameter('genetic_parameters_trait_days_to_harvest'),
-            GeneticTrait.BOLTING_TOLERANCE: self.get_parameter('genetic_parameters_trait_bolting_tolerance'),
-            GeneticTrait.LEAF_SIZE: self.get_parameter('genetic_parameters_trait_leaf_size'),
-            GeneticTrait.PLANT_ARCHITECTURE: self.get_parameter('genetic_parameters_trait_plant_architecture'),
-            GeneticTrait.ROOT_DEVELOPMENT: self.get_parameter('genetic_parameters_trait_root_development'),
-            GeneticTrait.YIELD_POTENTIAL: self.get_parameter('genetic_parameters_trait_yield_potential'),
-            GeneticTrait.CHLOROPHYLL_CONTENT: self.get_parameter('genetic_parameters_trait_chlorophyll_content'),
-            GeneticTrait.CAROTENOID_CONTENT: self.get_parameter('genetic_parameters_trait_carotenoid_content'),
-            GeneticTrait.VITAMIN_C_CONTENT: self.get_parameter('genetic_parameters_trait_vitamin_c_content'),
-            GeneticTrait.NITRATE_ACCUMULATION: self.get_parameter('genetic_parameters_trait_nitrate_accumulation'),
-            GeneticTrait.HEAT_TOLERANCE: self.get_parameter('genetic_parameters_trait_heat_tolerance'),
-            GeneticTrait.COLD_TOLERANCE: self.get_parameter('genetic_parameters_trait_cold_tolerance'),
-            GeneticTrait.SALINITY_TOLERANCE: self.get_parameter('genetic_parameters_trait_salinity_tolerance'),
-            GeneticTrait.DISEASE_RESISTANCE: self.get_parameter('genetic_parameters_trait_disease_resistance'),
-            GeneticTrait.GROWTH_RATE: self.get_parameter('genetic_parameters_trait_growth_rate')
-        }
-
-        # Create cultivar profile from CSV
-        cultivar_profile = CultivarProfile(
-            cultivar_id=self.get_parameter('genetic_parameters_cultivar_id'),
-            cultivar_name=self.get_parameter('genetic_parameters_cultivar_name'),
-            lettuce_type=LettuceType(self.get_parameter('genetic_parameters_lettuce_type')),
-            genetic_coefficients=genetic_coeffs,
-            yield_potential=self.get_parameter('genetic_parameters_yield_potential'),
-            adaptation_score=self.get_parameter('genetic_parameters_adaptation_score'),
-            trait_values=trait_values,
-            maturity_days=int(self.get_parameter('genetic_parameters_maturity_days'))
-        )
-
-        # Add cultivar to database
-        genetic_db.add_cultivar(cultivar_profile)
-
-        return genetic_db, cultivar_profile
 
     def create_leaf_development_parameters(self):
         """Create leaf development parameters from CSV"""

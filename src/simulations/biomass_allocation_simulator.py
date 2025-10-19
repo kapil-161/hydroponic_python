@@ -75,7 +75,6 @@ class BiomassAllocationSimulator(BaseSimulator):
             'respiration_simulator': ['total_respiration_rate', 'cumulative_respiration'],
             'phenology_simulator': ['growth_stage', 'development_index', 'thermal_time'],
             'stress_models': ['temperature_stress', 'water_stress', 'nutrient_stress'],
-            'genetic_parameters_simulator': ['genetic_coefficients', 'cultivar_profile'],
             'root_system_simulator': ['root_biomass']  # Use root biomass from root system simulator
         }
         
@@ -243,15 +242,7 @@ class BiomassAllocationSimulator(BaseSimulator):
             
             if any(x is None for x in [temperature_stress, water_stress, nutrient_stress]):
                 raise ValueError("Stress data missing from stress_models - no defaults allowed")
-            
-            # Get genetic parameters from genetic parameters simulator
-            genetic_data = self.dependency_cache.get('genetic_parameters_simulator', {})
-            genetic_coefficients = genetic_data.get('genetic_coefficients')
-            cultivar_profile = genetic_data.get('cultivar_profile')
-            
-            if genetic_coefficients is None or cultivar_profile is None:
-                raise ValueError("Genetic data missing from genetic_parameters_simulator - no defaults allowed")
-            
+
             # Calculate biomass allocation using model functions - no shortcuts
             # Per Rules.md: calculate stress from actual data, no hardcoded defaults
             light_stress = 1.0 - min(1.0, temperature_stress)  # Inverse of temperature stress as approximation
