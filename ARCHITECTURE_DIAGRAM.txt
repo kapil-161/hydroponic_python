@@ -1,0 +1,182 @@
+================================================================================
+                 HYDROPONIC SIMULATION FRAMEWORK ARCHITECTURE
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              ENTRY POINT                                     │
+│                            main.py (118 LOC)                                 │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    DISTRIBUTED SIMULATION RUNNER                             │
+│                   distributed_simulation_runner.py (342 LOC)                 │
+│                                                                               │
+│  • Loads all parameters from 17 CSV files                                    │
+│  • Loads weather data                                                        │
+│  • Creates 11 simulator instances                                            │
+│  • Initializes orchestrator                                                  │
+│  • Exports results                                                           │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       SIMULATION ORCHESTRATOR                                │
+│                    simulation_orchestrator.py (771 LOC)                      │
+│                                                                               │
+│  • Central coordinator                                                       │
+│  • Manages timing & synchronization                                          │
+│  • Dependency-ordered execution                                              │
+│  • Shared data cache                                                         │
+│  • Performance tracking                                                      │
+│  • Data collection                                                           │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                ┌──────────────────┴──────────────────┐
+                │                                     │
+                ▼                                     ▼
+┌────────────────────────────────┐   ┌────────────────────────────────────────┐
+│     COMMUNICATION BUS          │   │         11 SIMULATORS                  │
+│  communication_bus.py (360)    │   │     (Individual simulators)            │
+│                                │   │                                        │
+│  • Event-driven pub/sub        │◄─►│  1. phenology_simulator      (410)    │
+│  • Message queue               │   │  2. root_system_simulator    (550)    │
+│  • Global singleton            │   │  3. water_uptake_simulator   (492)    │
+│  • BaseSimulator class         │   │  4. nutrient_models_sim      (713)    │
+│  • Event types & handlers      │   │  5. leaf_development_sim     (580)    │
+│  • Simulator registry          │   │  6. stress_models_simulator  (532)    │
+└────────────────────────────────┘   │  7. canopy_architecture_sim  (520)    │
+                                     │  8. photosynthesis_simulator (504)    │
+                                     │  9. respiration_simulator    (396)    │
+                                     │ 10. biomass_allocation_sim   (506)    │
+                                     │ 11. nitrogen_balance_sim     (802)    │
+                                     └────────────┬───────────────────────────┘
+                                                  │
+                                                  │ Call model functions
+                                                  │
+                                                  ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          12 BIOLOGICAL MODELS                                │
+│                         src/models/ (8,395 LOC)                              │
+│                                                                               │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐             │
+│  │ ENVIRONMENTAL   │  │    GROWTH       │  │   STRUCTURAL    │             │
+│  │                 │  │                 │  │                 │             │
+│  │ • stress_models │  │ • phenology     │  │ • canopy_arch   │             │
+│  │   (1,485)       │  │   (501)         │  │   (526)         │             │
+│  │                 │  │ • photosynthesis│  │ • leaf_dev      │             │
+│  │                 │  │   (434)         │  │   (563)         │             │
+│  │                 │  │ • respiration   │  │ • root_system   │             │
+│  │                 │  │   (582)         │  │   (1,277)       │             │
+│  │                 │  │ • biomass_alloc │  │                 │             │
+│  │                 │  │   (270)         │  │                 │             │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘             │
+│                                                                               │
+│  ┌───────────────────────────────────────────────────────┐                  │
+│  │                    RESOURCE MODELS                     │                  │
+│  │                                                        │                  │
+│  │  • water_uptake (591)    • nitrogen_balance (692)    │                  │
+│  │  • nutrient_models (1,014)                           │                  │
+│  └───────────────────────────────────────────────────────┘                  │
+│                                                                               │
+│  All models extend: base_model.py (454 LOC)                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                   ▲
+                                   │ Read parameters
+                                   │
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            PARAMETER SYSTEM                                  │
+│                          17 CSV Files (1,861 lines)                          │
+│                                                                               │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐             │
+│  │ CORE PARAMS     │  │ MODEL PARAMS    │  │ SYSTEM CONFIG   │             │
+│  │                 │  │                 │  │                 │             │
+│  │ • constants     │  │ • phenology     │  │ • master_params │             │
+│  │ • genetics      │  │ • photo         │  │ • initials      │             │
+│  │ • initials      │  │ • respiration   │  │ • weather       │             │
+│  │                 │  │ • allocation    │  │ • observed_data │             │
+│  │                 │  │ • canopy        │  │                 │             │
+│  │                 │  │ • leaf          │  │                 │             │
+│  │                 │  │ • roots         │  │                 │             │
+│  │                 │  │ • water         │  │                 │             │
+│  │                 │  │ • nitrogen      │  │                 │             │
+│  │                 │  │ • nutrient      │  │                 │             │
+│  │                 │  │ • stress        │  │                 │             │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘             │
+│                                                                               │
+│  Loaded by: parameter_loader.py (StrictParameterLoader)                     │
+│  • No default values • No hardcoded values • Raise errors on missing params │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              OUTPUT SYSTEM                                   │
+│                            output/ directory                                 │
+│                                                                               │
+│  • simulation_results.csv (combined)                                         │
+│  • 11 individual simulator CSVs                                              │
+│  • Performance metrics                                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                         EXECUTION FLOW (Simplified)
+================================================================================
+
+1. main.py → DistributedSimulationRunner
+2. Load 17 CSV parameter files
+3. Load weather data  
+4. Create 11 simulator instances
+5. Register simulators with orchestrator
+6. Start simulation loop:
+   For each day (until harvest maturity):
+     For each hour (24 timesteps):
+       ┌────────────────────────────────────────────┐
+       │ Execute simulators in dependency order:    │
+       │                                            │
+       │  1. phenology                              │
+       │  2. root_system                            │
+       │  3. water_uptake                           │
+       │  4. nutrient_models                        │
+       │  5. leaf_development                       │
+       │  6. stress_models                          │
+       │  7. canopy_architecture                    │
+       │  8. photosynthesis                         │
+       │  9. respiration                            │
+       │ 10. biomass_allocation                     │
+       │ 11. nitrogen_balance                       │
+       │                                            │
+       │ (This order breaks circular dependencies) │
+       └────────────────────────────────────────────┘
+       Update shared data cache
+       Collect state data
+       Check harvest maturity
+7. Export results to CSV
+8. Display performance metrics
+
+================================================================================
+                          KEY DESIGN PATTERNS
+================================================================================
+
+• Event-Driven Architecture: Message bus for loose coupling
+• Microservices: Each simulator is independent
+• Dependency Injection: Parameters from CSV, not code
+• State Pattern: Simulators maintain state, models are stateless
+• Observer Pattern: Event subscriptions
+• Strategy Pattern: Different execution modes (sequential/parallel/event-driven)
+• Factory Pattern: Simulator creation
+• Singleton Pattern: Global message bus
+
+================================================================================
+                          CIRCULAR DEPENDENCIES
+================================================================================
+
+The framework handles 31 circular dependencies through one-step lag:
+
+    Biomass ←→ Photosynthesis ←→ Canopy ←→ Light
+        ↕
+    Roots ←→ Water ←→ Transpiration
+        ↕
+    Nitrogen ←→ Photosynthesis ←→ Growth
+
+Solution: Dependency-ordered execution creates acceptable one-step lag
+
+================================================================================

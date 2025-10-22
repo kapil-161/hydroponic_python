@@ -121,11 +121,13 @@ class RootSystemSimulator(BaseSimulator):
         try:
             # Get current weather data from daily weather file
             weather_data = data.get('weather_data', {})
+            # Get current hour from step data
+            current_hour = data.get('hour', -1)
             # Dependency data is provided by orchestrator in self.dependency_cache
             # No need to manually update - orchestrator injects shared_data_cache
 
-# Execute root system calculation using model functions
-            self._execute_root_system_step(weather_data)
+            # Execute root system calculation using model functions
+            self._execute_root_system_step(weather_data, current_hour)
             
             # Update state
             self.current_step += 1
@@ -172,7 +174,7 @@ class RootSystemSimulator(BaseSimulator):
             raise
     
 
-    def _execute_root_system_step(self, weather_data: Dict[str, Any]):
+    def _execute_root_system_step(self, weather_data: Dict[str, Any], current_hour: int = -1):
         """Execute root system calculation using model functions - no shortcuts"""
         try:
             # Get biomass data from biomass allocation simulator
@@ -278,7 +280,8 @@ class RootSystemSimulator(BaseSimulator):
             new_root_growth = self.model.generate_new_roots(growth_factors, environmental_conditions)
 
             # Update root aging (daily aging of existing roots)
-            if weather_data.get('hour', 0) == 0:  # Once per day
+            # Only run once per day at hour 0 to avoid performance issues
+            if current_hour == 0:
                 self.model.update_root_aging()
 
             result = self.model.calculate_hourly_root_metrics(

@@ -38,7 +38,7 @@ coarse_effectiveness,0.5,dimensionless,Coarse root effectiveness factor
 coarse_min_threshold,0.1,g,Minimum coarse root biomass threshold
 fine_min_threshold,0.05,g,Minimum fine root biomass threshold
 diameter_minimum_limit,0.1,mm,Minimum root diameter limit
-flow_stress_threshold,0.5,L_day,Flow stress threshold
+flow_stress_threshold,2.0,L_day,Flow stress threshold (must be > optimal_flow_rate)
 optimal_flow_rate,1.0,L_day,Optimal flow rate for root system
 auxin_decay_rate,0.1,per_day,Auxin decay rate for root growth
 optimal_density,0.8,g_cm3,Optimal root density
@@ -86,20 +86,6 @@ minimum_surface_area,0.1,m2,Minimum root surface area
 minimum_biomass,0.01,g,Minimum root biomass
 minimum_volume,0.001,L,Minimum root volume
 effective_area_minimum,0.001,cm2,Minimum effective root area
-no3_uptake_vmax,0.5,mg_g_root_day,Maximum NO3 uptake rate
-nh4_uptake_vmax,0.3,mg_g_root_day,Maximum NH4 uptake rate
-po4_uptake_vmax,0.2,mg_g_root_day,Maximum PO4 uptake rate
-k_uptake_vmax,0.4,mg_g_root_day,Maximum K uptake rate
-ca_uptake_vmax,0.3,mg_g_root_day,Maximum Ca uptake rate
-mg_uptake_vmax,0.2,mg_g_root_day,Maximum Mg uptake rate
-so4_uptake_vmax,0.1,mg_g_root_day,Maximum SO4 uptake rate
-no3_uptake_km,2.0,mg_L,NO3 uptake Km constant
-nh4_uptake_km,1.5,mg_L,NH4 uptake Km constant
-po4_uptake_km,1.0,mg_L,PO4 uptake Km constant
-k_uptake_km,1.8,mg_L,K uptake Km constant
-ca_uptake_km,1.2,mg_L,Ca uptake Km constant
-mg_uptake_km,0.8,mg_L,Mg uptake Km constant
-so4_uptake_km,0.5,mg_L,SO4 uptake Km constant
 multipliers_nutrient_film_technique_root_length_multiplier,1.0,dimensionless,NFT root length multiplier
 multipliers_deep_water_culture_root_length_multiplier,1.2,dimensionless,DWC root length multiplier
 multipliers_aeroponics_root_length_multiplier,0.8,dimensionless,Aeroponics root length multiplier
@@ -186,7 +172,6 @@ temperature_effect_weight,0.03,dimensionless,Weight of temperature effect in gro
 minimum_growth_potential,0.02,dimensionless,Minimum zone growth potential
 maximum_growth_potential,0.2,dimensionless,Maximum zone growth potential
 maximum_temperature_threshold,35.0,°C,Maximum temperature threshold for root activity
-temperature_decay_factor,0.1,dimensionless,Temperature decay factor above optimal
 flow_rate_offset,0.5,dimensionless,Offset for flow rate calculation
 flow_rate_multiplier,0.5,dimensionless,Multiplier for flow rate calculation
 transport_temperature_exponent,1.25,dimensionless,Exponent for temperature effect on nutrient transport
@@ -227,8 +212,6 @@ initial_root_activity,1.0,dimensionless,Initial activity factor for new roots
 fine_root_effectiveness,1.0,dimensionless,Fine root effectiveness factor
 medium_root_effectiveness,0.7,dimensionless,Medium root effectiveness factor
 coarse_root_effectiveness,0.3,dimensionless,Coarse root effectiveness factor
-optimal_flow_rate,1.5,L_min,Optimal flow rate
-flow_stress_threshold,4.0,L_min,Flow rate stress threshold
 root_growth_auxin_decay_rate,0.1,per_zone,Auxin decay rate for growth potential
 root_optimal_density,50.0,cm_per_cm3,Optimal root length density
 root_density_stress_factor,0.3,dimensionless,Root density stress factor
@@ -242,20 +225,6 @@ ph_stress_range_basic,1.5,pH_units,pH stress range on basic side
 ph_stress_factor,0.5,dimensionless,pH stress factor
 young_root_activity,0.9,dimensionless,Activity factor for young roots
 old_root_activity,0.4,dimensionless,Activity factor for old roots
-no3_uptake_vmax,0.03,mg_cm2_day,Maximum nitrate uptake rate
-no3_uptake_km,50.0,mg_L,Michaelis constant for nitrate uptake
-nh4_uptake_vmax,0.02,mg_cm2_day,Maximum ammonium uptake rate
-nh4_uptake_km,20.0,mg_L,Michaelis constant for ammonium uptake
-po4_uptake_vmax,0.08,mg_cm2_day,Maximum phosphate uptake rate
-po4_uptake_km,15.0,mg_L,Michaelis constant for phosphate uptake
-k_uptake_vmax,0.10,mg_cm2_day,Maximum potassium uptake rate
-k_uptake_km,30.0,mg_L,Michaelis constant for potassium uptake
-ca_uptake_vmax,0.06,mg_cm2_day,Maximum calcium uptake rate
-ca_uptake_km,40.0,mg_L,Michaelis constant for calcium uptake
-mg_uptake_vmax,0.05,mg_cm2_day,Maximum magnesium uptake rate
-mg_uptake_km,25.0,mg_L,Michaelis constant for magnesium uptake
-so4_uptake_vmax,0.04,mg_cm2_day,Maximum sulfate uptake rate
-so4_uptake_km,35.0,mg_L,Michaelis constant for sulfate uptake
 system_multipliers_nutrient_film_technique_root_length_multiplier,1.2,dimensionless,NFT root length multiplier
 system_multipliers_nutrient_film_technique_surface_area_multiplier,1.3,dimensionless,NFT surface area multiplier
 system_multipliers_nutrient_film_technique_branching_multiplier,1.1,dimensionless,NFT branching multiplier
@@ -291,6 +260,3 @@ heat_stress_minimum_factor,0.1,dimensionless,Minimum heat stress factor
 optimization_temp_min,16,°C,Minimum temperature for optimization
 optimization_temp_max,27,°C,Maximum temperature for optimization
 optimization_temp_step,2,°C,Temperature step for optimization
-optimization_flow_min,0.5,L/min,Minimum flow rate for optimization
-optimization_flow_max,3.0,L/min,Maximum flow rate for optimization
-optimization_flow_step,0.5,L/min,Flow rate step for optimization

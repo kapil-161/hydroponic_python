@@ -492,7 +492,7 @@ stress_redistribution_rates_Zn,0.08,g_g_day,Stress redistribution rate for zinc
 stress_redistribution_rates_Cu,0.07,g_g_day,Stress redistribution rate for copper
 stress_redistribution_rates_B,0.05,g_g_day,Stress redistribution rate for boron
 stress_redistribution_rates_Mo,0.2,g_g_day,Stress redistribution rate for molybdenum
-temperature_coefficient_alpha,0.02,per_C,Temperature coefficient for conductivity relative to 25C
+temperature_coefficient_alpha,0.02,per_°C,Temperature coefficient for conductivity relative to 25°C
 
 # Ion properties for EC calculation (literature-based)
 molar_mass_N-NO3,62.0049,g_per_mol,Molar mass of nitrate ion (NO3-)

@@ -38,7 +38,7 @@ kelvin_conversion,273.15,K,Temperature conversion from Celsius to Kelvin (K = °
 reference_temp_kelvin,298.15,K,Reference temperature in Kelvin (25°C),NIST
 saturation_vapor_pressure_constant,0.611,kPa,Saturation vapor pressure constant at 0°C,Magnus equation
 vapor_pressure_temp_coefficient,17.27,dimensionless,Temperature coefficient for vapor pressure calculation,Magnus equation
-vapor_pressure_base_temp,237.3,K,Base temperature for vapor pressure calculation,Magnus equation
+vapor_pressure_base_temp,237.3,°C,Base temperature for vapor pressure calculation (Magnus equation uses °C not K),Magnus equation
 saturation_curve_slope_constant,4098,kPa_K,Slope of saturation vapor pressure curve at 20°C,Allen et al. (1998)
 
 # Water and Energy Constants

@@ -1,12 +1,5 @@
 parameter_name,value,unit,description
-kelvin_conversion,273.15,K,Kelvin conversion constant (0°C = 273.15K)
 saturation_vapor_pressure_constant,0.6108,kPa,Saturation vapor pressure constant at 0°C
-vapor_pressure_temp_coefficient,17.27,dimensionless,Vapor pressure temperature coefficient
-vapor_pressure_base_temp,237.3,°C,Base temperature for vapor pressure calculation
-saturation_curve_slope_constant,4098.0,dimensionless,Saturation vapor pressure curve slope constant
-penman_monteith_conversion,0.408,dimensionless,Penman-Monteith conversion factor (MJ to mm)
-aerodynamic_resistance_coefficient,900.0,dimensionless,Aerodynamic resistance coefficient for reference crop
-wind_speed_coefficient,0.34,dimensionless,Wind speed coefficient in denominator
 psychrometric_constant,0.665,kPa_°C,Psychrometric constant for Penman-Monteith
 net_radiation_factor,0.77,dimensionless,Fraction of solar radiation converted to net radiation
 radiation_offset,2.45,MJ_m2_day,Radiation offset for net radiation calculation
@@ -15,7 +8,7 @@ lai_coefficient_factor,3.0,m2_m2,LAI scaling factor for crop coefficient
 vegetative_stage_factor,0.8,dimensionless,Crop coefficient multiplier for vegetative stage
 head_formation_stage_factor,1.2,dimensionless,Crop coefficient multiplier for head formation
 mature_stage_factor,0.9,dimensionless,Crop coefficient multiplier for mature stage
-temperature_sensitivity,0.15,°C_inverse,Temperature response sensitivity factor
+temperature_sensitivity,0.15,per_°C,Temperature response sensitivity factor
 optimal_vpd_min,0.8,kPa,Minimum optimal vapor pressure deficit
 optimal_vpd_max,1.5,kPa,Maximum optimal vapor pressure deficit
 vpd_sensitivity,0.3,kPa_inverse,VPD response sensitivity factor
@@ -28,7 +21,7 @@ leaf_area_to_biomass_ratio,0.1,g_per_m2,Ratio for converting leaf area to biomas
 water_uptake_sensitivity_low,0.06,per_°C,Water uptake sensitivity per °C below optimum for RZT
 water_uptake_sensitivity_high,0.1,per_°C,Water uptake sensitivity per °C above optimum for RZT
 minimum_vpd_threshold,0.1,kPa,Minimum vapor pressure deficit threshold
-minimum_et0_threshold,0.1,mm/day,Minimum reference evapotranspiration threshold
+minimum_et0_threshold,0.1,mm_day,Minimum reference evapotranspiration threshold
 ground_area_per_plant,0.06,m2,Ground area allocated per plant (0.2m × 0.3m spacing)
 maximum_lai_coverage_factor,0.5,dimensionless,LAI at which canopy reaches full coverage (lower value = faster coverage)
 minimum_coverage_factor,0.01,dimensionless,Minimum canopy coverage factor (prevents zero transpiration at low LAI)

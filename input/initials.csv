@@ -49,8 +49,8 @@ initial_state,solution_fe_concentration,2,mg_L,Initial iron concentration in sol
 initial_state,solution_ph,6.0,pH,Initial solution pH
 
 # Initial Environmental State
-initial_state,root_zone_temperature,22.0,C,Initial root zone temperature
-initial_state,canopy_temperature,22.0,C,Initial canopy temperature
+initial_state,root_zone_temperature,22.0,°C,Initial root zone temperature
+initial_state,canopy_temperature,22.0,°C,Initial canopy temperature
 
 # Initial Uptake Rates (very low at germination)
 initial_state,water_uptake_rate,0.01,L_day,Initial water uptake rate

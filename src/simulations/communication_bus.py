@@ -94,38 +94,74 @@ class SimulationEvent:
 class SimulationMessageBus:
     """Central message bus for inter-simulator communication"""
     
-    def __init__(self, max_queue_size: int = 50000):
+    def __init__(self, max_queue_size: int = 50000, use_threading: bool = False):
+        """Initialize communication bus.
+        
+        Args:
+            max_queue_size: Maximum size of event queue
+            use_threading: If False (default), use synchronous processing for better performance
+        """
         self.max_queue_size = max_queue_size
+        self.use_threading = use_threading
         self.event_handlers: Dict[EventType, List[Callable]] = {}
         self.simulator_registry: Dict[str, Any] = {}
-        self.event_queue = queue.PriorityQueue(maxsize=max_queue_size)
+        
+        if use_threading:
+            self.event_queue = queue.PriorityQueue(maxsize=max_queue_size)
+            self.event_loop_thread: Optional[threading.Thread] = None
+            self.lock = threading.RLock()
+        else:
+            # Synchronous mode - no threading overhead
+            self.event_queue = []  # Simple list for FIFO processing
+            self.event_loop_thread = None
+            self.lock = None
+        
         self.running = False
-        self.event_loop_thread: Optional[threading.Thread] = None
-        self.lock = threading.RLock()
         
     def register_simulator(self, simulator_id: str, simulator_instance: Any):
         """Register a simulator with the message bus"""
-        with self.lock:
+        if self.use_threading and self.lock:
+            with self.lock:
+                self.simulator_registry[simulator_id] = simulator_instance
+                print(f"Registered simulator: {simulator_id}")
+        else:
             self.simulator_registry[simulator_id] = simulator_instance
             print(f"Registered simulator: {simulator_id}")
     
     def unregister_simulator(self, simulator_id: str):
         """Unregister a simulator from the message bus"""
-        with self.lock:
+        if self.use_threading and self.lock:
+            with self.lock:
+                if simulator_id in self.simulator_registry:
+                    del self.simulator_registry[simulator_id]
+                    print(f"Unregistered simulator: {simulator_id}")
+        else:
             if simulator_id in self.simulator_registry:
                 del self.simulator_registry[simulator_id]
                 print(f"Unregistered simulator: {simulator_id}")
     
     def subscribe(self, event_type: EventType, handler: Callable[[SimulationEvent], None]):
         """Subscribe to specific event types"""
-        with self.lock:
+        if self.use_threading and self.lock:
+            with self.lock:
+                if event_type not in self.event_handlers:
+                    self.event_handlers[event_type] = []
+                self.event_handlers[event_type].append(handler)
+        else:
             if event_type not in self.event_handlers:
                 self.event_handlers[event_type] = []
             self.event_handlers[event_type].append(handler)
     
     def unsubscribe(self, event_type: EventType, handler: Callable[[SimulationEvent], None]):
         """Unsubscribe from specific event types"""
-        with self.lock:
+        if self.use_threading and self.lock:
+            with self.lock:
+                if event_type in self.event_handlers:
+                    try:
+                        self.event_handlers[event_type].remove(handler)
+                    except ValueError:
+                        pass
+        else:
             if event_type in self.event_handlers:
                 try:
                     self.event_handlers[event_type].remove(handler)
@@ -134,11 +170,15 @@ class SimulationMessageBus:
     
     def publish(self, event: SimulationEvent):
         """Publish an event to the message bus"""
-        try:
-            # Use negative priority for max-heap behavior (higher priority first)
-            self.event_queue.put((-event.priority, time.time(), event), timeout=1.0)
-        except queue.Full:
-            pass
+        if self.use_threading:
+            try:
+                # Use negative priority for max-heap behavior (higher priority first)
+                self.event_queue.put((-event.priority, time.time(), event), timeout=1.0)
+            except queue.Full:
+                pass
+        else:
+            # Synchronous mode - just append to list
+            self.event_queue.append((-event.priority, time.time(), event))
     
     def publish_immediate(self, event: SimulationEvent):
         """Publish an event and process it immediately"""
@@ -148,9 +188,12 @@ class SimulationMessageBus:
         """Start the message bus event loop"""
         if not self.running:
             self.running = True
-            self.event_loop_thread = threading.Thread(target=self._event_loop, daemon=True)
-            self.event_loop_thread.start()
-            print("Simulation message bus started")
+            if self.use_threading:
+                self.event_loop_thread = threading.Thread(target=self._event_loop, daemon=True)
+                self.event_loop_thread.start()
+                print("Simulation message bus started (threaded mode)")
+            else:
+                print("Simulation message bus started (synchronous mode)")
     
     def stop(self):
         """Stop the message bus event loop"""
@@ -176,46 +219,58 @@ class SimulationMessageBus:
     
     def _process_event(self, event: SimulationEvent):
         """Process a single event
-
+        
         Per Rules.md: No error suppression. All exceptions are raised to caller.
         Event handlers must be robust and handle their own errors if needed.
         """
-        with self.lock:
-            # Check if event should be delivered to specific simulators
-            if event.target_simulators:
-                # Direct delivery to specific simulators
-                for simulator_id in event.target_simulators:
-                    if simulator_id in self.simulator_registry:
-                        simulator = self.simulator_registry[simulator_id]
-                        if hasattr(simulator, 'handle_event'):
-                            # No try/except - let errors propagate per Rules.md
-                            simulator.handle_event(event)
-            else:
-                # Broadcast to all subscribers
-                if event.event_type in self.event_handlers:
-                    for handler in self.event_handlers[event.event_type]:
+        if self.use_threading and self.lock:
+            with self.lock:
+                self._deliver_event(event)
+        else:
+            self._deliver_event(event)
+    
+    def _deliver_event(self, event: SimulationEvent):
+        """Internal method to deliver event to handlers"""
+        # Check if event should be delivered to specific simulators
+        if event.target_simulators:
+            # Direct delivery to specific simulators
+            for simulator_id in event.target_simulators:
+                if simulator_id in self.simulator_registry:
+                    simulator = self.simulator_registry[simulator_id]
+                    if hasattr(simulator, 'handle_event'):
                         # No try/except - let errors propagate per Rules.md
-                        # If a handler fails, the simulation should fail (fail-fast principle)
-                        handler(event)
+                        simulator.handle_event(event)
+        else:
+            # Broadcast to all subscribers
+            if event.event_type in self.event_handlers:
+                for handler in self.event_handlers[event.event_type]:
+                    # No try/except - let errors propagate per Rules.md
+                    # If a handler fails, the simulation should fail (fail-fast principle)
+                    handler(event)
     
     def _process_pending_events(self):
         """Process any pending events in the queue"""
-        processed_count = 0
-        max_process = 50  # Increased for better performance
-        
-        while processed_count < max_process:
-            try:
-                # Get event with very short timeout
-                _, _, event = self.event_queue.get(timeout=0.001)
+        if self.use_threading:
+            # Threaded mode - use queue
+            processed_count = 0
+            max_process = 50
+            
+            while processed_count < max_process:
+                try:
+                    _, _, event = self.event_queue.get(timeout=0.001)
+                    self._process_event(event)
+                    self.event_queue.task_done()
+                    processed_count += 1
+                except queue.Empty:
+                    break
+                except Exception as e:
+                    print(f"ERROR processing pending event: {e}")
+                    raise
+        else:
+            # Synchronous mode - process all events in list
+            while self.event_queue:
+                _, _, event = self.event_queue.pop(0)  # FIFO
                 self._process_event(event)
-                self.event_queue.task_done()
-                processed_count += 1
-            except queue.Empty:
-                break
-            except Exception as e:
-                # Per Rules.md: raise errors instead of silently breaking
-                print(f"ERROR processing pending event: {e}")
-                raise
     
     def get_simulator_data(self, simulator_id: str, data_key: str, max_retries: int = 3) -> Any:
         """Request data from a specific simulator with retry logic"""

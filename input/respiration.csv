@@ -10,7 +10,7 @@ acclimation_memory,14.0,days,Days of temperature memory for acclimation
 n_effect_slope,1.2,dimensionless,Respiration response to leaf N content
 reference_leaf_n,0.035,g_N_g_biomass,Reference leaf nitrogen content
 max_temperature_threshold,40.0,°C,Maximum temperature before protein denaturation
-temperature_decay_factor,0.1,°C_inverse,Decay factor for high temperature respiration
+temperature_decay_factor,0.1,per_°C,Decay factor for high temperature respiration
 size_penalty_threshold,50.0,g_biomass,Biomass threshold for size penalty
 size_penalty_rate,0.002,g_inverse,Rate of size penalty increase per g biomass
 minimum_history_threshold,3.0,days,Minimum temperature history days for acclimation

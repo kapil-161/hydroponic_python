@@ -1232,11 +1232,20 @@ class StrictParameterLoader:
         config['minimum_volume'] = self.get_parameter('root_system_parameters_minimum_volume')
         config['effective_area_minimum'] = self.get_parameter('root_system_parameters_effective_area_minimum')
 
-        # Nutrient uptake parameters (required by model)
-        nutrients = ['NO3', 'NH4', 'PO4', 'K', 'Ca', 'Mg', 'SO4']
-        for nutrient in nutrients:
-            config[f'{nutrient.lower()}_uptake_vmax'] = self.get_parameter(f'root_system_parameters_{nutrient.lower()}_uptake_vmax')
-            config[f'{nutrient.lower()}_uptake_km'] = self.get_parameter(f'root_system_parameters_{nutrient.lower()}_uptake_km')
+        # Nutrient uptake parameters - USE VALUES FROM NUTRIENT.CSV (Single Source of Truth)
+        # Map root nutrient names to nutrient.csv parameter names
+        nutrient_mapping = {
+            'no3': 'n_no3',
+            'nh4': 'n_nh4',
+            'po4': 'p_po4',
+            'k': 'k',
+            'ca': 'ca',
+            'mg': 'mg',
+            'so4': 's_so4'
+        }
+        for root_name, nutrient_name in nutrient_mapping.items():
+            config[f'{root_name}_uptake_vmax'] = self.get_parameter(f'nutrient_parameters_kinetics_{nutrient_name}_vmax')
+            config[f'{root_name}_uptake_km'] = self.get_parameter(f'nutrient_parameters_kinetics_{nutrient_name}_km')
 
         # System multipliers for each hydroponic system type
         system_types = ['nutrient_film_technique', 'deep_water_culture', 'aeroponics', 'drip', 'wick_system', 'ebb_flow']
@@ -1375,20 +1384,21 @@ class StrictParameterLoader:
         config['specific_root_activity'] = self.get_parameter('nitrogen_parameters_specific_root_activity')
         config['root_zone_exploration'] = self.get_parameter('nitrogen_parameters_root_zone_exploration')
 
-        # Uptake kinetics for NO3, NH4, amino_acids
+        # Uptake kinetics for NO3, NH4, amino_acids - USE VALUES FROM NUTRIENT.CSV
         config['uptake_kinetics'] = {}
-        # NO3 and NH4: vmax/km from roots, min_conc/inhibition from nitrogen_balance
-        for n_form in ['NO3', 'NH4']:
+        # NO3 and NH4: vmax/km from nutrient.csv (Single Source of Truth)
+        nutrient_n_mapping = {'NO3': 'n_no3', 'NH4': 'n_nh4'}
+        for n_form, nutrient_name in nutrient_n_mapping.items():
             config['uptake_kinetics'][n_form] = {
-                'vmax': self.get_parameter(f'root_system_parameters_{n_form.lower()}_uptake_vmax'),
-                'km': self.get_parameter(f'root_system_parameters_{n_form.lower()}_uptake_km'),
+                'vmax': self.get_parameter(f'nutrient_parameters_kinetics_{nutrient_name}_vmax'),
+                'km': self.get_parameter(f'nutrient_parameters_kinetics_{nutrient_name}_km'),
                 'min_conc': self.get_parameter(f'nitrogen_parameters_uptake_kinetics_{n_form}_min_conc'),
                 'inhibition_ki': self.get_parameter(f'nitrogen_parameters_uptake_kinetics_{n_form}_inhibition_ki')
             }
-        # amino_acids: use its own vmax, NH4 km as proxy, own min_conc/inhibition
+        # amino_acids: use its own vmax, NH4 km from nutrient.csv
         config['uptake_kinetics']['amino_acids'] = {
             'vmax': self.get_parameter('nitrogen_parameters_amino_acid_uptake_rate'),
-            'km': self.get_parameter('root_system_parameters_nh4_uptake_km'),
+            'km': self.get_parameter('nutrient_parameters_kinetics_n_nh4_km'),
             'min_conc': self.get_parameter('nitrogen_parameters_uptake_kinetics_amino_acids_min_conc'),
             'inhibition_ki': self.get_parameter('nitrogen_parameters_uptake_kinetics_amino_acids_inhibition_ki')
         }
