@@ -28,7 +28,8 @@ class StrictParameterLoader:
                  canopy_csv_path: Optional[str] = None,
                  leaf_csv_path: Optional[str] = None,
                  water_csv_path: Optional[str] = None,
-                 nutrient_csv_path: Optional[str] = None):
+                 nutrient_csv_path: Optional[str] = None,
+):
         self.master_csv_path = master_csv_path
         self.constants_csv_path = constants_csv_path
         self.stress_csv_path = stress_csv_path
@@ -1036,6 +1037,14 @@ class StrictParameterLoader:
         config['carbon_assimilate_allocation_roots'] = self.get_parameter('nutrient_parameters_carbon_assimilate_allocation_roots')
         config['carbon_assimilate_allocation_leaves'] = self.get_parameter('nutrient_parameters_carbon_assimilate_allocation_leaves')
         config['carbon_assimilate_allocation_stems'] = self.get_parameter('nutrient_parameters_carbon_assimilate_allocation_stems')
+
+        # Automatic nutrient solution management parameters - NO HARDCODED VALUES (Rules.md)
+        config['optimal_ec'] = self.get_parameter('nutrient_parameters_optimal_ec')
+        config['optimal_ph'] = self.get_parameter('nutrient_parameters_optimal_ph')
+        config['ph_tolerance'] = self.get_parameter('nutrient_parameters_ph_tolerance')
+        config['ph_adjustment_rate'] = self.get_parameter('nutrient_parameters_ph_adjustment_rate')
+        config['minimum_ph'] = self.get_parameter('nutrient_parameters_minimum_ph')
+        config['maximum_ph'] = self.get_parameter('nutrient_parameters_maximum_ph')
 
         return NutrientParameters.from_config(config)
 

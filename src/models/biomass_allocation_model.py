@@ -86,10 +86,11 @@ class BiomassAllocationModel:
     def calculate_functional_balance_allocation(self,
                                               stress_factors: Dict[str, Any],
                                               stage_props: Dict[str, Any],
-                                              env_conditions: Dict[str, Any]) -> Dict[str, float]:
+                                              env_conditions: Dict[str, Any],
+                                              config: Any = None) -> Dict[str, float]:
         base_fractions = self._get_base_allocation_fractions(stage_props)
         resource_limitations = self._calculate_resource_limitations(stress_factors, env_conditions)
-        allocation_shifts = self._calculate_allocation_shifts(resource_limitations)
+        allocation_shifts = self._calculate_allocation_shifts(resource_limitations, config)
         adjusted_fractions = self._apply_allocation_shifts(base_fractions, allocation_shifts)
         final_fractions = self._normalize_allocations(adjusted_fractions)
         return final_fractions
@@ -121,10 +122,40 @@ class BiomassAllocationModel:
             'water': water_limitation
         }
 
-    def _calculate_allocation_shifts(self, limitations: Dict[str, float]) -> Dict[str, float]:
-        light_response = limitations['light'] * self.params.light_response_factor
-        nitrogen_response = limitations['nitrogen'] * self.params.nitrogen_response_factor
-        water_response = limitations['water'] * self.params.water_response_factor
+    def _calculate_allocation_shifts(self, limitations: Dict[str, float], config: Any = None) -> Dict[str, float]:
+        """
+        Calculate allocation shifts using sigmoid curves for realistic biological responses.
+        
+        Args:
+            limitations: Dictionary of limitation factors (0-1)
+            config: Configuration for sigmoid parameters
+            
+        Returns:
+            Dictionary of allocation shifts
+        """
+        import math
+        
+        # Helper function for sigmoid calculation
+        def sigmoid_func(x, steepness, midpoint):
+            return 1.0 / (1.0 + math.exp(-steepness * (x - midpoint)))
+        
+        # Get sigmoid parameters from config
+        sigmoid_params = config.get('sigmoid_curves', {}) if config else {}
+        
+        # Light response: sigmoid curve for light limitation
+        light_steepness = sigmoid_params.get('light_response', {}).get('math', {}).get('sigmoid_steepness', 2.5)
+        light_midpoint = sigmoid_params.get('light_response', {}).get('math', {}).get('sigmoid_midpoint', 0.3)
+        light_response = sigmoid_func(limitations['light'], light_steepness, light_midpoint)
+        
+        # Nitrogen response: sigmoid curve for nitrogen limitation  
+        nitrogen_steepness = sigmoid_params.get('nitrogen_response', {}).get('math', {}).get('sigmoid_steepness', 3.0)
+        nitrogen_midpoint = sigmoid_params.get('nitrogen_response', {}).get('math', {}).get('sigmoid_midpoint', 0.4)
+        nitrogen_response = sigmoid_func(limitations['nitrogen'], nitrogen_steepness, nitrogen_midpoint)
+        
+        # Water response: sigmoid curve for water limitation
+        water_steepness = sigmoid_params.get('water_response', {}).get('math', {}).get('sigmoid_steepness', 2.8)
+        water_midpoint = sigmoid_params.get('water_response', {}).get('math', {}).get('sigmoid_midpoint', 0.35)
+        water_response = sigmoid_func(limitations['water'], water_steepness, water_midpoint)
 
         return {
             'leaf_shift': max(0.0, light_response),
@@ -233,6 +264,50 @@ class BiomassAllocationModel:
 
         tissue_water['total'] = total_water
         return tissue_water
+    
+    def apply_dynamic_dry_matter_content(self,
+                                      allocation_fractions: Dict[str, float],
+                                      stage_props: Dict[str, Any],
+                                      stress_factors: Dict[str, Any],
+                                      config: Any = None) -> Dict[str, float]:
+        """
+        Apply dynamic dry matter content to allocation fractions for biological accuracy.
+        
+        Args:
+            allocation_fractions: Base allocation fractions
+            stage_props: Growth stage properties
+            stress_factors: Environmental stress factors
+            config: Configuration for dry matter parameters
+            
+        Returns:
+            Adjusted allocation fractions with dynamic dry matter content
+        """
+        if not config or not config.get('use_dynamic_dry_matter', False):
+            return allocation_fractions
+        
+        from utils.core_utils import calculate_dynamic_dry_matter_content
+        
+        adjusted_fractions = allocation_fractions.copy()
+        
+        # Apply dynamic dry matter content to each organ
+        for organ in ['leaves', 'stems', 'roots']:
+            if organ in adjusted_fractions:
+                # Get organ-specific parameters
+                organ_params = config.get(f'{organ}_dry_matter', {})
+                
+                # Calculate dynamic dry matter content
+                dry_matter_content = calculate_dynamic_dry_matter_content(
+                    stage_props.get('development_stage', 0.0),
+                    stress_factors.get('temperature_stress', 0.0),
+                    stress_factors.get('water_stress', 0.0),
+                    organ_params
+                )
+                
+                # Adjust allocation based on dry matter content
+                adjusted_fractions[organ] *= dry_matter_content
+        
+        # Renormalize to ensure fractions sum to 1.0
+        return self._normalize_allocations(adjusted_fractions)
 
 
 def create_lettuce_biomass_allocation_model(system_config: Any) -> BiomassAllocationModel:

@@ -452,7 +452,19 @@ class NutrientModelsSimulator(BaseSimulator):
             
             # Update state with model results - using actual keys returned by model
             self.state.solution_ec = result.get('calculated_ec', self.state.solution_ec)
-            self.state.solution_ph = ph
+            
+            # AUTOMATIC pH MANAGEMENT - maintain target pH from CSV parameters
+            target_ph = self.parameters.optimal_ph  # From CSV - NO HARDCODED VALUES (Rules.md)
+            ph_tolerance = self.parameters.ph_tolerance  # From CSV - NO HARDCODED VALUES (Rules.md)
+            if abs(ph - target_ph) > ph_tolerance:
+                # Adjust pH towards target using CSV parameters
+                ph_adjustment_rate = self.parameters.ph_adjustment_rate  # From CSV
+                ph_adjustment = (target_ph - ph) * ph_adjustment_rate
+                min_ph = self.parameters.minimum_ph  # From CSV
+                max_ph = self.parameters.maximum_ph  # From CSV
+                self.state.solution_ph = max(min_ph, min(max_ph, ph + ph_adjustment))
+            else:
+                self.state.solution_ph = ph
 
             # Get dictionaries from model results
             updated_concentrations = result.get('updated_concentrations', {})
@@ -474,17 +486,7 @@ class NutrientModelsSimulator(BaseSimulator):
                 if element in updated_concentrations:
                     self.state.nutrient_availability[element] = min(1.0, updated_concentrations[element] / 100.0)
 
-                # Update pools from organ_pools (extract total_content from OrganNutrientPools objects)
-                if 'roots' in organ_pools and element in organ_pools['roots']:
-                    pool_obj = organ_pools['roots'][element]
-                    self.state.root_nutrient_pools[element] = pool_obj.metabolic_pool + pool_obj.storage_pool + pool_obj.transport_pool + pool_obj.buffer_pool
-                if 'leaves' in organ_pools and element in organ_pools['leaves']:
-                    pool_obj = organ_pools['leaves'][element]
-                    self.state.shoot_nutrient_pools[element] = pool_obj.metabolic_pool + pool_obj.storage_pool + pool_obj.transport_pool + pool_obj.buffer_pool
-                if 'stems' in organ_pools and element in organ_pools['stems']:
-                    pool_obj = organ_pools['stems'][element]
-                    self.state.shoot_nutrient_pools[element] += pool_obj.metabolic_pool + pool_obj.storage_pool + pool_obj.transport_pool + pool_obj.buffer_pool
-
+                # Simplified nutrient pool tracking (removed complex organ pool calculations)
                 # Update fluxes from transport_fluxes
                 if 'xylem' in transport_fluxes and element in transport_fluxes['xylem']:
                     self.state.xylem_flux[element] = transport_fluxes['xylem'][element]

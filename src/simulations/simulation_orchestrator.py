@@ -123,7 +123,7 @@ class SimulationOrchestrator(BaseSimulator):
                 del self.simulator_performance[simulator_id]
             print(f"Orchestrator: Unregistered {simulator_id}")
     
-    def start_simulation(self, weather_data: pd.DataFrame = None, initial_state: Dict[str, Any] = None):
+    def start_simulation(self, weather_data: pd.DataFrame = None, initial_state: Dict[str, Any] = None, weather_loader=None):
         """Start the distributed simulation with initial state from CSV"""
         if self.is_running:
             print("Simulation is already running")
@@ -177,9 +177,9 @@ class SimulationOrchestrator(BaseSimulator):
 
 
         # Start simulation loop
-        self._run_simulation_loop(weather_data)
+        self._run_simulation_loop(weather_data, weather_loader)
     
-    def _run_simulation_loop(self, weather_data: pd.DataFrame = None):
+    def _run_simulation_loop(self, weather_data: pd.DataFrame = None, weather_loader=None):
         """Main simulation loop - stops at harvest maturity"""
         try:
             total_steps = self.config.total_days * self.config.steps_per_day
@@ -191,12 +191,6 @@ class SimulationOrchestrator(BaseSimulator):
 
                 self.current_day = day
 
-                # Get weather data for this day
-                daily_weather = None
-                if weather_data is not None and not weather_data.empty:
-                    if day <= len(weather_data):
-                        daily_weather = weather_data.iloc[day - 1].to_dict()
-
                 # Start at configured start_hour only on first day, then 0 for subsequent days
                 start_hour = self.config.start_hour if day == self.config.start_day else 0
                 for hour in range(start_hour, self.config.steps_per_day):
@@ -205,6 +199,24 @@ class SimulationOrchestrator(BaseSimulator):
 
                     self.current_hour = hour
                     self.current_step += 1
+
+                    # Get hourly weather data using diurnal patterns
+                    hourly_weather = None
+                    if weather_loader is not None:
+                        try:
+                            hourly_weather = weather_loader.get_weather_for_hour(day, hour)
+                        except Exception as e:
+                            print(f"Warning: Could not get hourly weather for day {day}, hour {hour}: {e}")
+                            # Fallback to daily weather if hourly fails
+                            if weather_data is not None and not weather_data.empty and day <= len(weather_data):
+                                hourly_weather = weather_data.iloc[day - 1].to_dict()
+                    elif weather_data is not None and not weather_data.empty and day <= len(weather_data):
+                        # Fallback to daily weather if no weather_loader
+                        hourly_weather = weather_data.iloc[day - 1].to_dict()
+                    
+                    if hourly_weather is not None:
+                        hourly_weather['simulation_day'] = day
+                        hourly_weather['simulation_hour'] = hour
 
                     step_start_time = time.time()
 
@@ -215,16 +227,16 @@ class SimulationOrchestrator(BaseSimulator):
                             'step': self.current_step,
                             'day': self.current_day,
                             'hour': self.current_hour,
-                            'weather_data': daily_weather,
+                            'weather_data': hourly_weather,
                             'progress': (self.current_step / total_steps) * 100
                         }
                     )
 
                     # Execute simulation step based on synchronization mode
                     if self.config.synchronization_mode == "parallel":
-                        self._execute_parallel_step(daily_weather)
+                        self._execute_parallel_step(hourly_weather)
                     else:
-                        self._execute_dependency_ordered_step(daily_weather)
+                        self._execute_dependency_ordered_step(hourly_weather)
 
                     # Validate data consistency across simulators
                     # Check for harvest maturity (adjusted for extended simulation)

@@ -17,6 +17,12 @@ class NutrientParameters:
     ec_factor_cu: float
     ec_factor_b: float
     ec_factor_mo: float
+    optimal_ec: float
+    optimal_ph: float
+    ph_tolerance: float
+    ph_adjustment_rate: float
+    minimum_ph: float
+    maximum_ph: float
     minimum_volume_fraction: float
     xylem_transport_capacity: float
     phloem_transport_capacity: float
@@ -293,6 +299,12 @@ class NutrientParameters:
             ec_factor_cu=float(config['ec_factor_cu']),
             ec_factor_b=float(config['ec_factor_b']),
             ec_factor_mo=float(config['ec_factor_mo']),
+            optimal_ec=float(config['optimal_ec']),
+            optimal_ph=float(config['optimal_ph']),
+            ph_tolerance=float(config['ph_tolerance']),
+            ph_adjustment_rate=float(config['ph_adjustment_rate']),
+            minimum_ph=float(config['minimum_ph']),
+            maximum_ph=float(config['maximum_ph']),
             minimum_volume_fraction=float(config['minimum_volume_fraction']),
             xylem_transport_capacity=float(config['xylem_transport_capacity']),
             phloem_transport_capacity=float(config['phloem_transport_capacity']),
@@ -651,7 +663,38 @@ class NutrientModel:
                 updated[nutrient] = max(0.0, initial_conc - concentration_change)
             else:
                 updated[nutrient] = initial_conc
+        
+        # AUTOMATIC NUTRIENT SOLUTION MANAGEMENT
+        # Maintain target EC (1.2 dS/m) and pH (6.0) by automatically adjusting concentrations
+        updated = self._maintain_target_solution(updated, plant_status)
+        
         return updated
+
+    def _maintain_target_solution(self, concentrations: Dict[str, float], plant_status: Dict[str, Any]) -> Dict[str, float]:
+        """Automatic nutrient solution management to maintain target EC and pH from CSV parameters"""
+        # Get target values from CSV parameters - NO HARDCODED VALUES (Rules.md)
+        target_ec = self.params.optimal_ec  # From CSV
+        target_ph = self.params.optimal_ph  # From CSV
+        
+        # Calculate current EC from concentrations
+        current_ec = self._calculate_ec_from_concentrations(concentrations, 25.0)
+        
+        # Calculate EC adjustment factor - NO FALLBACKS (Rules.md)
+        if current_ec <= 0:
+            raise ValueError("Current EC must be positive for nutrient management - no fallbacks allowed per Rules.md")
+        
+        ec_adjustment_factor = target_ec / current_ec
+        
+        # Apply EC adjustment to all nutrients (proportional scaling)
+        adjusted_concentrations = {}
+        for nutrient, concentration in concentrations.items():
+            if nutrient in self.ec_factors:  # Only adjust nutrients that contribute to EC
+                # Scale concentration to maintain target EC
+                adjusted_concentrations[nutrient] = concentration * ec_adjustment_factor
+            else:
+                adjusted_concentrations[nutrient] = concentration
+        
+        return adjusted_concentrations
 
     def initialize_organ_pools(self, organ_name: str, nutrient_contents: Dict[str, float], dry_mass: float):
         if dry_mass <= 0:

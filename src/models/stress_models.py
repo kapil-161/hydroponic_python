@@ -549,38 +549,71 @@ class TemperatureStressModel:
             return TemperatureStressType.COLD
         return TemperatureStressType.HEAT
 
-    def calculate_base_stress_level(self, temperature: float) -> float:
+    def calculate_base_stress_level(self, temperature: float, config: Any = None) -> float:
+        """
+        Calculate temperature stress level using gaussian curves for optimal temperature ranges.
+        
+        Args:
+            temperature: Current temperature (°C)
+            config: Configuration for gaussian parameters
+            
+        Returns:
+            Stress level (0-1)
+        """
         if not isinstance(temperature, (int, float)):
             raise ValueError("Temperature must be numeric")
-        if self.params.optimal_temp_min <= temperature <= self.params.optimal_temp_max:
-            return 0.0
-        if temperature > self.params.optimal_temp_max:
-            if temperature <= self.params.heat_threshold_mild:
-                excess_temp = temperature - self.params.optimal_temp_max
-                mild_range = self.params.heat_threshold_mild - self.params.optimal_temp_max
-                return self.params.mild_stress_level * (excess_temp / mild_range) if mild_range else self.params.mild_stress_level
-            elif temperature <= self.params.heat_threshold_severe:
-                excess_temp = temperature - self.params.heat_threshold_mild
-                moderate_range = self.params.heat_threshold_severe - self.params.heat_threshold_mild
-                return self.params.mild_stress_level + self.params.moderate_stress_level * (excess_temp / moderate_range) if moderate_range else (self.params.mild_stress_level + self.params.moderate_stress_level)
-            else:
-                excess_temp = temperature - self.params.heat_threshold_severe
-                severe_range = self.params.heat_lethal_temperature - self.params.heat_threshold_severe
-                return (self.params.mild_stress_level + self.params.moderate_stress_level) + self.params.severe_cold_stress_level * min(1.0, excess_temp / severe_range) if severe_range else 1.0
+        
+        if config and config.get('use_gaussian_temperature', False):
+            # Use gaussian curve for more realistic temperature response
+            from utils.core_utils import gaussian
+            
+            # Get gaussian parameters from config
+            gaussian_params = config.get('temperature_gaussian', {})
+            
+            # Convert to the expected parameter structure
+            math_config = {
+                'math': {
+                    'gaussian_mean': gaussian_params.get('peak', 22.0),
+                    'gaussian_std_dev': gaussian_params.get('width', 8.0) / 2.0  # Convert width to std dev
+                }
+            }
+            
+            # Calculate stress using gaussian curve
+            stress_level = gaussian(temperature, math_config)
+            
+            # Ensure stress level is between 0 and 1
+            return max(0.0, min(1.0, stress_level))
         else:
-            if temperature >= self.params.cold_threshold_mild:
-                temp_deficit = self.params.optimal_temp_min - temperature
-                mild_range = self.params.optimal_temp_min - self.params.cold_threshold_mild
-                return self.params.mild_cold_stress_level * (temp_deficit / mild_range) if mild_range else self.params.mild_cold_stress_level
-            elif temperature >= self.params.cold_threshold_severe:
-                temp_deficit = self.params.cold_threshold_mild - temperature
-                moderate_range = self.params.cold_threshold_mild - self.params.cold_threshold_severe
-                return self.params.mild_cold_stress_level + self.params.moderate_cold_stress_level * (temp_deficit / moderate_range) if moderate_range else (self.params.mild_cold_stress_level + self.params.moderate_cold_stress_level)
-            elif temperature >= self.params.frost_threshold:
-                temp_deficit = self.params.cold_threshold_severe - temperature
-                severe_range = self.params.cold_threshold_severe - self.params.frost_threshold
-                return (self.params.mild_cold_stress_level + self.params.moderate_cold_stress_level) + self.params.severe_cold_stress_level * (temp_deficit / severe_range) if severe_range else self.params.frost_base_stress_level
-            return self.params.frost_base_stress_level + self.params.frost_additional_stress * min(1.0, abs(temperature - self.params.frost_threshold) / 5.0)
+            # Fallback to original linear calculation
+            if self.params.optimal_temp_min <= temperature <= self.params.optimal_temp_max:
+                return 0.0
+            if temperature > self.params.optimal_temp_max:
+                if temperature <= self.params.heat_threshold_mild:
+                    excess_temp = temperature - self.params.optimal_temp_max
+                    mild_range = self.params.heat_threshold_mild - self.params.optimal_temp_max
+                    return self.params.mild_stress_level * (excess_temp / mild_range) if mild_range else self.params.mild_stress_level
+                elif temperature <= self.params.heat_threshold_severe:
+                    excess_temp = temperature - self.params.heat_threshold_mild
+                    moderate_range = self.params.heat_threshold_severe - self.params.heat_threshold_mild
+                    return self.params.mild_stress_level + self.params.moderate_stress_level * (excess_temp / moderate_range) if moderate_range else (self.params.mild_stress_level + self.params.moderate_stress_level)
+                else:
+                    excess_temp = temperature - self.params.heat_threshold_severe
+                    severe_range = self.params.heat_lethal_temperature - self.params.heat_threshold_severe
+                    return (self.params.mild_stress_level + self.params.moderate_stress_level) + self.params.severe_cold_stress_level * min(1.0, excess_temp / severe_range) if severe_range else 1.0
+            else:
+                if temperature >= self.params.cold_threshold_mild:
+                    temp_deficit = self.params.optimal_temp_min - temperature
+                    mild_range = self.params.optimal_temp_min - self.params.cold_threshold_mild
+                    return self.params.mild_cold_stress_level * (temp_deficit / mild_range) if mild_range else self.params.mild_cold_stress_level
+                elif temperature >= self.params.cold_threshold_severe:
+                    temp_deficit = self.params.cold_threshold_mild - temperature
+                    moderate_range = self.params.cold_threshold_mild - self.params.cold_threshold_severe
+                    return self.params.mild_cold_stress_level + self.params.moderate_cold_stress_level * (temp_deficit / moderate_range) if moderate_range else (self.params.mild_cold_stress_level + self.params.moderate_cold_stress_level)
+                elif temperature >= self.params.frost_threshold:
+                    temp_deficit = self.params.cold_threshold_severe - temperature
+                    severe_range = self.params.cold_threshold_severe - self.params.frost_threshold
+                    return (self.params.mild_cold_stress_level + self.params.moderate_cold_stress_level) + self.params.severe_cold_stress_level * (temp_deficit / severe_range) if severe_range else self.params.frost_base_stress_level
+                return self.params.frost_base_stress_level + self.params.frost_additional_stress * min(1.0, abs(temperature - self.params.frost_threshold) / 5.0)
 
     def update_acclimation(self, temperature: float, stress_type: TemperatureStressType):
         if not isinstance(temperature, (int, float)):
@@ -677,13 +710,13 @@ class TemperatureStressModel:
                 recovery_amount = self.params.recovery_rate_cold * self.params.frost_recovery_multiplier * time_scale
                 self.damage.frost_damage = max(0.0, self.damage.frost_damage - recovery_amount)
 
-    def daily_update(self, temperature: float, duration_hours: float = 24.0) -> TemperatureStressResponse:
+    def daily_update(self, temperature: float, duration_hours: float = 24.0, config: Any = None) -> TemperatureStressResponse:
         if not isinstance(temperature, (int, float)):
             raise ValueError("Temperature must be numeric")
         if duration_hours <= 0:
             raise ValueError("Duration hours must be positive")
         stress_type = self.classify_temperature_stress(temperature)
-        base_stress = self.calculate_base_stress_level(temperature)
+        base_stress = self.calculate_base_stress_level(temperature, config)
         self.update_acclimation(temperature, stress_type)
         adjusted_stress = self.apply_acclimation_effects(base_stress, stress_type)
         memory_effect = self.calculate_memory_effects()

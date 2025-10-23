@@ -305,10 +305,16 @@ class SimulationMessageBus:
     
     def get_system_status(self) -> Dict[str, Any]:
         """Get status of all registered simulators"""
+        # Handle different queue types (list vs queue.Queue)
+        if self.use_threading:
+            queue_size = self.event_queue.qsize()
+        else:
+            queue_size = len(self.event_queue)
+        
         status = {
             'total_simulators': len(self.simulator_registry),
             'registered_simulators': list(self.simulator_registry.keys()),
-            'queue_size': self.event_queue.qsize(),
+            'queue_size': queue_size,
             'running': self.running,
             'event_handlers': {event_type.value: len(handlers) 
                              for event_type, handlers in self.event_handlers.items()}

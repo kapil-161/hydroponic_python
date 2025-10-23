@@ -254,13 +254,20 @@ class StressModelsSimulator(BaseSimulator):
             # Nutrient stress: convert availability (0-1) to stress (0-1)
             nutrient_stress = 1.0 - min(1.0, max(0.0, nitrogen_availability))
 
-            # Temperature stress calculation using parameters from CSV
-            if self.temperature_optimal_min <= temperature <= self.temperature_optimal_max:
-                temperature_stress = 0.0
-            elif temperature < self.temperature_optimal_min:
-                temperature_stress = min(1.0, (self.temperature_optimal_min - temperature) / self.temperature_stress_range)
-            else:
-                temperature_stress = min(1.0, (temperature - self.temperature_optimal_max) / self.temperature_stress_range)
+            # Temperature stress calculation using gaussian curve for realistic biological response
+            import math
+            
+            # Get gaussian parameters from master parameters
+            temperature_peak = self.parameter_loader.get_parameter('gaussian_curves_temperature_peak')
+            temperature_width = self.parameter_loader.get_parameter('gaussian_curves_temperature_width')
+            
+            # Calculate gaussian response
+            std_dev = temperature_width / 2.0  # Convert width to std dev
+            gaussian_response = math.exp(-0.5 * ((temperature - temperature_peak) / std_dev) ** 2)
+            
+            # Convert to stress (inverse of optimal response)
+            temperature_stress = 1.0 - gaussian_response  # Convert to stress (higher = more stress)
+            temperature_stress = max(0.0, min(1.0, temperature_stress))
 
             # Light stress calculation using parameters from CSV
             # Only calculate light stress during photoperiod (light_intensity > 0)

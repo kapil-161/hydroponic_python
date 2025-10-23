@@ -248,6 +248,31 @@ class BiomassAllocationSimulator(BaseSimulator):
                 'light_stress': light_stress
             }
             
+            # Get biological accuracy parameters from master parameters
+            biological_config = {
+                'use_sigmoid_allocation': True,
+                'sigmoid_curves': {
+                    'light_response': {
+                        'math': {
+                            'sigmoid_steepness': self.parameter_loader.get_parameter('sigmoid_curves_light_steepness'),
+                            'sigmoid_midpoint': self.parameter_loader.get_parameter('sigmoid_curves_light_midpoint')
+                        }
+                    },
+                    'nitrogen_response': {
+                        'math': {
+                            'sigmoid_steepness': self.parameter_loader.get_parameter('sigmoid_curves_nitrogen_steepness'),
+                            'sigmoid_midpoint': self.parameter_loader.get_parameter('sigmoid_curves_nitrogen_midpoint')
+                        }
+                    },
+                    'water_response': {
+                        'math': {
+                            'sigmoid_steepness': self.parameter_loader.get_parameter('sigmoid_curves_water_steepness'),
+                            'sigmoid_midpoint': self.parameter_loader.get_parameter('sigmoid_curves_water_midpoint')
+                        }
+                    }
+                }
+            }
+            
             result = self.model.calculate_functional_balance_allocation(
                 stress_factors={
                     'nitrogen_stress_level': nutrient_stress,
@@ -260,7 +285,8 @@ class BiomassAllocationSimulator(BaseSimulator):
                     'development_index': development_index,
                     'thermal_time': thermal_time
                 },
-                env_conditions=env_conditions
+                env_conditions=env_conditions,
+                config=biological_config
             )
             
             # Update allocation fractions from model results

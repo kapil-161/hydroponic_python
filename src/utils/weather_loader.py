@@ -18,8 +18,9 @@ class WeatherDataError(Exception):
 class WeatherDataLoader:
     """Loads daily weather data strictly - no defaults"""
 
-    def __init__(self, weather_csv_path: str):
+    def __init__(self, weather_csv_path: str, simulation_start_date: str = None):
         self.weather_csv_path = weather_csv_path
+        self.simulation_start_date = simulation_start_date
         self.weather_data = None
         self._load_weather_data()
 
@@ -58,6 +59,10 @@ class WeatherDataLoader:
             # Convert date column to datetime
             self.weather_data['date'] = pd.to_datetime(self.weather_data['date'])
             
+            # Verify weather data dates align with simulation start date
+            if self.simulation_start_date:
+                self._verify_date_alignment()
+            
             # Validate data quality
             if self.weather_data.empty:
                 raise WeatherDataError("Weather data is empty - no defaults allowed")
@@ -70,6 +75,38 @@ class WeatherDataLoader:
             
         except Exception as e:
             raise WeatherDataError(f"Failed to load weather data from {self.weather_csv_path}: {e}")
+
+    def _verify_date_alignment(self):
+        """Verify that weather data dates align with simulation start date"""
+        try:
+            # Convert simulation start date to datetime
+            simulation_start = pd.to_datetime(self.simulation_start_date)
+            
+            # Get first weather data date
+            first_weather_date = self.weather_data['date'].iloc[0]
+            
+            # Check if first weather date matches simulation start date
+            if first_weather_date.date() != simulation_start.date():
+                raise WeatherDataError(
+                    f"Weather data start date ({first_weather_date.date()}) does not match "
+                    f"simulation start date ({simulation_start.date()}). "
+                    f"Weather data must start from simulation start date."
+                )
+            
+            # Verify weather data is sequential (no gaps or duplicates)
+            date_diffs = self.weather_data['date'].diff().dt.days
+            non_sequential_days = date_diffs[date_diffs != 1].dropna()
+            
+            if not non_sequential_days.empty:
+                raise WeatherDataError(
+                    f"Weather data contains non-sequential dates. "
+                    f"Found gaps or duplicates at positions: {non_sequential_days.index.tolist()}"
+                )
+            
+            print(f"✓ Weather data dates verified: {len(self.weather_data)} days starting from {simulation_start.date()}")
+            
+        except Exception as e:
+            raise WeatherDataError(f"Date verification failed: {e}")
 
     def get_weather_for_day(self, day: int) -> Dict[str, Any]:
         """Get weather data for specific day"""
@@ -92,17 +129,32 @@ class WeatherDataLoader:
         }
 
     def get_weather_for_hour(self, day: int, hour: int) -> Dict[str, Any]:
-        """Get weather data for specific hour (interpolated from daily data)"""
+        """Get weather data for specific hour (interpolated from daily data using diurnal patterns)"""
         daily_weather = self.get_weather_for_day(day)
         
-        # Simple interpolation for hourly data
-        # In a real system, you might have hourly weather data
+        # Use sophisticated diurnal patterns from core_utils
+        from .core_utils import create_hourly_interpolation
+        
+        # Get daily values for interpolation
+        temp_min = daily_weather.get('temperature_min', daily_weather['temperature'] - 5.0)
+        temp_max = daily_weather.get('temperature_max', daily_weather['temperature'] + 5.0)
+        humidity = daily_weather['humidity']
+        solar_radiation = daily_weather.get('solar_radiation', 20.0)  # Default if not available
+        
+        # Create hourly interpolation
+        hourly_data = create_hourly_interpolation(temp_min, temp_max, humidity, solar_radiation)
+        
+        # Get the specific hour data
+        hour_data = hourly_data[hour]
+        
         return {
             'date': daily_weather['date'],
             'hour': hour,
-            'temperature': daily_weather['temperature'],
-            'humidity': daily_weather['humidity'],
+            'temperature': hour_data['temperature'],
+            'humidity': hour_data['humidity'],
             'light_intensity': daily_weather['light_intensity'] * self._get_hourly_light_factor(hour),
+            'solar_radiation': hour_data['solar_radiation'],
+            'vpd': hour_data['vpd'],
             'co2_concentration': daily_weather['co2_concentration'],
             'wind_speed': daily_weather['wind_speed'],
             'precipitation': daily_weather['precipitation']

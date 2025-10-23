@@ -483,37 +483,6 @@ def calculate_ph_effect(ph: float, config: Any) -> float:
         return 0.0
     return (stress_ph_max - ph) / (stress_ph_max - optimal_ph_max)
 
-def safe_division(numerator: float, denominator: float, default: float = 0.0) -> float:
-    """
-    Perform safe division with fallback for zero denominator.
-
-    Args:
-        numerator: Numerator value.
-        denominator: Denominator value.
-        default: Value to return if denominator is near zero.
-
-    Returns:
-        Division result or default value.
-    """
-    if abs(denominator) < 1e-10:
-        return default
-    return numerator / denominator
-
-def interpolate_linear(x: float, x1: float, y1: float, x2: float, y2: float) -> float:
-    """
-    Perform linear interpolation between two points.
-
-    Args:
-        x: Input value to interpolate.
-        x1, y1: First point coordinates.
-        x2, y2: Second point coordinates.
-
-    Returns:
-        Interpolated value.
-    """
-    if abs(x2 - x1) < 1e-10:
-        return y1
-    return y1 + (y2 - y1) * (x - x1) / (x2 - x1)
 
 # =========================
 # Weather Interpolation
@@ -566,96 +535,7 @@ def create_hourly_interpolation(daily_temp_min: float, daily_temp_max: float,
 # Mathematical Utilities
 # =========================
 
-def sigmoid(x: float, config: Any) -> float:
-    """
-    Sigmoid function for smooth transitions.
 
-    Args:
-        x: Input value.
-        config: Configuration with 'math' category containing 'sigmoid_midpoint', 'sigmoid_steepness'.
-
-    Returns:
-        Sigmoid output (0.0-1.0).
-
-    Raises:
-        ParameterAccessError: If required parameters are missing.
-    """
-    midpoint = get_strict_param(config, 'math', 'sigmoid_midpoint')
-    steepness = get_strict_param(config, 'math', 'sigmoid_steepness')
-    
-    try:
-        return 1.0 / (1.0 + math.exp(-steepness * (x - midpoint)))
-    except OverflowError:
-        return 0.0 if x < midpoint else 1.0
-
-def gaussian(x: float, config: Any) -> float:
-    """
-    Gaussian function for normal distributions.
-
-    Args:
-        x: Input value.
-        config: Configuration with 'math' category containing 'gaussian_mean', 'gaussian_std_dev'.
-
-    Returns:
-        Gaussian output.
-
-    Raises:
-        ParameterAccessError: If required parameters are missing.
-        ValueError: If standard deviation is non-positive.
-    """
-    mean = get_strict_param(config, 'math', 'gaussian_mean')
-    std_dev = get_strict_param(config, 'math', 'gaussian_std_dev')
-    
-    if std_dev <= 0:
-        raise ValueError("Standard deviation must be positive")
-    
-    return math.exp(-0.5 * ((x - mean) / std_dev) ** 2)
-
-def exponential_decay(x: float, config: Any) -> float:
-    """
-    Exponential decay function.
-
-    Args:
-        x: Input value.
-        config: Configuration with 'math' category containing 'decay_rate', 'initial_value'.
-
-    Returns:
-        Decay output.
-
-    Raises:
-        ParameterAccessError: If required parameters are missing.
-        ValueError: If decay rate is negative.
-    """
-    decay_rate = get_strict_param(config, 'math', 'decay_rate')
-    initial_value = get_strict_param(config, 'math', 'initial_value')
-    
-    if decay_rate < 0:
-        raise ValueError("Decay rate must be non-negative")
-    
-    return initial_value * math.exp(-decay_rate * x)
-
-def scale_linear(value: float, in_min: float, in_max: float, out_min: float = 0.0, out_max: float = 1.0) -> float:
-    """
-    Scale value from input range to output range.
-
-    Args:
-        value: Value to scale.
-        in_min: Input range minimum.
-        in_max: Input range maximum.
-        out_min: Output range minimum.
-        out_max: Output range maximum.
-
-    Returns:
-        Scaled value.
-
-    Raises:
-        ValueError: If input range is invalid.
-    """
-    if in_max == in_min:
-        raise ValueError("Input range minimum and maximum cannot be equal")
-    
-    scaled = (value - in_min) / (in_max - in_min)
-    return out_min + scaled * (out_max - out_min)
 
 # =========================
 # Parameter Validation
@@ -677,95 +557,16 @@ def validate_parameter_range(value: float, min_val: float, max_val: float, param
     if not (min_val <= value <= max_val):
         raise ValueError(f"Parameter '{param_name}' ({value}) outside range [{min_val}, {max_val}]")
 
-def validate_allocation_fractions(fractions: Dict[str, float], tolerance: float = 0.05) -> None:
-    """
-    Validate allocation fractions sum to approximately 1.0.
-
-    Args:
-        fractions: Dictionary of allocation fractions.
-        tolerance: Allowed deviation from 1.0.
-
-    Raises:
-        ValueError: If fractions sum is outside tolerance.
-    """
-    total = sum(fractions.values())
-    if not (1.0 - tolerance <= total <= 1.0 + tolerance):
-        raise ValueError(f"Allocation fractions sum to {total:.3f}, expected 1.0 ± {tolerance}")
 
 # =========================
 # Results Formatting
 # =========================
 
-def format_scientific(value: float, precision: int = 3) -> str:
-    """
-    Format number in scientific notation if needed.
-
-    Args:
-        value: Value to format.
-        precision: Number of decimal places.
-
-    Returns:
-        Formatted string.
-    """
-    if value is None or math.isnan(value):
-        return "N/A"
-    if abs(value) < 0.001 or abs(value) >= 1000:
-        return f"{value:.{precision}e}"
-    return f"{value:.{precision}f}"
-
-def create_summary_table(data: Dict[str, float], title: str = "Results") -> str:
-    """
-    Create formatted summary table.
-
-    Args:
-        data: Dictionary of results.
-        title: Table title.
-
-    Returns:
-        Formatted string table.
-    """
-    lines = [f"{title}:", "=" * len(title)]
-    for key, value in data.items():
-        formatted_value = format_scientific(value)
-        lines.append(f"  {key:<25} {formatted_value:>15}")
-    return "\n".join(lines)
 
 # =========================
 # Configuration Utilities
 # =========================
 
-def extract_config_subset(config: Any, category_name: str, parameter_mapping: Dict[str, str]) -> Dict[str, Any]:
-    """
-    Extract subset of parameters with name mapping.
-
-    Args:
-        config: Configuration object.
-        category_name: Name of the parameter category.
-        parameter_mapping: Mapping of internal names to CSV names.
-
-    Returns:
-        Dictionary of extracted parameters.
-
-    Raises:
-        ParameterAccessError: If required parameters are missing.
-    """
-    category_params = get_strict_category(config, category_name)
-    extracted_params = {}
-    missing_params = []
-    
-    for internal_name, csv_name in parameter_mapping.items():
-        if csv_name in category_params:
-            extracted_params[internal_name] = category_params[csv_name]
-        else:
-            missing_params.append(csv_name)
-    
-    if missing_params:
-        raise ParameterAccessError(
-            f"Missing parameters in {category_name}: {missing_params}. "
-            "Add them to master_parameters.csv."
-        )
-    
-    return extracted_params
 
 # =========================
 # Centralized Utility Functions
@@ -890,84 +691,3 @@ def calculate_dynamic_dry_matter_content(result: Any, plant_part: str, config: A
 # Validation and Testing
 # =========================
 
-def quick_validate() -> bool:
-    """
-    Perform minimal validation of core functions.
-
-    Args:
-        config: Configuration object (optional for basic checks).
-
-    Returns:
-        True if core functions pass, False otherwise.
-    """
-    try:
-        # Mock config for testing
-        mock_config = {
-            'environment': {
-                'base_temp': 10.0,
-                'max_temp': 40.0,
-                'optimal_temp': 22.0,
-                'temp_range': 10.0,
-                'q10': 2.0,
-                'reference_temp': 25.0,
-                'min_q10_factor': 0.1,
-                'max_q10_factor': 4.0,
-                'optimal_temp_min': 18.0,
-                'optimal_temp_max': 24.0,
-                'stress_temp_min': 10.0,
-                'stress_temp_max': 35.0
-            },
-            'solution_chemistry': {
-                'optimal_ph_min': 5.5,
-                'optimal_ph_max': 6.5,
-                'stress_ph_min': 4.0,
-                'stress_ph_max': 8.0
-            }
-        }
-        
-        # Test core calculations
-        vpd = calculate_vpd(25.0, 60.0)
-        gdd = calculate_thermal_time(25.0, mock_config)
-        temp_factor = calculate_temperature_factor(22.0, mock_config)
-        temp_stress = calculate_temperature_stress_factor(22.0, mock_config)
-        
-        # Basic sanity checks
-        if not (0.8 <= vpd <= 1.4):
-            return False
-        if gdd != 15.0:
-            return False
-        if not (0.8 <= temp_factor <= 1.2):
-            return False
-        if temp_stress != 1.0:
-            return False
-
-        return True
-    except Exception as e:
-        # Per Rules.md: raise errors instead of silently passing
-        raise RuntimeError(f"Core utilities validation failed: {e}")
-
-def check_critical_params(config: Any) -> List[str]:
-    """
-    Check for critical parameters, returning missing ones.
-
-    Args:
-        config: Configuration object.
-
-    Returns:
-        List of missing parameter names.
-    """
-    critical_params = [
-        ('photosynthesis_parameters', 'jmax_25'),
-        ('photosynthesis_parameters', 'vcmax_25'),
-        ('water_parameters', 'base_crop_coefficient'),
-        ('environment', 'optimal_temperature_min')
-    ]
-    missing = []
-    
-    for category, param in critical_params:
-        try:
-            get_strict_param(config, category, param)
-        except ParameterAccessError:
-            missing.append(f"{category}.{param}")
-    
-    return missing

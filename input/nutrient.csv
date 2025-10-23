@@ -12,6 +12,12 @@ ec_factor_zn,0.015,dS_m_per_mg_L,EC contribution factor for zinc
 ec_factor_cu,0.016,dS_m_per_mg_L,EC contribution factor for copper
 ec_factor_b,0.014,dS_m_per_mg_L,EC contribution factor for boron
 ec_factor_mo,0.010,dS_m_per_mg_L,EC contribution factor for molybdenum
+optimal_ec,1.2,dS_m,Optimal electrical conductivity for nutrient solution
+optimal_ph,6.0,dimensionless,Optimal pH for nutrient solution
+ph_tolerance,0.1,dimensionless,pH tolerance for automatic adjustment
+ph_adjustment_rate,0.1,dimensionless,pH adjustment rate for automatic buffering
+minimum_ph,5.0,dimensionless,Minimum allowed pH value
+maximum_ph,7.0,dimensionless,Maximum allowed pH value
 minimum_volume_fraction,0.1,dimensionless,Minimum solution volume fraction
 xylem_transport_capacity,0.8,L_day_mg,Maximum xylem transport rate per unit concentration
 phloem_transport_capacity,0.3,g_day_mg,Maximum phloem transport rate per unit concentration

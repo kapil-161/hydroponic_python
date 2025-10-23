@@ -57,7 +57,8 @@ class DistributedSimulationRunner:
                  leaf_csv_path: str = "input/leaf.csv",
                  water_csv_path: str = "input/water.csv",
                  nutrient_csv_path: str = "input/nutrient.csv",
-                 weather_csv_path: str = "input/LET_EXP001_2024_weather.csv"):
+                 weather_csv_path: str = "input/LET_EXP001_2024_weather.csv",
+):
         """
         Initialize distributed simulation runner.
 
@@ -80,7 +81,10 @@ class DistributedSimulationRunner:
         """
         # Load parameters and weather data - all from CSV, no defaults per Rules.md
         self.parameter_loader = StrictParameterLoader(master_csv_path, constants_csv_path, stress_csv_path, roots_csv_path, genetics_csv_path, photo_csv_path, respiration_csv_path, allocation_csv_path, phenology_csv_path, nitrogen_balance_csv_path, canopy_csv_path, leaf_csv_path, water_csv_path, nutrient_csv_path)
-        self.weather_loader = WeatherDataLoader(weather_csv_path)
+        
+        # Get simulation start date from master parameters for date verification
+        simulation_start_date = self.parameter_loader.get_parameter('planting_dates_simulation_start_date')
+        self.weather_loader = WeatherDataLoader(weather_csv_path, simulation_start_date)
 
         # Load initial state from initials.csv - all from CSV per Rules.md
         self.initial_state_data = self.parameter_loader.load_initial_state("input/initials.csv")
@@ -106,6 +110,7 @@ class DistributedSimulationRunner:
         
         self.orchestrator = SimulationOrchestrator(self.config)
         
+        
         # Initialize all simulators
         self.simulators: Dict[str, Any] = {}
         self._initialize_all_simulators()
@@ -129,6 +134,7 @@ class DistributedSimulationRunner:
             # 3. Biomass Allocation Simulator
             biomass_params = self.parameter_loader.create_biomass_allocation_parameters()
             self.simulators['biomass_allocation'] = BiomassAllocationSimulator(biomass_params)
+            self.simulators['biomass_allocation'].parameter_loader = self.parameter_loader
             self.orchestrator.register_simulator(self.simulators['biomass_allocation'])
             
             # 4. Phenology Simulator
@@ -157,6 +163,7 @@ class DistributedSimulationRunner:
                 light_compensation_point=light_compensation_point,
                 light_saturation_point=light_saturation_point
             )
+            self.simulators['stress_models'].parameter_loader = self.parameter_loader
             self.orchestrator.register_simulator(self.simulators['stress_models'])
             
             # 6. Water Uptake Simulator
@@ -225,7 +232,7 @@ class DistributedSimulationRunner:
             
             # Start simulation with initial state from CSV
             start_time = time.time()
-            self.orchestrator.start_simulation(weather_data, initial_state=self.initial_state_data)
+            self.orchestrator.start_simulation(weather_data, initial_state=self.initial_state_data, weather_loader=self.weather_loader)
             end_time = time.time()
             
             # Get results

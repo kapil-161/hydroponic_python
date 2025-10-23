@@ -23,3 +23,30 @@ validation,max_daily_lai_change,1.0,per_day,Maximum realistic daily LAI change
 validation,max_k_concentration,110.0,mg_per_g,Maximum realistic tissue K concentration
 validation,min_respiration_photosynthesis_ratio,0.001,dimensionless,Minimum realistic respiration to photosynthesis ratio for young plants
 temperature,q10_factor,2.0,dimensionless,Q10 temperature response coefficient (universal)
+# Planting and Transplanting Dates
+planting_dates,sowing_date,2024-07-15,date,Date when seeds were sown
+planting_dates,transplanting_date,2024-07-22,date,Date when seedlings were transplanted to hydroponic system
+planting_dates,simulation_start_date,2024-07-22,date,Date when simulation begins (from transplanting date)
+# Biological Accuracy Features
+biological_features,use_sigmoid_allocation,true,boolean,Enable sigmoid curves for biomass allocation responses
+biological_features,use_gaussian_temperature,true,boolean,Enable gaussian curves for temperature stress responses
+biological_features,use_dynamic_dry_matter,true,boolean,Enable dynamic dry matter content calculations
+biological_features,use_enhanced_stress,true,boolean,Enable enhanced stress response modeling
+# Sigmoid Curve Parameters
+sigmoid_curves,light_steepness,2.5,float,Steepness of light response curve
+sigmoid_curves,light_midpoint,0.3,float,Midpoint of light response curve
+sigmoid_curves,nitrogen_steepness,3.0,float,Steepness of nitrogen response curve
+sigmoid_curves,nitrogen_midpoint,0.4,float,Midpoint of nitrogen response curve
+sigmoid_curves,water_steepness,2.8,float,Steepness of water response curve
+sigmoid_curves,water_midpoint,0.35,float,Midpoint of water response curve
+# Gaussian Curve Parameters
+gaussian_curves,temperature_peak,22.0,float,Peak temperature for optimal response
+gaussian_curves,temperature_width,8.0,float,Width of temperature response curve
+gaussian_curves,temperature_amplitude,1.0,float,Amplitude of temperature response curve
+# Dynamic Dry Matter Content Parameters
+dry_matter_content,leaves_base,0.15,float,Base dry matter content for leaves
+dry_matter_content,leaves_stress_sensitivity,0.3,float,Stress sensitivity for leaf dry matter
+dry_matter_content,stems_base,0.12,float,Base dry matter content for stems
+dry_matter_content,stems_stress_sensitivity,0.25,float,Stress sensitivity for stem dry matter
+dry_matter_content,roots_base,0.08,float,Base dry matter content for roots
+dry_matter_content,roots_stress_sensitivity,0.2,float,Stress sensitivity for root dry matter
