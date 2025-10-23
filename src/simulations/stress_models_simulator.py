@@ -222,8 +222,14 @@ class StressModelsSimulator(BaseSimulator):
             nitrogen_availability = nutrient_data.get('nitrogen_availability')
             nitrogen_uptake = nutrient_data.get('nitrogen_uptake')
 
-            # Use default pH (no pH model)
-            ph = 6.0  # Default optimal pH for lettuce
+            # Get pH from nutrient models simulator
+            nutrient_data = self.dependency_cache.get('nutrient_models_simulator', {})
+            ph = nutrient_data.get('solution_ph')
+            
+            if ph is None:
+                if self.current_step <= 2:
+                    return
+                raise ValueError("Solution pH missing from nutrient_models_simulator - no defaults allowed")
 
             phenology_data = self.dependency_cache.get('phenology_simulator', {})
             growth_stage = phenology_data.get('growth_stage')
@@ -320,7 +326,12 @@ class StressModelsSimulator(BaseSimulator):
             self.state.nutrient_stress = stress_result['nutrient_stress']
             self.state.light_stress = stress_result['light_stress']
             self.state.ph_stress = stress_result['ph_stress']
-            self.state.salinity_stress = 0.0  # Minimal for hydroponic
+            # Get salinity stress from nutrient models
+            salinity_stress = nutrient_data.get('salinity_stress')
+            if salinity_stress is not None:
+                self.state.salinity_stress = salinity_stress
+            else:
+                self.state.salinity_stress = 0.0  # Will be calculated by nutrient models
 
             # Use model's overall stress factor and severity
             self.state.integrated_stress = stress_result['overall_stress_factor']

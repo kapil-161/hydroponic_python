@@ -148,7 +148,7 @@ class RespirationParameters:
         if config['day_start_hour'] >= config['day_end_hour']:
             raise ValueError("day_start_hour must be less than day_end_hour")
         # Get optimal temperature from phenology parameters (consolidation per Rules.md)
-        phenology_optimal_temp = (phenology_params.get('optimal_temperature_min', config.get('optimal_temperature_min', 18.0)) + phenology_params.get('optimal_temperature_max', config.get('optimal_temperature_max', 24.0))) / 2.0
+        phenology_optimal_temp = (phenology_params.get('optimal_temperature_min') + phenology_params.get('optimal_temperature_max')) / 2.0
         if phenology_optimal_temp < config['min_acclimation_temperature'] or phenology_optimal_temp > config['max_acclimation_temperature']:
             raise ValueError("consolidated optimal_temperature must be within acclimation bounds")
         if config['moderate_stress_threshold'] >= config['severe_stress_threshold']:

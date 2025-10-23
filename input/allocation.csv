@@ -1,20 +1,19 @@
 parameter_name,value,unit,description
-vegetative_leaf_allocation,0.68,dimensionless,Base leaf allocation fraction during vegetative stage - higher in hydroponics
+vegetative_leaf_allocation,0.68,dimensionless,Base leaf allocation fraction during vegetative stage
 vegetative_stem_allocation,0.12,dimensionless,Base stem allocation fraction during vegetative stage
-vegetative_root_allocation,0.18000000000000002,dimensionless,Base root allocation fraction during vegetative stage - lower in hydroponics (abundant nutrients)
+vegetative_root_allocation,0.18,dimensionless,Base root allocation fraction during vegetative stage
 reproductive_leaf_allocation,0.4,dimensionless,Base leaf allocation fraction during reproductive stage
 reproductive_stem_allocation,0.35,dimensionless,Base stem allocation fraction during reproductive stage
 reproductive_root_allocation,0.25,dimensionless,Base root allocation fraction during reproductive stage
-light_response_factor,0.3,dimensionless,Response strength to light limitation
-nitrogen_response_factor,0.4,dimensionless,Response strength to nitrogen limitation
-water_response_factor,0.35,dimensionless,Response strength to water limitation
 minimum_organ_fraction,0.05,dimensionless,Minimum allocation fraction for any organ
-min_root_allocation_fraction,0.15,dimensionless,Minimum root allocation fraction to maintain biological realism
-allocation_efficiency,1.0,dimensionless,Allocation efficiency (set to 1.0 as growth respiration is handled separately by respiration model)
-carbon_content_fraction,0.4,g C per g DM,Carbon to biomass conversion factor (calibrated for realistic butterhead lettuce: target ~10-15g DM at 34 days harvest)
-carbon_allocation_roots,0.25,dimensionless,Fraction of net carbon allocated to roots
-carbon_allocation_leaves,0.65,dimensionless,Fraction of net carbon allocated to leaves
-carbon_allocation_stems,0.1,dimensionless,Fraction of net carbon allocated to stems
-leaf_water_content,0.95,fraction,Leaf tissue water content fraction (fresh weight basis)
-stem_water_content,0.92,fraction,Stem tissue water content fraction (fresh weight basis)
-root_water_content,0.9680000000000001,fraction,Root tissue water content fraction (fresh weight basis)
+allocation_efficiency,1.0,dimensionless,Allocation efficiency (quantum use efficiency)
+carbon_content_fraction,0.4,g C per g DM,Carbon to biomass conversion factor (calibrated for realistic butterhead lettuce)
+leaf_water_content,0.95,fraction,Leaf tissue water content fraction
+stem_water_content,0.92,fraction,Stem tissue water content fraction
+root_water_content,0.968,fraction,Root tissue water content fraction
+light_response_factor,0.3,dimensionless,Light response factor for allocation
+nitrogen_response_factor,0.4,dimensionless,Nitrogen response factor for allocation
+water_response_factor,0.35,dimensionless,Water response factor for allocation
+carbon_allocation_roots,0.25,dimensionless,Carbon allocation fraction to roots
+carbon_allocation_leaves,0.65,dimensionless,Carbon allocation fraction to leaves
+carbon_allocation_stems,0.1,dimensionless,Carbon allocation fraction to stems

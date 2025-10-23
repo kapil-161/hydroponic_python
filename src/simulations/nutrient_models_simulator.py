@@ -105,7 +105,7 @@ class NutrientModelsSimulator(BaseSimulator):
         # Load initial nutrient concentrations from CSV - NO DEFAULTS per Rules.md
         initial_state = data.get('initial_state', {})
         if initial_state:
-            self.state.solution_ph = initial_state.get('solution_ph', 6.0)
+            self.state.solution_ph = initial_state.get('solution_ph')
 
             # Map CSV keys to nutrient elements
             # CSV format: solution_n_concentration → N-NO3 + N-NH4

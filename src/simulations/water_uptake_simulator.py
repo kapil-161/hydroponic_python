@@ -234,7 +234,7 @@ class WaterUptakeSimulator(BaseSimulator):
                         'salinity_stress': stress_data.get('salinity_stress'),  # Get from stress models
                         'temperature_stress': temperature_stress
                     },
-                    solution_ec=stress_data.get('solution_ec', 1.5)  # Get from stress models or use typical hydroponic value
+                    solution_ec=stress_data.get('solution_ec')  # Must be provided by stress models
                 )
             except (TypeError, ValueError) as e:
                 if self.current_step == 0 and ("NoneType" in str(e) or "<=" in str(e)):
@@ -427,8 +427,8 @@ class WaterUptakeSimulator(BaseSimulator):
         """Handle simulation end"""
         # Get tissue water retention from biomass simulator
         biomass_data = self.dependency_cache.get('biomass_allocation_simulator', {})
-        tissue_water_retention = biomass_data.get('cumulative_tissue_water_retention', 0.0)
-        total_fresh_weight = biomass_data.get('total_fresh_weight', 0.0)
+        tissue_water_retention = biomass_data.get('cumulative_tissue_water_retention')
+        total_fresh_weight = biomass_data.get('total_fresh_weight')
 
         total_water_used = self.state.cumulative_water_uptake + tissue_water_retention
 

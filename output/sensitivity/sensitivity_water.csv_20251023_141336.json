@@ -1,0 +1,1424 @@
+{
+  "csv_file": "water.csv",
+  "baseline": {
+    "total_biomass": 38.074,
+    "leaf_biomass": 21.8525,
+    "stem_biomass": 1.9064,
+    "root_biomass": 14.3151,
+    "lai": 2.4614,
+    "leaf_area": 0.2954,
+    "canopy_height": 0.124,
+    "cumulative_water": 5.541,
+    "water_availability": 0.928,
+    "cumulative_carbon": 35.6098,
+    "total_leaves": 10
+  },
+  "parameters": [
+    {
+      "name": "saturation_vapor_pressure_constant",
+      "original_value": 0.6108,
+      "unit": "kPa",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.67188,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "psychrometric_constant",
+      "original_value": 0.665,
+      "unit": "kPa_\u00b0C",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.7315000000000002,
+          "metrics": {
+            "total_biomass": 38.0703,
+            "leaf_biomass": 21.8516,
+            "stem_biomass": 1.9062,
+            "root_biomass": 14.3125,
+            "lai": 2.4612,
+            "leaf_area": 0.2953,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.5961,
+            "water_availability": 0.9268,
+            "cumulative_carbon": 35.6069,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": -0.009717917739126255,
+            "leaf_biomass": -0.004118521908238886,
+            "stem_biomass": -0.010490977759137642,
+            "root_biomass": -0.01816263945064491,
+            "lai": -0.00812545705695856,
+            "leaf_area": -0.03385240352064624,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.9944053419960202,
+            "water_availability": -0.12931034482759587,
+            "cumulative_carbon": -0.00814382557609645,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "net_radiation_factor",
+      "original_value": 0.77,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.8470000000000001,
+          "metrics": {
+            "total_biomass": 38.0699,
+            "leaf_biomass": 21.8395,
+            "stem_biomass": 1.9062,
+            "root_biomass": 14.3243,
+            "lai": 2.461,
+            "leaf_area": 0.2953,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.5818,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6068,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": -0.01076850344067107,
+            "leaf_biomass": -0.05948976089691397,
+            "stem_biomass": -0.010490977759137642,
+            "root_biomass": 0.0642678011330684,
+            "lai": -0.01625091411391712,
+            "leaf_area": -0.03385240352064624,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.7363291824580391,
+            "water_availability": 0.0,
+            "cumulative_carbon": -0.008424647147695617,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "radiation_offset",
+      "original_value": 2.45,
+      "unit": "MJ_m2_day",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 2.6950000000000003,
+          "metrics": {
+            "total_biomass": 38.0756,
+            "leaf_biomass": 21.855,
+            "stem_biomass": 1.9065,
+            "root_biomass": 14.3141,
+            "lai": 2.4616,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.5214,
+            "water_availability": 0.9283,
+            "cumulative_carbon": 35.6111,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.004202342806123278,
+            "leaf_biomass": 0.01144033863402942,
+            "stem_biomass": 0.0052454888795629975,
+            "root_biomass": -0.006985630557938442,
+            "lai": 0.00812545705695856,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": -0.35372676412200876,
+            "water_availability": 0.03232758620689299,
+            "cumulative_carbon": 0.0036506804306694306,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "base_crop_coefficient",
+      "original_value": 1.0,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 1.1,
+          "metrics": {
+            "total_biomass": 37.8215,
+            "leaf_biomass": 21.6563,
+            "stem_biomass": 1.8938,
+            "root_biomass": 14.2714,
+            "lai": 2.4457,
+            "leaf_area": 0.2935,
+            "canopy_height": 0.1237,
+            "cumulative_water": 6.0572,
+            "water_availability": 0.9212,
+            "cumulative_carbon": 35.3895,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": -0.6631822240899242,
+            "leaf_biomass": -0.8978377759981581,
+            "stem_biomass": -0.6609315988250192,
+            "root_biomass": -0.3052720553820749,
+            "lai": -0.6378483789713101,
+            "leaf_area": -0.6431956668923537,
+            "canopy_height": -0.2419354838709635,
+            "cumulative_water": 9.3160079408049,
+            "water_availability": -0.7327586206896582,
+            "cumulative_carbon": -0.6186499222124295,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "lai_coefficient_factor",
+      "original_value": 3.0,
+      "unit": "m2_m2",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 3.3000000000000003,
+          "metrics": {
+            "total_biomass": 38.2204,
+            "leaf_biomass": 21.9875,
+            "stem_biomass": 1.9137,
+            "root_biomass": 14.3192,
+            "lai": 2.4735,
+            "leaf_area": 0.2968,
+            "canopy_height": 0.1242,
+            "cumulative_water": 5.0566,
+            "water_availability": 0.9342,
+            "cumulative_carbon": 35.7423,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.38451436675946804,
+            "leaf_biomass": 0.6177782862372798,
+            "stem_biomass": 0.38292068820813374,
+            "root_biomass": 0.028641085287571186,
+            "lai": 0.491590151946056,
+            "leaf_area": 0.47393364928910375,
+            "canopy_height": 0.1612903225806498,
+            "cumulative_water": -8.742104313300846,
+            "water_availability": 0.6681034482758602,
+            "cumulative_carbon": 0.3720885823565431,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "vegetative_stage_factor",
+      "original_value": 0.8,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.8800000000000001,
+          "metrics": {
+            "total_biomass": 37.8293,
+            "leaf_biomass": 21.6817,
+            "stem_biomass": 1.8942,
+            "root_biomass": 14.2534,
+            "lai": 2.4501,
+            "leaf_area": 0.294,
+            "canopy_height": 0.1237,
+            "cumulative_water": 5.8788,
+            "water_availability": 0.9283,
+            "cumulative_carbon": 35.3935,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": -0.6426958029101082,
+            "leaf_biomass": -0.7816039354764894,
+            "stem_biomass": -0.6399496433067556,
+            "root_biomass": -0.43101340542504135,
+            "lai": -0.45908832371820374,
+            "leaf_area": -0.47393364928910375,
+            "canopy_height": -0.2419354838709635,
+            "cumulative_water": 6.096372495939355,
+            "water_availability": 0.03232758620689299,
+            "cumulative_carbon": -0.6074170593488221,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "head_formation_stage_factor",
+      "original_value": 1.2,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 1.32,
+          "metrics": {
+            "total_biomass": 38.0676,
+            "leaf_biomass": 21.8275,
+            "stem_biomass": 1.9061,
+            "root_biomass": 14.334,
+            "lai": 2.4602,
+            "leaf_area": 0.2952,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.7206,
+            "water_availability": 0.9208,
+            "cumulative_carbon": 35.6061,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": -0.016809371224455784,
+            "leaf_biomass": -0.11440338634022917,
+            "stem_biomass": -0.01573646663870064,
+            "root_biomass": 0.13202841754511224,
+            "lai": -0.04875274234175136,
+            "leaf_area": -0.06770480704129248,
+            "canopy_height": 0.0,
+            "cumulative_water": 3.2412921855260732,
+            "water_availability": -0.7758620689655275,
+            "cumulative_carbon": -0.010390398148829914,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "mature_stage_factor",
+      "original_value": 0.9,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.9900000000000001,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "temperature_sensitivity",
+      "original_value": 0.15,
+      "unit": "per_\u00b0C",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.165,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "optimal_vpd_min",
+      "original_value": 0.8,
+      "unit": "kPa",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.8800000000000001,
+          "metrics": {
+            "total_biomass": 38.0791,
+            "leaf_biomass": 21.8587,
+            "stem_biomass": 1.9066,
+            "root_biomass": 14.3137,
+            "lai": 2.4619,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.5476,
+            "water_availability": 0.9279,
+            "cumulative_carbon": 35.614,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.013394967694486455,
+            "leaf_biomass": 0.028372039812377355,
+            "stem_biomass": 0.010490977759125995,
+            "root_biomass": -0.009779882781108855,
+            "lai": 0.02031364264240542,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.11911207363291312,
+            "water_availability": -0.010775862068976294,
+            "cumulative_carbon": 0.011794506006765883,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "optimal_vpd_max",
+      "original_value": 1.5,
+      "unit": "kPa",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 1.6500000000000001,
+          "metrics": {
+            "total_biomass": 38.0743,
+            "leaf_biomass": 21.8465,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3214,
+            "lai": 2.4617,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.6506,
+            "water_availability": 0.9279,
+            "cumulative_carbon": 35.6112,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0007879392761539465,
+            "leaf_biomass": -0.027456812721657602,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.04400947251504569,
+            "lai": 0.01218818558544686,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 1.9779823136617845,
+            "water_availability": -0.010775862068976294,
+            "cumulative_carbon": 0.003931502002248643,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "vpd_sensitivity",
+      "original_value": 0.3,
+      "unit": "kPa_inverse",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.33,
+          "metrics": {
+            "total_biomass": 38.0787,
+            "leaf_biomass": 21.8577,
+            "stem_biomass": 1.9066,
+            "root_biomass": 14.3144,
+            "lai": 2.4617,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.4508,
+            "water_availability": 0.9279,
+            "cumulative_carbon": 35.6132,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.012344381992960299,
+            "leaf_biomass": 0.023795904358778593,
+            "stem_biomass": 0.010490977759125995,
+            "root_biomass": -0.004889941390560632,
+            "lai": 0.01218818558544686,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": -1.6278650063165545,
+            "water_availability": -0.010775862068976294,
+            "cumulative_carbon": 0.009547933434052372,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "metabolic_water_per_biomass",
+      "original_value": 1e-05,
+      "unit": "L_g_biomass",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 1.1000000000000001e-05,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.542,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.01804728388376549,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "metabolic_water_per_lai",
+      "original_value": 0.1,
+      "unit": "L_LAI",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.11000000000000001,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "temperature_tolerance",
+      "original_value": 15.0,
+      "unit": "\u00b0C",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 16.5,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "minimum_temperature_factor",
+      "original_value": 0.1,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.11000000000000001,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "stem_biomass_fraction",
+      "original_value": 0.3,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.33,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "leaf_area_to_biomass_ratio",
+      "original_value": 0.1,
+      "unit": "g_per_m2",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.11000000000000001,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "water_uptake_sensitivity_low",
+      "original_value": 0.06,
+      "unit": "per_\u00b0C",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.066,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "water_uptake_sensitivity_high",
+      "original_value": 0.1,
+      "unit": "per_\u00b0C",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.11000000000000001,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "minimum_vpd_threshold",
+      "original_value": 0.1,
+      "unit": "kPa",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.11000000000000001,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "minimum_et0_threshold",
+      "original_value": 0.1,
+      "unit": "mm_day",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.11000000000000001,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "ground_area_per_plant",
+      "original_value": 0.06,
+      "unit": "m2",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.066,
+          "metrics": {
+            "total_biomass": 37.8215,
+            "leaf_biomass": 21.6563,
+            "stem_biomass": 1.8938,
+            "root_biomass": 14.2714,
+            "lai": 2.4457,
+            "leaf_area": 0.2935,
+            "canopy_height": 0.1237,
+            "cumulative_water": 6.0572,
+            "water_availability": 0.9212,
+            "cumulative_carbon": 35.3895,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": -0.6631822240899242,
+            "leaf_biomass": -0.8978377759981581,
+            "stem_biomass": -0.6609315988250192,
+            "root_biomass": -0.3052720553820749,
+            "lai": -0.6378483789713101,
+            "leaf_area": -0.6431956668923537,
+            "canopy_height": -0.2419354838709635,
+            "cumulative_water": 9.3160079408049,
+            "water_availability": -0.7327586206896582,
+            "cumulative_carbon": -0.6186499222124295,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "maximum_lai_coverage_factor",
+      "original_value": 0.5,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.55,
+          "metrics": {
+            "total_biomass": 38.0747,
+            "leaf_biomass": 21.853,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3153,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.5396,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.61,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0018385249776801003,
+            "leaf_biomass": 0.002288067726815639,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0013971261115976153,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": -0.02526619743729092,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0005616431431783775,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "minimum_coverage_factor",
+      "original_value": 0.01,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.011000000000000001,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "max_root_surface_area_factor",
+      "original_value": 2.0,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 2.2,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "cavitation_gradient_denominator",
+      "original_value": 1.0,
+      "unit": "MPa",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 1.1,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "temperature_response_exponent_denominator",
+      "original_value": 200.0,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 220.00000000000003,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "vpd_effect_divisor",
+      "original_value": 1.0,
+      "unit": "kPa",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 1.1,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "transpiration_base_rate_scale_factor",
+      "original_value": 0.5,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.55,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "transpiration_scaling_multiplier",
+      "original_value": 0.1,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.11000000000000001,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "lai_coefficient_threshold",
+      "original_value": 0.1,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.11000000000000001,
+          "metrics": {
+            "total_biomass": 38.0746,
+            "leaf_biomass": 21.8524,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3158,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6104,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0015758785522892308,
+            "leaf_biomass": -0.00045761354535987623,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.004889941390560632,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0016849294295351327,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "minimum_coverage_factor",
+      "original_value": 0.01,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.011000000000000001,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "minimum_cavitation_factor",
+      "original_value": 0.1,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.11000000000000001,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "maximum_vpd_effect",
+      "original_value": 2.0,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 2.2,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "sensitivity_low",
+      "original_value": 0.06,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.066,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "sensitivity_high",
+      "original_value": 0.1,
+      "unit": "dimensionless",
+      "variations": [
+        {
+          "multiplier": 1.1,
+          "value": 0.11000000000000001,
+          "metrics": {
+            "total_biomass": 38.074,
+            "leaf_biomass": 21.8525,
+            "stem_biomass": 1.9064,
+            "root_biomass": 14.3151,
+            "lai": 2.4614,
+            "leaf_area": 0.2954,
+            "canopy_height": 0.124,
+            "cumulative_water": 5.541,
+            "water_availability": 0.928,
+            "cumulative_carbon": 35.6098,
+            "total_leaves": 10
+          },
+          "relative_change": {
+            "total_biomass": 0.0,
+            "leaf_biomass": 0.0,
+            "stem_biomass": 0.0,
+            "root_biomass": 0.0,
+            "lai": 0.0,
+            "leaf_area": 0.0,
+            "canopy_height": 0.0,
+            "cumulative_water": 0.0,
+            "water_availability": 0.0,
+            "cumulative_carbon": 0.0,
+            "total_leaves": 0.0
+          }
+        }
+      ]
+    }
+  ]
+}

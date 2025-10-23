@@ -121,11 +121,14 @@ class WeatherDataLoader:
         return {
             'date': row['date'],
             'temperature': float(row['temperature']),
+            'temperature_min': float(row['temperature_min']),
+            'temperature_max': float(row['temperature_max']),
             'humidity': float(row['humidity']),
             'light_intensity': float(row['light_intensity']),
+            'solar_radiation': float(row['solar_radiation']),
             'co2_concentration': float(row['co2_concentration']),
-            'wind_speed': float(row.get('wind_speed', 0.0)),
-            'precipitation': float(row.get('precipitation', 0.0))
+            'wind_speed': float(row['wind_speed']),
+            'precipitation': float(row['precipitation'])
         }
 
     def get_weather_for_hour(self, day: int, hour: int) -> Dict[str, Any]:
@@ -136,10 +139,16 @@ class WeatherDataLoader:
         from .core_utils import create_hourly_interpolation
         
         # Get daily values for interpolation
-        temp_min = daily_weather.get('temperature_min', daily_weather['temperature'] - 5.0)
-        temp_max = daily_weather.get('temperature_max', daily_weather['temperature'] + 5.0)
+        temp_min = daily_weather.get('temperature_min')
+        
+        if temp_min is None:
+            raise ValueError("Temperature minimum missing from weather data - no defaults allowed")
+        temp_max = daily_weather.get('temperature_max')
         humidity = daily_weather['humidity']
-        solar_radiation = daily_weather.get('solar_radiation', 20.0)  # Default if not available
+        solar_radiation = daily_weather.get('solar_radiation')
+        
+        if temp_max is None or solar_radiation is None:
+            raise ValueError("Required weather data missing from CSV - no defaults allowed")
         
         # Create hourly interpolation
         hourly_data = create_hourly_interpolation(temp_min, temp_max, humidity, solar_radiation)

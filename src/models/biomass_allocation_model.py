@@ -143,18 +143,18 @@ class BiomassAllocationModel:
         sigmoid_params = config.get('sigmoid_curves', {}) if config else {}
         
         # Light response: sigmoid curve for light limitation
-        light_steepness = sigmoid_params.get('light_response', {}).get('math', {}).get('sigmoid_steepness', 2.5)
-        light_midpoint = sigmoid_params.get('light_response', {}).get('math', {}).get('sigmoid_midpoint', 0.3)
+        light_steepness = sigmoid_params.get('light_response', {}).get('math', {}).get('sigmoid_steepness')
+        light_midpoint = sigmoid_params.get('light_response', {}).get('math', {}).get('sigmoid_midpoint')
         light_response = sigmoid_func(limitations['light'], light_steepness, light_midpoint)
         
         # Nitrogen response: sigmoid curve for nitrogen limitation  
-        nitrogen_steepness = sigmoid_params.get('nitrogen_response', {}).get('math', {}).get('sigmoid_steepness', 3.0)
-        nitrogen_midpoint = sigmoid_params.get('nitrogen_response', {}).get('math', {}).get('sigmoid_midpoint', 0.4)
+        nitrogen_steepness = sigmoid_params.get('nitrogen_response', {}).get('math', {}).get('sigmoid_steepness')
+        nitrogen_midpoint = sigmoid_params.get('nitrogen_response', {}).get('math', {}).get('sigmoid_midpoint')
         nitrogen_response = sigmoid_func(limitations['nitrogen'], nitrogen_steepness, nitrogen_midpoint)
         
         # Water response: sigmoid curve for water limitation
-        water_steepness = sigmoid_params.get('water_response', {}).get('math', {}).get('sigmoid_steepness', 2.8)
-        water_midpoint = sigmoid_params.get('water_response', {}).get('math', {}).get('sigmoid_midpoint', 0.35)
+        water_steepness = sigmoid_params.get('water_response', {}).get('math', {}).get('sigmoid_steepness')
+        water_midpoint = sigmoid_params.get('water_response', {}).get('math', {}).get('sigmoid_midpoint')
         water_response = sigmoid_func(limitations['water'], water_steepness, water_midpoint)
 
         return {
@@ -297,9 +297,9 @@ class BiomassAllocationModel:
                 
                 # Calculate dynamic dry matter content
                 dry_matter_content = calculate_dynamic_dry_matter_content(
-                    stage_props.get('development_stage', 0.0),
-                    stress_factors.get('temperature_stress', 0.0),
-                    stress_factors.get('water_stress', 0.0),
+                    stage_props.get('development_stage'),
+                    stress_factors.get('temperature_stress'),
+                    stress_factors.get('water_stress'),
                     organ_params
                 )
                 

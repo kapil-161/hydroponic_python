@@ -100,11 +100,13 @@ class CanopyArchitectureSimulator(BaseSimulator):
         self.model.initialize()
 
         # Initialize LAI from initials.csv - this is the ONLY LAI source
-        initial_config = data.get('initial_config', {})
-        initial_state = initial_config.get('initial_state', {})
-        initial_lai = initial_state.get('lai', 0.05)  # From initials.csv line 14
-        initial_leaf_area = initial_state.get('leaf_area', 0.001)  # From initials.csv line 15
-        initial_plant_height = initial_state.get('plant_height', 0.02)  # From initials.csv line 16
+        initial_state = data.get('initial_state', {})
+        initial_lai = initial_state.get('lai')
+        initial_leaf_area = initial_state.get('leaf_area')
+        initial_plant_height = initial_state.get('plant_height')
+        
+        if any(x is None for x in [initial_lai, initial_leaf_area, initial_plant_height]):
+            raise ValueError("Initial canopy state missing from initial_state - no defaults allowed")
 
         # Set initial state from CSV
         self.state.lai = initial_lai
@@ -190,7 +192,13 @@ class CanopyArchitectureSimulator(BaseSimulator):
 
             # Calculate canopy biomass even if other calculations are skipped
             # This ensures canopy biomass is always calculated when biomass data is available
-            stem_biomass = biomass_data.get('stem_biomass', 0.0)
+            stem_biomass = biomass_data.get('stem_biomass')
+            
+            if stem_biomass is None:
+                if self.current_step <= 2:
+                    return
+                raise ValueError("Stem biomass missing from biomass_allocation_simulator - no defaults allowed")
+            
             canopy_biomass = leaf_biomass + stem_biomass if leaf_biomass is not None and stem_biomass is not None else 0.0
             self.state.canopy_biomass = canopy_biomass
             
@@ -251,7 +259,12 @@ class CanopyArchitectureSimulator(BaseSimulator):
             # Scientific approach: Height emerges from stem biomass and plant structure
             # NOT from comparing to a target biomass (that manipulates results)
             # Use allometric relationship: height ~ stem_biomass^(1/3) for volume-based growth
-            stem_biomass = biomass_data.get('stem_biomass', 0.0)  # g
+            stem_biomass = biomass_data.get('stem_biomass')  # g
+            
+            if stem_biomass is None:
+                if self.current_step <= 2:
+                    return
+                raise ValueError("Stem biomass missing from biomass_allocation_simulator - no defaults allowed")
 
             if stem_biomass > 0:
                 # Allometric equation: height (cm) = k * stem_biomass^(1/3)
@@ -262,8 +275,8 @@ class CanopyArchitectureSimulator(BaseSimulator):
                     (stem_biomass ** (1.0/3.0)) * 0.1  # Allometric coefficient in meters
                 )
             else:
-                # No stem biomass yet - minimal height
-                canopy_height = 0.01  # 1 cm minimum
+                # No stem biomass yet - use initial height from CSV
+                canopy_height = self.state.canopy_height
             
             # Create light environment from weather data and parameters - no hardcoded values
             from models.canopy_architecture import LightEnvironment

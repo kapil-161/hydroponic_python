@@ -220,12 +220,10 @@ class PhotosynthesisSimulator(BaseSimulator):
                 # Clamp to biological range (2-5%)
                 leaf_nitrogen = max(2.0, min(5.0, leaf_nitrogen))
             else:
-                # First few steps before N data available
-                if self.current_step < 5:
-                    leaf_nitrogen = 3.0  # % dry weight, optimal for lettuce
-                else:
-                    # After initial steps, require N data (direct biochemical link)
-                    leaf_nitrogen = 2.5  # Minimum viable default
+                # Require nitrogen data from nitrogen balance simulator
+                if self.current_step <= 2:
+                    return
+                raise ValueError("Leaf nitrogen data missing from nitrogen_balance_simulator - no defaults allowed")
 
             # SOURCE-SINK FEEDBACK: Adjust photosynthetic capacity based on sink demand
             # Get sink strength from biomass_allocation (Relative Growth Rate)
@@ -247,11 +245,9 @@ class PhotosynthesisSimulator(BaseSimulator):
                 # High demand (1.0) → 1.3x capacity
                 sink_feedback_factor = 0.7 + (0.6 * normalized_sink)
             else:
-                # First few steps before biomass data available
-                if self.current_step < 5:
-                    sink_feedback_factor = 1.0  # Neutral for seedling
-                else:
-                    sink_feedback_factor = 1.0  # Default to no adjustment
+                if self.current_step <= 2:
+                    return
+                raise ValueError("Sink strength data missing from biomass_allocation_simulator - no defaults allowed")
 
             # Apply sink feedback by adjusting effective light intensity
             # This mimics the biological upregulation of photosynthetic machinery
@@ -267,7 +263,7 @@ class PhotosynthesisSimulator(BaseSimulator):
                 'optimal_vpd_min': self.parameters.optimal_vpd_min,
                 'optimal_vpd_max': self.parameters.optimal_vpd_max
             }
-            ec_factor = 1.0  # Default EC factor
+            ec_factor = 1.0  # Neutral EC factor (no adjustment)
             # Scientific fix: ensure sunlit + shaded = total LAI (avoid floating point errors)
             sunlit_lai = lai * sunlit_fraction
             shaded_lai = lai - sunlit_lai  # Calculate shaded as difference to ensure sum equals lai
@@ -296,7 +292,7 @@ class PhotosynthesisSimulator(BaseSimulator):
             
             # Get respiration rate from respiration simulator (if available)
             respiration_data = self.dependency_cache.get('respiration_simulator', {})
-            respiration_rate = respiration_data.get('total_respiration_rate', 0.0)
+            respiration_rate = respiration_data.get('total_respiration_rate')
             
             # Calculate gross photosynthesis correctly: Gross = Net + Respiration
             # This ensures the carbon balance equation: Net = Gross - Respiration

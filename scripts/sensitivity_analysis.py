@@ -448,20 +448,20 @@ class SensitivityAnalyzer:
         # Sort by biomass sensitivity
         sensitivities.sort(key=lambda x: x['biomass_sensitivity'], reverse=True)
 
-        print(f"{Colors.OKBLUE}Top 5 Most Sensitive Parameters (by Biomass):{Colors.ENDC}\n")
+        print(f"{Colors.OKBLUE}All Parameters Ranked by Biomass Sensitivity:{Colors.ENDC}\n")
         print(f"  {'Rank':<6} {'Parameter':<40} {'Max Change':<15}")
         print(f"  {'-'*6} {'-'*40} {'-'*15}")
 
-        for i, sens in enumerate(sensitivities[:5], 1):
+        for i, sens in enumerate(sensitivities, 1):
             print(f"  {i:<6} {sens['name']:<40} {sens['biomass_sensitivity']:>10.2f}%")
 
-        print(f"\n{Colors.OKBLUE}Top 5 Most Sensitive Parameters (by LAI):{Colors.ENDC}\n")
+        print(f"\n{Colors.OKBLUE}All Parameters Ranked by LAI Sensitivity:{Colors.ENDC}\n")
         sensitivities.sort(key=lambda x: x['lai_sensitivity'], reverse=True)
 
         print(f"  {'Rank':<6} {'Parameter':<40} {'Max Change':<15}")
         print(f"  {'-'*6} {'-'*40} {'-'*15}")
 
-        for i, sens in enumerate(sensitivities[:5], 1):
+        for i, sens in enumerate(sensitivities, 1):
             print(f"  {i:<6} {sens['name']:<40} {sens['lai_sensitivity']:>10.2f}%")
 
     def run(self) -> None:

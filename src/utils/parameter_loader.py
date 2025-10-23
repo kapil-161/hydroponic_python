@@ -520,22 +520,24 @@ class StrictParameterLoader:
         params_dict['reproductive_leaf_allocation'] = self.get_parameter('allocation_parameters_reproductive_leaf_allocation')
         params_dict['reproductive_stem_allocation'] = self.get_parameter('allocation_parameters_reproductive_stem_allocation')
         params_dict['reproductive_root_allocation'] = self.get_parameter('allocation_parameters_reproductive_root_allocation')
-        params_dict['light_response_factor'] = self.get_parameter('allocation_parameters_light_response_factor')
-        params_dict['nitrogen_response_factor'] = self.get_parameter('allocation_parameters_nitrogen_response_factor')
-        params_dict['water_response_factor'] = self.get_parameter('allocation_parameters_water_response_factor')
         params_dict['minimum_organ_fraction'] = self.get_parameter('allocation_parameters_minimum_organ_fraction')
-        params_dict['carbon_content_fraction'] = self.get_parameter('allocation_parameters_carbon_content_fraction')
         params_dict['allocation_efficiency'] = self.get_parameter('allocation_parameters_allocation_efficiency')
-
-        # Carbon allocation fractions - NO HARDCODED VALUES (Rules.md)
-        params_dict['carbon_allocation_roots'] = self.get_parameter('allocation_parameters_carbon_allocation_roots')
-        params_dict['carbon_allocation_leaves'] = self.get_parameter('allocation_parameters_carbon_allocation_leaves')
-        params_dict['carbon_allocation_stems'] = self.get_parameter('allocation_parameters_carbon_allocation_stems')
 
         # Tissue water content fractions - NO HARDCODED VALUES (Rules.md)
         params_dict['leaf_water_content'] = self.get_parameter('allocation_parameters_leaf_water_content')
         params_dict['stem_water_content'] = self.get_parameter('allocation_parameters_stem_water_content')
         params_dict['root_water_content'] = self.get_parameter('allocation_parameters_root_water_content')
+
+        # Response factors - must be present in CSV
+        params_dict['light_response_factor'] = self.get_parameter('allocation_parameters_light_response_factor')
+        params_dict['nitrogen_response_factor'] = self.get_parameter('allocation_parameters_nitrogen_response_factor')
+        params_dict['water_response_factor'] = self.get_parameter('allocation_parameters_water_response_factor')
+        params_dict['carbon_content_fraction'] = self.get_parameter('allocation_parameters_carbon_content_fraction')
+
+        # Carbon allocation fractions - must be present in CSV
+        params_dict['carbon_allocation_roots'] = self.get_parameter('allocation_parameters_carbon_allocation_roots')
+        params_dict['carbon_allocation_leaves'] = self.get_parameter('allocation_parameters_carbon_allocation_leaves')
+        params_dict['carbon_allocation_stems'] = self.get_parameter('allocation_parameters_carbon_allocation_stems')
 
         return BiomassAllocationParameters(**params_dict)
 
@@ -1187,7 +1189,7 @@ class StrictParameterLoader:
         config['young_root_activity'] = self.get_parameter('root_system_parameters_young_root_activity')
         config['old_root_activity'] = self.get_parameter('root_system_parameters_old_root_activity')
 
-        # Additional hardcoded parameters extracted from code
+        # Additional parameters loaded from CSV
         config['temperature_range_factor'] = self.get_parameter('root_system_parameters_temperature_range_factor')
         config['minimum_temperature_factor'] = self.get_parameter('root_system_parameters_minimum_temperature_factor')
         config['maximum_temperature_factor'] = self.get_parameter('root_system_parameters_maximum_temperature_factor')

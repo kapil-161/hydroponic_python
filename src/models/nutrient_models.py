@@ -630,7 +630,7 @@ class NutrientModel:
                 k = self.kinetics[nutrient]
                 uptake_per_cm2 = (k['vmax'] * concentration) / (k['km'] + concentration)
                 base_uptake = uptake_per_cm2 * root_surface_area
-                env_adjusted_uptake = base_uptake * temp_factor * ph_factor * uptake_modifiers.get(nutrient, 1.0)
+                env_adjusted_uptake = base_uptake * temp_factor * ph_factor * uptake_modifiers.get(nutrient)
                 uptake_rates[nutrient] = max(0.0, env_adjusted_uptake * demand_factor)
             else:
                 uptake_rates[nutrient] = 0.0
@@ -805,8 +805,8 @@ class NutrientModel:
                 raise KeyError(f"Missing transport rates for {nutrient}")
             xylem_rate = self.params.xylem_transport_rates[nutrient] * temp_factor
             phloem_rate = self.params.phloem_transport_rates[nutrient] * temp_factor
-            total_demand = sum(d.get(nutrient, 0.0) for d in sink_demands.values())
-            total_supply = sum(s.get(nutrient, 0.0) for s in source_supplies.values())
+            total_demand = sum(d.get(nutrient) for d in sink_demands.values() if d.get(nutrient) is not None)
+            total_supply = sum(s.get(nutrient) for s in source_supplies.values() if s.get(nutrient) is not None)
             if total_demand > 0 and total_supply > 0:
                 supply_demand_ratio = total_supply / total_demand
                 transport_eff = min(1.0, supply_demand_ratio)

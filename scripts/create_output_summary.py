@@ -3,30 +3,32 @@ import pandas as pd
 import os
 from pathlib import Path
 
-def load_config_param(df, param_name, default="N/A"):
-    """Load parameter value from config dataframe"""
+def load_config_param(df, param_name):
+    """Load parameter value from config dataframe - no defaults allowed"""
     try:
         row = df[df['parameter_name'] == param_name]
         if not row.empty:
             return row.iloc[0]['value']
+        else:
+            raise ValueError(f"Parameter '{param_name}' not found in config - no defaults allowed")
     except KeyError as e:
         raise KeyError(f"Missing column in config dataframe while looking for '{param_name}': {e}")
     except Exception as e:
         raise RuntimeError(f"Error loading config parameter '{param_name}': {e}")
-    return default
 
-def load_initial_param(df, param_name, default="N/A"):
-    """Load parameter value from initials dataframe"""
+def load_initial_param(df, param_name):
+    """Load parameter value from initials dataframe - no defaults allowed"""
     try:
         row = df[(df['category'] == 'system_config') | (df['category'] == 'initial_state')]
         row = row[row['parameter_name'] == param_name]
         if not row.empty:
             return row.iloc[0]['value']
+        else:
+            raise ValueError(f"Parameter '{param_name}' not found in initials - no defaults allowed")
     except KeyError as e:
         raise KeyError(f"Missing column in initials dataframe while looking for '{param_name}': {e}")
     except Exception as e:
         raise RuntimeError(f"Error loading initial parameter '{param_name}': {e}")
-    return default
 
 # Load configuration files
 input_dir = Path("input")

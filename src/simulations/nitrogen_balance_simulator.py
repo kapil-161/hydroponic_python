@@ -162,7 +162,8 @@ class NitrogenBalanceSimulator(BaseSimulator):
             # Initialize organs with small starting values
             for organ in self.organs:
                 initial_mass = initial_state.get(f'{organ[:-1]}_biomass', 0.05)  # Remove 's' and add _biomass
-                initial_n_conc = 0.03  # 3% nitrogen concentration as default
+                # Get initial nitrogen concentration from CSV data
+                initial_n_conc = initial_state.get('initial_nitrogen_concentration', 0.03)  # 3% default from literature
                 try:
                     self.model.initialize_organ_nitrogen(organ, initial_mass, initial_n_conc)
                 except Exception as e:
@@ -268,12 +269,22 @@ class NitrogenBalanceSimulator(BaseSimulator):
             # Get nitrogen uptake data from nutrient_models_simulator
             # Use the same data source for both total and individual forms to ensure consistency
             nutrient_uptake_rates = nutrient_data.get('nutrient_uptake_rates', {})
-            nitrate_uptake_rate = nutrient_uptake_rates.get('N-NO3', 0.0)
-            ammonium_uptake_rate = nutrient_uptake_rates.get('N-NH4', 0.0)
+            nitrate_uptake_rate = nutrient_uptake_rates.get('N-NO3')
+            ammonium_uptake_rate = nutrient_uptake_rates.get('N-NH4')
+            
+            if nitrate_uptake_rate is None or ammonium_uptake_rate is None:
+                if self.current_step <= 2:
+                    return
+                raise ValueError("Nitrogen uptake rates missing from nutrient_models_simulator - no defaults allowed")
             
             # Use the total nitrogen uptake directly from nutrient_models_simulator
             # This ensures consistency with the authoritative source
-            nitrogen_uptake_mg_per_plant_per_day = nutrient_data.get('total_nitrogen_uptake', 0.0)
+            nitrogen_uptake_mg_per_plant_per_day = nutrient_data.get('total_nitrogen_uptake')
+            
+            if nitrogen_uptake_mg_per_plant_per_day is None:
+                if self.current_step <= 2:
+                    return
+                raise ValueError("Total nitrogen uptake missing from nutrient_models_simulator - no defaults allowed")
             
             # If total is not available, calculate from individual forms as fallback
             if nitrogen_uptake_mg_per_plant_per_day == 0.0:
@@ -288,9 +299,14 @@ class NitrogenBalanceSimulator(BaseSimulator):
             
             # Get root data from root system simulator
             root_data = self.dependency_cache.get('root_system_simulator', {})
-            root_mass = root_data.get('root_mass', 0.1)  # Minimum initial root mass from initials.csv
-            root_surface_area = root_data.get('root_surface_area', 0.001)
-            root_activity_root = root_data.get('root_activity', 1.0)
+            root_mass = root_data.get('root_mass')
+            root_surface_area = root_data.get('root_surface_area')
+            root_activity_root = root_data.get('root_activity')
+            
+            if any(x is None for x in [root_mass, root_surface_area, root_activity_root]):
+                if self.current_step <= 2:
+                    return
+                raise ValueError("Root data missing from root_system_simulator - no defaults allowed")
 
             # Ensure minimum positive values
             root_mass = max(root_mass, 0.01)  # Ensure at least 0.01g
@@ -426,9 +442,14 @@ class NitrogenBalanceSimulator(BaseSimulator):
             
             # Calculate nitrogen concentrations using cumulative nitrogen and current biomass
             biomass_data = self.dependency_cache.get('biomass_allocation_simulator', {})
-            leaf_biomass = biomass_data.get('leaf_biomass', 0.001)  # Avoid division by zero
-            stem_biomass = biomass_data.get('stem_biomass', 0.001)
-            root_biomass = biomass_data.get('root_biomass', 0.001)
+            leaf_biomass = biomass_data.get('leaf_biomass')
+            stem_biomass = biomass_data.get('stem_biomass')
+            root_biomass = biomass_data.get('root_biomass')
+            
+            if any(x is None for x in [leaf_biomass, stem_biomass, root_biomass]):
+                if self.current_step <= 2:
+                    return
+                raise ValueError("Biomass data missing from biomass_allocation_simulator - no defaults allowed")
 
             # Calculate concentrations as cumulative N / current biomass (g N / g biomass)
             if leaf_biomass > 0:

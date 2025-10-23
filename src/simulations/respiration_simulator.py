@@ -147,19 +147,34 @@ class RespirationSimulator(BaseSimulator):
             
             # Get biomass data from biomass allocation simulator
             biomass_data = self.dependency_cache.get('biomass_allocation_simulator', {})
-            leaf_biomass = biomass_data.get('leaf_biomass', 0.01)  # Fallback for first step only
-            stem_biomass = biomass_data.get('stem_biomass', 0.005)
-            root_biomass = biomass_data.get('root_biomass', 0.005)
-            total_biomass = biomass_data.get('total_biomass', 0.02)
+            leaf_biomass = biomass_data.get('leaf_biomass')
+            stem_biomass = biomass_data.get('stem_biomass')
+            root_biomass = biomass_data.get('root_biomass')
+            total_biomass = biomass_data.get('total_biomass')
+            
+            if any(x is None for x in [leaf_biomass, stem_biomass, root_biomass, total_biomass]):
+                if self.current_step <= 2:
+                    return
+                raise ValueError("Biomass data missing from biomass_allocation_simulator - no defaults allowed")
 
             # Get phenology data
             phenology_data = self.dependency_cache.get('phenology_simulator', {})
-            growth_stage = phenology_data.get('growth_stage', 'GERMINATION')
-            development_index = phenology_data.get('development_index', 0.0)
+            growth_stage = phenology_data.get('growth_stage')
+            development_index = phenology_data.get('development_index')
+            
+            if growth_stage is None or development_index is None:
+                if self.current_step <= 2:
+                    return
+                raise ValueError("Phenology data missing from phenology_simulator - no defaults allowed")
 
             # Get stress data
             stress_data = self.dependency_cache.get('stress_models', {})
-            temperature_stress = stress_data.get('temperature_stress', 1.0)
+            temperature_stress = stress_data.get('temperature_stress')
+            
+            if temperature_stress is None:
+                if self.current_step <= 2:
+                    return
+                raise ValueError("Temperature stress data missing from stress_models - no defaults allowed")
             
             # Create biomass pools from simulator data
             biomass_pools = {
@@ -189,7 +204,12 @@ class RespirationSimulator(BaseSimulator):
             # Calculate respiration using model functions - no shortcuts
             # Per Rules.md: All parameters must come from CSV
             # Get hourly biomass gain from biomass simulator
-            hourly_biomass_gain = biomass_data.get('hourly_biomass_gain', 0.0)
+            hourly_biomass_gain = biomass_data.get('hourly_biomass_gain')
+            
+            if hourly_biomass_gain is None:
+                if self.current_step <= 2:
+                    return
+                raise ValueError("Hourly biomass gain missing from biomass_allocation_simulator - no defaults allowed")
 
             # Accumulate daily biomass gain (reset every 24 hours)
             self.state.daily_biomass_gain += hourly_biomass_gain

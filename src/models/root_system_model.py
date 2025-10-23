@@ -823,7 +823,7 @@ class EnhancedRootSystemModel:
             return max(0.2, 1.0 - ph_stress * self.params.ph_stress_factor)
 
     def calculate_root_age_effect(self, architecture_metrics: Dict[str, float]) -> float:
-        fine_root_fraction = architecture_metrics.get('fine_root_fraction', 0.0)
+        fine_root_fraction = architecture_metrics.get('fine_root_fraction')
         return max(0.1, fine_root_fraction * self.params.young_root_activity + 
                    (1.0 - fine_root_fraction) * self.params.old_root_activity)
 
