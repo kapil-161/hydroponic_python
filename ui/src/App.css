@@ -1,0 +1,82 @@
+.App {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f5f5f5;
+}
+
+.app-header {
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  color: white;
+  padding: 30px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.app-header h1 {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.app-header p {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.app-nav {
+  display: flex;
+  gap: 8px;
+  padding: 16px 30px;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+  overflow-x: auto;
+}
+
+.nav-btn {
+  padding: 10px 20px;
+  border: 2px solid #ddd;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.nav-btn:hover {
+  border-color: #2ecc71;
+  color: #2ecc71;
+}
+
+.nav-btn.active {
+  background: #2ecc71;
+  color: white;
+  border-color: #2ecc71;
+}
+
+.app-content {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: 20px;
+  }
+
+  .app-header h1 {
+    font-size: 24px;
+  }
+
+  .app-nav {
+    padding: 10px;
+    gap: 4px;
+  }
+
+  .nav-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}
