@@ -296,7 +296,7 @@ class WaterUptakeModel:
         Returns:
             WaterUptakeResponse with water uptake components
         """
-        if not all(isinstance(x, (int, float)) for x in [temperature, humidity, solar_radiation, lai, total_biomass]):
+        if not all(isinstance(x, (int, float)) for x in [temperature, humidity, solar_radiation, lai, total_biomass, wind_speed]):
             raise ValueError("All numeric inputs must be numbers")
         if not -50 <= temperature <= 60:
             raise ValueError("Temperature must be between -50 and 60°C")

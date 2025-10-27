@@ -210,6 +210,15 @@ class WaterUptakeSimulator(BaseSimulator):
                     return
                 raise ValueError("Stress data missing from stress_models - no defaults allowed")
 
+            # Get solution_ec from nutrient models simulator
+            nutrient_data = self.dependency_cache.get('nutrient_models_simulator', {})
+            solution_ec = nutrient_data.get('solution_ec')
+
+            if solution_ec is None:
+                if self.current_step <= 2:
+                    return
+                raise ValueError("Solution EC missing from nutrient_models_simulator - no defaults allowed")
+
             # Get total_biomass from biomass_allocation_simulator
             biomass_data = self.dependency_cache.get('biomass_allocation_simulator', {})
             total_biomass = biomass_data.get('total_biomass')
@@ -234,7 +243,7 @@ class WaterUptakeSimulator(BaseSimulator):
                         'salinity_stress': stress_data.get('salinity_stress'),  # Get from stress models
                         'temperature_stress': temperature_stress
                     },
-                    solution_ec=stress_data.get('solution_ec')  # Must be provided by stress models
+                    solution_ec=solution_ec  # Get from nutrient models simulator
                 )
             except (TypeError, ValueError) as e:
                 if self.current_step == 0 and ("NoneType" in str(e) or "<=" in str(e)):

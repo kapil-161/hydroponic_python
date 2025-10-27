@@ -17,20 +17,20 @@ def get_required_stress_param(params: dict, param_name: str) -> float:
 
 
 
-def _build_simple_interactions(stress_weights: Dict[str, float]) -> Dict[str, Dict[str, Dict[str, Any]]]:
-    """Build simplified stress interactions from weights"""
+def _build_simple_interactions(stress_weights: Dict[str, float], config: Dict[str, Any]) -> Dict[str, Dict[str, Dict[str, Any]]]:
+    """Build simplified stress interactions from weights using CSV parameters - NO HARDCODED VALUES (Rules.md)"""
     return {
         "water": {
-            "temperature": {"type": "synergistic", "factor": 1.2},
-            "salinity": {"type": "synergistic", "factor": 1.3}
+            "temperature": {"type": "synergistic", "factor": float(config.get('water_temperature_interaction_factor'))},
+            "salinity": {"type": "synergistic", "factor": float(config.get('water_salinity_interaction_factor'))}
         },
         "temperature": {
-            "water": {"type": "synergistic", "factor": 1.2},
-            "light": {"type": "additive", "factor": 1.1}
+            "water": {"type": "synergistic", "factor": float(config.get('temperature_water_interaction_factor'))},
+            "light": {"type": "additive", "factor": float(config.get('temperature_light_interaction_factor'))}
         },
         "nutrient": {
-            "ph": {"type": "synergistic", "factor": 1.4},
-            "salinity": {"type": "multiplicative", "factor": 1.2}
+            "ph": {"type": "synergistic", "factor": float(config.get('nutrient_ph_interaction_factor'))},
+            "salinity": {"type": "multiplicative", "factor": float(config.get('nutrient_salinity_interaction_factor'))}
         }
     }
 
@@ -127,49 +127,49 @@ def _calculate_stress_interactions(stress_weights: Dict[str, float], config: Dic
     }
 
 
-def _calculate_process_sensitivity(stress_weights: Dict[str, float]) -> Dict[str, Dict[str, float]]:
-    """Calculate process sensitivity to different stress types based on biological principles"""
+def _calculate_process_sensitivity(stress_weights: Dict[str, float], config: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
+    """Calculate process sensitivity to different stress types using CSV parameters - NO HARDCODED VALUES (Rules.md)"""
     stress_keys = list(stress_weights.keys())
 
-    # Base sensitivity values based on biological knowledge
+    # Get sensitivity values from CSV parameters - NO HARDCODED VALUES (Rules.md)
     photosynthesis_sensitivity = {
-        StressType.LIGHT.value: 0.9,        # Highly sensitive to light
-        StressType.TEMPERATURE.value: 0.7,   # Moderately sensitive to temperature
-        StressType.WATER.value: 0.6,         # Sensitive to water stress
-        StressType.NUTRIENT.value: 0.5,      # Moderately sensitive to nutrients
-        StressType.SALINITY.value: 0.4,      # Less sensitive to salinity
-        StressType.PH.value: 0.3,            # Less sensitive to pH
-        StressType.OXYGEN.value: 0.2         # Least sensitive to oxygen
+        StressType.LIGHT.value: float(config.get('photosynthesis_light_sensitivity')),
+        StressType.TEMPERATURE.value: float(config.get('photosynthesis_temperature_sensitivity')),
+        StressType.WATER.value: float(config.get('photosynthesis_water_sensitivity')),
+        StressType.NUTRIENT.value: float(config.get('photosynthesis_nutrient_sensitivity')),
+        StressType.SALINITY.value: float(config.get('photosynthesis_salinity_sensitivity')),
+        StressType.PH.value: float(config.get('photosynthesis_ph_sensitivity')),
+        StressType.OXYGEN.value: float(config.get('photosynthesis_oxygen_sensitivity'))
     }
 
     respiration_sensitivity = {
-        StressType.TEMPERATURE.value: 0.8,   # Highly sensitive to temperature
-        StressType.OXYGEN.value: 0.9,        # Highly sensitive to oxygen
-        StressType.WATER.value: 0.4,         # Moderately sensitive to water
-        StressType.NUTRIENT.value: 0.3,      # Less sensitive to nutrients
-        StressType.LIGHT.value: 0.2,         # Less sensitive to light
-        StressType.SALINITY.value: 0.3,      # Less sensitive to salinity
-        StressType.PH.value: 0.2             # Least sensitive to pH
+        StressType.TEMPERATURE.value: float(config.get('respiration_temperature_sensitivity')),
+        StressType.OXYGEN.value: float(config.get('respiration_oxygen_sensitivity')),
+        StressType.WATER.value: float(config.get('respiration_water_sensitivity')),
+        StressType.NUTRIENT.value: float(config.get('respiration_nutrient_sensitivity')),
+        StressType.LIGHT.value: float(config.get('respiration_light_sensitivity')),
+        StressType.SALINITY.value: float(config.get('respiration_salinity_sensitivity')),
+        StressType.PH.value: float(config.get('respiration_ph_sensitivity'))
     }
 
     transpiration_sensitivity = {
-        StressType.WATER.value: 0.9,         # Highly sensitive to water
-        StressType.TEMPERATURE.value: 0.8,   # Highly sensitive to temperature
-        StressType.LIGHT.value: 0.6,         # Moderately sensitive to light
-        StressType.SALINITY.value: 0.5,      # Moderately sensitive to salinity
-        StressType.NUTRIENT.value: 0.3,      # Less sensitive to nutrients
-        StressType.PH.value: 0.2,            # Less sensitive to pH
-        StressType.OXYGEN.value: 0.2         # Least sensitive to oxygen
+        StressType.WATER.value: float(config.get('transpiration_water_sensitivity')),
+        StressType.TEMPERATURE.value: float(config.get('transpiration_temperature_sensitivity')),
+        StressType.LIGHT.value: float(config.get('transpiration_light_sensitivity')),
+        StressType.SALINITY.value: float(config.get('transpiration_salinity_sensitivity')),
+        StressType.NUTRIENT.value: float(config.get('transpiration_nutrient_sensitivity')),
+        StressType.PH.value: float(config.get('transpiration_ph_sensitivity')),
+        StressType.OXYGEN.value: float(config.get('transpiration_oxygen_sensitivity'))
     }
 
     growth_sensitivity = {
-        StressType.NUTRIENT.value: 0.8,      # Highly sensitive to nutrients
-        StressType.WATER.value: 0.7,         # Highly sensitive to water
-        StressType.TEMPERATURE.value: 0.6,   # Moderately sensitive to temperature
-        StressType.LIGHT.value: 0.5,         # Moderately sensitive to light
-        StressType.PH.value: 0.4,            # Moderately sensitive to pH
-        StressType.SALINITY.value: 0.4,      # Moderately sensitive to salinity
-        StressType.OXYGEN.value: 0.3         # Less sensitive to oxygen
+        StressType.NUTRIENT.value: float(config.get('growth_nutrient_sensitivity')),
+        StressType.WATER.value: float(config.get('growth_water_sensitivity')),
+        StressType.TEMPERATURE.value: float(config.get('growth_temperature_sensitivity')),
+        StressType.LIGHT.value: float(config.get('growth_light_sensitivity')),
+        StressType.PH.value: float(config.get('growth_ph_sensitivity')),
+        StressType.SALINITY.value: float(config.get('growth_salinity_sensitivity')),
+        StressType.OXYGEN.value: float(config.get('growth_oxygen_sensitivity'))
     }
 
     # Adjust sensitivities based on stress weights
@@ -188,68 +188,68 @@ def _calculate_process_sensitivity(stress_weights: Dict[str, float]) -> Dict[str
     }
 
 
-def _calculate_memory_duration(stress_weights: Dict[str, float]) -> Dict[str, float]:
-    """Calculate stress memory duration based on biological principles"""
+def _calculate_memory_duration(stress_weights: Dict[str, float], config: Dict[str, Any]) -> Dict[str, float]:
+    """Calculate stress memory duration using CSV parameters - NO HARDCODED VALUES (Rules.md)"""
     return {
-        StressType.WATER.value: 2.0 + stress_weights[StressType.WATER.value] * 1.0,
-        StressType.TEMPERATURE.value: 1.5 + stress_weights[StressType.TEMPERATURE.value] * 0.5,
-        StressType.NUTRIENT.value: 3.0 + stress_weights[StressType.NUTRIENT.value] * 2.0,
-        StressType.LIGHT.value: 1.0 + stress_weights[StressType.LIGHT.value] * 0.5,
-        StressType.SALINITY.value: 4.0 + stress_weights[StressType.SALINITY.value] * 2.0,
-        StressType.OXYGEN.value: 0.5 + stress_weights[StressType.OXYGEN.value] * 0.2,
-        StressType.PH.value: 2.5 + stress_weights[StressType.PH.value] * 1.0
+        StressType.WATER.value: float(config.get('water_memory_base_duration')) + stress_weights[StressType.WATER.value] * float(config.get('water_memory_weight_factor')),
+        StressType.TEMPERATURE.value: float(config.get('temperature_memory_base_duration')) + stress_weights[StressType.TEMPERATURE.value] * float(config.get('temperature_memory_weight_factor')),
+        StressType.NUTRIENT.value: float(config.get('nutrient_memory_base_duration')) + stress_weights[StressType.NUTRIENT.value] * float(config.get('nutrient_memory_weight_factor')),
+        StressType.LIGHT.value: float(config.get('light_memory_base_duration')) + stress_weights[StressType.LIGHT.value] * float(config.get('light_memory_weight_factor')),
+        StressType.SALINITY.value: float(config.get('salinity_memory_base_duration')) + stress_weights[StressType.SALINITY.value] * float(config.get('salinity_memory_weight_factor')),
+        StressType.OXYGEN.value: float(config.get('oxygen_memory_base_duration')) + stress_weights[StressType.OXYGEN.value] * float(config.get('oxygen_memory_weight_factor')),
+        StressType.PH.value: float(config.get('ph_memory_base_duration')) + stress_weights[StressType.PH.value] * float(config.get('ph_memory_weight_factor'))
     }
 
 
-def _calculate_recovery_rates(stress_weights: Dict[str, float]) -> Dict[str, float]:
-    """Calculate stress recovery rates based on biological principles"""
+def _calculate_recovery_rates(stress_weights: Dict[str, float], config: Dict[str, Any]) -> Dict[str, float]:
+    """Calculate stress recovery rates using CSV parameters - NO HARDCODED VALUES (Rules.md)"""
     return {
-        StressType.WATER.value: 0.3 + stress_weights[StressType.WATER.value] * 0.2,
-        StressType.TEMPERATURE.value: 0.5 + stress_weights[StressType.TEMPERATURE.value] * 0.3,
-        StressType.NUTRIENT.value: 0.2 + stress_weights[StressType.NUTRIENT.value] * 0.1,
-        StressType.LIGHT.value: 0.8 + stress_weights[StressType.LIGHT.value] * 0.1,
-        StressType.SALINITY.value: 0.1 + stress_weights[StressType.SALINITY.value] * 0.05,
-        StressType.OXYGEN.value: 0.9 + stress_weights[StressType.OXYGEN.value] * 0.1,
-        StressType.PH.value: 0.4 + stress_weights[StressType.PH.value] * 0.2
+        StressType.WATER.value: float(config.get('water_recovery_base_rate')) + stress_weights[StressType.WATER.value] * float(config.get('water_recovery_weight_factor')),
+        StressType.TEMPERATURE.value: float(config.get('temperature_recovery_base_rate')) + stress_weights[StressType.TEMPERATURE.value] * float(config.get('temperature_recovery_weight_factor')),
+        StressType.NUTRIENT.value: float(config.get('nutrient_recovery_base_rate')) + stress_weights[StressType.NUTRIENT.value] * float(config.get('nutrient_recovery_weight_factor')),
+        StressType.LIGHT.value: float(config.get('light_recovery_base_rate')) + stress_weights[StressType.LIGHT.value] * float(config.get('light_recovery_weight_factor')),
+        StressType.SALINITY.value: float(config.get('salinity_recovery_base_rate')) + stress_weights[StressType.SALINITY.value] * float(config.get('salinity_recovery_weight_factor')),
+        StressType.OXYGEN.value: float(config.get('oxygen_recovery_base_rate')) + stress_weights[StressType.OXYGEN.value] * float(config.get('oxygen_recovery_weight_factor')),
+        StressType.PH.value: float(config.get('ph_recovery_base_rate')) + stress_weights[StressType.PH.value] * float(config.get('ph_recovery_weight_factor'))
     }
 
 
-def _calculate_acclimation_rates(stress_weights: Dict[str, float]) -> Dict[str, float]:
-    """Calculate stress acclimation rates based on biological principles"""
+def _calculate_acclimation_rates(stress_weights: Dict[str, float], config: Dict[str, Any]) -> Dict[str, float]:
+    """Calculate stress acclimation rates using CSV parameters - NO HARDCODED VALUES (Rules.md)"""
     return {
-        StressType.WATER.value: 0.1 + stress_weights[StressType.WATER.value] * 0.05,
-        StressType.TEMPERATURE.value: 0.2 + stress_weights[StressType.TEMPERATURE.value] * 0.1,
-        StressType.NUTRIENT.value: 0.05 + stress_weights[StressType.NUTRIENT.value] * 0.02,
-        StressType.LIGHT.value: 0.3 + stress_weights[StressType.LIGHT.value] * 0.1,
-        StressType.SALINITY.value: 0.02 + stress_weights[StressType.SALINITY.value] * 0.01,
-        StressType.OXYGEN.value: 0.1 + stress_weights[StressType.OXYGEN.value] * 0.05,
-        StressType.PH.value: 0.08 + stress_weights[StressType.PH.value] * 0.03
+        StressType.WATER.value: float(config.get('water_acclimation_base_rate')) + stress_weights[StressType.WATER.value] * float(config.get('water_acclimation_weight_factor')),
+        StressType.TEMPERATURE.value: float(config.get('temperature_acclimation_base_rate')) + stress_weights[StressType.TEMPERATURE.value] * float(config.get('temperature_acclimation_weight_factor')),
+        StressType.NUTRIENT.value: float(config.get('nutrient_acclimation_base_rate')) + stress_weights[StressType.NUTRIENT.value] * float(config.get('nutrient_acclimation_weight_factor')),
+        StressType.LIGHT.value: float(config.get('light_acclimation_base_rate')) + stress_weights[StressType.LIGHT.value] * float(config.get('light_acclimation_weight_factor')),
+        StressType.SALINITY.value: float(config.get('salinity_acclimation_base_rate')) + stress_weights[StressType.SALINITY.value] * float(config.get('salinity_acclimation_weight_factor')),
+        StressType.OXYGEN.value: float(config.get('oxygen_acclimation_base_rate')) + stress_weights[StressType.OXYGEN.value] * float(config.get('oxygen_acclimation_weight_factor')),
+        StressType.PH.value: float(config.get('ph_acclimation_base_rate')) + stress_weights[StressType.PH.value] * float(config.get('ph_acclimation_weight_factor'))
     }
 
 
-def _calculate_onset_thresholds(stress_weights: Dict[str, float]) -> Dict[str, float]:
-    """Calculate stress onset thresholds based on biological principles"""
+def _calculate_onset_thresholds(stress_weights: Dict[str, float], config: Dict[str, Any]) -> Dict[str, float]:
+    """Calculate stress onset thresholds using CSV parameters - NO HARDCODED VALUES (Rules.md)"""
     return {
-        StressType.WATER.value: 0.8 - stress_weights[StressType.WATER.value] * 0.1,
-        StressType.TEMPERATURE.value: 0.75 - stress_weights[StressType.TEMPERATURE.value] * 0.1,
-        StressType.NUTRIENT.value: 0.7 - stress_weights[StressType.NUTRIENT.value] * 0.1,
-        StressType.LIGHT.value: 0.6 - stress_weights[StressType.LIGHT.value] * 0.1,
-        StressType.SALINITY.value: 0.9 - stress_weights[StressType.SALINITY.value] * 0.1,
-        StressType.OXYGEN.value: 0.5 - stress_weights[StressType.OXYGEN.value] * 0.1,
-        StressType.PH.value: 0.85 - stress_weights[StressType.PH.value] * 0.1
+        StressType.WATER.value: float(config.get('water_onset_base_threshold')) - stress_weights[StressType.WATER.value] * float(config.get('water_onset_weight_factor')),
+        StressType.TEMPERATURE.value: float(config.get('temperature_onset_base_threshold')) - stress_weights[StressType.TEMPERATURE.value] * float(config.get('temperature_onset_weight_factor')),
+        StressType.NUTRIENT.value: float(config.get('nutrient_onset_base_threshold')) - stress_weights[StressType.NUTRIENT.value] * float(config.get('nutrient_onset_weight_factor')),
+        StressType.LIGHT.value: float(config.get('light_onset_base_threshold')) - stress_weights[StressType.LIGHT.value] * float(config.get('light_onset_weight_factor')),
+        StressType.SALINITY.value: float(config.get('salinity_onset_base_threshold')) - stress_weights[StressType.SALINITY.value] * float(config.get('salinity_onset_weight_factor')),
+        StressType.OXYGEN.value: float(config.get('oxygen_onset_base_threshold')) - stress_weights[StressType.OXYGEN.value] * float(config.get('oxygen_onset_weight_factor')),
+        StressType.PH.value: float(config.get('ph_onset_base_threshold')) - stress_weights[StressType.PH.value] * float(config.get('ph_onset_weight_factor'))
     }
 
 
-def _calculate_damage_thresholds(stress_weights: Dict[str, float]) -> Dict[str, float]:
-    """Calculate stress damage thresholds based on biological principles"""
+def _calculate_damage_thresholds(stress_weights: Dict[str, float], config: Dict[str, Any]) -> Dict[str, float]:
+    """Calculate stress damage thresholds using CSV parameters - NO HARDCODED VALUES (Rules.md)"""
     return {
-        StressType.WATER.value: 0.4 - stress_weights[StressType.WATER.value] * 0.05,
-        StressType.TEMPERATURE.value: 0.3 - stress_weights[StressType.TEMPERATURE.value] * 0.05,
-        StressType.NUTRIENT.value: 0.3 - stress_weights[StressType.NUTRIENT.value] * 0.05,
-        StressType.LIGHT.value: 0.2 - stress_weights[StressType.LIGHT.value] * 0.05,
-        StressType.SALINITY.value: 0.5 - stress_weights[StressType.SALINITY.value] * 0.05,
-        StressType.OXYGEN.value: 0.1 - stress_weights[StressType.OXYGEN.value] * 0.02,
-        StressType.PH.value: 0.4 - stress_weights[StressType.PH.value] * 0.05
+        StressType.WATER.value: float(config.get('water_damage_base_threshold')) - stress_weights[StressType.WATER.value] * float(config.get('water_damage_weight_factor')),
+        StressType.TEMPERATURE.value: float(config.get('temperature_damage_base_threshold')) - stress_weights[StressType.TEMPERATURE.value] * float(config.get('temperature_damage_weight_factor')),
+        StressType.NUTRIENT.value: float(config.get('nutrient_damage_base_threshold')) - stress_weights[StressType.NUTRIENT.value] * float(config.get('nutrient_damage_weight_factor')),
+        StressType.LIGHT.value: float(config.get('light_damage_base_threshold')) - stress_weights[StressType.LIGHT.value] * float(config.get('light_damage_weight_factor')),
+        StressType.SALINITY.value: float(config.get('salinity_damage_base_threshold')) - stress_weights[StressType.SALINITY.value] * float(config.get('salinity_damage_weight_factor')),
+        StressType.OXYGEN.value: float(config.get('oxygen_damage_base_threshold')) - stress_weights[StressType.OXYGEN.value] * float(config.get('oxygen_damage_weight_factor')),
+        StressType.PH.value: float(config.get('ph_damage_base_threshold')) - stress_weights[StressType.PH.value] * float(config.get('ph_damage_weight_factor'))
     }
 
 
@@ -867,9 +867,9 @@ class IntegratedStressParameters:
             StressType.WATER.value: float(integration_config.get('water_weight')),
             StressType.NUTRIENT.value: float(integration_config.get('nutrient_weight')),
             StressType.LIGHT.value: float(integration_config.get('light_weight')),
-            StressType.PH.value: 0.1,  # Calculated as remaining weight
-            StressType.SALINITY.value: 0.05,  # Calculated as remaining weight
-            StressType.OXYGEN.value: 0.05  # Calculated as remaining weight
+            StressType.PH.value: float(integration_config.get('ph_weight')),
+            StressType.SALINITY.value: float(integration_config.get('salinity_weight')),
+            StressType.OXYGEN.value: float(integration_config.get('oxygen_weight'))
         }
 
         # Validate weights sum close to 1.0
@@ -881,49 +881,49 @@ class IntegratedStressParameters:
         # Build process sensitivity from config
         process_sensitivity = {
             ProcessType.PHOTOSYNTHESIS.value: {
-                StressType.TEMPERATURE.value: float(sensitivity_config.get('photosynthesis', 0.8)),
-                StressType.WATER.value: float(sensitivity_config.get('photosynthesis', 0.8)) * 0.8,
-                StressType.NUTRIENT.value: float(sensitivity_config.get('photosynthesis', 0.8)) * 0.6,
-                StressType.LIGHT.value: float(sensitivity_config.get('photosynthesis', 0.8)) * 1.0,
-                StressType.PH.value: float(sensitivity_config.get('photosynthesis', 0.8)) * 0.4,
-                StressType.SALINITY.value: float(sensitivity_config.get('photosynthesis', 0.8)) * 0.5,
-                StressType.OXYGEN.value: float(sensitivity_config.get('photosynthesis', 0.8)) * 0.3
+                StressType.TEMPERATURE.value: float(sensitivity_config.get('photosynthesis_temperature_sensitivity')),
+                StressType.WATER.value: float(sensitivity_config.get('photosynthesis_water_sensitivity')),
+                StressType.NUTRIENT.value: float(sensitivity_config.get('photosynthesis_nutrient_sensitivity')),
+                StressType.LIGHT.value: float(sensitivity_config.get('photosynthesis_light_sensitivity')),
+                StressType.PH.value: float(sensitivity_config.get('photosynthesis_ph_sensitivity')),
+                StressType.SALINITY.value: float(sensitivity_config.get('photosynthesis_salinity_sensitivity')),
+                StressType.OXYGEN.value: float(sensitivity_config.get('photosynthesis_oxygen_sensitivity'))
             },
             ProcessType.RESPIRATION.value: {
-                StressType.TEMPERATURE.value: float(sensitivity_config.get('respiration', 0.4)),
-                StressType.WATER.value: float(sensitivity_config.get('respiration', 0.4)) * 0.5,
-                StressType.NUTRIENT.value: float(sensitivity_config.get('respiration', 0.4)) * 0.3,
-                StressType.LIGHT.value: float(sensitivity_config.get('respiration', 0.4)) * 0.2,
-                StressType.PH.value: float(sensitivity_config.get('respiration', 0.4)) * 0.2,
-                StressType.SALINITY.value: float(sensitivity_config.get('respiration', 0.4)) * 0.3,
-                StressType.OXYGEN.value: float(sensitivity_config.get('respiration', 0.4)) * 1.2
+                StressType.TEMPERATURE.value: float(sensitivity_config.get('respiration_temperature_sensitivity')),
+                StressType.WATER.value: float(sensitivity_config.get('respiration_water_sensitivity')),
+                StressType.NUTRIENT.value: float(sensitivity_config.get('respiration_nutrient_sensitivity')),
+                StressType.LIGHT.value: float(sensitivity_config.get('respiration_light_sensitivity')),
+                StressType.PH.value: float(sensitivity_config.get('respiration_ph_sensitivity')),
+                StressType.SALINITY.value: float(sensitivity_config.get('respiration_salinity_sensitivity')),
+                StressType.OXYGEN.value: float(sensitivity_config.get('respiration_oxygen_sensitivity'))
             },
             ProcessType.TRANSPIRATION.value: {
-                StressType.TEMPERATURE.value: float(sensitivity_config.get('transpiration', 0.6)),
-                StressType.WATER.value: float(sensitivity_config.get('transpiration', 0.6)) * 1.5,
-                StressType.NUTRIENT.value: float(sensitivity_config.get('transpiration', 0.6)) * 0.3,
-                StressType.LIGHT.value: float(sensitivity_config.get('transpiration', 0.6)) * 0.8,
-                StressType.PH.value: float(sensitivity_config.get('transpiration', 0.6)) * 0.2,
-                StressType.SALINITY.value: float(sensitivity_config.get('transpiration', 0.6)) * 0.7,
-                StressType.OXYGEN.value: float(sensitivity_config.get('transpiration', 0.6)) * 0.4
+                StressType.TEMPERATURE.value: float(sensitivity_config.get('transpiration_temperature_sensitivity')),
+                StressType.WATER.value: float(sensitivity_config.get('transpiration_water_sensitivity')),
+                StressType.NUTRIENT.value: float(sensitivity_config.get('transpiration_nutrient_sensitivity')),
+                StressType.LIGHT.value: float(sensitivity_config.get('transpiration_light_sensitivity')),
+                StressType.PH.value: float(sensitivity_config.get('transpiration_ph_sensitivity')),
+                StressType.SALINITY.value: float(sensitivity_config.get('transpiration_salinity_sensitivity')),
+                StressType.OXYGEN.value: float(sensitivity_config.get('transpiration_oxygen_sensitivity'))
             },
             ProcessType.GROWTH.value: {
-                StressType.TEMPERATURE.value: float(sensitivity_config.get('growth', 0.9)),
-                StressType.WATER.value: float(sensitivity_config.get('growth', 0.9)) * 1.0,
-                StressType.NUTRIENT.value: float(sensitivity_config.get('growth', 0.9)) * 1.1,
-                StressType.LIGHT.value: float(sensitivity_config.get('growth', 0.9)) * 0.8,
-                StressType.PH.value: float(sensitivity_config.get('growth', 0.9)) * 0.4,
-                StressType.SALINITY.value: float(sensitivity_config.get('growth', 0.9)) * 0.6,
-                StressType.OXYGEN.value: float(sensitivity_config.get('growth', 0.9)) * 0.5
+                StressType.TEMPERATURE.value: float(sensitivity_config.get('growth_temperature_sensitivity')),
+                StressType.WATER.value: float(sensitivity_config.get('growth_water_sensitivity')),
+                StressType.NUTRIENT.value: float(sensitivity_config.get('growth_nutrient_sensitivity')),
+                StressType.LIGHT.value: float(sensitivity_config.get('growth_light_sensitivity')),
+                StressType.PH.value: float(sensitivity_config.get('growth_ph_sensitivity')),
+                StressType.SALINITY.value: float(sensitivity_config.get('growth_salinity_sensitivity')),
+                StressType.OXYGEN.value: float(sensitivity_config.get('growth_oxygen_sensitivity'))
             },
             ProcessType.DEVELOPMENT.value: {
-                StressType.TEMPERATURE.value: float(sensitivity_config.get('development', 0.5)),
-                StressType.WATER.value: float(sensitivity_config.get('development', 0.5)) * 0.8,
-                StressType.NUTRIENT.value: float(sensitivity_config.get('development', 0.5)) * 0.6,
-                StressType.LIGHT.value: float(sensitivity_config.get('development', 0.5)) * 0.7,
-                StressType.PH.value: float(sensitivity_config.get('development', 0.5)) * 0.3,
-                StressType.SALINITY.value: float(sensitivity_config.get('development', 0.5)) * 0.4,
-                StressType.OXYGEN.value: float(sensitivity_config.get('development', 0.5)) * 0.3
+                StressType.TEMPERATURE.value: float(sensitivity_config.get('development_temperature_sensitivity')),
+                StressType.WATER.value: float(sensitivity_config.get('development_water_sensitivity')),
+                StressType.NUTRIENT.value: float(sensitivity_config.get('development_nutrient_sensitivity')),
+                StressType.LIGHT.value: float(sensitivity_config.get('development_light_sensitivity')),
+                StressType.PH.value: float(sensitivity_config.get('development_ph_sensitivity')),
+                StressType.SALINITY.value: float(sensitivity_config.get('development_salinity_sensitivity')),
+                StressType.OXYGEN.value: float(sensitivity_config.get('development_oxygen_sensitivity'))
             }
         }
 
@@ -960,28 +960,28 @@ class IntegratedStressParameters:
 
         # Build threshold parameters from config
         onset_thresholds = {
-            StressType.TEMPERATURE.value: 0.95,  # Start stress at 95% of optimal
-            StressType.WATER.value: float(water_config.get('drought_threshold', 0.3)),
-            StressType.NUTRIENT.value: float(nutrient_config.get('deficiency_threshold', 0.3)),
-            StressType.LIGHT.value: 0.8,  # 80% of optimal light
-            StressType.PH.value: 0.9,  # 90% pH optimality
-            StressType.SALINITY.value: 0.85,  # 85% salinity optimality
-            StressType.OXYGEN.value: 0.8  # 80% oxygen optimality
+            StressType.TEMPERATURE.value: float(temp_config.get('onset_threshold')),
+            StressType.WATER.value: float(water_config.get('drought_threshold')),
+            StressType.NUTRIENT.value: float(nutrient_config.get('deficiency_threshold')),
+            StressType.LIGHT.value: float(light_config.get('onset_threshold')),
+            StressType.PH.value: float(ph_config.get('onset_threshold')),
+            StressType.SALINITY.value: float(salinity_config.get('onset_threshold')),
+            StressType.OXYGEN.value: float(oxygen_config.get('onset_threshold'))
         }
 
         damage_thresholds = {
-            StressType.TEMPERATURE.value: 0.8,  # Damage below 80% optimality
-            StressType.WATER.value: float(water_config.get('critical_threshold', 0.15)),
-            StressType.NUTRIENT.value: float(nutrient_config.get('critical_threshold', 0.1)),
-            StressType.LIGHT.value: 0.6,  # Damage below 60% optimal light
-            StressType.PH.value: 0.7,  # Damage below 70% pH optimality
-            StressType.SALINITY.value: 0.6,  # Damage below 60% salinity optimality
-            StressType.OXYGEN.value: 0.5  # Damage below 50% oxygen optimality
+            StressType.TEMPERATURE.value: float(temp_config.get('damage_threshold')),
+            StressType.WATER.value: float(water_config.get('critical_threshold')),
+            StressType.NUTRIENT.value: float(nutrient_config.get('critical_threshold')),
+            StressType.LIGHT.value: float(light_config.get('damage_threshold')),
+            StressType.PH.value: float(ph_config.get('damage_threshold')),
+            StressType.SALINITY.value: float(salinity_config.get('damage_threshold')),
+            StressType.OXYGEN.value: float(oxygen_config.get('damage_threshold'))
         }
 
         return cls(
             stress_weights=stress_weights,
-            stress_interactions=_build_simple_interactions(stress_weights),
+            stress_interactions=_build_simple_interactions(stress_weights, config_dict),
             process_sensitivity=process_sensitivity,
             stress_memory_duration=stress_memory_duration,
             cumulative_threshold=_build_cumulative_thresholds(stress_weights, config_dict),
@@ -1320,8 +1320,8 @@ def create_lettuce_integrated_stress_model(system_config: Any) -> IntegratedStre
                 'stress_weight_nutrient': get_strict_param(genetic_params, 'nutrient_stress_weight'),
                 'stress_weight_light': get_strict_param(genetic_params, 'light_stress_weight'),
                 'stress_weight_salinity': get_strict_param(genetic_params, 'salinity_stress_weight'),
-                'stress_weight_oxygen': 0.1,
-                'stress_weight_ph': 0.15
+                'stress_weight_oxygen': get_strict_param(genetic_params, 'oxygen_stress_weight'),
+                'stress_weight_ph': get_strict_param(genetic_params, 'ph_stress_weight')
             })
         parameters = IntegratedStressParameters.from_config(config)
         return IntegratedStressModel(parameters)

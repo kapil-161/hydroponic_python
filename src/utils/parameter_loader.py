@@ -619,6 +619,8 @@ class StrictParameterLoader:
         config['temperature']['stress_factor_slope'] = self.get_parameter('photosynthesis_parameters_minimum_stress_factor')
         config['temperature']['acclimation_rate'] = self.get_parameter('phenology_parameters_stress_acceleration_factor')
         config['temperature']['recovery_rate'] = self.get_parameter('stress_parameters_temperature_recovery_rate')
+        config['temperature']['onset_threshold'] = self.get_parameter('stress_parameters_temperature_onset_threshold')
+        config['temperature']['damage_threshold'] = self.get_parameter('stress_parameters_temperature_damage_threshold')
 
         # Water stress parameters
         config['water'] = {}
@@ -627,6 +629,8 @@ class StrictParameterLoader:
         config['water']['osmotic_adjustment_max'] = self.get_parameter('stress_parameters_max_osmotic_adjustment')
         config['water']['salt_stress_factor'] = self.get_parameter('stress_parameters_salt_stress_osmotic_factor')
         config['water']['recovery_rate'] = self.get_parameter('stress_parameters_water_recovery_rate')
+        config['water']['onset_threshold'] = self.get_parameter('stress_parameters_water_onset_threshold')
+        config['water']['damage_threshold'] = self.get_parameter('stress_parameters_water_damage_threshold')
 
         # Nutrient stress parameters (using N stress as representative)
         config['nutrient'] = {}
@@ -634,6 +638,8 @@ class StrictParameterLoader:
         config['nutrient']['critical_threshold'] = self.get_parameter('stress_parameters_nutrient_critical_threshold')
         config['nutrient']['toxicity_threshold'] = self.get_parameter('stress_parameters_nutrient_toxicity_threshold')
         config['nutrient']['recovery_rate'] = self.get_parameter('stress_parameters_nutrient_recovery_rate')
+        config['nutrient']['onset_threshold'] = self.get_parameter('stress_parameters_nutrient_onset_threshold')
+        config['nutrient']['damage_threshold'] = self.get_parameter('stress_parameters_nutrient_damage_threshold')
 
         # Light stress parameters
         config['light'] = {}
@@ -642,6 +648,8 @@ class StrictParameterLoader:
         config['light']['max_ppfd'] = self.get_parameter('stress_parameters_light_max_ppfd')
         config['light']['photoinhibition_threshold'] = self.get_parameter('stress_parameters_light_photoinhibition_threshold')
         config['light']['recovery_rate'] = self.get_parameter('stress_parameters_light_recovery_rate')
+        config['light']['onset_threshold'] = self.get_parameter('stress_parameters_light_onset_threshold')
+        config['light']['damage_threshold'] = self.get_parameter('stress_parameters_light_damage_threshold')
 
 
         # Salinity/EC stress parameters
@@ -650,12 +658,16 @@ class StrictParameterLoader:
         config['salinity']['critical_ec'] = self.get_parameter('stress_parameters_salinity_critical_ec')
         config['salinity']['osmotic_factor'] = self.get_parameter('stress_parameters_salt_stress_osmotic_factor')
         config['salinity']['recovery_rate'] = self.get_parameter('stress_parameters_salinity_recovery_rate')
+        config['salinity']['onset_threshold'] = self.get_parameter('stress_parameters_salinity_onset_threshold')
+        config['salinity']['damage_threshold'] = self.get_parameter('stress_parameters_salinity_damage_threshold')
 
         # Oxygen stress parameters
         config['oxygen'] = {}
         config['oxygen']['critical_min'] = self.get_parameter('stress_parameters_oxygen_critical_min')
         config['oxygen']['optimal_min'] = self.get_parameter('stress_parameters_oxygen_optimal_min')
         config['oxygen']['recovery_rate'] = self.get_parameter('stress_parameters_oxygen_recovery_rate')
+        config['oxygen']['onset_threshold'] = self.get_parameter('stress_parameters_oxygen_onset_threshold')
+        config['oxygen']['damage_threshold'] = self.get_parameter('stress_parameters_oxygen_damage_threshold')
 
         # pH stress parameters
         config['ph'] = {}
@@ -663,6 +675,8 @@ class StrictParameterLoader:
         config['ph']['optimal_max'] = self.get_parameter('stress_parameters_ph_optimal_max')
         config['ph']['stress_range'] = self.get_parameter('stress_parameters_ph_stress_range')
         config['ph']['recovery_rate'] = self.get_parameter('stress_parameters_ph_recovery_rate')
+        config['ph']['onset_threshold'] = self.get_parameter('stress_parameters_ph_onset_threshold')
+        config['ph']['damage_threshold'] = self.get_parameter('stress_parameters_ph_damage_threshold')
 
         # Integrated stress parameters
         config['integration'] = {}
@@ -673,6 +687,9 @@ class StrictParameterLoader:
         config['integration']['interaction_factor'] = self.get_parameter('stress_parameters_integration_interaction_factor')
         config['integration']['threshold_severe'] = self.get_parameter('stress_parameters_integration_threshold_severe')
         config['integration']['threshold_critical'] = self.get_parameter('stress_parameters_integration_threshold_critical')
+        config['integration']['ph_weight'] = self.get_parameter('stress_parameters_ph_weight')
+        config['integration']['salinity_weight'] = self.get_parameter('stress_parameters_salinity_weight')
+        config['integration']['oxygen_weight'] = self.get_parameter('stress_parameters_oxygen_weight')
 
         # Memory and acclimation parameters
         config['acclimation'] = {}
@@ -688,6 +705,51 @@ class StrictParameterLoader:
         config['sensitivity']['transpiration'] = self.get_parameter('stress_parameters_sensitivity_transpiration')
         config['sensitivity']['growth'] = self.get_parameter('stress_parameters_sensitivity_growth')
         config['sensitivity']['development'] = self.get_parameter('stress_parameters_sensitivity_development')
+        
+        # Individual sensitivity parameters
+        config['sensitivity']['photosynthesis_temperature_sensitivity'] = self.get_parameter('stress_parameters_photosynthesis_temperature_sensitivity')
+        config['sensitivity']['photosynthesis_water_sensitivity'] = self.get_parameter('stress_parameters_photosynthesis_water_sensitivity')
+        config['sensitivity']['photosynthesis_nutrient_sensitivity'] = self.get_parameter('stress_parameters_photosynthesis_nutrient_sensitivity')
+        config['sensitivity']['photosynthesis_light_sensitivity'] = self.get_parameter('stress_parameters_photosynthesis_light_sensitivity')
+        config['sensitivity']['photosynthesis_ph_sensitivity'] = self.get_parameter('stress_parameters_photosynthesis_ph_sensitivity')
+        config['sensitivity']['photosynthesis_salinity_sensitivity'] = self.get_parameter('stress_parameters_photosynthesis_salinity_sensitivity')
+        config['sensitivity']['photosynthesis_oxygen_sensitivity'] = self.get_parameter('stress_parameters_photosynthesis_oxygen_sensitivity')
+        
+        # Respiration sensitivity parameters
+        config['sensitivity']['respiration_temperature_sensitivity'] = self.get_parameter('stress_parameters_respiration_temperature_sensitivity')
+        config['sensitivity']['respiration_water_sensitivity'] = self.get_parameter('stress_parameters_respiration_water_sensitivity')
+        config['sensitivity']['respiration_nutrient_sensitivity'] = self.get_parameter('stress_parameters_respiration_nutrient_sensitivity')
+        config['sensitivity']['respiration_light_sensitivity'] = self.get_parameter('stress_parameters_respiration_light_sensitivity')
+        config['sensitivity']['respiration_ph_sensitivity'] = self.get_parameter('stress_parameters_respiration_ph_sensitivity')
+        config['sensitivity']['respiration_salinity_sensitivity'] = self.get_parameter('stress_parameters_respiration_salinity_sensitivity')
+        config['sensitivity']['respiration_oxygen_sensitivity'] = self.get_parameter('stress_parameters_respiration_oxygen_sensitivity')
+        
+        # Transpiration sensitivity parameters
+        config['sensitivity']['transpiration_temperature_sensitivity'] = self.get_parameter('stress_parameters_transpiration_temperature_sensitivity')
+        config['sensitivity']['transpiration_water_sensitivity'] = self.get_parameter('stress_parameters_transpiration_water_sensitivity')
+        config['sensitivity']['transpiration_nutrient_sensitivity'] = self.get_parameter('stress_parameters_transpiration_nutrient_sensitivity')
+        config['sensitivity']['transpiration_light_sensitivity'] = self.get_parameter('stress_parameters_transpiration_light_sensitivity')
+        config['sensitivity']['transpiration_ph_sensitivity'] = self.get_parameter('stress_parameters_transpiration_ph_sensitivity')
+        config['sensitivity']['transpiration_salinity_sensitivity'] = self.get_parameter('stress_parameters_transpiration_salinity_sensitivity')
+        config['sensitivity']['transpiration_oxygen_sensitivity'] = self.get_parameter('stress_parameters_transpiration_oxygen_sensitivity')
+        
+        # Growth sensitivity parameters
+        config['sensitivity']['growth_temperature_sensitivity'] = self.get_parameter('stress_parameters_growth_temperature_sensitivity')
+        config['sensitivity']['growth_water_sensitivity'] = self.get_parameter('stress_parameters_growth_water_sensitivity')
+        config['sensitivity']['growth_nutrient_sensitivity'] = self.get_parameter('stress_parameters_growth_nutrient_sensitivity')
+        config['sensitivity']['growth_light_sensitivity'] = self.get_parameter('stress_parameters_growth_light_sensitivity')
+        config['sensitivity']['growth_ph_sensitivity'] = self.get_parameter('stress_parameters_growth_ph_sensitivity')
+        config['sensitivity']['growth_salinity_sensitivity'] = self.get_parameter('stress_parameters_growth_salinity_sensitivity')
+        config['sensitivity']['growth_oxygen_sensitivity'] = self.get_parameter('stress_parameters_growth_oxygen_sensitivity')
+        
+        # Development sensitivity parameters
+        config['sensitivity']['development_temperature_sensitivity'] = self.get_parameter('stress_parameters_development_temperature_sensitivity')
+        config['sensitivity']['development_water_sensitivity'] = self.get_parameter('stress_parameters_development_water_sensitivity')
+        config['sensitivity']['development_nutrient_sensitivity'] = self.get_parameter('stress_parameters_development_nutrient_sensitivity')
+        config['sensitivity']['development_light_sensitivity'] = self.get_parameter('stress_parameters_development_light_sensitivity')
+        config['sensitivity']['development_ph_sensitivity'] = self.get_parameter('stress_parameters_development_ph_sensitivity')
+        config['sensitivity']['development_salinity_sensitivity'] = self.get_parameter('stress_parameters_development_salinity_sensitivity')
+        config['sensitivity']['development_oxygen_sensitivity'] = self.get_parameter('stress_parameters_development_oxygen_sensitivity')
 
         # Cache timeout
         config['cache_timeout'] = self.get_parameter('simulator_defaults_cache_timeout_global')
@@ -695,6 +757,14 @@ class StrictParameterLoader:
         # Stress interaction coefficients - NO HARDCODED VALUES (Rules.md)
         config['stress_interaction_water_temperature_coefficient'] = self.get_parameter('stress_parameters_stress_interaction_water_temperature_coefficient')
         config['stress_interaction_water_nutrient_coefficient'] = self.get_parameter('stress_parameters_stress_interaction_water_nutrient_coefficient')
+        
+        # Interaction factor parameters
+        config['water_temperature_interaction_factor'] = self.get_parameter('stress_parameters_water_temperature_interaction_factor')
+        config['water_salinity_interaction_factor'] = self.get_parameter('stress_parameters_water_salinity_interaction_factor')
+        config['temperature_water_interaction_factor'] = self.get_parameter('stress_parameters_temperature_water_interaction_factor')
+        config['temperature_light_interaction_factor'] = self.get_parameter('stress_parameters_temperature_light_interaction_factor')
+        config['nutrient_ph_interaction_factor'] = self.get_parameter('stress_parameters_nutrient_ph_interaction_factor')
+        config['nutrient_salinity_interaction_factor'] = self.get_parameter('stress_parameters_nutrient_salinity_interaction_factor')
         config['stress_interaction_temperature_light_coefficient'] = self.get_parameter('stress_parameters_stress_interaction_temperature_light_coefficient')
         config['stress_interaction_nutrient_ph_coefficient'] = self.get_parameter('stress_parameters_stress_interaction_nutrient_ph_coefficient')
         config['stress_interaction_nutrient_salinity_coefficient'] = self.get_parameter('stress_parameters_stress_interaction_nutrient_salinity_coefficient')

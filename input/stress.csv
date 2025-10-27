@@ -196,3 +196,106 @@ recovery_time_minimum_rate,0.01,per_day,Minimum recovery rate to prevent divisio
 acclimation_capacity_multiplier,2.0,dimensionless,Multiplier for calculating acclimation capacity from rates
 acclimation_capacity_maximum,0.8,dimensionless,Maximum acclimation capacity cap
 acclimation_memory_decay_factor,0.8,dimensionless,Decay factor for acclimation memory duration
+# Integration parameters for stress weights
+ph_weight,0.1,dimensionless,PH stress weight
+salinity_weight,0.05,dimensionless,Salinity stress weight
+oxygen_weight,0.05,dimensionless,Oxygen stress weight
+# Interaction factors
+water_temperature_interaction_factor,1.2,dimensionless,Water-temperature interaction factor
+water_salinity_interaction_factor,1.3,dimensionless,Water-salinity interaction factor
+temperature_water_interaction_factor,1.2,dimensionless,Temperature-water interaction factor
+temperature_light_interaction_factor,1.1,dimensionless,Temperature-light interaction factor
+nutrient_ph_interaction_factor,1.4,dimensionless,Nutrient-pH interaction factor
+nutrient_salinity_interaction_factor,1.2,dimensionless,Nutrient-salinity interaction factor
+# Process sensitivity parameters
+photosynthesis_temperature_sensitivity,0.7,dimensionless,Photosynthesis sensitivity to temperature
+photosynthesis_water_sensitivity,0.6,dimensionless,Photosynthesis sensitivity to water
+photosynthesis_nutrient_sensitivity,0.5,dimensionless,Photosynthesis sensitivity to nutrients
+photosynthesis_light_sensitivity,0.9,dimensionless,Photosynthesis sensitivity to light
+photosynthesis_ph_sensitivity,0.3,dimensionless,Photosynthesis sensitivity to pH
+photosynthesis_salinity_sensitivity,0.4,dimensionless,Photosynthesis sensitivity to salinity
+photosynthesis_oxygen_sensitivity,0.2,dimensionless,Photosynthesis sensitivity to oxygen
+respiration_temperature_sensitivity,0.8,dimensionless,Respiration sensitivity to temperature
+respiration_oxygen_sensitivity,0.9,dimensionless,Respiration sensitivity to oxygen
+respiration_water_sensitivity,0.4,dimensionless,Respiration sensitivity to water
+respiration_nutrient_sensitivity,0.3,dimensionless,Respiration sensitivity to nutrients
+respiration_light_sensitivity,0.2,dimensionless,Respiration sensitivity to light
+respiration_salinity_sensitivity,0.3,dimensionless,Respiration sensitivity to salinity
+respiration_ph_sensitivity,0.2,dimensionless,Respiration sensitivity to pH
+transpiration_temperature_sensitivity,0.8,dimensionless,Transpiration sensitivity to temperature
+transpiration_water_sensitivity,0.9,dimensionless,Transpiration sensitivity to water
+transpiration_nutrient_sensitivity,0.3,dimensionless,Transpiration sensitivity to nutrients
+transpiration_light_sensitivity,0.6,dimensionless,Transpiration sensitivity to light
+transpiration_ph_sensitivity,0.2,dimensionless,Transpiration sensitivity to pH
+transpiration_salinity_sensitivity,0.5,dimensionless,Transpiration sensitivity to salinity
+transpiration_oxygen_sensitivity,0.2,dimensionless,Transpiration sensitivity to oxygen
+growth_temperature_sensitivity,0.6,dimensionless,Growth sensitivity to temperature
+growth_water_sensitivity,0.7,dimensionless,Growth sensitivity to water
+growth_nutrient_sensitivity,0.8,dimensionless,Growth sensitivity to nutrients
+growth_light_sensitivity,0.5,dimensionless,Growth sensitivity to light
+growth_ph_sensitivity,0.4,dimensionless,Growth sensitivity to pH
+growth_salinity_sensitivity,0.4,dimensionless,Growth sensitivity to salinity
+growth_oxygen_sensitivity,0.3,dimensionless,Growth sensitivity to oxygen
+development_temperature_sensitivity,0.5,dimensionless,Development sensitivity to temperature
+development_water_sensitivity,0.4,dimensionless,Development sensitivity to water
+development_nutrient_sensitivity,0.3,dimensionless,Development sensitivity to nutrients
+development_light_sensitivity,0.35,dimensionless,Development sensitivity to light
+development_ph_sensitivity,0.15,dimensionless,Development sensitivity to pH
+development_salinity_sensitivity,0.2,dimensionless,Development sensitivity to salinity
+development_oxygen_sensitivity,0.15,dimensionless,Development sensitivity to oxygen
+# Missing sensitivity parameters for stress models
+respiration_temperature_sensitivity,0.8,dimensionless,Respiration sensitivity to temperature
+respiration_water_sensitivity,0.4,dimensionless,Respiration sensitivity to water
+respiration_nutrient_sensitivity,0.3,dimensionless,Respiration sensitivity to nutrients
+respiration_light_sensitivity,0.2,dimensionless,Respiration sensitivity to light
+respiration_ph_sensitivity,0.2,dimensionless,Respiration sensitivity to pH
+respiration_salinity_sensitivity,0.3,dimensionless,Respiration sensitivity to salinity
+respiration_oxygen_sensitivity,0.9,dimensionless,Respiration sensitivity to oxygen
+transpiration_temperature_sensitivity,0.8,dimensionless,Transpiration sensitivity to temperature
+transpiration_water_sensitivity,0.9,dimensionless,Transpiration sensitivity to water
+transpiration_nutrient_sensitivity,0.3,dimensionless,Transpiration sensitivity to nutrients
+transpiration_light_sensitivity,0.6,dimensionless,Transpiration sensitivity to light
+transpiration_ph_sensitivity,0.2,dimensionless,Transpiration sensitivity to pH
+transpiration_salinity_sensitivity,0.5,dimensionless,Transpiration sensitivity to salinity
+transpiration_oxygen_sensitivity,0.2,dimensionless,Transpiration sensitivity to oxygen
+growth_temperature_sensitivity,0.6,dimensionless,Growth sensitivity to temperature
+growth_water_sensitivity,0.7,dimensionless,Growth sensitivity to water
+growth_nutrient_sensitivity,0.8,dimensionless,Growth sensitivity to nutrients
+growth_light_sensitivity,0.5,dimensionless,Growth sensitivity to light
+growth_ph_sensitivity,0.4,dimensionless,Growth sensitivity to pH
+growth_salinity_sensitivity,0.4,dimensionless,Growth sensitivity to salinity
+growth_oxygen_sensitivity,0.3,dimensionless,Growth sensitivity to oxygen
+# Integration weight parameters
+stress_weight_temperature,0.3,dimensionless,Temperature stress weight
+integration_water_weight,0.25,dimensionless,Water stress weight for integration
+integration_nutrient_weight,0.2,dimensionless,Nutrient stress weight for integration
+integration_light_weight,0.15,dimensionless,Light stress weight for integration
+integration_interaction_factor,1.2,dimensionless,Interaction factor for stress integration
+integration_threshold_severe,0.8,dimensionless,Severe stress threshold for integration
+integration_threshold_critical,0.6,dimensionless,Critical stress threshold for integration
+# Additional integration parameters
+ph_weight,0.1,dimensionless,PH stress weight for integration
+salinity_weight,0.05,dimensionless,Salinity stress weight for integration
+oxygen_weight,0.05,dimensionless,Oxygen stress weight for integration
+# Threshold parameters
+temperature_onset_threshold,0.95,dimensionless,Temperature onset threshold
+water_onset_threshold,0.8,dimensionless,Water onset threshold
+nutrient_onset_threshold,0.7,dimensionless,Nutrient onset threshold
+light_onset_threshold,0.6,dimensionless,Light onset threshold
+ph_onset_threshold,0.85,dimensionless,pH onset threshold
+salinity_onset_threshold,0.9,dimensionless,Salinity onset threshold
+oxygen_onset_threshold,0.5,dimensionless,Oxygen onset threshold
+temperature_damage_threshold,0.8,dimensionless,Temperature damage threshold
+water_damage_threshold,0.4,dimensionless,Water damage threshold
+nutrient_damage_threshold,0.3,dimensionless,Nutrient damage threshold
+light_damage_threshold,0.2,dimensionless,Light damage threshold
+ph_damage_threshold,0.7,dimensionless,pH damage threshold
+salinity_damage_threshold,0.5,dimensionless,Salinity damage threshold
+oxygen_damage_threshold,0.1,dimensionless,Oxygen damage threshold
+# Interaction factor parameters
+water_temperature_interaction_factor,1.2,dimensionless,Water-temperature interaction factor
+water_salinity_interaction_factor,1.5,dimensionless,Water-salinity interaction factor
+temperature_water_interaction_factor,1.2,dimensionless,Temperature-water interaction factor
+temperature_light_interaction_factor,0.8,dimensionless,Temperature-light interaction factor
+nutrient_ph_interaction_factor,1.3,dimensionless,Nutrient-pH interaction factor
+nutrient_salinity_interaction_factor,1.4,dimensionless,Nutrient-salinity interaction factor
