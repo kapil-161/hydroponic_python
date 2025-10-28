@@ -37,3 +37,4 @@ minimum_cavitation_factor,0.1,dimensionless,Minimum cavitation factor
 maximum_vpd_effect,2.0,dimensionless,Maximum VPD effect multiplier
 sensitivity_low,0.06,dimensionless,Low water uptake sensitivity
 sensitivity_high,0.1,dimensionless,High water uptake sensitivity
+lai_to_light_interception_factor,0.7,dimensionless,Fraction of LAI contributing to light interception

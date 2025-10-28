@@ -514,13 +514,35 @@ def tracking_summary():
         used_params = [p for p in tracker.parameters.values() if p['used_by']]
         unused_params = [p for p in tracker.parameters.values() if not p['used_by']]
 
+        # Build detailed unused parameters list with CSV file locations
+        unused_params_detail = []
+        for param_name, param_info in tracker.parameters.items():
+            if not param_info['used_by']:
+                unused_params_detail.append({
+                    'name': param_name,
+                    'file': param_info['file'],
+                    'value': param_info['value'],
+                    'unit': param_info['unit'],
+                    'description': param_info['description']
+                })
+
+        # Group unused parameters by CSV file
+        unused_by_file = {}
+        for param in unused_params_detail:
+            file = param['file']
+            if file not in unused_by_file:
+                unused_by_file[file] = []
+            unused_by_file[file].append(param)
+
         return jsonify({
             'total_parameters': len(tracker.parameters),
             'used_parameters': len(used_params),
             'unused_parameters': len(unused_params),
             'total_models': len(tracker.model_usage),
             'models': list(tracker.model_usage.keys()),
-            'unused_params_list': [p for p in tracker.parameters.keys() if not tracker.parameters[p]['used_by']]
+            'unused_params_list': [p['name'] for p in unused_params_detail],
+            'unused_params_detail': unused_params_detail,
+            'unused_by_file': unused_by_file
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500

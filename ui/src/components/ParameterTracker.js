@@ -485,21 +485,52 @@ const ParameterTracker = () => {
               </div>
             </div>
 
-            {summary.unused_parameters > 0 && summary.unused_params_list && (
+            {summary.unused_parameters > 0 && summary.unused_params_detail && (
               <div className="unused-parameters-section">
                 <h4>⚠️ Unused Parameters ({summary.unused_parameters})</h4>
                 <p className="note">These parameters are defined but not used by any model:</p>
-                <div className="unused-list">
-                  {summary.unused_params_list.map((param) => (
-                    <div
-                      key={param}
-                      className="unused-item"
-                      onClick={() => handleSelectParameter(param)}
-                    >
-                      {param}
-                    </div>
-                  ))}
-                </div>
+
+                {summary.unused_by_file && Object.keys(summary.unused_by_file).length > 0 ? (
+                  <div className="unused-by-file">
+                    {Object.entries(summary.unused_by_file).map(([file, params]) => (
+                      <div key={file} className="file-group">
+                        <div className="file-header">📄 {file}</div>
+                        <div className="unused-list">
+                          {params.map((param) => (
+                            <div
+                              key={param.name}
+                              className="unused-item"
+                              onClick={() => handleSelectParameter(param.name)}
+                            >
+                              <div className="param-name">{param.name}</div>
+                              <div className="param-meta">
+                                <span className="param-value">Value: {param.value}</span>
+                                {param.unit && <span className="param-unit">Unit: {param.unit}</span>}
+                                {param.description && <span className="param-desc">{param.description}</span>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="unused-list">
+                    {summary.unused_params_detail.map((param) => (
+                      <div
+                        key={param.name}
+                        className="unused-item"
+                        onClick={() => handleSelectParameter(param.name)}
+                      >
+                        <div className="param-name">{param.name}</div>
+                        <div className="param-meta">
+                          <span className="file-badge">{param.file}</span>
+                          <span className="param-value">{param.value}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
