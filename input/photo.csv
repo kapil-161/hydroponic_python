@@ -31,4 +31,3 @@ minimum_vpd_threshold,0.1,kPa,Minimum VPD threshold for photosynthesis
 reference_leaf_nitrogen,2.5,g_N_m2,Reference leaf nitrogen content
 nitrogen_sensitivity,0.6,dimensionless,Sensitivity of photosynthesis to nitrogen content
 water_stress_sensitivity,0.8,dimensionless,Sensitivity of photosynthesis to water stress
-photosynthesis_temperature_factor,0.8,dimensionless,Temperature factor for photosynthesis efficiency
