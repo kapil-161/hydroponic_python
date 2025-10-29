@@ -18,8 +18,6 @@ temperature_tolerance,15.0,°C,Temperature tolerance range for water uptake
 minimum_temperature_factor,0.1,dimensionless,Minimum temperature response factor
 stem_biomass_fraction,0.3,dimensionless,Fraction of total biomass allocated to stem
 leaf_area_to_biomass_ratio,0.1,g_per_m2,Ratio for converting leaf area to biomass
-water_uptake_sensitivity_low,0.06,per_°C,Water uptake sensitivity per °C below optimum for RZT
-water_uptake_sensitivity_high,0.1,per_°C,Water uptake sensitivity per °C above optimum for RZT
 minimum_vpd_threshold,0.1,kPa,Minimum vapor pressure deficit threshold
 minimum_et0_threshold,0.1,mm_day,Minimum reference evapotranspiration threshold
 ground_area_per_plant,0.06,m2,Ground area allocated per plant (0.2m × 0.3m spacing)
@@ -35,6 +33,4 @@ lai_coefficient_threshold,0.1,dimensionless,LAI threshold for coefficient calcul
 minimum_coverage_factor,0.01,dimensionless,Minimum coverage factor when LAI is zero
 minimum_cavitation_factor,0.1,dimensionless,Minimum cavitation factor
 maximum_vpd_effect,2.0,dimensionless,Maximum VPD effect multiplier
-sensitivity_low,0.06,dimensionless,Low water uptake sensitivity
-sensitivity_high,0.1,dimensionless,High water uptake sensitivity
 lai_to_light_interception_factor,0.7,dimensionless,Fraction of LAI contributing to light interception

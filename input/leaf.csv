@@ -31,10 +31,4 @@ late_position_scaling_factor,10.0,dimensionless,Scaling factor for late leaf pos
 minimum_temperature,4.5,°C,Minimum temperature for leaf development
 maximum_temperature,35.0,°C,Maximum temperature for leaf development
 specific_leaf_area,200.0,cm2_g,Specific leaf area (cm²/g dry weight) - higher for hydroponic lettuce with optimal light
-initial_leaf_stage,emerging,string,Initial leaf development stage
-initial_leaf_angle_distribution,planophile,string,Initial leaf angle distribution
 initial_ppfd_above_canopy,200.0,umol_m2_s,Initial PPFD above canopy
-initial_direct_beam_fraction,0.7,dimensionless,Initial direct beam fraction
-initial_diffuse_fraction,0.3,dimensionless,Initial diffuse fraction
-initial_solar_zenith_angle,30.0,degrees,Initial solar zenith angle
-initial_solar_azimuth_angle,180.0,degrees,Initial solar azimuth angle

@@ -35,6 +35,5 @@ lower_middle_canopy_height_threshold,0.2,dimensionless,Relative height threshold
 zenith_angle_precision_threshold,0.001,dimensionless,Numerical precision threshold for zenith angle calculations
 direct_beam_fraction,0.7,dimensionless,Direct beam light fraction
 diffuse_fraction,0.3,dimensionless,Diffuse light fraction
-target_harvest_biomass,20.0,g_DM,Target harvest biomass for single lettuce plant (dry weight)
 sunlit_fraction_lai_coefficient,0.3,per_LAI,Coefficient for LAI effect on sunlit fraction reduction
 sunlit_fraction_minimum,0.2,dimensionless,Minimum sunlit fraction regardless of LAI
