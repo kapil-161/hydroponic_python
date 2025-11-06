@@ -883,11 +883,67 @@ class SimulationOrchestrator(BaseSimulator):
         base_cols = ['step', 'day', 'hour']
         exported_files = []
 
+        # Define major output variables for each simulator (to reduce CSV size)
+        major_variables = {
+            'root_system_simulator': [
+                'root_depth', 'root_biomass', 'root_length', 
+                'root_surface_area', 'root_activity', 'root_density'
+            ],
+            'photosynthesis_simulator': [
+                'net_assimilation_rate', 'gross_photosynthesis_rate', 
+                'respiration_rate', 'stomatal_conductance', 'cumulative_carbon_gained'
+            ],
+            'respiration_simulator': [
+                'total_respiration_rate', 'maintenance_respiration', 
+                'growth_respiration', 'cumulative_respiration'
+            ],
+            'biomass_allocation_simulator': [
+                'total_biomass', 'leaf_biomass', 'stem_biomass', 'root_biomass',
+                'allocation_efficiency', 'cumulative_biomass_gain'
+            ],
+            'phenology_simulator': [
+                'current_growth_stage', 'development_index', 'thermal_time',
+                'days_in_current_stage', 'total_days_from_planting'
+            ],
+            'stress_models': [
+                'integrated_stress', 'stress_severity', 'temperature_stress',
+                'water_stress', 'nutrient_stress', 'cumulative_stress'
+            ],
+            'water_uptake_simulator': [
+                'water_uptake_rate', 'transpiration_rate', 'water_availability',
+                'cumulative_water_uptake', 'cumulative_transpiration'
+            ],
+            'nutrient_models_simulator': [
+                'solution_ec', 'solution_ph',
+                'nutrient_concentrations_N_NO3', 'nutrient_concentrations_P_PO4', 'nutrient_concentrations_K',
+                'nutrient_availability_N_NO3', 'nutrient_availability_P_PO4', 'nutrient_availability_K',
+                'nutrient_uptake_rates_N_NO3', 'nutrient_uptake_rates_P_PO4', 'nutrient_uptake_rates_K'
+            ],
+            'canopy_architecture_simulator': [
+                'lai', 'leaf_area', 'canopy_height', 'ground_coverage',
+                'light_interception_efficiency', 'cumulative_light_interception'
+            ],
+            'leaf_development_simulator': [
+                'total_leaves', 'total_leaf_area', 'leaf_appearance_rate',
+                'leaf_expansion_rate', 'total_leaf_weight'
+            ],
+            'nitrogen_balance_simulator': [
+                'total_nitrogen_uptake', 'nitrogen_stress_index', 
+                'nitrogen_use_efficiency', 'cumulative_nitrogen_uptake',
+                'leaf_nitrogen_allocation', 'root_nitrogen_allocation'
+            ],
+        }
+
         for simulator_id in self.simulators.keys():
             # Get columns for this simulator
             sim_cols = [col for col in df.columns if col.startswith(f"{simulator_id}_")]
 
             if sim_cols:
+                # Filter to major variables if specified
+                if simulator_id in major_variables:
+                    major_cols = [f"{simulator_id}_{var}" for var in major_variables[simulator_id]]
+                    sim_cols = [col for col in sim_cols if col in major_cols]
+
                 # Create DataFrame with base columns + simulator columns
                 sim_df = df[base_cols + sim_cols].copy()
 

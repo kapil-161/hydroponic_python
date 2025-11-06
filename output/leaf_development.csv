@@ -1,68 +1,68 @@
-step,day,hour,total_leaves,leaf_appearance_rate,leaf_expansion_rate,leaf_senescence_rate,total_leaf_area,total_leaf_weight,leaf_weight_ratio,leaf_nitrogen_content,leaf_nitrogen_ratio,leaf_age_distribution,leaf_size_distribution,leaf_nitrogen_distribution,cumulative_thermal_time,phyllochron_adjusted,leaf_growth_stress,leaf_senescence_stress
-13,1,12,2,2.0000,0.0642,0.0000,0.0642,0.0003,1.0000,0.0002,0.0146,{},{},{},18.1073,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-24,1,23,2,2.0000,0.0682,0.0000,0.0682,0.0003,1.0000,0.0004,0.0284,{},{},{},30.8675,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-37,2,12,2,2.0000,0.0788,0.0000,0.0788,0.0004,1.0000,0.0007,0.0446,{},{},{},50.8839,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-48,2,23,2,2.0000,0.0816,0.0000,0.0816,0.0004,1.0000,0.0009,0.0584,{},{},{},63.0597,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-61,3,12,2,0.0000,0.0872,0.0000,0.0872,0.0004,1.0000,0.0011,0.0746,{},{},{},83.2069,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-72,3,23,2,0.0000,0.0872,0.0000,0.0872,0.0004,1.0000,0.0013,0.0884,{},{},{},96.9416,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-85,4,12,2,0.0000,0.0872,0.0000,0.0872,0.0004,1.0000,0.0016,0.1046,{},{},{},116.3441,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-96,4,23,3,0.0000,0.0872,0.0000,0.0872,0.0004,1.0000,0.0018,0.1184,{},{},{},127.6695,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-109,5,12,3,0.0000,0.0872,0.0000,0.0872,0.0004,1.0000,0.0020,0.1346,{},{},{},146.1934,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-120,5,23,3,0.0000,0.0872,0.0000,0.0872,0.0004,1.0000,0.0022,0.1484,{},{},{},159.1777,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-133,6,12,3,1.0000,0.0905,0.0000,0.0905,0.0005,1.0000,0.0025,0.1646,{},{},{},179.1518,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-144,6,23,3,1.0000,0.0924,0.0000,0.0924,0.0005,1.0000,0.0027,0.1784,{},{},{},192.8656,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-157,7,12,3,1.0000,0.0963,0.0000,0.0963,0.0005,1.0000,0.0029,0.1946,{},{},{},212.4124,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-168,7,23,3,1.0000,0.0972,0.0000,0.0972,0.0005,1.0000,0.0031,0.2084,{},{},{},223.9120,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-181,8,12,3,1.0000,0.1005,0.0000,0.1005,0.0005,1.0000,0.0034,0.2030,{},{},{},242.5646,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-192,8,23,4,1.0000,0.1023,0.0000,0.1023,0.0005,1.0000,0.0043,0.0591,{},{},{},256.9083,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-205,9,12,4,0.0000,0.1045,0.0000,0.1045,0.0005,1.0000,0.0055,0.0534,{},{},{},276.7053,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-216,9,23,4,0.0000,0.1045,0.0000,0.1045,0.0005,1.0000,0.0071,0.0614,{},{},{},287.4966,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-229,10,12,4,1.0000,0.1063,0.0000,0.1063,0.0005,1.0000,0.0091,0.0758,{},{},{},304.7026,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-240,10,23,4,1.0000,0.1095,0.0000,0.1095,0.0005,1.0000,0.0107,0.0895,{},{},{},319.4536,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-253,11,12,4,1.0000,0.1148,0.0000,0.1148,0.0006,1.0000,0.0140,0.0246,{},{},{},338.3313,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-264,11,23,4,1.0000,0.1165,0.0000,0.1165,0.0006,1.0000,0.0230,0.0356,{},{},{},351.0915,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-277,12,12,4,1.0000,0.1212,0.0000,0.1212,0.0006,1.0000,0.0348,0.0329,{},{},{},371.1079,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-288,12,23,4,1.0000,0.1225,0.0000,0.1225,0.0006,1.0000,0.0505,0.0449,{},{},{},383.2837,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-301,13,12,5,1.0000,0.1266,0.0000,0.1266,0.0006,1.0000,0.0704,0.0445,{},{},{},403.4309,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-312,13,23,5,0.0000,0.1268,0.0000,0.1268,0.0006,1.0000,0.0931,0.0569,{},{},{},417.1657,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-325,14,12,5,1.0000,0.1288,0.0000,0.1288,0.0006,1.0000,0.1211,0.0589,{},{},{},436.5681,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-336,14,23,5,1.0000,0.1305,0.0000,0.1305,0.0007,1.0000,0.1503,0.0711,{},{},{},447.8935,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-349,15,12,5,1.0000,0.1368,0.0000,0.1368,0.0007,1.0000,0.1820,0.0718,{},{},{},466.4174,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-360,15,23,5,1.0000,0.1391,0.0000,0.1391,0.0007,1.0000,0.2163,0.0832,{},{},{},479.4018,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-373,16,12,5,1.0000,0.1451,0.0000,0.1451,0.0007,1.0000,0.2540,0.0848,{},{},{},499.3759,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-384,16,23,6,1.0000,0.1475,0.0000,0.1475,0.0007,1.0000,0.2913,0.0956,{},{},{},513.0897,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-397,17,12,6,1.0000,0.1525,0.0000,0.1525,0.0008,1.0000,0.3335,0.1002,{},{},{},532.6365,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-408,17,23,6,0.0000,0.1530,0.0000,0.1530,0.0008,1.0000,0.3772,0.1119,{},{},{},544.1360,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-421,18,12,6,1.0000,0.1567,0.0000,0.1567,0.0008,1.0000,0.4160,0.1119,{},{},{},562.7886,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-432,18,23,6,1.0000,0.1608,0.0000,0.1608,0.0008,1.0000,0.4541,0.1201,{},{},{},577.1323,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-445,19,12,6,1.0000,0.1686,0.0000,0.1686,0.0008,1.0000,0.4984,0.1204,{},{},{},596.9294,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-456,19,23,6,1.0000,0.1700,0.0000,0.1700,0.0009,1.0000,0.5457,0.1305,{},{},{},607.7206,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-469,20,12,6,1.0000,0.1758,0.0000,0.1758,0.0009,1.0000,0.5842,0.1272,{},{},{},624.9266,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-480,20,23,6,1.0000,0.1793,0.0000,0.1793,0.0009,1.0000,0.6251,0.1339,{},{},{},639.6776,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-493,21,12,7,0.0000,0.1856,0.0000,0.1856,0.0009,1.0000,0.6729,0.1351,{},{},{},659.9266,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-504,21,23,7,0.0000,0.1856,0.0000,0.1856,0.0009,1.0000,0.7175,0.1428,{},{},{},673.5043,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-517,22,12,7,1.0000,0.1868,0.0000,0.1868,0.0009,1.0000,0.7647,0.1434,{},{},{},692.7894,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-528,22,23,7,1.0000,0.1901,0.0000,0.1901,0.0010,1.0000,0.8112,0.1506,{},{},{},705.7882,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-541,23,12,7,1.0000,0.1987,0.0000,0.1987,0.0010,1.0000,0.8589,0.1481,{},{},{},725.1431,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-552,23,23,7,1.0000,0.2006,0.0000,0.2006,0.0010,1.0000,0.9086,0.1553,{},{},{},736.4908,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-565,24,12,7,1.0000,0.2079,0.0000,0.2079,0.0010,1.0000,0.9553,0.1539,{},{},{},755.6466,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-576,24,23,7,1.0000,0.2096,0.0000,0.2096,0.0010,1.0000,1.0055,0.1602,{},{},{},766.9432,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-589,25,12,8,1.0000,0.2163,0.0000,0.2163,0.0011,1.0000,1.0556,0.1594,{},{},{},786.6619,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-600,25,23,8,0.0000,0.2172,0.0000,0.2172,0.0011,1.0000,1.1084,0.1664,{},{},{},797.1106,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-613,26,12,8,0.0000,0.2172,0.0000,0.2172,0.0011,1.0000,1.1519,0.1629,{},{},{},814.7555,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-624,26,23,8,1.0000,0.2208,0.0000,0.2208,0.0011,1.0000,1.1986,0.1680,{},{},{},830.4882,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-637,27,12,8,1.0000,0.2300,0.0000,0.2300,0.0012,1.0000,1.2498,0.1667,{},{},{},849.9595,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-648,27,23,8,1.0000,0.2326,0.0000,0.2326,0.0012,1.0000,1.3011,0.1724,{},{},{},862.6250,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-661,28,12,8,1.0000,0.2404,0.0000,0.2404,0.0012,1.0000,1.3576,0.1727,{},{},{},882.6109,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-672,28,23,8,1.0000,0.2422,0.0000,0.2422,0.0012,1.0000,1.4115,0.1788,{},{},{},894.6096,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-685,29,12,9,1.0000,0.2489,0.0000,0.2489,0.0012,1.0000,1.4601,0.1759,{},{},{},913.7168,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-696,29,23,9,0.0000,0.2521,0.0000,0.2521,0.0013,1.0000,1.5127,0.1810,{},{},{},929.4677,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-709,30,12,9,0.0000,0.2521,0.0000,0.2521,0.0013,1.0000,1.5616,0.1786,{},{},{},947.7808,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-720,30,23,9,1.0000,0.2576,0.0000,0.2576,0.0013,1.0000,1.6175,0.1839,{},{},{},963.1190,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-733,31,12,9,1.0000,0.2666,0.0000,0.2666,0.0013,1.0000,1.6691,0.1815,{},{},{},981.6997,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-744,31,23,9,1.0000,0.2696,0.0000,0.2696,0.0013,1.0000,1.7258,0.1866,{},{},{},994.9124,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-757,32,12,9,1.0000,0.2773,0.0000,0.2773,0.0014,1.0000,1.7836,0.1854,{},{},{},1014.6856,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-768,32,23,9,1.0000,0.2789,0.0000,0.2789,0.0014,1.0000,1.8422,0.1905,{},{},{},1026.2044,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-781,33,12,10,1.0000,0.2851,0.0000,0.2851,0.0014,1.0000,1.8917,0.1880,{},{},{},1044.3093,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-792,33,23,10,0.0000,0.2873,0.0000,0.2873,0.0014,1.0000,1.9496,0.1928,{},{},{},1059.0955,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
-793,34,0,10,0.0000,0.2873,0.0000,0.2873,0.0014,1.0000,1.9548,0.1933,{},{},{},1060.6747,"PhyllochronParameters(base_phyllochron=80, min_temp=4.5, opt_temp_min=18, opt_temp_max=24, max_temp=35, late_leaf_phyllochron_factor=1.5, very_late_leaf_phyllochron_factor=2)",1.0000,1.0000
+step,day,hour,total_leaves,leaf_appearance_rate,leaf_expansion_rate,total_leaf_area,total_leaf_weight
+13,1,12,2,2.0000,0.0642,0.0642,0.0003
+24,1,23,2,2.0000,0.0682,0.0682,0.0003
+37,2,12,2,2.0000,0.0788,0.0788,0.0004
+48,2,23,2,2.0000,0.0816,0.0816,0.0004
+61,3,12,2,0.0000,0.0872,0.0872,0.0004
+72,3,23,2,0.0000,0.0872,0.0872,0.0004
+85,4,12,2,0.0000,0.0872,0.0872,0.0004
+96,4,23,3,0.0000,0.0872,0.0872,0.0004
+109,5,12,3,0.0000,0.0872,0.0872,0.0004
+120,5,23,3,0.0000,0.0872,0.0872,0.0004
+133,6,12,3,1.0000,0.0905,0.0905,0.0005
+144,6,23,3,1.0000,0.0924,0.0924,0.0005
+157,7,12,3,1.0000,0.0963,0.0963,0.0005
+168,7,23,3,1.0000,0.0972,0.0972,0.0005
+181,8,12,3,1.0000,0.1005,0.1005,0.0005
+192,8,23,4,1.0000,0.1023,0.1023,0.0005
+205,9,12,4,0.0000,0.1045,0.1045,0.0005
+216,9,23,4,0.0000,0.1045,0.1045,0.0005
+229,10,12,4,1.0000,0.1063,0.1063,0.0005
+240,10,23,4,1.0000,0.1095,0.1095,0.0005
+253,11,12,4,1.0000,0.1148,0.1148,0.0006
+264,11,23,4,1.0000,0.1165,0.1165,0.0006
+277,12,12,4,1.0000,0.1212,0.1212,0.0006
+288,12,23,4,1.0000,0.1225,0.1225,0.0006
+301,13,12,5,1.0000,0.1266,0.1266,0.0006
+312,13,23,5,0.0000,0.1268,0.1268,0.0006
+325,14,12,5,1.0000,0.1288,0.1288,0.0006
+336,14,23,5,1.0000,0.1305,0.1305,0.0007
+349,15,12,5,1.0000,0.1368,0.1368,0.0007
+360,15,23,5,1.0000,0.1391,0.1391,0.0007
+373,16,12,5,1.0000,0.1451,0.1451,0.0007
+384,16,23,6,1.0000,0.1475,0.1475,0.0007
+397,17,12,6,1.0000,0.1525,0.1525,0.0008
+408,17,23,6,0.0000,0.1530,0.1530,0.0008
+421,18,12,6,1.0000,0.1567,0.1567,0.0008
+432,18,23,6,1.0000,0.1608,0.1608,0.0008
+445,19,12,6,1.0000,0.1686,0.1686,0.0008
+456,19,23,6,1.0000,0.1700,0.1700,0.0009
+469,20,12,6,1.0000,0.1758,0.1758,0.0009
+480,20,23,6,1.0000,0.1793,0.1793,0.0009
+493,21,12,7,0.0000,0.1856,0.1856,0.0009
+504,21,23,7,0.0000,0.1856,0.1856,0.0009
+517,22,12,7,1.0000,0.1868,0.1868,0.0009
+528,22,23,7,1.0000,0.1901,0.1901,0.0010
+541,23,12,7,1.0000,0.1987,0.1987,0.0010
+552,23,23,7,1.0000,0.2006,0.2006,0.0010
+565,24,12,7,1.0000,0.2079,0.2079,0.0010
+576,24,23,7,1.0000,0.2096,0.2096,0.0010
+589,25,12,8,1.0000,0.2163,0.2163,0.0011
+600,25,23,8,0.0000,0.2172,0.2172,0.0011
+613,26,12,8,0.0000,0.2172,0.2172,0.0011
+624,26,23,8,1.0000,0.2208,0.2208,0.0011
+637,27,12,8,1.0000,0.2300,0.2300,0.0012
+648,27,23,8,1.0000,0.2326,0.2326,0.0012
+661,28,12,8,1.0000,0.2404,0.2404,0.0012
+672,28,23,8,1.0000,0.2422,0.2422,0.0012
+685,29,12,9,1.0000,0.2489,0.2489,0.0012
+696,29,23,9,0.0000,0.2521,0.2521,0.0013
+709,30,12,9,0.0000,0.2521,0.2521,0.0013
+720,30,23,9,1.0000,0.2576,0.2576,0.0013
+733,31,12,9,1.0000,0.2666,0.2666,0.0013
+744,31,23,9,1.0000,0.2696,0.2696,0.0013
+757,32,12,9,1.0000,0.2773,0.2773,0.0014
+768,32,23,9,1.0000,0.2789,0.2789,0.0014
+781,33,12,10,1.0000,0.2851,0.2851,0.0014
+792,33,23,10,0.0000,0.2873,0.2873,0.0014
+793,34,0,10,0.0000,0.2873,0.2873,0.0014
