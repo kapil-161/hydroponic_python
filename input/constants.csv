@@ -1,5 +1,4 @@
 constant_name,value,unit,description,reference
-atmospheric_o2,210.0,mmol_mol,Atmospheric O2 concentration at sea level,NIST
 hours_per_day,24,h,Hours per day,Universal
 carbon_to_co2_ratio,3.67,g_CO2_g_C,Carbon to CO2 molecular weight ratio (44/12),Chemical standard
 ppfd_to_photosynthesis_factor,0.045,μmol_CO2_per_μmol_PPFD,Conversion factor from PPFD to photosynthesis rate,Evans (1987)
@@ -11,6 +10,7 @@ reference_temp_kelvin,298.15,K,Reference temperature (25°C) in Kelvin,NIST
 penman_monteith_conversion,0.408,kPa_°C,Conversion factor for Penman-Monteith equation,Allen et al. (1998)
 wind_speed_coefficient,0.34,s_m,Wind speed coefficient for aerodynamic resistance (denominator term),Allen et al. (1998) FAO-56 eq. 6
 gas_constant,8.314,J_mol_K,Universal gas constant,RSPT
+atmospheric_o2,210.0,mmol_mol,Atmospheric O2 concentration at sea level,NIST
 seconds_per_hour,3600,s,Seconds in one hour,Universal
 umol_to_g_carbon_ratio,1.2e-05,g_C_per_μmol,Conversion from μmol CO2 to grams of carbon,Derived (12 g/mol)
 glucose_to_carbon_ratio,0.4,g_C_g_glucose,Carbon content per gram of glucose (72/180),Stoichiometry

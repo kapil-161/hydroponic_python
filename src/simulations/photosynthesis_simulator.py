@@ -284,20 +284,50 @@ class PhotosynthesisSimulator(BaseSimulator):
                 water_stress=water_stress
             )
 
-            # DEBUG: Log output for first few steps
+            # DEBUG: Log model output for first few steps and key checkpoints
+            if self.current_step <= 5 or self.current_step % 100 == 0:
+                print(f"[PHOTOSYNTHESIS DEBUG Step {self.current_step}] Model returned: net_assimilation={net_assimilation:.10f} g C/hour, stomatal_conductance={stomatal_conductance:.10f} mol/m²/s")
 
             # Update state with model results
             self.state.net_assimilation_rate = net_assimilation  # Already in g C/hour (from model)
             self.state.stomatal_conductance = stomatal_conductance  # mol/m²/s - for transpiration coupling
             
-            # Get respiration rate from respiration simulator (if available)
-            respiration_data = self.dependency_cache.get('respiration_simulator', {})
-            respiration_rate = respiration_data.get('total_respiration_rate')
+            # CROP MODELER FIX: Calculate gross photosynthesis correctly
+            # Gross = Net + Dark Respiration (rd), NOT Net + Total Respiration
+            # This breaks the circular dependency because dark respiration doesn't depend on total_respiration_rate
+            # Dark respiration (rd) is calculated using Arrhenius temperature response from photosynthesis model
+            import math
+            # Use same Arrhenius equation as photosynthesis model
+            temp_k = temperature + self.parameters.kelvin_conversion
+            ref_temp_k = self.parameters.reference_temp_kelvin
+            r = self.parameters.r  # Gas constant (J/mol/K)
+            # Arrhenius equation: rate = rate_25 * exp(ea * (T - T_ref) / (R * T_ref * T))
+            rd_25 = self.parameters.rd_25  # Dark respiration at 25°C (umol CO2/m2/s)
+            ear = self.parameters.ear  # Activation energy for Rd (J/mol)
+            rd_umol_per_m2_per_s = rd_25 * math.exp(ear * (temp_k - ref_temp_k) / (ref_temp_k * r * temp_k))
+            # Convert to g C/hour: umol CO2/m2/s -> g C/hour
+            # Use same conversion factor as photosynthesis model
+            umol_to_g_carbon = self.parameters.umol_to_g_carbon_ratio  # Conversion factor from model
+            seconds_per_hour = self.parameters.seconds_per_hour
+            # Multiply by LAI to get total canopy dark respiration
+            dark_respiration_g_c_per_hour = rd_umol_per_m2_per_s * lai * umol_to_g_carbon * seconds_per_hour  # g C/hour
             
-            # Calculate gross photosynthesis correctly: Gross = Net + Respiration
-            # This ensures the carbon balance equation: Net = Gross - Respiration
-            self.state.gross_photosynthesis_rate = net_assimilation + respiration_rate
-            self.state.respiration_rate = respiration_rate
+            # Calculate gross photosynthesis: Gross = Net + Dark Respiration
+            self.state.gross_photosynthesis_rate = net_assimilation + dark_respiration_g_c_per_hour
+            
+            # Store dark respiration rate for reference
+            self.state.respiration_rate = dark_respiration_g_c_per_hour
+            
+            # Get total respiration rate from respiration simulator for reference (not used in gross calculation)
+            respiration_data = self.dependency_cache.get('respiration_simulator', {})
+            total_respiration_rate = respiration_data.get('total_respiration_rate')
+            if total_respiration_rate is None and self.current_step > 2:
+                # This is just for reference, not critical for photosynthesis calculation
+                pass
+            
+            # DEBUG: Log calculation for first few steps
+            if self.current_step <= 5 or self.current_step % 100 == 0:
+                print(f"[PHOTOSYNTHESIS DEBUG Step {self.current_step}] Calculated: net={net_assimilation:.10f}, dark_resp={dark_respiration_g_c_per_hour:.10f}, gross={self.state.gross_photosynthesis_rate:.10f} g C/hour")
             
             # FIXED: Calculate light use efficiency properly
             # Convert net_assimilation from g C/hour to μmol CO2/m²/s for proper comparison with PAR
@@ -328,6 +358,10 @@ class PhotosynthesisSimulator(BaseSimulator):
             self.state.hourly_carbon_gain = hourly_carbon
             self.state.cumulative_carbon_gained += hourly_carbon
             self.state.daily_carbon_gained += hourly_carbon
+            
+            # DEBUG: Log accumulation for first few steps
+            if self.current_step <= 5 or self.current_step % 100 == 0:
+                print(f"[PHOTOSYNTHESIS DEBUG Step {self.current_step}] Accumulation: hourly_carbon={hourly_carbon:.10f}, cumulative={self.state.cumulative_carbon_gained:.10f} g C")
             
         except Exception as e:
             # Per Rules.md: raise error, no fallbacks

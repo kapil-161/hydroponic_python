@@ -20,13 +20,23 @@ class NitrogenBalanceParameters:
     organ_weights: Dict[str, float]
     pool_fractions: Dict[str, Dict[str, float]]
     cache_timeout: float
+    # New parameters from CSV (Rules.md compliance)
+    nitrogen_concentration_new_growth: float
+    minimum_growth_rate: float
+    max_allocation_biomass_fraction: float
+    max_allocation_nitrogen_fraction: float
+    max_remobilization_biomass_fraction: float
+    max_remobilization_nitrogen_fraction: float
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'NitrogenBalanceParameters':
         required_params = [
             'nitrate_reduction_rate', 'ammonium_assimilation_rate', 'amino_acid_uptake_rate',
             'photosynthetic_n_use_efficiency', 'growth_n_use_efficiency', 'n_stress_threshold',
-            'luxury_uptake_threshold', 'specific_root_activity', 'root_zone_exploration', 'cache_timeout'
+            'luxury_uptake_threshold', 'specific_root_activity', 'root_zone_exploration', 'cache_timeout',
+            'nitrogen_concentration_new_growth', 'minimum_growth_rate',
+            'max_allocation_biomass_fraction', 'max_allocation_nitrogen_fraction',
+            'max_remobilization_biomass_fraction', 'max_remobilization_nitrogen_fraction'
         ]
         for param in required_params:
             if param not in config:
@@ -95,7 +105,13 @@ class NitrogenBalanceParameters:
             remobilization_efficiency=config['remobilization_efficiency'],
             organ_weights=config['organ_weights'],
             pool_fractions=pool_fractions,
-            cache_timeout=float(config['cache_timeout'])
+            cache_timeout=float(config['cache_timeout']),
+            nitrogen_concentration_new_growth=float(config['nitrogen_concentration_new_growth']),
+            minimum_growth_rate=float(config['minimum_growth_rate']),
+            max_allocation_biomass_fraction=float(config['max_allocation_biomass_fraction']),
+            max_allocation_nitrogen_fraction=float(config['max_allocation_nitrogen_fraction']),
+            max_remobilization_biomass_fraction=float(config['max_remobilization_biomass_fraction']),
+            max_remobilization_nitrogen_fraction=float(config['max_remobilization_nitrogen_fraction'])
         )
 
 @dataclass

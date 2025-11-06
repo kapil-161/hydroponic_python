@@ -38,6 +38,9 @@ class SimulationConfig:
     initialization_wait_time: float  # Seconds to wait for initialization
     event_processing_wait_time: float  # Seconds between event processing
     initialization_cycles: int  # Number of initialization event cycles
+    enable_iterative_coupling: bool = False  # Enable iterative N-photosynthesis coupling
+    max_iterations: int = 5  # Maximum iterations for coupling
+    convergence_threshold: float = 0.01  # Relative change threshold for convergence (1%)
 
     @classmethod
     def from_csv_parameters(cls, parameters: Dict[str, Any]) -> 'SimulationConfig':
@@ -47,6 +50,13 @@ class SimulationConfig:
             'enable_real_time', 'synchronization_mode', 'data_collection_interval', 'max_concurrent_simulators', 'max_errors',
             'progress_report_interval', 'initialization_wait_time', 'event_processing_wait_time', 'initialization_cycles'
         ]
+        
+        # Optional parameters with defaults
+        optional_params = {
+            'enable_iterative_coupling': False,
+            'max_iterations': 5,
+            'convergence_threshold': 0.01
+        }
 
         for param in required_params:
             if param not in parameters:
@@ -66,7 +76,10 @@ class SimulationConfig:
             progress_report_interval=int(parameters['progress_report_interval']),
             initialization_wait_time=float(parameters['initialization_wait_time']),
             event_processing_wait_time=float(parameters['event_processing_wait_time']),
-            initialization_cycles=int(parameters['initialization_cycles'])
+            initialization_cycles=int(parameters['initialization_cycles']),
+            enable_iterative_coupling=bool(parameters.get('enable_iterative_coupling', optional_params['enable_iterative_coupling'])),
+            max_iterations=int(parameters.get('max_iterations', optional_params['max_iterations'])),
+            convergence_threshold=float(parameters.get('convergence_threshold', optional_params['convergence_threshold']))
         )
 
 
@@ -246,7 +259,10 @@ class SimulationOrchestrator(BaseSimulator):
                         break
 
                     # Collect data if needed
-                    if self.current_step % self.config.data_collection_interval == 0:
+                    # FIX: Collect data at midday (hour 12) instead of end of day (hour 23)
+                    # This ensures photosynthesis variables are captured during daylight hours
+                    # when they are non-zero, rather than at nighttime when they are 0.0
+                    if self.current_step % self.config.data_collection_interval == 0 or hour == 12:
                         self._collect_step_data()
 
                     # Track performance
@@ -373,6 +389,20 @@ class SimulationOrchestrator(BaseSimulator):
         
         # Execute simulators in dependency order
         for simulator_id in execution_order:
+            # Handle iterative coupling for N-photosynthesis feedback
+            if (simulator_id == 'photosynthesis_simulator' and 
+                self.config.enable_iterative_coupling and 
+                'nitrogen_balance_simulator' in self.simulators):
+                # Execute iterative coupling between photosynthesis and nitrogen balance
+                # This handles both photosynthesis and nitrogen balance execution
+                self._execute_iterative_n_photo_coupling(weather_data, execution_order)
+                continue
+            
+            # Skip nitrogen_balance_simulator if iterative coupling already executed it
+            if (simulator_id == 'nitrogen_balance_simulator' and 
+                self.config.enable_iterative_coupling):
+                continue
+                
             if simulator_id in self.simulators:
                 try:
                     simulator = self.simulators[simulator_id]
@@ -422,6 +452,109 @@ class SimulationOrchestrator(BaseSimulator):
                     # Per Rules.md: raise errors instead of silently incrementing counter
                     self.error_count += 1
                     raise RuntimeError(f"Error executing parallel step for simulator '{simulator_id}': {e}")
+    
+    def _execute_iterative_n_photo_coupling(self, weather_data: Dict[str, Any], execution_order: List[str]):
+        """
+        Execute iterative coupling between nitrogen balance and photosynthesis.
+        
+        This method implements iterative solution for the N-photosynthesis feedback loop:
+        1. Calculate photosynthesis using current N status
+        2. Calculate N demand from photosynthesis
+        3. Update N allocation
+        4. Recalculate photosynthesis with new N status
+        5. Iterate until convergence or max iterations
+        
+        This improves accuracy by using current timestep N status instead of previous timestep.
+        """
+        photo_sim = self.simulators.get('photosynthesis_simulator')
+        nitrogen_sim = self.simulators.get('nitrogen_balance_simulator')
+        
+        if not photo_sim or not nitrogen_sim:
+            # Fallback to normal execution if simulators not available
+            return
+        
+        # Create simulation step data
+        step_data = {
+            'day': self.current_day,
+            'hour': self.current_hour,
+            'weather_data': weather_data,
+            'step': self.current_step,
+            'shared_data': self.shared_data_cache,
+            'system_config': self.shared_data_cache.get('system_config', {})
+        }
+        
+        # Store initial N status for convergence check
+        initial_n_data = self.shared_data_cache.get('nitrogen_balance_simulator', {})
+        initial_n_area = initial_n_data.get('nitrogen_area_based', {}).get('leaves', 0.0)
+        
+        # Store previous photosynthesis rate for convergence check
+        previous_photo_rate = None
+        
+        # Iterative coupling loop
+        for iteration in range(self.config.max_iterations):
+            # Step 1: Inject dependencies into photosynthesis simulator
+            if hasattr(photo_sim, 'dependency_cache'):
+                for dep_simulator_id, dep_data in self.shared_data_cache.items():
+                    if dep_simulator_id != 'photosynthesis_simulator':
+                        photo_sim.dependency_cache[dep_simulator_id] = dep_data
+                        if hasattr(photo_sim, 'cache_timestamp'):
+                            photo_sim.cache_timestamp[dep_simulator_id] = datetime.now()
+            
+            # Step 2: Execute photosynthesis with current N status
+            photo_sim.on_simulation_step(step_data)
+            
+            # Step 3: Update shared cache with photosynthesis results
+            if hasattr(photo_sim, 'publish_state_data') and callable(photo_sim.publish_state_data):
+                photo_sim.publish_state_data()
+                if hasattr(photo_sim, 'dependency_cache') and photo_sim.simulator_id in photo_sim.dependency_cache:
+                    self.shared_data_cache['photosynthesis_simulator'] = photo_sim.dependency_cache[photo_sim.simulator_id]
+            
+            # Step 4: Get current photosynthesis rate for convergence check
+            current_photo_data = self.shared_data_cache.get('photosynthesis_simulator', {})
+            current_photo_rate = current_photo_data.get('net_assimilation_rate', 0.0)
+            
+            # Step 5: Inject dependencies into nitrogen balance simulator (including updated photosynthesis)
+            if hasattr(nitrogen_sim, 'dependency_cache'):
+                for dep_simulator_id, dep_data in self.shared_data_cache.items():
+                    if dep_simulator_id != 'nitrogen_balance_simulator':
+                        nitrogen_sim.dependency_cache[dep_simulator_id] = dep_data
+                        if hasattr(nitrogen_sim, 'cache_timestamp'):
+                            nitrogen_sim.cache_timestamp[dep_simulator_id] = datetime.now()
+            
+            # Step 6: Execute nitrogen balance with updated photosynthesis
+            nitrogen_sim.on_simulation_step(step_data)
+            
+            # Step 7: Update shared cache with nitrogen balance results
+            if hasattr(nitrogen_sim, 'publish_state_data') and callable(nitrogen_sim.publish_state_data):
+                nitrogen_sim.publish_state_data()
+                if hasattr(nitrogen_sim, 'dependency_cache') and nitrogen_sim.simulator_id in nitrogen_sim.dependency_cache:
+                    self.shared_data_cache['nitrogen_balance_simulator'] = nitrogen_sim.dependency_cache[nitrogen_sim.simulator_id]
+            
+            # Step 8: Check convergence
+            current_n_data = self.shared_data_cache.get('nitrogen_balance_simulator', {})
+            current_n_area = current_n_data.get('nitrogen_area_based', {}).get('leaves', 0.0)
+            
+            # Convergence criteria: relative change in photosynthesis rate < threshold
+            if previous_photo_rate is not None and previous_photo_rate > 0:
+                relative_change = abs(current_photo_rate - previous_photo_rate) / abs(previous_photo_rate)
+                if relative_change < self.config.convergence_threshold:
+                    # Converged - exit iteration
+                    if iteration > 0:  # Only log if we did iterations
+                        print(f"[Iterative Coupling] Converged after {iteration + 1} iterations (relative change: {relative_change:.6f})")
+                    break
+            
+            previous_photo_rate = current_photo_rate
+            
+            # Process message bus events
+            self.message_bus._process_pending_events()
+        
+        # Log if max iterations reached without convergence
+        if iteration == self.config.max_iterations - 1:
+            final_n_area = self.shared_data_cache.get('nitrogen_balance_simulator', {}).get('nitrogen_area_based', {}).get('leaves', 0.0)
+            final_photo_rate = self.shared_data_cache.get('photosynthesis_simulator', {}).get('net_assimilation_rate', 0.0)
+            if previous_photo_rate is not None and previous_photo_rate > 0:
+                final_relative_change = abs(final_photo_rate - previous_photo_rate) / abs(previous_photo_rate)
+                print(f"[Iterative Coupling] Max iterations ({self.config.max_iterations}) reached. Final relative change: {final_relative_change:.6f}")
             
           
     
@@ -684,6 +817,16 @@ class SimulationOrchestrator(BaseSimulator):
         if output_dir and not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
+        # Define nutrients for expansion (macronutrients only - micronutrients removed)
+        nutrients = ['N-NO3', 'N-NH4', 'P-PO4', 'K', 'Ca', 'Mg', 'S-SO4']
+        
+        # Dictionary columns to expand for nutrient_models_simulator
+        nutrient_dict_columns = [
+            'nutrient_concentrations', 'nutrient_uptake_rates', 'nutrient_availability',
+            'root_nutrient_pools', 'shoot_nutrient_pools', 'xylem_flux', 'phloem_flux',
+            'cumulative_nutrient_uptake', 'daily_nutrient_uptake'
+        ]
+
         # Export combined results
         flattened_data = []
         for step_data in self.simulation_data:
@@ -696,8 +839,33 @@ class SimulationOrchestrator(BaseSimulator):
             # Add simulator-specific data
             for simulator_id, simulator_data in step_data.get('simulators', {}).items():
                 for key, value in simulator_data.items():
-                    # Convert lists/dicts to string to avoid formatting errors
-                    if isinstance(value, (list, dict)):
+                    # Special handling for nutrient_models_simulator dictionary columns
+                    if (simulator_id == 'nutrient_models_simulator' and 
+                        key in nutrient_dict_columns and 
+                        isinstance(value, dict)):
+                        # Expand dictionary into separate columns for each nutrient
+                        for nutrient in nutrients:
+                            nutrient_value = value.get(nutrient, 0.0)
+                            # Use safe column name (replace hyphens with underscores)
+                            safe_nutrient = nutrient.replace('-', '_')
+                            base_record[f"{simulator_id}_{key}_{safe_nutrient}"] = nutrient_value
+                    elif isinstance(value, dict):
+                        # For other simulators, try to expand if it's a simple dict
+                        # Otherwise convert to string
+                        try:
+                            # Check if it's a nutrient-like dict (has known nutrients as keys)
+                            if any(nutrient in value for nutrient in nutrients):
+                                # Expand nutrient dictionaries
+                                for nutrient in nutrients:
+                                    if nutrient in value:
+                                        safe_nutrient = nutrient.replace('-', '_')
+                                        base_record[f"{simulator_id}_{key}_{safe_nutrient}"] = value[nutrient]
+                            else:
+                                # For other dicts, convert to string
+                                base_record[f"{simulator_id}_{key}"] = str(value)
+                        except:
+                            base_record[f"{simulator_id}_{key}"] = str(value)
+                    elif isinstance(value, list):
                         base_record[f"{simulator_id}_{key}"] = str(value)
                     else:
                         base_record[f"{simulator_id}_{key}"] = value

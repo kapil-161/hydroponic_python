@@ -203,28 +203,96 @@ class RespirationSimulator(BaseSimulator):
             
             # Calculate respiration using model functions - no shortcuts
             # Per Rules.md: All parameters must come from CSV
-            # Get hourly biomass gain from biomass simulator
-            hourly_biomass_gain = biomass_data.get('hourly_biomass_gain')
+            # 
+            # CROP MODELER FIX: Break circular dependency by calculating growth respiration
+            # from GROSS carbon gain instead of NET biomass gain
+            # 
+            # The problem: 
+            #   - Biomass allocation: net_carbon = gross_carbon - total_respiration
+            #   - Biomass allocation: biomass_gain = net_carbon / carbon_fraction
+            #   - Respiration: growth_respiration = f(biomass_gain)
+            #   - Respiration: total_respiration = maintenance + growth_respiration
+            #   This creates a circular dependency!
+            #
+            # The solution:
+            #   1. Calculate maintenance respiration from existing biomass
+            #   2. Get gross carbon gain from photosynthesis (doesn't depend on respiration)
+            #   3. Estimate potential growth: potential_biomass = (gross_carbon - maintenance) / carbon_fraction
+            #   4. Calculate growth_respiration from potential_biomass
+            #   5. Calculate total_respiration = maintenance + growth
+            #   6. Biomass allocation then uses: net_carbon = gross - total_respiration
             
-            if hourly_biomass_gain is None:
+            # Get gross carbon gain from photosynthesis simulator (g C/hour)
+            photosynthesis_data = self.dependency_cache.get('photosynthesis_simulator', {})
+            gross_carbon_gain = photosynthesis_data.get('gross_photosynthesis_rate')  # g C/hour
+            net_assimilation = photosynthesis_data.get('net_assimilation_rate')  # g C/hour (gross - dark respiration)
+            
+            if gross_carbon_gain is None:
                 if self.current_step <= 2:
                     return
-                raise ValueError("Hourly biomass gain missing from biomass_allocation_simulator - no defaults allowed")
-
-            # Accumulate daily biomass gain (reset every 24 hours)
-            self.state.daily_biomass_gain += hourly_biomass_gain
-            current_hour = self.current_step % 24
-
-            # Use daily biomass gain for respiration calculation (model expects g/day)
-            # Scientific principle: Growth respiration only applies to positive growth
-            # When respiration > photosynthesis, net growth is negative = no growth respiration
-            # Reset accumulator at the start of each new day
-            if current_hour == 0 and self.current_step > 0:
-                total_new_growth = max(0.0, self.state.daily_biomass_gain)  # g/day, clamped to zero
-                self.state.daily_biomass_gain = 0.0  # Reset for next day
+                raise ValueError("Gross photosynthesis rate missing from photosynthesis_simulator - no defaults allowed")
+            
+            if net_assimilation is None:
+                if self.current_step <= 2:
+                    net_assimilation = 0.0
+                else:
+                    raise ValueError("Net assimilation rate missing from photosynthesis_simulator - no defaults allowed")
+            
+            # Get carbon fraction from biomass allocation simulator
+            carbon_fraction = biomass_data.get('carbon_content_fraction')
+            if carbon_fraction is None:
+                # Per Rules.md: raise error if missing, no defaults allowed
+                if self.current_step <= 2:
+                    return  # Skip early steps if data not available yet
+                raise ValueError("Carbon content fraction missing from biomass_allocation_simulator - no defaults allowed")
+            
+            # Calculate maintenance respiration first (from existing biomass)
+            # This doesn't depend on growth, so no circular dependency
+            maintenance_result = 0.0
+            for pool in biomass_pools.values():
+                maint_resp, _ = self.model.calculate_maintenance_respiration(pool, temperature)
+                maintenance_result += maint_resp  # g C/day
+            
+            # CRITICAL FIX: Only calculate growth respiration when net assimilation is positive
+            # Net assimilation = gross photosynthesis - dark respiration
+            # If net assimilation <= 0, there's no photosynthesis happening, so no growth possible
+            # Growth respiration should only be calculated when there's actual carbon fixation
+            maintenance_respiration_hourly = maintenance_result / 24.0  # g C/hour
+            
+            # Check if net assimilation is positive (actual photosynthesis happening)
+            # Net assimilation already accounts for dark respiration, so we compare it to maintenance
+            net_carbon_available_hourly = net_assimilation - maintenance_respiration_hourly  # g C/hour
+            
+            # Only estimate growth if net assimilation is positive AND exceeds maintenance THIS HOUR
+            if net_assimilation > 0 and net_carbon_available_hourly > 0:
+                # Convert to daily rate for respiration model (which expects g/day)
+                gross_carbon_daily = gross_carbon_gain * 24.0  # g C/day
+                net_carbon_available_daily = gross_carbon_daily - maintenance_result  # g C/day
+                
+                # Estimate potential biomass growth from available net carbon
+                potential_biomass_growth_daily = net_carbon_available_daily / carbon_fraction  # g dry biomass/day
+                
+                # Accumulate daily potential growth (reset every 24 hours)
+                current_hour = self.current_step % 24
+                self.state.daily_biomass_gain += potential_biomass_growth_daily / 24.0  # Accumulate hourly portion
+                
+                # Use accumulated daily potential growth for respiration calculation (model expects g/day)
+                if current_hour == 0 and self.current_step > 0:
+                    # Use the accumulated value from the previous day BEFORE resetting
+                    total_new_growth = max(0.0, self.state.daily_biomass_gain)  # g/day, clamped to zero
+                    # Reset AFTER using the value
+                    self.state.daily_biomass_gain = potential_biomass_growth_daily / 24.0  # Start new day with current hour's portion
+                else:
+                    # Use accumulated value so far (will be partial for current day)
+                    total_new_growth = max(0.0, self.state.daily_biomass_gain)  # g/day (partial), clamped to zero
             else:
-                # Use accumulated value so far (will be partial for current day)
-                total_new_growth = max(0.0, self.state.daily_biomass_gain)  # g/day (partial), clamped to zero
+                # No growth possible THIS HOUR if maintenance respiration exceeds gross carbon
+                # Set growth respiration to zero for this hour
+                total_new_growth = 0.0
+                # Reset daily accumulation at start of new day
+                current_hour = self.current_step % 24
+                if current_hour == 0:
+                    self.state.daily_biomass_gain = 0.0
 
             growth_composition = {
                 'protein': self.parameters.growth.protein_fraction,

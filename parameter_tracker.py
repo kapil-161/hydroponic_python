@@ -25,11 +25,13 @@ class ParameterTracker:
         self.project_root = project_root
         self.input_dir = project_root / "input"
         self.models_dir = project_root / "src" / "models"
+        self.simulators_dir = project_root / "src" / "simulations"
 
         # Parameter usage database
         self.parameters: Dict[str, Dict[str, Any]] = {}
         self.model_usage: Dict[str, List[str]] = defaultdict(list)
         self.parameter_flow: Dict[str, List[str]] = defaultdict(list)
+        self.backward_compat_mappings: Dict[str, List[str]] = {}
 
     def load_all_parameters(self) -> Dict[str, pd.DataFrame]:
         """Load all parameters from CSV files"""
@@ -61,6 +63,31 @@ class ParameterTracker:
 
         return parameters
 
+    def load_backward_compatibility_mappings(self):
+        """Load backward compatibility mappings from parameter_loader.py"""
+        loader_path = self.project_root / "src" / "utils" / "parameter_loader.py"
+
+        try:
+            with open(loader_path, 'r') as f:
+                content = f.read()
+
+            # Find backward_compat_mappings dictionary
+            import re
+            pattern = r"backward_compat_mappings\s*=\s*\{([^}]+)\}"
+            match = re.search(pattern, content, re.DOTALL)
+
+            if match:
+                mappings_str = match.group(1)
+                # Parse each line like: 'atmospheric_o2': ['photosynthesis_parameters_o2_mmol_mol']
+                line_pattern = r"'([^']+)':\s*\[([^\]]+)\]"
+                for line_match in re.finditer(line_pattern, mappings_str):
+                    param_name = line_match.group(1)
+                    mapped_keys_str = line_match.group(2)
+                    mapped_keys = [k.strip().strip("'\"") for k in mapped_keys_str.split(',')]
+                    self.backward_compat_mappings[param_name] = mapped_keys
+        except Exception as e:
+            print(f"Warning: Could not load backward compatibility mappings: {e}")
+
     def extract_parameters_from_csv(self):
         """Extract all parameters from CSV files"""
         csv_files = self.load_all_parameters()
@@ -87,8 +114,17 @@ class ParameterTracker:
                     }
 
     def analyze_model_files(self):
-        """Analyze model files to find parameter usage"""
+        """Analyze model and simulator files to find parameter usage"""
+        # Combine both model files and simulator files
+        python_files = []
         for model_file in self.models_dir.glob("*.py"):
+            if model_file.name != '__init__.py' and model_file.name != 'base_model.py':
+                python_files.append(model_file)
+        for simulator_file in self.simulators_dir.glob("*.py"):
+            if simulator_file.name != '__init__.py':
+                python_files.append(simulator_file)
+
+        for model_file in python_files:
             if model_file.name == '__init__.py' or model_file.name == 'base_model.py':
                 continue
 
@@ -99,14 +135,47 @@ class ParameterTracker:
 
                     # Find all parameters used in this model
                     for param_name in self.parameters.keys():
-                        if param_name in content:
+                        # Check direct parameter name usage
+                        found_usage = param_name in content
+
+                        # Check if parameter is used through backward compatibility mappings
+                        if not found_usage and param_name in self.backward_compat_mappings:
+                            for mapped_key in self.backward_compat_mappings[param_name]:
+                                # Check for full mapped key: photosynthesis_parameters_o2_mmol_mol
+                                if mapped_key in content:
+                                    found_usage = True
+                                    break
+                                # Also check for shortened form used in models: o2_mmol_mol
+                                # Extract the part after the category prefix (e.g., photosynthesis_parameters_)
+                                if 'parameters_' in mapped_key:
+                                    short_form = mapped_key.split('parameters_', 1)[1]
+                                    if short_form and short_form in content:
+                                        found_usage = True
+                                        break
+
+                        if found_usage:
                             self.parameters[param_name]['used_by'].append(model_name)
                             self.model_usage[model_name].append(param_name)
 
                             # Find the line where it's used
                             lines = content.split('\n')
                             for i, line in enumerate(lines):
-                                if param_name in line and not line.strip().startswith('#'):
+                                # Check both direct usage and mapped keys
+                                line_has_param = param_name in line
+                                if not line_has_param and param_name in self.backward_compat_mappings:
+                                    for mapped_key in self.backward_compat_mappings[param_name]:
+                                        # Check full key
+                                        if mapped_key in line:
+                                            line_has_param = True
+                                            break
+                                        # Check shortened form
+                                        if 'parameters_' in mapped_key:
+                                            short_form = mapped_key.split('parameters_', 1)[1]
+                                            if short_form and short_form in line:
+                                                line_has_param = True
+                                                break
+
+                                if line_has_param and not line.strip().startswith('#'):
                                     self.parameters[param_name]['equations'].append({
                                         'model': model_name,
                                         'line': i + 1,
@@ -506,6 +575,10 @@ def main():
     print("🔍 Loading parameters from CSV files...")
     tracker.extract_parameters_from_csv()
     print(f"✅ Loaded {len(tracker.parameters)} parameters")
+
+    print("\n🔗 Loading backward compatibility mappings...")
+    tracker.load_backward_compatibility_mappings()
+    print(f"✅ Loaded {len(tracker.backward_compat_mappings)} backward compatibility mappings")
 
     print("\n📊 Analyzing model files...")
     tracker.analyze_model_files()

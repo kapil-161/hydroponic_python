@@ -1086,8 +1086,24 @@ class IntegratedStressModel:
             if ph_stress is not None:
                 current_stress_levels['ph_stress'] = ph_stress
             
-            # Use the existing daily_update method
-            response = self.daily_update(current_stress_levels)
+            # Map keys from simulator format ('temperature_stress') to model format ('temperature')
+            # stress_states uses keys from stress_weights which are 'temperature', 'water', etc.
+            key_mapping = {
+                'temperature_stress': 'temperature',
+                'water_stress': 'water',
+                'nutrient_stress': 'nutrient',
+                'light_stress': 'light',
+                'ph_stress': 'ph',
+                'salinity_stress': 'salinity'
+            }
+            
+            mapped_stress_levels = {}
+            for key, value in current_stress_levels.items():
+                mapped_key = key_mapping.get(key, key.replace('_stress', ''))
+                mapped_stress_levels[mapped_key] = value
+            
+            # Use the existing daily_update method with mapped keys
+            response = self.daily_update(mapped_stress_levels)
 
             # Return response with stress_states for acclimation/damage extraction
             return {

@@ -291,7 +291,16 @@ class RootSystemSimulator(BaseSimulator):
             )
             
             # Update state with model results
-            self.state.root_depth = result.get('root_depth', self.state.root_depth)
+            # Root depth: Use model's calculated depth, or calculate from root length if not available
+            model_root_depth = result.get('root_depth')
+            if model_root_depth is not None and model_root_depth > 0:
+                self.state.root_depth = model_root_depth
+            else:
+                # Fallback: Estimate depth from root length (assuming vertical growth)
+                # Typical root depth ≈ 0.1-0.2 × root length for hydroponic systems
+                estimated_depth = min(self.state.root_length * 0.15, 40.0)  # Cap at 40cm for DWC
+                self.state.root_depth = max(self.state.root_depth, estimated_depth)
+            
             # Use root biomass from biomass_allocation_simulator as authoritative source
             # The biomass allocation simulator calculates root biomass from photosynthesis carbon gain
             # Root system simulator uses this to calculate root architecture (depth, length, surface area)
@@ -324,19 +333,68 @@ class RootSystemSimulator(BaseSimulator):
             self.state.medium_root_fraction = result.get('medium_root_length', 0.0) / max(result.get('total_root_length', 1.0), 1.0)
             self.state.coarse_root_fraction = result.get('coarse_root_length', 0.0) / max(result.get('total_root_length', 1.0), 1.0)
             
-            # Update root distribution
-            root_distribution = result.get('root_distribution', {})
-            for zone in self.root_zones:
-                if zone in root_distribution:
-                    self.state.root_distribution[zone] = root_distribution[zone]
+            # Update root distribution - convert integer zone IDs to string zone names
+            root_distribution_raw = result.get('root_distribution', {})
+            if root_distribution_raw:
+                # Model returns distribution with integer keys (0, 1, 2, ...) for zone indices
+                # Convert to string keys based on actual number of zones
+                # Handle variable number of zones (typically 3-4 for DWC/NFT systems)
+                num_zones = len(root_distribution_raw)
+                if num_zones == 3:
+                    zone_names = ['upper', 'middle', 'lower']
+                elif num_zones == 4:
+                    zone_names = ['upper', 'upper_middle', 'lower_middle', 'lower']
+                else:
+                    # Generic naming for any number of zones
+                    zone_names = [f'zone_{i}' for i in range(num_zones)]
+                
+                for zone_id, fraction in root_distribution_raw.items():
+                    if isinstance(zone_id, int) and 0 <= zone_id < len(zone_names):
+                        zone_name = zone_names[zone_id]
+                        self.state.root_distribution[zone_name] = fraction
+                    elif isinstance(zone_id, str):
+                        # Already string key, use as-is
+                        self.state.root_distribution[zone_id] = fraction
             
-            # Update root zone layers
-            root_zone_layers = result.get('root_zone_layers', [])
-            self.state.root_zone_layers = root_zone_layers
+            # Update root zone layers - serialize zone data from model
+            if hasattr(self.model, 'root_zones') and self.model.root_zones:
+                root_zone_layers = []
+                for zone in self.model.root_zones:
+                    zone_surface_area = sum(cohort.surface_area for cohort in zone.root_cohorts)
+                    zone_length = sum(cohort.length for cohort in zone.root_cohorts)
+                    zone_data = {
+                        'depth_range': zone.depth_range,
+                        'volume': zone.volume,
+                        'root_length': zone_length,
+                        'root_surface_area': zone_surface_area,
+                        'root_length_density': zone_length / max(zone.volume, 0.001),
+                        'temperature': zone.temperature,
+                        'flow_rate': zone.flow_rate,
+                        'oxygen_level': zone.oxygen_level,
+                        'ph': zone.ph,
+                        'num_cohorts': len(zone.root_cohorts)
+                    }
+                    root_zone_layers.append(zone_data)
+                self.state.root_zone_layers = root_zone_layers
             
-            # Update root cohorts
-            root_cohorts = result.get('root_cohorts', [])
-            self.state.root_cohorts = root_cohorts
+            # Update root cohorts - serialize cohort data from model
+            if hasattr(self.model, 'root_zones') and self.model.root_zones:
+                root_cohorts = []
+                for zone_idx, zone in enumerate(self.model.root_zones):
+                    for cohort in zone.root_cohorts:
+                        cohort_data = {
+                            'age_days': cohort.age_days,
+                            'length': cohort.length,
+                            'diameter': cohort.diameter,
+                            'root_type': cohort.root_type.value if hasattr(cohort.root_type, 'value') else str(cohort.root_type),
+                            'zone_depth': cohort.zone_depth,
+                            'biomass': cohort.biomass,
+                            'surface_area': cohort.surface_area,
+                            'activity_factor': cohort.activity_factor,
+                            'zone_index': zone_idx
+                        }
+                        root_cohorts.append(cohort_data)
+                self.state.root_cohorts = root_cohorts
             
             # Calculate NET root growth (accounts for both growth and senescence)
             # This is the change in actual root length, not gross production

@@ -7,12 +7,6 @@ ec_factor_k,0.064,dS_m_per_mg_L,EC contribution factor for potassium
 ec_factor_ca,0.050,dS_m_per_mg_L,EC contribution factor for calcium
 ec_factor_mg,0.082,dS_m_per_mg_L,EC contribution factor for magnesium
 ec_factor_s_so4,0.065,dS_m_per_mg_L,EC contribution factor for sulfate sulfur
-ec_factor_fe,0.018,dS_m_per_mg_L,EC contribution factor for iron
-ec_factor_mn,0.019,dS_m_per_mg_L,EC contribution factor for manganese
-ec_factor_zn,0.015,dS_m_per_mg_L,EC contribution factor for zinc
-ec_factor_cu,0.016,dS_m_per_mg_L,EC contribution factor for copper
-ec_factor_b,0.014,dS_m_per_mg_L,EC contribution factor for boron
-ec_factor_mo,0.010,dS_m_per_mg_L,EC contribution factor for molybdenum
 optimal_ec,1.2,dS_m,Optimal electrical conductivity for nutrient solution
 optimal_ph,6.0,dimensionless,Optimal pH for nutrient solution
 ph_tolerance,0.1,dimensionless,pH tolerance for automatic adjustment
@@ -32,7 +26,6 @@ ec_uptake_modifier_k_high,0.2,dimensionless,Potassium uptake modifier under high
 ec_uptake_modifier_ca_high,0.1,dimensionless,Calcium uptake modifier under high EC
 ec_uptake_modifier_n_low,0.2,dimensionless,Nitrogen uptake modifier under low EC
 ec_uptake_modifier_p_low,0.3,dimensionless,Phosphorus uptake modifier under low EC
-ec_uptake_modifier_fe_low,0.4,dimensionless,Iron uptake modifier under low EC
 kinetics_n_no3_vmax,0.051,mg_cm2_day,Maximum uptake rate for nitrate nitrogen (calibrated for 4% N content in lettuce ~8-10 mg/plant/day)
 kinetics_n_no3_km,15.0,mg_L,Michaelis constant for nitrate nitrogen
 kinetics_n_no3_min_conc,0.01,mg_L,Minimum concentration for nitrate nitrogen uptake
@@ -54,24 +47,6 @@ kinetics_mg_min_conc,0.005,mg_L,Minimum concentration for magnesium uptake
 kinetics_s_so4_vmax,0.02,mg_cm2_day,Maximum uptake rate for sulfate sulfur
 kinetics_s_so4_km,1.0,mg_L,Michaelis constant for sulfate sulfur uptake
 kinetics_s_so4_min_conc,0.05,mg_L,Minimum concentration for sulfate sulfur uptake
-kinetics_fe_vmax,0.001,mg_cm2_day,Maximum uptake rate for iron
-kinetics_fe_km,0.1,mg_L,Michaelis constant for iron uptake
-kinetics_fe_min_conc,0.01,mg_L,Minimum concentration for iron uptake
-kinetics_mn_vmax,0.0005,mg_cm2_day,Maximum uptake rate for manganese
-kinetics_mn_km,0.05,mg_L,Michaelis constant for manganese uptake
-kinetics_mn_min_conc,0.005,mg_L,Minimum concentration for manganese uptake
-kinetics_zn_vmax,0.0003,mg_cm2_day,Maximum uptake rate for zinc
-kinetics_zn_km,0.03,mg_L,Michaelis constant for zinc uptake
-kinetics_zn_min_conc,0.003,mg_L,Minimum concentration for zinc uptake
-kinetics_cu_vmax,0.0002,mg_cm2_day,Maximum uptake rate for copper
-kinetics_cu_km,0.02,mg_L,Michaelis constant for copper uptake
-kinetics_cu_min_conc,0.002,mg_L,Minimum concentration for copper uptake
-kinetics_b_vmax,0.0001,mg_cm2_day,Maximum uptake rate for boron
-kinetics_b_km,0.01,mg_L,Michaelis constant for boron uptake
-kinetics_b_min_conc,0.001,mg_L,Minimum concentration for boron uptake
-kinetics_mo_vmax,0.00005,mg_cm2_day,Maximum uptake rate for molybdenum
-kinetics_mo_km,0.005,mg_L,Michaelis constant for molybdenum uptake
-kinetics_mo_min_conc,0.0005,mg_L,Minimum concentration for molybdenum uptake
 critical_n_concentrations_leaves_minimum,0.015,g_N_g_dry_mass,Minimum nitrogen concentration in leaves
 critical_n_concentrations_leaves_critical,0.025,g_N_g_dry_mass,Critical nitrogen concentration in leaves
 critical_n_concentrations_leaves_optimal,0.045,g_N_g_dry_mass,Optimal nitrogen concentration in leaves
@@ -124,48 +99,11 @@ remobilization_efficiency_sulfur,0.4,dimensionless,Remobilization efficiency for
 deficiency_mobility_sulfur,high,string,Deficiency mobility for sulfur
 retranslocation_rate_sulfur,0.015,g_g_day,Retranslocation rate for sulfur
 xylem_transport_rates_sulfur,0.07,g_g_day,Xylem transport rate for sulfur
-mobility_classifications_iron_mobility,immobile,string,Mobility classification for iron
-mobility_classifications_iron_transport,xylem_only,string,Transport classification for iron
-remobilization_efficiency_iron,0.2,dimensionless,Remobilization efficiency for iron
-deficiency_mobility_iron,very_low,string,Deficiency mobility for iron
-retranslocation_rate_iron,0.005,g_g_day,Retranslocation rate for iron
-xylem_transport_rates_iron,0.03,g_g_day,Xylem transport rate for iron
-mobility_classifications_manganese_mobility,immobile,string,Mobility classification for manganese
-mobility_classifications_manganese_transport,xylem_only,string,Transport classification for manganese
-remobilization_efficiency_manganese,0.15,dimensionless,Remobilization efficiency for manganese
-deficiency_mobility_manganese,very_low,string,Deficiency mobility for manganese
-retranslocation_rate_manganese,0.003,g_g_day,Retranslocation rate for manganese
-xylem_transport_rates_manganese,0.025,g_g_day,Xylem transport rate for manganese
-mobility_classifications_zinc_mobility,immobile,string,Mobility classification for zinc
-mobility_classifications_zinc_transport,xylem_only,string,Transport classification for zinc
-remobilization_efficiency_zinc,0.3,dimensionless,Remobilization efficiency for zinc
-deficiency_mobility_zinc,very_low,string,Deficiency mobility for zinc
-retranslocation_rate_zinc,0.008,g_g_day,Retranslocation rate for zinc
-xylem_transport_rates_zinc,0.04,g_g_day,Xylem transport rate for zinc
-mobility_classifications_copper_mobility,immobile,string,Mobility classification for copper
-mobility_classifications_copper_transport,xylem_only,string,Transport classification for copper
-remobilization_efficiency_copper,0.25,dimensionless,Remobilization efficiency for copper
-deficiency_mobility_copper,very_low,string,Deficiency mobility for copper
-retranslocation_rate_copper,0.006,g_g_day,Retranslocation rate for copper
-xylem_transport_rates_copper,0.035,g_g_day,Xylem transport rate for copper
-mobility_classifications_boron_mobility,immobile,string,Mobility classification for boron
-mobility_classifications_boron_transport,xylem_only,string,Transport classification for boron
-remobilization_efficiency_boron,0.1,dimensionless,Remobilization efficiency for boron
-deficiency_mobility_boron,very_low,string,Deficiency mobility for boron
-retranslocation_rate_boron,0.002,g_g_day,Retranslocation rate for boron
-xylem_transport_rates_boron,0.02,g_g_day,Xylem transport rate for boron
-mobility_classifications_molybdenum_mobility,moderately_mobile,string,Mobility classification for molybdenum
-mobility_classifications_molybdenum_transport,bidirectional,string,Transport classification for molybdenum
-remobilization_efficiency_molybdenum,0.6,dimensionless,Remobilization efficiency for molybdenum
-deficiency_mobility_molybdenum,high,string,Deficiency mobility for molybdenum
-retranslocation_rate_molybdenum,0.01,g_g_day,Retranslocation rate for molybdenum
-xylem_transport_rates_molybdenum,0.05,g_g_day,Xylem transport rate for molybdenum
 phloem_transport_factor,0.4,fraction,Phloem transport rate as fraction of xylem rate
 ec_stress_min_threshold,0.3,dimensionless,Minimum EC stress threshold
 ec_boost_max_n,1.3,dimensionless,Maximum EC boost for nitrogen
 ec_boost_max_p,1.2,dimensionless,Maximum EC boost for phosphorus
 ec_boost_max_k,1.4,dimensionless,Maximum EC boost for potassium
-ec_boost_max_fe,1.3,dimensionless,Maximum EC boost for iron
 temperature_factor_base,1.0,dimensionless,Base temperature factor for nutrient calculations
 ph_factor_base,1.0,dimensionless,Base pH factor for nutrient calculations
 reference_daily_growth_rate,1.0,g/day,Reference daily growth rate
@@ -224,12 +162,6 @@ molar_mass_K,39.0983,g_per_mol,Molar mass of potassium ion (K+)
 molar_mass_Ca,40.078,g_per_mol,Molar mass of calcium ion (Ca2+)
 molar_mass_Mg,24.305,g_per_mol,Molar mass of magnesium ion (Mg2+)
 molar_mass_S-SO4,96.06,g_per_mol,Molar mass of sulfate ion (SO4^2-)
-molar_mass_Fe,55.845,g_per_mol,Molar mass of iron (approx as Fe2+)
-molar_mass_Mn,54.938,g_per_mol,Molar mass of manganese (approx as Mn2+)
-molar_mass_Zn,65.38,g_per_mol,Molar mass of zinc (approx as Zn2+)
-molar_mass_Cu,63.546,g_per_mol,Molar mass of copper (approx as Cu2+)
-molar_mass_B,61.83,g_per_mol,Molar mass of borate (approx as B(OH)4-)
-molar_mass_Mo,95.95,g_per_mol,Molar mass of molybdenum (approx as MoO4^2-)
 lambda0_25C_N-NO3,71.4,S_cm2_per_mol,Limiting molar conductivity at 25C for NO3-
 lambda0_25C_N-NH4,73.5,S_cm2_per_mol,Limiting molar conductivity at 25C for NH4+
 lambda0_25C_P-PO4,44.5,S_cm2_per_mol,Approximate molar conductivity for HPO4^2- proxy
@@ -237,12 +169,6 @@ lambda0_25C_K,73.5,S_cm2_per_mol,Limiting molar conductivity at 25C for K+
 lambda0_25C_Ca,238.0,S_cm2_per_mol,Approximate molar conductivity for Ca2+ (2*119 S·cm2/eq)
 lambda0_25C_Mg,212.0,S_cm2_per_mol,Approximate molar conductivity for Mg2+ (2*106 S·cm2/eq)
 lambda0_25C_S-SO4,320.0,S_cm2_per_mol,Approximate molar conductivity for SO4^2- (2*160 S·cm2/eq)
-lambda0_25C_Fe,200.0,S_cm2_per_mol,Approximate; transition metals vary with speciation
-lambda0_25C_Mn,180.0,S_cm2_per_mol,Approximate; transition metals vary with speciation
-lambda0_25C_Zn,150.0,S_cm2_per_mol,Approximate; transition metals vary with speciation
-lambda0_25C_Cu,130.0,S_cm2_per_mol,Approximate; transition metals vary with speciation
-lambda0_25C_B,40.0,S_cm2_per_mol,Approximate for borate species
-lambda0_25C_Mo,140.0,S_cm2_per_mol,Approximate for molybdate (MoO4^2-)
 valence_N-NO3,-1,dimensionless,Valence of nitrate ion
 valence_N-NH4,1,dimensionless,Valence of ammonium ion
 valence_P-PO4,-2,dimensionless,Using HPO4^2- proxy for phosphate system
@@ -250,9 +176,3 @@ valence_K,1,dimensionless,Valence of potassium ion
 valence_Ca,2,dimensionless,Valence of calcium ion
 valence_Mg,2,dimensionless,Valence of magnesium ion
 valence_S-SO4,-2,dimensionless,Valence of sulfate ion
-valence_Fe,2,dimensionless,Assuming Fe2+ predominant
-valence_Mn,2,dimensionless,Assuming Mn2+ predominant
-valence_Zn,2,dimensionless,Assuming Zn2+ predominant
-valence_Cu,2,dimensionless,Assuming Cu2+ predominant
-valence_B,-1,dimensionless,Assuming borate as B(OH)4-
-valence_Mo,-2,dimensionless,Assuming molybdate MoO4^2-

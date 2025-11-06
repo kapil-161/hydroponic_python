@@ -11,12 +11,6 @@ class NutrientParameters:
     ec_factor_ca: float
     ec_factor_mg: float
     ec_factor_s_so4: float
-    ec_factor_fe: float
-    ec_factor_mn: float
-    ec_factor_zn: float
-    ec_factor_cu: float
-    ec_factor_b: float
-    ec_factor_mo: float
     optimal_ec: float
     optimal_ph: float
     ph_tolerance: float
@@ -36,7 +30,6 @@ class NutrientParameters:
     ec_uptake_modifier_ca_high: float
     ec_uptake_modifier_n_low: float
     ec_uptake_modifier_p_low: float
-    ec_uptake_modifier_fe_low: float
     kinetics_n_no3_vmax: float
     kinetics_n_no3_km: float
     kinetics_n_no3_min_conc: float
@@ -58,24 +51,6 @@ class NutrientParameters:
     kinetics_s_so4_vmax: float
     kinetics_s_so4_km: float
     kinetics_s_so4_min_conc: float
-    kinetics_fe_vmax: float
-    kinetics_fe_km: float
-    kinetics_fe_min_conc: float
-    kinetics_mn_vmax: float
-    kinetics_mn_km: float
-    kinetics_mn_min_conc: float
-    kinetics_zn_vmax: float
-    kinetics_zn_km: float
-    kinetics_zn_min_conc: float
-    kinetics_cu_vmax: float
-    kinetics_cu_km: float
-    kinetics_cu_min_conc: float
-    kinetics_b_vmax: float
-    kinetics_b_km: float
-    kinetics_b_min_conc: float
-    kinetics_mo_vmax: float
-    kinetics_mo_km: float
-    kinetics_mo_min_conc: float
     mobility_classifications: Dict[str, Dict[str, Any]]
     xylem_transport_rates: Dict[str, float]
     phloem_transport_rates: Dict[str, float]
@@ -91,7 +66,6 @@ class NutrientParameters:
     ec_boost_max_n: float
     ec_boost_max_p: float
     ec_boost_max_k: float
-    ec_boost_max_fe: float
     temperature_factor_base: float
     ph_factor_base: float
     reference_daily_growth_rate: float
@@ -159,24 +133,20 @@ class NutrientParameters:
     def from_config(cls, config: Dict[str, Any]) -> 'NutrientParameters':
         required_params = [
             'ec_factor_n_no3', 'ec_factor_n_nh4', 'ec_factor_p_po4', 'ec_factor_k',
-            'ec_factor_ca', 'ec_factor_mg', 'ec_factor_s_so4', 'ec_factor_fe',
-            'ec_factor_mn', 'ec_factor_zn', 'ec_factor_cu', 'ec_factor_b', 'ec_factor_mo',
+            'ec_factor_ca', 'ec_factor_mg', 'ec_factor_s_so4',
             'minimum_volume_fraction', 'xylem_transport_capacity', 'phloem_transport_capacity',
             'temperature_q10', 'transpiration_coupling', 'ec_uptake_high_threshold',
             'ec_uptake_low_threshold', 'ec_uptake_modifier_n_high', 'ec_uptake_modifier_p_high',
             'ec_uptake_modifier_k_high', 'ec_uptake_modifier_ca_high', 'ec_uptake_modifier_n_low',
-            'ec_uptake_modifier_p_low', 'ec_uptake_modifier_fe_low', 'kinetics_n_no3_vmax',
+            'ec_uptake_modifier_p_low', 'kinetics_n_no3_vmax',
             'kinetics_n_no3_km', 'kinetics_n_no3_min_conc', 'kinetics_n_nh4_vmax',
             'kinetics_n_nh4_km', 'kinetics_n_nh4_min_conc', 'kinetics_p_po4_vmax',
             'kinetics_p_po4_km', 'kinetics_p_po4_min_conc', 'kinetics_k_vmax',
             'kinetics_k_km', 'kinetics_k_min_conc', 'kinetics_ca_vmax', 'kinetics_ca_km',
             'kinetics_ca_min_conc', 'kinetics_mg_vmax', 'kinetics_mg_km', 'kinetics_mg_min_conc',
-            'kinetics_s_so4_vmax', 'kinetics_s_so4_km', 'kinetics_s_so4_min_conc', 'kinetics_fe_vmax', 'kinetics_fe_km', 'kinetics_fe_min_conc',
-            'kinetics_mn_vmax', 'kinetics_mn_km', 'kinetics_mn_min_conc', 'kinetics_zn_vmax', 'kinetics_zn_km', 'kinetics_zn_min_conc',
-            'kinetics_cu_vmax', 'kinetics_cu_km', 'kinetics_cu_min_conc', 'kinetics_b_vmax', 'kinetics_b_km', 'kinetics_b_min_conc',
-            'kinetics_mo_vmax', 'kinetics_mo_km', 'kinetics_mo_min_conc',
+            'kinetics_s_so4_vmax', 'kinetics_s_so4_km', 'kinetics_s_so4_min_conc',
             # Hardcoded value replacements
-            'ec_stress_min_threshold', 'ec_boost_max_n', 'ec_boost_max_p', 'ec_boost_max_k', 'ec_boost_max_fe',
+            'ec_stress_min_threshold', 'ec_boost_max_n', 'ec_boost_max_p', 'ec_boost_max_k',
             'temperature_factor_base', 'ph_factor_base', 'reference_daily_growth_rate',
             'rhizosphere_thickness_cm', 'minimum_root_zone_volume_L', 'transport_pool_fraction_multiplier',
             'deficiency_mobility_very_high_factor', 'deficiency_mobility_high_factor',
@@ -202,8 +172,7 @@ class NutrientParameters:
             if param not in config:
                 raise KeyError(f"Required parameter '{param}' not found in configuration")
 
-        nutrients = ["N-NO3", "N-NH4", "P-PO4", "K", "Ca", "Mg", "S-SO4",
-                     "Fe", "Mn", "Zn", "Cu", "B", "Mo"]
+        nutrients = ["N-NO3", "N-NH4", "P-PO4", "K", "Ca", "Mg", "S-SO4"]
         mobility_class = {}
         xylem_rates = {}
         phloem_rates = {}
@@ -293,12 +262,6 @@ class NutrientParameters:
             ec_factor_ca=float(config['ec_factor_ca']),
             ec_factor_mg=float(config['ec_factor_mg']),
             ec_factor_s_so4=float(config['ec_factor_s_so4']),
-            ec_factor_fe=float(config['ec_factor_fe']),
-            ec_factor_mn=float(config['ec_factor_mn']),
-            ec_factor_zn=float(config['ec_factor_zn']),
-            ec_factor_cu=float(config['ec_factor_cu']),
-            ec_factor_b=float(config['ec_factor_b']),
-            ec_factor_mo=float(config['ec_factor_mo']),
             optimal_ec=float(config['optimal_ec']),
             optimal_ph=float(config['optimal_ph']),
             ph_tolerance=float(config['ph_tolerance']),
@@ -318,7 +281,6 @@ class NutrientParameters:
             ec_uptake_modifier_ca_high=float(config['ec_uptake_modifier_ca_high']),
             ec_uptake_modifier_n_low=float(config['ec_uptake_modifier_n_low']),
             ec_uptake_modifier_p_low=float(config['ec_uptake_modifier_p_low']),
-            ec_uptake_modifier_fe_low=float(config['ec_uptake_modifier_fe_low']),
             kinetics_n_no3_vmax=float(config['kinetics_n_no3_vmax']),
             kinetics_n_no3_km=float(config['kinetics_n_no3_km']),
             kinetics_n_no3_min_conc=float(config['kinetics_n_no3_min_conc']),
@@ -340,24 +302,6 @@ class NutrientParameters:
             kinetics_s_so4_vmax=float(config['kinetics_s_so4_vmax']),
             kinetics_s_so4_km=float(config['kinetics_s_so4_km']),
             kinetics_s_so4_min_conc=float(config['kinetics_s_so4_min_conc']),
-            kinetics_fe_vmax=float(config['kinetics_fe_vmax']),
-            kinetics_fe_km=float(config['kinetics_fe_km']),
-            kinetics_fe_min_conc=float(config['kinetics_fe_min_conc']),
-            kinetics_mn_vmax=float(config['kinetics_mn_vmax']),
-            kinetics_mn_km=float(config['kinetics_mn_km']),
-            kinetics_mn_min_conc=float(config['kinetics_mn_min_conc']),
-            kinetics_zn_vmax=float(config['kinetics_zn_vmax']),
-            kinetics_zn_km=float(config['kinetics_zn_km']),
-            kinetics_zn_min_conc=float(config['kinetics_zn_min_conc']),
-            kinetics_cu_vmax=float(config['kinetics_cu_vmax']),
-            kinetics_cu_km=float(config['kinetics_cu_km']),
-            kinetics_cu_min_conc=float(config['kinetics_cu_min_conc']),
-            kinetics_b_vmax=float(config['kinetics_b_vmax']),
-            kinetics_b_km=float(config['kinetics_b_km']),
-            kinetics_b_min_conc=float(config['kinetics_b_min_conc']),
-            kinetics_mo_vmax=float(config['kinetics_mo_vmax']),
-            kinetics_mo_km=float(config['kinetics_mo_km']),
-            kinetics_mo_min_conc=float(config['kinetics_mo_min_conc']),
             mobility_classifications=mobility_class,
             xylem_transport_rates=xylem_rates,
             phloem_transport_rates=phloem_rates,
@@ -372,7 +316,6 @@ class NutrientParameters:
             ec_boost_max_n=float(config['ec_boost_max_n']),
             ec_boost_max_p=float(config['ec_boost_max_p']),
             ec_boost_max_k=float(config['ec_boost_max_k']),
-            ec_boost_max_fe=float(config['ec_boost_max_fe']),
             temperature_factor_base=float(config['temperature_factor_base']),
             ph_factor_base=float(config['ph_factor_base']),
             reference_daily_growth_rate=float(config['reference_daily_growth_rate']),
@@ -508,13 +451,7 @@ class NutrientModel:
             "K": self.params.ec_factor_k,
             "Ca": self.params.ec_factor_ca,
             "Mg": self.params.ec_factor_mg,
-            "S-SO4": self.params.ec_factor_s_so4,
-            "Fe": self.params.ec_factor_fe,
-            "Mn": self.params.ec_factor_mn,
-            "Zn": self.params.ec_factor_zn,
-            "Cu": self.params.ec_factor_cu,
-            "B": self.params.ec_factor_b,
-            "Mo": self.params.ec_factor_mo
+            "S-SO4": self.params.ec_factor_s_so4
         }
 
     def _get_uptake_kinetics(self) -> Dict[str, Dict[str, float]]:
@@ -525,13 +462,7 @@ class NutrientModel:
             'K': {'vmax': self.params.kinetics_k_vmax, 'km': self.params.kinetics_k_km, 'min_conc': self.params.kinetics_k_min_conc},
             'Ca': {'vmax': self.params.kinetics_ca_vmax, 'km': self.params.kinetics_ca_km, 'min_conc': self.params.kinetics_ca_min_conc},
             'Mg': {'vmax': self.params.kinetics_mg_vmax, 'km': self.params.kinetics_mg_km, 'min_conc': self.params.kinetics_mg_min_conc},
-            'S-SO4': {'vmax': self.params.kinetics_s_so4_vmax, 'km': self.params.kinetics_s_so4_km, 'min_conc': self.params.kinetics_s_so4_min_conc},
-            'Fe': {'vmax': self.params.kinetics_fe_vmax, 'km': self.params.kinetics_fe_km, 'min_conc': self.params.kinetics_fe_min_conc},
-            'Mn': {'vmax': self.params.kinetics_mn_vmax, 'km': self.params.kinetics_mn_km, 'min_conc': self.params.kinetics_mn_min_conc},
-            'Zn': {'vmax': self.params.kinetics_zn_vmax, 'km': self.params.kinetics_zn_km, 'min_conc': self.params.kinetics_zn_min_conc},
-            'Cu': {'vmax': self.params.kinetics_cu_vmax, 'km': self.params.kinetics_cu_km, 'min_conc': self.params.kinetics_cu_min_conc},
-            'B': {'vmax': self.params.kinetics_b_vmax, 'km': self.params.kinetics_b_km, 'min_conc': self.params.kinetics_b_min_conc},
-            'Mo': {'vmax': self.params.kinetics_mo_vmax, 'km': self.params.kinetics_mo_km, 'min_conc': self.params.kinetics_mo_min_conc}
+            'S-SO4': {'vmax': self.params.kinetics_s_so4_vmax, 'km': self.params.kinetics_s_so4_km, 'min_conc': self.params.kinetics_s_so4_min_conc}
         }
 
     def calculate_nutrient_dynamics(self, concentrations: Dict[str, float], plant_status: Dict[str, Any],
@@ -594,7 +525,7 @@ class NutrientModel:
                 "K": max(self.params.ec_stress_min_threshold, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_k_high),
                 "Ca": max(self.params.ec_stress_min_threshold, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_ca_high),
                 "Mg": max(self.params.ec_stress_min_threshold, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_ca_high),
-                "Fe": max(self.params.ec_stress_min_threshold, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_p_high),
+                "S-SO4": max(self.params.ec_stress_min_threshold, 1.0 - (ec_ratio - 1.0) * self.params.ec_uptake_modifier_p_high),
             }
         elif ec_ratio < self.params.ec_uptake_low_threshold:
             modifiers = {
@@ -603,7 +534,7 @@ class NutrientModel:
                 "K": min(self.params.ec_boost_max_k, 1.0 + (self.params.ec_uptake_low_threshold - ec_ratio) * self.params.ec_uptake_modifier_p_low),
                 "Ca": self.params.ph_factor_base,
                 "Mg": self.params.ph_factor_base,
-                "Fe": min(self.params.ec_boost_max_fe, 1.0 + (self.params.ec_uptake_low_threshold - ec_ratio) * self.params.ec_uptake_modifier_fe_low),
+                "S-SO4": self.params.ph_factor_base,
             }
         else:
             modifiers = {nutrient: 1.0 for nutrient in self.ec_factors.keys()}
@@ -807,6 +738,11 @@ class NutrientModel:
             phloem_rate = self.params.phloem_transport_rates[nutrient] * temp_factor
             total_demand = sum(d.get(nutrient) for d in sink_demands.values() if d.get(nutrient) is not None)
             total_supply = sum(s.get(nutrient) for s in source_supplies.values() if s.get(nutrient) is not None)
+            # Debug logging for P-PO4
+            if nutrient == "P-PO4":
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"P-PO4 transport check: total_demand={total_demand:.8f}, total_supply={total_supply:.8f}")
             if total_demand > 0 and total_supply > 0:
                 supply_demand_ratio = total_supply / total_demand
                 transport_eff = min(1.0, supply_demand_ratio)
@@ -839,11 +775,23 @@ class NutrientModel:
                                     total_cap = transport_capacities[source_organ]["xylem"] + transport_capacities[source_organ]["phloem"]
                                     flux_rate = min(base_flux, sink_demand, total_cap)
                                     mechanism = "complex"
+                                elif transport_type == TransportMechanism.PHLOEM_ONLY.value:
+                                    # Phloem-only transport (e.g., P-PO4) - can move from any organ via phloem
+                                    max_flux = src_supply * phloem_rate
+                                    cap = transport_capacities[source_organ]["phloem"]
+                                    flux_rate = min(max_flux, sink_demand, cap)
+                                    mechanism = "phloem"
                                 else:
                                     flux_rate = 0.0
                                     mechanism = "none"
+                                flux_rate_before_eff = flux_rate
                                 flux_rate *= transport_eff
-                                if flux_rate > 0.001:
+                                # Use a very low threshold, but also check flux_rate_before_eff to ensure
+                                # we don't filter out valid fluxes that are just small due to efficiency
+                                if flux_rate > 0.000001 or (flux_rate_before_eff > 0.00001 and flux_rate > 0):
+                                    # Capture fluxes that are either:
+                                    # 1. Above threshold after efficiency (flux_rate > 0.000001), OR
+                                    # 2. Were significant before efficiency but reduced by transport_eff
                                     fluxes.append(
                                         NutrientTransportFlux(
                                             source_organ=source_organ,

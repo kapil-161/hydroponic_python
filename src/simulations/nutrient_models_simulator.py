@@ -57,8 +57,8 @@ class NutrientModelsSimulator(BaseSimulator):
         
         # Initialize nutrient dictionaries
         # Use nutrient names that match the model's kinetics dictionary
-        self.nutrient_elements = ['N-NO3', 'N-NH4', 'P-PO4', 'K', 'Ca', 'Mg', 'S-SO4', 
-                                 'Fe', 'Mn', 'Zn', 'Cu', 'B', 'Mo']
+        # Only macronutrients: N, P, K, Ca, Mg, S (micronutrients removed)
+        self.nutrient_elements = ['N-NO3', 'N-NH4', 'P-PO4', 'K', 'Ca', 'Mg', 'S-SO4']
         
         for element in self.nutrient_elements:
             # Initialize with zero values - actual concentrations must come from CSV/inputs
@@ -117,7 +117,6 @@ class NutrientModelsSimulator(BaseSimulator):
                 'Ca': 'solution_ca_concentration',
                 'Mg': 'solution_mg_concentration',
                 'S-SO4': 'solution_s_concentration',
-                'Fe': 'solution_fe_concentration',
             }
 
             # Load concentrations from CSV
@@ -130,9 +129,6 @@ class NutrientModelsSimulator(BaseSimulator):
                         self.state.nutrient_concentrations[element] = base_value * 0.1  # 10% as ammonium
                     else:
                         self.state.nutrient_concentrations[element] = base_value
-                else:
-                    # Micronutrients not in CSV - set to trace levels
-                    self.state.nutrient_concentrations[element] = 0.1
 
             # Calculate EC from concentrations instead of using hardcoded value
             initial_temp = initial_state.get('canopy_temperature', 22.0)  # Default to 22C if not in initials
@@ -470,7 +466,7 @@ class NutrientModelsSimulator(BaseSimulator):
             updated_concentrations = result.get('updated_concentrations', {})
             uptake_rates = result.get('uptake_rates_mg_per_plant_per_day', {})
             organ_pools = result.get('organ_pools', {})
-            transport_fluxes = result.get('transport_fluxes', {})
+            transport_fluxes = result.get('transport_fluxes', [])
 
             # Update nutrient concentrations and uptake rates
             # Scientific principle: Only update if model returns valid values, preserve existing otherwise
@@ -486,12 +482,84 @@ class NutrientModelsSimulator(BaseSimulator):
                 if element in updated_concentrations:
                     self.state.nutrient_availability[element] = min(1.0, updated_concentrations[element] / 100.0)
 
-                # Simplified nutrient pool tracking (removed complex organ pool calculations)
-                # Update fluxes from transport_fluxes
-                if 'xylem' in transport_fluxes and element in transport_fluxes['xylem']:
-                    self.state.xylem_flux[element] = transport_fluxes['xylem'][element]
-                if 'phloem' in transport_fluxes and element in transport_fluxes['phloem']:
-                    self.state.phloem_flux[element] = transport_fluxes['phloem'][element]
+                # Extract organ pools from nested dict structure: Dict[organ_name, Dict[nutrient, OrganNutrientPools]]
+                # Sum root pools (roots) and shoot pools (leaves + stems)
+                root_pool_total = 0.0
+                shoot_pool_total = 0.0
+                
+                if organ_pools:
+                    # Root pools
+                    if 'roots' in organ_pools and element in organ_pools['roots']:
+                        root_pool = organ_pools['roots'][element]
+                        # OrganNutrientPools has total_content attribute
+                        if hasattr(root_pool, 'total_content'):
+                            root_pool_total = root_pool.total_content
+                        elif isinstance(root_pool, dict):
+                            root_pool_total = root_pool.get('total_content', 0.0)
+                    
+                    # Shoot pools (leaves + stems)
+                    for shoot_organ in ['leaves', 'stems']:
+                        if shoot_organ in organ_pools and element in organ_pools[shoot_organ]:
+                            shoot_pool = organ_pools[shoot_organ][element]
+                            if hasattr(shoot_pool, 'total_content'):
+                                shoot_pool_total += shoot_pool.total_content
+                            elif isinstance(shoot_pool, dict):
+                                shoot_pool_total += shoot_pool.get('total_content', 0.0)
+                
+                self.state.root_nutrient_pools[element] = root_pool_total
+                self.state.shoot_nutrient_pools[element] = shoot_pool_total
+
+                # Extract transport fluxes from list of NutrientTransportFlux objects
+                # Aggregate by nutrient and separate xylem vs phloem
+                xylem_flux_total = 0.0
+                phloem_flux_total = 0.0
+                
+                if isinstance(transport_fluxes, list) and len(transport_fluxes) > 0:
+                    for flux in transport_fluxes:
+                        # Get nutrient name from flux object
+                        flux_nutrient = None
+                        if hasattr(flux, 'nutrient'):
+                            flux_nutrient = flux.nutrient
+                        elif isinstance(flux, dict):
+                            flux_nutrient = flux.get('nutrient')
+                        
+                        # Only process fluxes for this nutrient
+                        if flux_nutrient == element:
+                            # Get transport mechanism and flux rate
+                            mechanism = None
+                            flux_rate = 0.0
+                            
+                            if hasattr(flux, 'transport_mechanism'):
+                                mechanism = flux.transport_mechanism
+                                flux_rate = flux.flux_rate if hasattr(flux, 'flux_rate') else 0.0
+                            elif isinstance(flux, dict):
+                                mechanism = flux.get('transport_mechanism', '')
+                                flux_rate = flux.get('flux_rate', 0.0)
+                            
+                            # Distribute flux based on transport mechanism
+                            # Mechanism values from model: "xylem", "phloem", "bidirectional", "complex", "none"
+                            if mechanism == 'xylem':
+                                xylem_flux_total += flux_rate
+                            elif mechanism == 'phloem':
+                                phloem_flux_total += flux_rate
+                            elif mechanism == 'bidirectional':
+                                # Split bidirectional flux (60% xylem, 40% phloem based on model logic)
+                                xylem_flux_total += flux_rate * 0.6
+                                phloem_flux_total += flux_rate * 0.4
+                            elif mechanism == 'complex':
+                                # Complex transport uses both, split evenly
+                                xylem_flux_total += flux_rate * 0.5
+                                phloem_flux_total += flux_rate * 0.5
+                            # "none" mechanism means no transport, so skip it
+                elif isinstance(transport_fluxes, dict):
+                    # Handle case where transport_fluxes might be a dict (legacy format)
+                    if 'xylem' in transport_fluxes and element in transport_fluxes['xylem']:
+                        xylem_flux_total = transport_fluxes['xylem'][element]
+                    if 'phloem' in transport_fluxes and element in transport_fluxes['phloem']:
+                        phloem_flux_total = transport_fluxes['phloem'][element]
+                
+                self.state.xylem_flux[element] = xylem_flux_total
+                self.state.phloem_flux[element] = phloem_flux_total
             
             # Update cumulative values
             # Note: nutrient_uptake_rates is in mg/plant/day (from model)

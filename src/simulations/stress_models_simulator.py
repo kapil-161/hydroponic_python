@@ -334,8 +334,24 @@ class StressModelsSimulator(BaseSimulator):
                 self.state.salinity_stress = 0.0  # Will be calculated by nutrient models
 
             # Use model's overall stress factor and severity
-            self.state.integrated_stress = stress_result['overall_stress_factor']
-            self.state.stress_severity = stress_result['stress_severity'].upper()
+            # overall_stress_factor is a process functionality factor (1.0 = no impact, 0.0 = complete inhibition)
+            # Convert to stress level (0.0 = no stress, 1.0 = max stress) by inverting
+            self.state.integrated_stress = 1.0 - stress_result['overall_stress_factor']
+            
+            # Recalculate severity from integrated_stress (stress level) using correct thresholds
+            # Severity thresholds for stress level (0.0 = no stress, 1.0 = max stress):
+            # - MILD: stress <= 0.2 (low stress)
+            # - MODERATE: stress <= 0.4
+            # - SEVERE: stress <= 0.7
+            # - CRITICAL: stress > 0.7 (high stress)
+            if self.state.integrated_stress <= 0.2:
+                self.state.stress_severity = "MILD"
+            elif self.state.integrated_stress <= 0.4:
+                self.state.stress_severity = "MODERATE"
+            elif self.state.integrated_stress <= 0.7:
+                self.state.stress_severity = "SEVERE"
+            else:
+                self.state.stress_severity = "CRITICAL"
 
             # Extract acclimation and damage from stress_states
             # Get maximum acclimation and damage across all stress types
@@ -352,10 +368,9 @@ class StressModelsSimulator(BaseSimulator):
             self.state.acclimation_level = max_acclimation
             self.state.damage_level = max_damage
 
-            # Update cumulative values (accumulate actual stress, not deficit)
-            hourly_stress = self.state.integrated_stress * 3600
-            self.state.cumulative_stress += hourly_stress
-            self.state.daily_stress += hourly_stress
+            # Update cumulative values (accumulate stress directly, not multiplied by time)
+            self.state.cumulative_stress += self.state.integrated_stress
+            self.state.daily_stress += self.state.integrated_stress
             
         except Exception as e:
             # Per Rules.md: raise errors, don't suppress them

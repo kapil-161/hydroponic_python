@@ -264,7 +264,13 @@ class PhotosynthesisModel:
 
         hourly_g_c_per_m2 = net_photosynthesis_rate * self.params.seconds_per_hour * self.params.umol_to_g_carbon_ratio
         final_result = max(0.0, hourly_g_c_per_m2 * lai * ec_factor)
-
+        
+        # DEBUG: Log if net is being clamped to 0
+        if final_result == 0.0 and net_photosynthesis_rate > -0.001:  # Very small negative values
+            # This indicates net_photosynthesis_rate is slightly negative (respiration > photosynthesis)
+            # but gets clamped to 0.0, which is correct behavior
+            pass
+        
         return final_result, gs
 
     def _calculate_temperature_stress_factor(self, temp_c: float, optimal_temp_min: float, optimal_temp_max: float) -> float:

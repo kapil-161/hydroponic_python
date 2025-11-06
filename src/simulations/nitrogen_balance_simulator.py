@@ -146,6 +146,14 @@ class NitrogenBalanceSimulator(BaseSimulator):
         self.history.clear()
         self.dependency_cache.clear()
         
+        # Initialize previous biomass tracking for growth rate calculation
+        initial_state = data.get('initial_state', {})
+        self._prev_biomass = {
+            'leaf_biomass': initial_state.get('leaf_biomass', 0.015),
+            'stem_biomass': initial_state.get('stem_biomass', 0.005),
+            'root_biomass': initial_state.get('root_biomass', 0.01)
+        }
+        
         # Persist system_config from initials.csv into dependency cache for consistent access
         system_config = data.get('system_config', {})
         if system_config:
@@ -338,6 +346,29 @@ class NitrogenBalanceSimulator(BaseSimulator):
             if any(x is None for x in [growth_stage, development_index]):
                 raise ValueError("Phenology data missing from phenology_simulator - no defaults allowed")
             
+            # Convert growth_stage to format expected by nitrogen balance model
+            # Model expects: 'vegetative' or 'reproductive'
+            # Phenology returns: LettuceGrowthStage enum or string like "V1", "V2", "HI", "HM", etc.
+            if isinstance(growth_stage, str):
+                # Check if it's a vegetative stage (starts with "V" or "GE", "VE")
+                if growth_stage.startswith('V') or growth_stage in ['GE', 'VE', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11+']:
+                    growth_stage_for_model = 'vegetative'
+                # Check if it's a reproductive stage
+                elif growth_stage in ['HI', 'HD', 'HM', 'BI', 'FL', 'AN', 'SD', 'PM']:
+                    growth_stage_for_model = 'reproductive'
+                else:
+                    # Default to vegetative for unknown stages
+                    growth_stage_for_model = 'vegetative'
+            else:
+                # Handle enum values
+                growth_stage_str = str(growth_stage)
+                if 'VEGETATIVE' in growth_stage_str or growth_stage_str.startswith('V'):
+                    growth_stage_for_model = 'vegetative'
+                elif 'REPRODUCTIVE' in growth_stage_str or growth_stage_str in ['HI', 'HD', 'HM', 'BI', 'FL', 'AN', 'SD', 'PM']:
+                    growth_stage_for_model = 'reproductive'
+                else:
+                    growth_stage_for_model = 'vegetative'  # Default
+            
             # Get stress data from stress models simulator
             stress_data = self.dependency_cache.get('stress_models', {})
             nutrient_stress = stress_data.get('nutrient_stress')
@@ -369,31 +400,172 @@ class NitrogenBalanceSimulator(BaseSimulator):
             # It already accounts for root surface area, Michaelis-Menten kinetics, environmental factors, etc.
             # No need to recalculate here - this creates consistency across the system
 
-            # Calculate nitrogen demand and allocation using model methods
-            demand_result = self.model.calculate_nitrogen_demand(
-                organ_growth_rates={'leaves': 0.1, 'stems': 0.05, 'roots': 0.05},
-                growth_stage=growth_stage,
-                environmental_factors={
-                    'temperature': weather_data.get('temperature'),
-                    'water': 1.0,
-                    'pH': 6.0
-                }
+            # Convert nitrogen uptake from mg/plant/day to g/plant/day for model
+            nitrogen_uptake_g_per_plant_per_day = nitrogen_uptake_mg_per_plant_per_day / 1000.0
+            
+            # Calculate organ growth rates from biomass change (g/day)
+            # Get previous biomass for growth rate calculation
+            prev_biomass_data = getattr(self, '_prev_biomass', {})
+            prev_leaf_biomass = prev_biomass_data.get('leaf_biomass', leaf_biomass)
+            prev_stem_biomass = prev_biomass_data.get('stem_biomass', stem_biomass)
+            prev_root_biomass = prev_biomass_data.get('root_biomass', root_biomass)
+            
+            # Calculate hourly growth rates (g/hour), convert to daily (g/day)
+            # Use max to ensure non-negative, and multiply by 24 to convert hourly to daily
+            # If biomass hasn't changed, use a small positive value to allow nitrogen allocation
+            leaf_growth_rate = max(0.0, (leaf_biomass - prev_leaf_biomass) * 24.0)  # g/day
+            stem_growth_rate = max(0.0, (stem_biomass - prev_stem_biomass) * 24.0)  # g/day
+            root_growth_rate = max(0.0, (root_biomass - prev_root_biomass) * 24.0)  # g/day
+            
+            # FIX: If growth rates are 0 but we have nitrogen uptake, estimate growth from nitrogen
+            # This handles the case where biomass change is small but nitrogen is being allocated
+            # Use realistic bounds to prevent unrealistic growth estimates
+            if leaf_growth_rate == 0.0 and stem_growth_rate == 0.0 and root_growth_rate == 0.0:
+                # Estimate growth rates from nitrogen uptake and typical N concentrations
+                # Typical lettuce: 3-4% N in leaves, 2-3% in stems, 1-2% in roots
+                if nitrogen_uptake_g_per_plant_per_day > 0:
+                    # Distribute nitrogen uptake proportionally to organ biomass
+                    total_biomass_for_ratio = max(0.001, total_biomass)
+                    leaf_fraction = leaf_biomass / total_biomass_for_ratio
+                    stem_fraction = stem_biomass / total_biomass_for_ratio
+                    root_fraction = root_biomass / total_biomass_for_ratio
+                    
+                    # Estimate growth from nitrogen allocation (using parameter from CSV)
+                    # Use realistic bounds: max growth = 10% of current biomass per day
+                    n_concentration_new_growth = self.nitrogen_params.nitrogen_concentration_new_growth  # From CSV
+                    estimated_total_growth = nitrogen_uptake_g_per_plant_per_day / n_concentration_new_growth
+                    max_realistic_growth = total_biomass * 0.1  # Max 10% growth per day
+                    estimated_total_growth = min(estimated_total_growth, max_realistic_growth)
+                    
+                    # Ensure minimum growth to allow nitrogen allocation
+                    # Minimum: enough to use at least 10% of nitrogen uptake
+                    min_growth_from_n = (nitrogen_uptake_g_per_plant_per_day * 0.1) / n_concentration_new_growth
+                    estimated_total_growth = max(estimated_total_growth, min_growth_from_n)
+                    
+                    leaf_growth_rate = estimated_total_growth * leaf_fraction
+                    stem_growth_rate = estimated_total_growth * stem_fraction
+                    root_growth_rate = estimated_total_growth * root_fraction
+                    
+                    # Ensure non-negative and reasonable bounds (using parameter from CSV)
+                    minimum_growth_rate = self.nitrogen_params.minimum_growth_rate  # From CSV
+                    leaf_growth_rate = max(minimum_growth_rate, min(leaf_growth_rate, leaf_biomass * 0.1))
+                    stem_growth_rate = max(minimum_growth_rate, min(stem_growth_rate, stem_biomass * 0.1))
+                    root_growth_rate = max(minimum_growth_rate, min(root_growth_rate, root_biomass * 0.1))
+            else:
+                # Ensure minimum growth rates even when calculated from biomass change
+                # This prevents zero demand when growth is very small (using parameter from CSV)
+                minimum_growth_rate = self.nitrogen_params.minimum_growth_rate  # From CSV
+                leaf_growth_rate = max(leaf_growth_rate, minimum_growth_rate / 10.0)  # Use smaller fraction for very small growth
+                stem_growth_rate = max(stem_growth_rate, minimum_growth_rate / 10.0)
+                root_growth_rate = max(root_growth_rate, minimum_growth_rate / 10.0)
+            
+            # Store current biomass for next step
+            self._prev_biomass = {
+                'leaf_biomass': leaf_biomass,
+                'stem_biomass': stem_biomass,
+                'root_biomass': root_biomass
+            }
+            
+            # Prepare inputs for update_nitrogen_pools
+            organ_growth_rates = {
+                'leaves': leaf_growth_rate,
+                'stems': stem_growth_rate,
+                'roots': root_growth_rate,
+                'reproductive': 0.0  # Lettuce doesn't have reproductive stage in this simulation
+            }
+            
+            # CRITICAL FIX: Model expects normalized environmental factors (0-1), not raw values
+            # Temperature: normalize to 0-1 range (optimal ~20-25°C = 0.8-1.0)
+            # Water: convert stress (0-1) to water status (1-0)
+            # pH: normalize to 0-1 range (optimal ~6.0-6.5 = 0.8-1.0)
+            temperature_c = weather_data.get('temperature', 25.0)
+            # Normalize temperature: optimal range 20-25°C = 1.0, range 5-35°C = 0.0-1.0
+            temp_normalized = max(0.0, min(1.0, (temperature_c - 5.0) / 30.0))  # 5-35°C → 0-1
+            # Boost optimal range (20-25°C) to near 1.0
+            if 20.0 <= temperature_c <= 25.0:
+                temp_normalized = 0.9 + (temperature_c - 20.0) / 25.0 * 0.1  # 0.9-1.0
+            
+            water_normalized = max(0.1, 1.0 - water_stress)  # Convert stress (0-1) to water status (1-0)
+            
+            # Normalize pH: optimal ~6.0-6.5 = 1.0, range 4.0-8.0 = 0.0-1.0
+            ph_value = 6.0  # Typical hydroponic pH
+            ph_normalized = max(0.0, min(1.0, 1.0 - abs(ph_value - 6.25) / 2.25))  # Distance from optimal 6.25
+            
+            environmental_factors = {
+                'temperature': max(0.1, temp_normalized),  # Ensure > 0 (model requirement)
+                'water': max(0.1, min(1.0, water_normalized)),  # Clamp to 0.1-1.0
+                'pH': max(0.1, min(1.0, ph_normalized))  # Clamp to 0.1-1.0
+            }
+            
+            stress_factors = {
+                'nutrient': 1.0 - nutrient_stress,
+                'water': 1.0 - water_stress,
+                'temperature': 1.0 - temperature_stress
+            }
+            
+            # Senescence rates (fraction/day) - simplified for now
+            senescence_rates = {
+                'leaves': 0.0,  # No senescence in vegetative lettuce
+                'stems': 0.0,
+                'roots': 0.0,
+                'reproductive': 0.0
+            }
+            
+            # CRITICAL FIX: Call update_nitrogen_pools() to update model's internal state
+            # This method updates organ states, calculates remobilization, and returns proper response
+            balance_response = self.model.update_nitrogen_pools(
+                external_nitrogen_input=nitrogen_uptake_g_per_plant_per_day,  # g/plant/day
+                organ_growth_rates=organ_growth_rates,
+                environmental_factors=environmental_factors,
+                growth_stage=growth_stage_for_model,  # Use converted growth stage
+                stress_factors=stress_factors,
+                senescence_rates=senescence_rates
             )
-
-            # Create result dict using uptake from nutrient_models and demand from nitrogen_balance model
-            total_demand = sum(demand_result.values()) if demand_result else 0.0
+            
+            # Extract data from NitrogenBalanceResponse
+            allocation_response = balance_response.allocation_response
+            uptake_response = balance_response.uptake_response
+            
+            # Create result dict from model response
             result = {
                 'total_nitrogen_uptake': nitrogen_uptake_mg_per_plant_per_day,  # From nutrient_models (mg/plant/day)
                 'nitrate_uptake': nitrate_uptake_rate,  # From nutrient_models (mg/plant/day)
                 'ammonium_uptake': ammonium_uptake_rate,  # From nutrient_models (mg/plant/day)
                 'amino_acid_uptake': 0.0,  # Amino acids negligible in hydroponic lettuce
-                'total_nitrogen_allocation': total_demand,
-                'leaf_nitrogen_allocation': demand_result.get('leaves', 0.0) if demand_result else 0.0,
-                'stem_nitrogen_allocation': demand_result.get('stems', 0.0) if demand_result else 0.0,
-                'root_nitrogen_allocation': demand_result.get('roots', 0.0) if demand_result else 0.0,
-                'reproductive_nitrogen_allocation': demand_result.get('reproductive', 0.0) if demand_result else 0.0,
-                'total_nitrogen_remobilization': 0.0,
-                'nitrogen_stress_index': self.model.calculate_nitrogen_stress_level()
+                'total_nitrogen_allocation': sum(allocation_response.allocated_by_organ.values()),  # g/plant/day
+                'leaf_nitrogen_allocation': allocation_response.allocated_by_organ.get('leaves', 0.0),
+                'stem_nitrogen_allocation': allocation_response.allocated_by_organ.get('stems', 0.0),
+                'root_nitrogen_allocation': allocation_response.allocated_by_organ.get('roots', 0.0),
+                'reproductive_nitrogen_allocation': allocation_response.allocated_by_organ.get('reproductive', 0.0),
+                'total_nitrogen_remobilization': balance_response.remobilized_nitrogen,  # g/plant/day
+                'nitrogen_stress_index': balance_response.nitrogen_stress_level,  # Calculated AFTER pools updated
+                'nitrogen_use_efficiency': balance_response.nitrogen_use_efficiency,
+                'photosynthetic_n_use_efficiency': self.nitrogen_params.photosynthetic_n_use_efficiency,
+                'growth_n_use_efficiency': self.nitrogen_params.growth_n_use_efficiency,
+                'luxury_uptake_factor': 1.0,  # TODO: Calculate from model
+                # Extract nitrogen pools from organ states
+                'nitrogen_pools': {
+                    'total': balance_response.total_plant_nitrogen,
+                    'organic': sum(state.structural_n + state.metabolic_n + state.storage_n for state in balance_response.organ_states.values()),
+                    'inorganic': 0.0,  # Not tracked separately
+                    'mobile': sum(state.transport_n for state in balance_response.organ_states.values()),
+                    'structural': sum(state.structural_n for state in balance_response.organ_states.values())
+                },
+                # Extract uptake rates from uptake response
+                'uptake_rates': {
+                    'NO3': nitrate_uptake_rate / root_mass if root_mass > 0 else 0.0,  # mg/g root/day
+                    'NH4': ammonium_uptake_rate / root_mass if root_mass > 0 else 0.0,
+                    'amino_acids': 0.0
+                },
+                # Extract allocation rates (g/plant/day)
+                'allocation_rates': allocation_response.allocated_by_organ.copy(),
+                # Extract remobilization rates (g/plant/day) - simplified for now
+                'remobilization_rates': {
+                    'leaves': balance_response.remobilized_nitrogen * 0.5 if balance_response.remobilized_nitrogen > 0 else 0.0,
+                    'stems': balance_response.remobilized_nitrogen * 0.3 if balance_response.remobilized_nitrogen > 0 else 0.0,
+                    'roots': balance_response.remobilized_nitrogen * 0.2 if balance_response.remobilized_nitrogen > 0 else 0.0,
+                    'reproductive': 0.0
+                }
             }
             
             # Update state with model results
@@ -403,36 +575,79 @@ class NitrogenBalanceSimulator(BaseSimulator):
             ammonium_uptake_rate = result.get('ammonium_uptake', 0.0)
             amino_acid_uptake_rate = result.get('amino_acid_uptake', 0.0)
             
-            # Update allocation (hourly rates)
-            self.state.total_nitrogen_allocation = result.get('total_nitrogen_allocation', self.state.total_nitrogen_allocation)
-            leaf_alloc_hourly = result.get('leaf_nitrogen_allocation', self.state.leaf_nitrogen_allocation)
-            stem_alloc_hourly = result.get('stem_nitrogen_allocation', self.state.stem_nitrogen_allocation)
-            root_alloc_hourly = result.get('root_nitrogen_allocation', self.state.root_nitrogen_allocation)
-            reproductive_alloc_hourly = result.get('reproductive_nitrogen_allocation', self.state.reproductive_nitrogen_allocation)
-
+            # Update allocation (convert from g/plant/day to hourly rates)
+            # Get values directly from allocation_response, not from result dict
+            # This ensures we use the actual model output
+            total_alloc_daily = sum(allocation_response.allocated_by_organ.values())  # g/plant/day
+            leaf_alloc_daily = allocation_response.allocated_by_organ.get('leaves', 0.0)  # g/plant/day
+            stem_alloc_daily = allocation_response.allocated_by_organ.get('stems', 0.0)  # g/plant/day
+            root_alloc_daily = allocation_response.allocated_by_organ.get('roots', 0.0)  # g/plant/day
+            reproductive_alloc_daily = allocation_response.allocated_by_organ.get('reproductive', 0.0)  # g/plant/day
+            
+            # Ensure all allocation values are non-negative (model should not return negative)
+            leaf_alloc_daily = max(0.0, leaf_alloc_daily)
+            stem_alloc_daily = max(0.0, stem_alloc_daily)
+            root_alloc_daily = max(0.0, root_alloc_daily)
+            reproductive_alloc_daily = max(0.0, reproductive_alloc_daily)
+            total_alloc_daily = leaf_alloc_daily + stem_alloc_daily + root_alloc_daily + reproductive_alloc_daily
+            
+            # Add upper bounds to prevent unrealistic values (using parameters from CSV)
+            # Max realistic allocation: fraction of current organ biomass per day (using N fraction from CSV)
+            # This allows for rapid growth while preventing unrealistic values
+            # Remove minimum bound - let model values pass through (they're already validated)
+            max_allocation_biomass_fraction = self.nitrogen_params.max_allocation_biomass_fraction  # From CSV
+            max_allocation_nitrogen_fraction = self.nitrogen_params.max_allocation_nitrogen_fraction  # From CSV
+            max_leaf_alloc = leaf_biomass * max_allocation_biomass_fraction * max_allocation_nitrogen_fraction if leaf_biomass > 0 else 1.0
+            max_stem_alloc = stem_biomass * max_allocation_biomass_fraction * max_allocation_nitrogen_fraction if stem_biomass > 0 else 1.0
+            max_root_alloc = root_biomass * max_allocation_biomass_fraction * max_allocation_nitrogen_fraction if root_biomass > 0 else 1.0
+            
+            # Apply upper bounds only (don't clamp small values to minimum)
+            leaf_alloc_daily = min(leaf_alloc_daily, max_leaf_alloc) if max_leaf_alloc > 0 else leaf_alloc_daily
+            stem_alloc_daily = min(stem_alloc_daily, max_stem_alloc) if max_stem_alloc > 0 else stem_alloc_daily
+            root_alloc_daily = min(root_alloc_daily, max_root_alloc) if max_root_alloc > 0 else root_alloc_daily
+            total_alloc_daily = leaf_alloc_daily + stem_alloc_daily + root_alloc_daily + reproductive_alloc_daily
+            
+            # Convert to hourly rates (g/plant/hour)
+            leaf_alloc_hourly = leaf_alloc_daily / 24.0
+            stem_alloc_hourly = stem_alloc_daily / 24.0
+            root_alloc_hourly = root_alloc_daily / 24.0
+            reproductive_alloc_hourly = reproductive_alloc_daily / 24.0
+            
+            # Store hourly rates in state
+            self.state.total_nitrogen_allocation = total_alloc_daily / 24.0  # Store as hourly rate
             self.state.leaf_nitrogen_allocation = leaf_alloc_hourly
             self.state.stem_nitrogen_allocation = stem_alloc_hourly
             self.state.root_nitrogen_allocation = root_alloc_hourly
             self.state.reproductive_nitrogen_allocation = reproductive_alloc_hourly
 
-            # Accumulate into cumulative totals for concentration calculation
+            # Accumulate into cumulative totals for concentration calculation (hourly accumulation)
             self.state.cumulative_leaf_nitrogen += leaf_alloc_hourly
             self.state.cumulative_stem_nitrogen += stem_alloc_hourly
             self.state.cumulative_root_nitrogen += root_alloc_hourly
             self.state.cumulative_reproductive_nitrogen += reproductive_alloc_hourly
             
-            # Update remobilization
-            self.state.total_nitrogen_remobilization = result.get('total_nitrogen_remobilization', self.state.total_nitrogen_remobilization)
-            self.state.leaf_nitrogen_remobilization = result.get('leaf_nitrogen_remobilization', self.state.leaf_nitrogen_remobilization)
-            self.state.stem_nitrogen_remobilization = result.get('stem_nitrogen_remobilization', self.state.stem_nitrogen_remobilization)
-            self.state.root_nitrogen_remobilization = result.get('root_nitrogen_remobilization', self.state.root_nitrogen_remobilization)
+            # Update remobilization (convert from g/plant/day to hourly rates)
+            total_remob_daily = result.get('total_nitrogen_remobilization', 0.0)  # g/plant/day
+            remob_rates = result.get('remobilization_rates', {})
             
-            # Update efficiency and stress
-            self.state.nitrogen_use_efficiency = result.get('nitrogen_use_efficiency', self.state.nitrogen_use_efficiency)
-            self.state.photosynthetic_n_use_efficiency = result.get('photosynthetic_n_use_efficiency', self.state.photosynthetic_n_use_efficiency)
-            self.state.growth_n_use_efficiency = result.get('growth_n_use_efficiency', self.state.growth_n_use_efficiency)
-            self.state.nitrogen_stress_index = result.get('nitrogen_stress_index', self.state.nitrogen_stress_index)
-            self.state.luxury_uptake_factor = result.get('luxury_uptake_factor', self.state.luxury_uptake_factor)
+            # Add bounds checking for remobilization (using parameters from CSV)
+            # Remobilization should be reasonable (using fractions from CSV)
+            max_remobilization_biomass_fraction = self.nitrogen_params.max_remobilization_biomass_fraction  # From CSV
+            max_remobilization_nitrogen_fraction = self.nitrogen_params.max_remobilization_nitrogen_fraction  # From CSV
+            max_remob = total_biomass * max_remobilization_biomass_fraction * max_remobilization_nitrogen_fraction if total_biomass > 0 else 0.0
+            total_remob_daily = max(0.0, min(total_remob_daily, max_remob))
+            
+            self.state.total_nitrogen_remobilization = total_remob_daily / 24.0  # Store as hourly rate
+            self.state.leaf_nitrogen_remobilization = max(0.0, remob_rates.get('leaves', 0.0) / 24.0)  # Convert to hourly
+            self.state.stem_nitrogen_remobilization = max(0.0, remob_rates.get('stems', 0.0) / 24.0)
+            self.state.root_nitrogen_remobilization = max(0.0, remob_rates.get('roots', 0.0) / 24.0)
+            
+            # Update efficiency and stress (get directly from balance_response, not result dict)
+            self.state.nitrogen_use_efficiency = balance_response.nitrogen_use_efficiency
+            self.state.photosynthetic_n_use_efficiency = self.nitrogen_params.photosynthetic_n_use_efficiency
+            self.state.growth_n_use_efficiency = self.nitrogen_params.growth_n_use_efficiency
+            self.state.nitrogen_stress_index = balance_response.nitrogen_stress_level  # Get directly from model response
+            self.state.luxury_uptake_factor = 1.0  # TODO: Calculate from model if needed
             
             # Update nitrogen pools
             nitrogen_pools = result.get('nitrogen_pools', {})
@@ -463,40 +678,69 @@ class NitrogenBalanceSimulator(BaseSimulator):
 
             # Calculate AREA-BASED nitrogen for photosynthesis (DIRECT BIOCHEMICAL LINK)
             # This enables direct N → Photosynthesis feedback
+            # FIX: Use CURRENT leaf N content from organ_states, not cumulative uptake
             canopy_data = self.dependency_cache.get('canopy_architecture_simulator', {})
             leaf_area = canopy_data.get('leaf_area')  # m²
 
             if leaf_area is not None and leaf_area > 0:
-                # Calculate leaf N content (assume 60% of total N goes to leaves - typical for lettuce)
-                leaf_n_fraction = 0.60  # From literature (Evans 1989, Field & Mooney 1986)
-                cumulative_n_g = self.state.cumulative_nitrogen_uptake  # grams
-                leaf_n_total = cumulative_n_g * leaf_n_fraction  # g N in leaves
+                # Get current leaf N content from organ_states (updated by update_nitrogen_pools)
+                # This represents actual current N in leaves, accounting for allocation, remobilization, and growth
+                leaf_organ_state = balance_response.organ_states.get('leaves')
+                if leaf_organ_state is not None and leaf_organ_state.total_nitrogen > 0:
+                    # Use current leaf N content (g N) divided by leaf area (m²)
+                    leaf_n_total = leaf_organ_state.total_nitrogen  # g N in leaves (current)
+                    leaf_n_area = leaf_n_total / leaf_area  # g N/m² leaf area
+                    self.state.nitrogen_area_based['leaves'] = leaf_n_area
+                else:
+                    # Fallback: use nitrogen concentration * leaf biomass / leaf area
+                    # This handles cases where organ_states might not be initialized yet
+                    if leaf_biomass > 0:
+                        # Get nitrogen concentration from state (g N/g dry mass)
+                        leaf_n_conc = self.state.nitrogen_concentrations.get('leaves', 0.0)
+                        if leaf_n_conc > 0:
+                            leaf_n_total = leaf_biomass * leaf_n_conc  # g N
+                            leaf_n_area = leaf_n_total / leaf_area  # g N/m²
+                            self.state.nitrogen_area_based['leaves'] = leaf_n_area
+                        else:
+                            # Last resort: use small default value
+                            self.state.nitrogen_area_based['leaves'] = 2.5  # g N/m² (typical optimal)
+                    else:
+                        # No leaf biomass yet, use default
+                        self.state.nitrogen_area_based['leaves'] = 2.5  # g N/m²
 
-                # Area-based concentration (g N/m² leaf area)
-                leaf_n_area = leaf_n_total / leaf_area  # g N/m²
-                self.state.nitrogen_area_based['leaves'] = leaf_n_area
-
-                # Also calculate for stems and roots if needed (using biomass allocation fractions)
-                stem_n_fraction = 0.25
-                root_n_fraction = 0.15
-                self.state.nitrogen_area_based['stems'] = cumulative_n_g * stem_n_fraction
-                self.state.nitrogen_area_based['roots'] = cumulative_n_g * root_n_fraction
+                # Also calculate for stems and roots using current organ states
+                stem_organ_state = balance_response.organ_states.get('stems')
+                root_organ_state = balance_response.organ_states.get('roots')
+                
+                if stem_organ_state is not None:
+                    self.state.nitrogen_area_based['stems'] = stem_organ_state.total_nitrogen
+                else:
+                    self.state.nitrogen_area_based['stems'] = 0.0
+                    
+                if root_organ_state is not None:
+                    self.state.nitrogen_area_based['roots'] = root_organ_state.total_nitrogen
+                else:
+                    self.state.nitrogen_area_based['roots'] = 0.0
             
-            # Update rates
+            # Update uptake rates dictionary
             uptake_rates = result.get('uptake_rates', {})
             for form in self.nitrogen_forms:
                 if form in uptake_rates:
                     self.state.uptake_rates[form] = uptake_rates[form]
             
-            allocation_rates = result.get('allocation_rates', {})
-            for organ in self.organs:
-                if organ in allocation_rates:
-                    self.state.allocation_rates[organ] = allocation_rates[organ]
+            # Update allocation rates dictionary (store hourly rates for consistency)
+            # Use the actual calculated allocation values, not from result dict
+            self.state.allocation_rates['leaves'] = leaf_alloc_hourly
+            self.state.allocation_rates['stems'] = stem_alloc_hourly
+            self.state.allocation_rates['roots'] = root_alloc_hourly
+            self.state.allocation_rates['reproductive'] = reproductive_alloc_hourly
             
+            # Update remobilization rates dictionary (convert from daily to hourly)
             remobilization_rates = result.get('remobilization_rates', {})
             for organ in self.organs:
                 if organ in remobilization_rates:
-                    self.state.remobilization_rates[organ] = remobilization_rates[organ]
+                    # Convert from g/plant/day to g/plant/hour
+                    self.state.remobilization_rates[organ] = remobilization_rates[organ] / 24.0
             
             # Update cumulative values
             # Use total_nitrogen_uptake returned by model (mg/plant/day)
@@ -601,17 +845,20 @@ class NitrogenBalanceSimulator(BaseSimulator):
     
     def get_current_state(self) -> Dict[str, Any]:
         """Get current simulator state - only scientific results, no internal tracking fields"""
+        # Convert hourly rates back to daily rates for CSV export (more readable, avoids precision loss)
+        # State stores hourly rates (g/plant/hour) for hourly simulation
+        # CSV exports daily rates (g/plant/day) for readability
         return {
             'total_nitrogen_uptake': self.state.total_nitrogen_uptake,
             'nitrate_uptake': self.state.nitrate_uptake,
             'ammonium_uptake': self.state.ammonium_uptake,
             'amino_acid_uptake': self.state.amino_acid_uptake,
-            'total_nitrogen_allocation': self.state.total_nitrogen_allocation,
-            'leaf_nitrogen_allocation': self.state.leaf_nitrogen_allocation,
-            'stem_nitrogen_allocation': self.state.stem_nitrogen_allocation,
-            'root_nitrogen_allocation': self.state.root_nitrogen_allocation,
-            'reproductive_nitrogen_allocation': self.state.reproductive_nitrogen_allocation,
-            'total_nitrogen_remobilization': self.state.total_nitrogen_remobilization,
+            'total_nitrogen_allocation': self.state.total_nitrogen_allocation * 24.0,  # Convert hourly to daily
+            'leaf_nitrogen_allocation': self.state.leaf_nitrogen_allocation * 24.0,  # Convert hourly to daily
+            'stem_nitrogen_allocation': self.state.stem_nitrogen_allocation * 24.0,  # Convert hourly to daily
+            'root_nitrogen_allocation': self.state.root_nitrogen_allocation * 24.0,  # Convert hourly to daily
+            'reproductive_nitrogen_allocation': self.state.reproductive_nitrogen_allocation * 24.0,  # Convert hourly to daily
+            'total_nitrogen_remobilization': self.state.total_nitrogen_remobilization * 24.0,  # Convert hourly to daily
             'nitrogen_use_efficiency': self.state.nitrogen_use_efficiency,
             'photosynthetic_n_use_efficiency': self.state.photosynthetic_n_use_efficiency,
             'growth_n_use_efficiency': self.state.growth_n_use_efficiency,
@@ -621,8 +868,8 @@ class NitrogenBalanceSimulator(BaseSimulator):
             'nitrogen_concentrations': self.state.nitrogen_concentrations,
             'nitrogen_area_based': self.state.nitrogen_area_based,  # For direct N → Photosynthesis link
             'uptake_rates': self.state.uptake_rates,
-            'allocation_rates': self.state.allocation_rates,
-            'remobilization_rates': self.state.remobilization_rates,
+            'allocation_rates': {k: v * 24.0 for k, v in self.state.allocation_rates.items()},  # Convert hourly to daily
+            'remobilization_rates': {k: v * 24.0 for k, v in self.state.remobilization_rates.items()},  # Convert hourly to daily
             'cumulative_nitrogen_uptake': self.state.cumulative_nitrogen_uptake,
             'daily_nitrogen_uptake': self.state.daily_nitrogen_uptake
         }

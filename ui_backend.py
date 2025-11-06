@@ -471,6 +471,7 @@ def get_tracker():
     if _tracker is None:
         _tracker = ParameterTracker(str(PROJECT_ROOT))
         _tracker.extract_parameters_from_csv()
+        _tracker.load_backward_compatibility_mappings()
         _tracker.analyze_model_files()
         _tracker.trace_parameter_flow()
     return _tracker

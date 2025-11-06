@@ -123,11 +123,13 @@ class PhenologySimulator(BaseSimulator):
             # Phenology model expects daily updates, so only call it once per day
             hour = data.get('hour', 0)
             if hour == 0:
+                # Daily reset BEFORE calculation (so daily_thermal_time accumulates correctly)
+                self.state.daily_thermal_time = 0.0
+                
                 # Execute phenology calculation using model functions (once per day)
                 self._execute_phenology_step(weather_data)
 
-                # Daily reset
-                self.state.daily_thermal_time = 0.0
+                # Update day counters
                 self.state.days_in_current_stage += 1
                 self.state.total_days_from_planting += 1
 

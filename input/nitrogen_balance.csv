@@ -5,6 +5,12 @@ nitrogen_balance,redistribution_threshold,0.8,dimensionless,Threshold for nitrog
 nitrogen_balance,redistribution_rate,0.1,per_day,Rate of nitrogen redistribution
 nitrogen_balance,sink_strength_base,1.0,dimensionless,Base sink strength for nitrogen
 nitrogen_balance,sink_strength_reproductive,1.5,dimensionless,Reproductive sink strength for nitrogen
+nitrogen_balance,nitrogen_concentration_new_growth,0.03,g_N_g_biomass,Nitrogen concentration in new growth (typical for lettuce)
+nitrogen_balance,minimum_growth_rate,0.001,g_day,Minimum growth rate to allow nitrogen allocation
+nitrogen_balance,max_allocation_biomass_fraction,0.50,dimensionless,Maximum allocation as fraction of organ biomass per day
+nitrogen_balance,max_allocation_nitrogen_fraction,0.03,g_N_g_biomass,Nitrogen fraction for maximum allocation calculation
+nitrogen_balance,max_remobilization_biomass_fraction,0.01,dimensionless,Maximum remobilization as fraction of organ biomass per day
+nitrogen_balance,max_remobilization_nitrogen_fraction,0.03,g_N_g_biomass,Nitrogen fraction for maximum remobilization calculation
 nitrogen_parameters,nitrate_reduction_rate,0.5,per_day,Nitrate reduction rate
 nitrogen_parameters,ammonium_assimilation_rate,0.3,per_day,Ammonium assimilation rate
 nitrogen_parameters,amino_acid_uptake_rate,0.2,per_day,Amino acid uptake rate

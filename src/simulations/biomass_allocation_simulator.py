@@ -444,7 +444,8 @@ class BiomassAllocationSimulator(BaseSimulator):
             'total_fresh_weight': self.state.total_fresh_weight,
             'leaf_fresh_weight': self.state.leaf_fresh_weight,
             'stem_fresh_weight': self.state.stem_fresh_weight,
-            'root_fresh_weight': self.state.root_fresh_weight
+            'root_fresh_weight': self.state.root_fresh_weight,
+            'carbon_content_fraction': self.parameters.carbon_content_fraction  # For respiration calculator
         }
 
         # Store in dependency cache for other simulators to access

@@ -876,7 +876,7 @@ class StrictParameterLoader:
 
         config = {}
 
-        # EC factors for all nutrients
+        # EC factors for macronutrients only (micronutrients removed)
         config['ec_factor_n_no3'] = self.get_parameter('nutrient_parameters_ec_factor_n_no3')
         config['ec_factor_n_nh4'] = self.get_parameter('nutrient_parameters_ec_factor_n_nh4')
         config['ec_factor_p_po4'] = self.get_parameter('nutrient_parameters_ec_factor_p_po4')
@@ -884,12 +884,6 @@ class StrictParameterLoader:
         config['ec_factor_ca'] = self.get_parameter('nutrient_parameters_ec_factor_ca')
         config['ec_factor_mg'] = self.get_parameter('nutrient_parameters_ec_factor_mg')
         config['ec_factor_s_so4'] = self.get_parameter('nutrient_parameters_ec_factor_s_so4')
-        config['ec_factor_fe'] = self.get_parameter('nutrient_parameters_ec_factor_fe')
-        config['ec_factor_mn'] = self.get_parameter('nutrient_parameters_ec_factor_mn')
-        config['ec_factor_zn'] = self.get_parameter('nutrient_parameters_ec_factor_zn')
-        config['ec_factor_cu'] = self.get_parameter('nutrient_parameters_ec_factor_cu')
-        config['ec_factor_b'] = self.get_parameter('nutrient_parameters_ec_factor_b')
-        config['ec_factor_mo'] = self.get_parameter('nutrient_parameters_ec_factor_mo')
 
         # Transport and system parameters
         config['minimum_volume_fraction'] = self.get_parameter('nutrient_parameters_minimum_volume_fraction')
@@ -898,7 +892,7 @@ class StrictParameterLoader:
         config['temperature_q10'] = self.get_parameter('nutrient_parameters_temperature_q10')
         config['transpiration_coupling'] = self.get_parameter('nutrient_parameters_transpiration_coupling')
 
-        # EC uptake modifiers
+        # EC uptake modifiers (macronutrients only)
         config['ec_uptake_high_threshold'] = self.get_parameter('nutrient_parameters_ec_uptake_high_threshold')
         config['ec_uptake_low_threshold'] = self.get_parameter('nutrient_parameters_ec_uptake_low_threshold')
         config['ec_uptake_modifier_n_high'] = self.get_parameter('nutrient_parameters_ec_uptake_modifier_n_high')
@@ -907,7 +901,6 @@ class StrictParameterLoader:
         config['ec_uptake_modifier_ca_high'] = self.get_parameter('nutrient_parameters_ec_uptake_modifier_ca_high')
         config['ec_uptake_modifier_n_low'] = self.get_parameter('nutrient_parameters_ec_uptake_modifier_n_low')
         config['ec_uptake_modifier_p_low'] = self.get_parameter('nutrient_parameters_ec_uptake_modifier_p_low')
-        config['ec_uptake_modifier_fe_low'] = self.get_parameter('nutrient_parameters_ec_uptake_modifier_fe_low')
 
         # Kinetic parameters - Nitrate
         config['kinetics_n_no3_vmax'] = self.get_parameter('nutrient_parameters_kinetics_n_no3_vmax')
@@ -944,38 +937,9 @@ class StrictParameterLoader:
         config['kinetics_s_so4_km'] = self.get_parameter('nutrient_parameters_kinetics_s_so4_km')
         config['kinetics_s_so4_min_conc'] = self.get_parameter('nutrient_parameters_kinetics_s_so4_min_conc')
 
-        # Kinetic parameters - Iron
-        config['kinetics_fe_vmax'] = self.get_parameter('nutrient_parameters_kinetics_fe_vmax')
-        config['kinetics_fe_km'] = self.get_parameter('nutrient_parameters_kinetics_fe_km')
-        config['kinetics_fe_min_conc'] = self.get_parameter('nutrient_parameters_kinetics_fe_min_conc')
-
-        # Kinetic parameters - Manganese
-        config['kinetics_mn_vmax'] = self.get_parameter('nutrient_parameters_kinetics_mn_vmax')
-        config['kinetics_mn_km'] = self.get_parameter('nutrient_parameters_kinetics_mn_km')
-        config['kinetics_mn_min_conc'] = self.get_parameter('nutrient_parameters_kinetics_mn_min_conc')
-
-        # Kinetic parameters - Zinc
-        config['kinetics_zn_vmax'] = self.get_parameter('nutrient_parameters_kinetics_zn_vmax')
-        config['kinetics_zn_km'] = self.get_parameter('nutrient_parameters_kinetics_zn_km')
-        config['kinetics_zn_min_conc'] = self.get_parameter('nutrient_parameters_kinetics_zn_min_conc')
-
-        # Kinetic parameters - Copper
-        config['kinetics_cu_vmax'] = self.get_parameter('nutrient_parameters_kinetics_cu_vmax')
-        config['kinetics_cu_km'] = self.get_parameter('nutrient_parameters_kinetics_cu_km')
-        config['kinetics_cu_min_conc'] = self.get_parameter('nutrient_parameters_kinetics_cu_min_conc')
-
-        # Kinetic parameters - Boron
-        config['kinetics_b_vmax'] = self.get_parameter('nutrient_parameters_kinetics_b_vmax')
-        config['kinetics_b_km'] = self.get_parameter('nutrient_parameters_kinetics_b_km')
-        config['kinetics_b_min_conc'] = self.get_parameter('nutrient_parameters_kinetics_b_min_conc')
-
-        # Kinetic parameters - Molybdenum
-        config['kinetics_mo_vmax'] = self.get_parameter('nutrient_parameters_kinetics_mo_vmax')
-        config['kinetics_mo_km'] = self.get_parameter('nutrient_parameters_kinetics_mo_km')
-        config['kinetics_mo_min_conc'] = self.get_parameter('nutrient_parameters_kinetics_mo_min_conc')
-
         # Load mobility parameters for nutrients that have them in CSV
         # Map specific nutrient forms to their general element names (consolidated parameters)
+        # Macronutrients only (micronutrients removed)
         nutrient_csv_mapping = {
             "N-NO3": "nitrogen",      # NO3 and NH4 both use nitrogen parameters
             "N-NH4": "nitrogen",
@@ -984,15 +948,9 @@ class StrictParameterLoader:
             "Ca": "calcium",
             "Mg": "magnesium",
             "S-SO4": "sulfur",        # SO4 uses sulfur parameters
-            "Fe": "iron",
-            "Mn": "manganese",
-            "Zn": "zinc",
-            "Cu": "copper",
-            "B": "boron",
-            "Mo": "molybdenum"
         }
 
-        nutrients = ["N-NO3", "N-NH4", "P-PO4", "K", "Ca", "Mg", "S-SO4", "Fe", "Mn", "Zn", "Cu", "B", "Mo"]
+        nutrients = ["N-NO3", "N-NH4", "P-PO4", "K", "Ca", "Mg", "S-SO4"]
         for nutrient in nutrients:
             csv_key = nutrient_csv_mapping[nutrient]
 
@@ -1052,7 +1010,6 @@ class StrictParameterLoader:
         config['ec_boost_max_n'] = self.get_parameter('nutrient_parameters_ec_boost_max_n')
         config['ec_boost_max_p'] = self.get_parameter('nutrient_parameters_ec_boost_max_p')
         config['ec_boost_max_k'] = self.get_parameter('nutrient_parameters_ec_boost_max_k')
-        config['ec_boost_max_fe'] = self.get_parameter('nutrient_parameters_ec_boost_max_fe')
         config['temperature_factor_base'] = self.get_parameter('nutrient_parameters_temperature_factor_base')
         config['ph_factor_base'] = self.get_parameter('nutrient_parameters_ph_factor_base')
         config['reference_daily_growth_rate'] = self.get_parameter('nutrient_parameters_reference_daily_growth_rate')
@@ -1530,6 +1487,14 @@ class StrictParameterLoader:
 
         # Cache timeout - use system default if no specific N balance timeout
         config['cache_timeout'] = self.get_parameter('simulator_defaults_cache_timeout_global')
+
+        # New parameters from CSV (Rules.md compliance - no hardcoded values)
+        config['nitrogen_concentration_new_growth'] = self.get_parameter('nitrogen_balance_nitrogen_concentration_new_growth')
+        config['minimum_growth_rate'] = self.get_parameter('nitrogen_balance_minimum_growth_rate')
+        config['max_allocation_biomass_fraction'] = self.get_parameter('nitrogen_balance_max_allocation_biomass_fraction')
+        config['max_allocation_nitrogen_fraction'] = self.get_parameter('nitrogen_balance_max_allocation_nitrogen_fraction')
+        config['max_remobilization_biomass_fraction'] = self.get_parameter('nitrogen_balance_max_remobilization_biomass_fraction')
+        config['max_remobilization_nitrogen_fraction'] = self.get_parameter('nitrogen_balance_max_remobilization_nitrogen_fraction')
 
         return NitrogenBalanceParameters.from_config(config)
 

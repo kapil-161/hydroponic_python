@@ -715,11 +715,20 @@ class EnhancedRootSystemModel:
             zone_surface_area = sum(cohort.surface_area for cohort in zone.root_cohorts)
             zone_surface_areas[i] = zone_surface_area
 
-        # Calculate distribution fractions
+        # Calculate distribution fractions - include ALL zones, even if zero
         root_distribution = {}
         if total_surface_area > 0:
             for zone_id, surface_area in zone_surface_areas.items():
                 root_distribution[zone_id] = surface_area / total_surface_area
+        else:
+            # If no surface area, distribute equally (shouldn't happen in practice)
+            for zone_id in range(len(self.root_zones)):
+                root_distribution[zone_id] = 1.0 / len(self.root_zones) if len(self.root_zones) > 0 else 0.0
+        
+        # Ensure all zones are included in distribution (even if zero)
+        for i in range(len(self.root_zones)):
+            if i not in root_distribution:
+                root_distribution[i] = 0.0
 
         # Calculate maximum root depth from deepest zone with roots
         max_root_depth = 0.0
