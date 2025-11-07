@@ -827,63 +827,8 @@ class SimulationOrchestrator(BaseSimulator):
             'cumulative_nutrient_uptake', 'daily_nutrient_uptake'
         ]
 
-        # Export combined results
-        flattened_data = []
-        for step_data in self.simulation_data:
-            base_record = {
-                'step': step_data['step'],
-                'day': step_data['day'],
-                'hour': step_data['hour']
-            }
-
-            # Add simulator-specific data
-            for simulator_id, simulator_data in step_data.get('simulators', {}).items():
-                for key, value in simulator_data.items():
-                    # Special handling for nutrient_models_simulator dictionary columns
-                    if (simulator_id == 'nutrient_models_simulator' and 
-                        key in nutrient_dict_columns and 
-                        isinstance(value, dict)):
-                        # Expand dictionary into separate columns for each nutrient
-                        for nutrient in nutrients:
-                            nutrient_value = value.get(nutrient, 0.0)
-                            # Use safe column name (replace hyphens with underscores)
-                            safe_nutrient = nutrient.replace('-', '_')
-                            base_record[f"{simulator_id}_{key}_{safe_nutrient}"] = nutrient_value
-                    elif isinstance(value, dict):
-                        # For other simulators, try to expand if it's a simple dict
-                        # Otherwise convert to string
-                        try:
-                            # Check if it's a nutrient-like dict (has known nutrients as keys)
-                            if any(nutrient in value for nutrient in nutrients):
-                                # Expand nutrient dictionaries
-                                for nutrient in nutrients:
-                                    if nutrient in value:
-                                        safe_nutrient = nutrient.replace('-', '_')
-                                        base_record[f"{simulator_id}_{key}_{safe_nutrient}"] = value[nutrient]
-                            else:
-                                # For other dicts, convert to string
-                                base_record[f"{simulator_id}_{key}"] = str(value)
-                        except:
-                            base_record[f"{simulator_id}_{key}"] = str(value)
-                    elif isinstance(value, list):
-                        base_record[f"{simulator_id}_{key}"] = str(value)
-                    else:
-                        base_record[f"{simulator_id}_{key}"] = value
-
-            flattened_data.append(base_record)
-
-        # Create combined DataFrame and save
-        df = pd.DataFrame(flattened_data)
-        # Round numeric columns to 4 decimal places
-        df = df.round(4)
-        df.to_csv(output_path, index=False, float_format='%.4f')
-        print(f"Combined results exported to: {output_path}")
-
-        # Export separate CSV files for each simulator
-        base_cols = ['step', 'day', 'hour']
-        exported_files = []
-
         # Define major output variables for each simulator (to reduce CSV size)
+        # Only these fields will be included in the combined CSV, matching individual CSV files
         major_variables = {
             'root_system_simulator': [
                 'root_depth', 'root_biomass', 'root_length', 
@@ -933,6 +878,55 @@ class SimulationOrchestrator(BaseSimulator):
                 'leaf_nitrogen_allocation', 'root_nitrogen_allocation'
             ],
         }
+
+        # Export combined results - only include fields from major_variables
+        flattened_data = []
+        for step_data in self.simulation_data:
+            base_record = {
+                'step': step_data['step'],
+                'day': step_data['day'],
+                'hour': step_data['hour']
+            }
+
+            # Add simulator-specific data - only include fields in major_variables
+            for simulator_id, simulator_data in step_data.get('simulators', {}).items():
+                # Get allowed fields for this simulator
+                allowed_fields = major_variables.get(simulator_id, [])
+                
+                for key, value in simulator_data.items():
+                    # Skip complex structures (dicts/lists) that aren't in major_variables
+                    if isinstance(value, (dict, list)):
+                        # Only process if it's a nutrient dict that should be expanded
+                        if (simulator_id == 'nutrient_models_simulator' and 
+                            key in nutrient_dict_columns and 
+                            isinstance(value, dict)):
+                            # Expand dictionary into separate columns for each nutrient
+                            for nutrient in nutrients:
+                                nutrient_value = value.get(nutrient, 0.0)
+                                safe_nutrient = nutrient.replace('-', '_')
+                                col_name = f"{simulator_id}_{key}_{safe_nutrient}"
+                                # Check if this expanded column name is in allowed_fields
+                                if col_name.replace(f"{simulator_id}_", "") in allowed_fields:
+                                    base_record[col_name] = nutrient_value
+                        # Skip all other dicts/lists - they're not in major_variables
+                        continue
+                    
+                    # Only include scalar fields that are in major_variables
+                    if key in allowed_fields:
+                        base_record[f"{simulator_id}_{key}"] = value
+
+            flattened_data.append(base_record)
+
+        # Create combined DataFrame and save
+        df = pd.DataFrame(flattened_data)
+        # Round numeric columns to 4 decimal places
+        df = df.round(4)
+        df.to_csv(output_path, index=False, float_format='%.4f')
+        print(f"Combined results exported to: {output_path}")
+
+        # Export separate CSV files for each simulator
+        base_cols = ['step', 'day', 'hour']
+        exported_files = []
 
         for simulator_id in self.simulators.keys():
             # Get columns for this simulator
